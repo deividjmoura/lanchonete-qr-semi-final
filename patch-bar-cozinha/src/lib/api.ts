@@ -64,8 +64,8 @@ export const api = {
   cozinhaPedidos: () => apiGet<any[]>("/api/cozinha/pedidos"),
   barPedidos: () => apiGet<any[]>("/api/bar/pedidos"),
   garcomPedidos: (token: string) => apiGet<any[]>(`/api/garcom/${token}/pedidos`),
-  garcomEntregar: (token: string, pedidoId: number) =>
-    apiSend(`/api/garcom/${token}/pedidos/${pedidoId}/entregar`, "POST", {}),
+  garcomEntregar: (token: string, pedidoId: number, itemIds?: number[]) =>
+    apiSend(`/api/garcom/${token}/pedidos/${pedidoId}/entregar`, "POST", itemIds?.length ? { itemIds } : {}),
 
   caixaSessoes: () => apiGet<any[]>("/api/caixa/sessoes"),
   registrarPagamento: (sessaoId: number, valor: number, formaPagamento: string) =>

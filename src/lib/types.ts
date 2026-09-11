@@ -43,6 +43,8 @@ export interface Produto {
   vendidos: number;
 }
 
+export type ItemStatus = "recebido" | "em_producao" | "concluido" | "entregue";
+
 export interface ItemPedido {
   id: string;
   produtoId: number;
@@ -54,6 +56,9 @@ export interface ItemPedido {
   escolha: Opcao | null;
   obs: string;
   totalUnit: number; // (base + adicionais + escolha)
+  /** Status de produção/entrega do item (parcial) */
+  status?: ItemStatus;
+  setor?: "cozinha" | "bar";
 }
 
 export type PedidoStatus = "na_fila" | "em_producao" | "pronto" | "entregue";

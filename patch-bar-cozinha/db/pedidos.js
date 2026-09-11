@@ -372,7 +372,9 @@ async function getSessao(token) {
 
     const ids = pedidos.map((p) => p.id);
     const { rows: itensRows } = await client.query(
-      `SELECT ip.id, ip.pedido_id, pr.nome, ip.quantidade, ip.preco_unitario, ip.ponto_carne, ip.observacao, ip.produto_id
+      `SELECT ip.id, ip.pedido_id, pr.nome, ip.quantidade, ip.preco_unitario, ip.ponto_carne, ip.observacao, ip.produto_id,
+              COALESCE(ip.status, 'recebido') AS status,
+              COALESCE(pr.setor, 'cozinha') AS setor
        FROM itens_pedido ip
        JOIN produtos pr ON pr.id = ip.produto_id
        WHERE ip.pedido_id = ANY($1::int[])
@@ -432,6 +434,8 @@ async function getSessao(token) {
         preco_unitario: item.preco_unitario,
         ponto_carne: item.ponto_carne,
         observacao: item.observacao,
+        status: item.status || 'recebido',
+        setor: item.setor || 'cozinha',
         adicionais,
         remocoes,
         totalLinha: Number(linha.toFixed(2)),
@@ -444,7 +448,10 @@ async function getSessao(token) {
     const pedidosComItens = pedidos.map((p) => {
       const itens = itensByPedido.get(p.id) || [];
       const totalPedido = itens.reduce((sum, i) => sum + i.totalLinha, 0);
-      if (p.status === 'entregue') totalDevido += totalPedido;
+      // Conta na conta o que já foi ENTREGUE (parcial ou total)
+      for (const i of itens) {
+        if (i.status === 'entregue') totalDevido += i.totalLinha;
+      }
       return {
         ...p,
         editadoEm: p.editado_em || null,
@@ -551,6 +558,7 @@ async function listarPedidosPorStatus(statuses, setor = null) {
        WHERE p.status = ANY($1::text[])
          AND COALESCE(pr.setor, 'cozinha') = $2
          AND p.status <> 'entregue'
+         AND COALESCE(ip.status, 'recebido') <> 'entregue'
        ORDER BY p.criado_em`,
       [statuses, setor]
     );
@@ -581,6 +589,7 @@ async function listarPedidosPorStatus(statuses, setor = null) {
        JOIN produtos pr ON pr.id = ip.produto_id
        WHERE ip.pedido_id = ANY($1::int[])
          AND COALESCE(pr.setor, 'cozinha') = $2
+         AND COALESCE(ip.status, 'recebido') <> 'entregue'
        ORDER BY ip.id`,
       [ids, setor]
     );
@@ -633,7 +642,54 @@ async function getFilaCozinha() {
 }
 
 async function getFilaGarcom() {
-  return listarPedidosPorStatus(['concluido']);
+  /* Pedidos com pelo menos um item PRONTO (concluido) aguardando entrega parcial ou total */
+  const { rows: pedidos } = await pool.query(
+    `SELECT DISTINCT p.id, p.status, p.criado_em, p.observacao_geral, p.cliente_nome, p.garcom_nome,
+            p.editado_em, m.numero AS mesa
+     FROM pedidos p
+     JOIN mesa_sessoes s ON s.id = p.sessao_id
+     JOIN mesas m ON m.id = s.mesa_id
+     JOIN itens_pedido ip ON ip.pedido_id = p.id
+     WHERE p.status <> 'entregue'
+       AND COALESCE(ip.status, 'recebido') = 'concluido'
+     ORDER BY p.criado_em`
+  );
+  if (!pedidos.length) return [];
+
+  const ids = pedidos.map((p) => p.id);
+  const { rows: itensRows } = await pool.query(
+    `SELECT ip.id, ip.pedido_id, pr.nome, ip.quantidade, ip.ponto_carne, ip.observacao,
+            COALESCE(ip.status, 'recebido') AS status,
+            COALESCE(pr.setor, 'cozinha') AS setor
+     FROM itens_pedido ip
+     JOIN produtos pr ON pr.id = ip.produto_id
+     WHERE ip.pedido_id = ANY($1::int[])
+     ORDER BY ip.id`,
+    [ids]
+  );
+  await anexarExtrasAosItens(itensRows);
+
+  const byPedido = new Map();
+  for (const item of itensRows) {
+    if (!byPedido.has(item.pedido_id)) byPedido.set(item.pedido_id, []);
+    byPedido.get(item.pedido_id).push(item);
+  }
+
+  return pedidos.map((p) => {
+    const itens = byPedido.get(p.id) || [];
+    const prontos = itens.filter((i) => i.status === 'concluido');
+    return {
+      ...p,
+      /* status UI "concluido" enquanto houver algo pra levar */
+      status: 'concluido',
+      editadoEm: p.editado_em || null,
+      itens,
+      itensProntos: prontos.length,
+      itensPendentesProducao: itens.filter((i) =>
+        i.status === 'recebido' || i.status === 'em_producao'
+      ).length,
+    };
+  });
 }
 
 async function getFilaBar() {
@@ -645,7 +701,7 @@ const ITEM_TRANSICOES = Object.freeze({
   em_producao: 'concluido',
 });
 
-/** Sincroniza status do pedido-pai a partir dos itens (não mexe em entregue). */
+/** Sincroniza status do pedido-pai a partir dos itens. */
 async function sincronizarStatusPedido(client, pedidoId) {
   const { rows } = await client.query(
     `SELECT COALESCE(status, 'recebido') AS status FROM itens_pedido WHERE pedido_id = $1`,
@@ -653,15 +709,18 @@ async function sincronizarStatusPedido(client, pedidoId) {
   );
   if (!rows.length) return null;
   const statuses = rows.map((r) => r.status);
-  const allConcluido = statuses.every((s) => s === 'concluido');
-  const anyAvancado = statuses.some((s) => s === 'em_producao' || s === 'concluido');
+  const allEntregue = statuses.every((s) => s === 'entregue');
+  const allProntosOuEntregues = statuses.every((s) => s === 'concluido' || s === 'entregue');
+  const anyAvancado = statuses.some((s) =>
+    s === 'em_producao' || s === 'concluido' || s === 'entregue'
+  );
   let novo = 'recebido';
-  if (allConcluido) novo = 'concluido';
+  if (allEntregue) novo = 'entregue';
+  else if (allProntosOuEntregues) novo = 'concluido';
   else if (anyAvancado) novo = 'em_producao';
 
   const { rows: updated } = await client.query(
-    `UPDATE pedidos SET status = $2
-     WHERE id = $1 AND status <> 'entregue'
+    `UPDATE pedidos SET status = $2 WHERE id = $1
      RETURNING id, status, criado_em, editado_em, cliente_nome, sessao_id`,
     [pedidoId, novo]
   );
@@ -759,7 +818,7 @@ async function setStatusPedido(pedidoId, statusAlvo, setor = null) {
     if (alvo === 'entregue') {
       // entrega fecha todos os itens
       await client.query(
-        `UPDATE itens_pedido SET status = 'concluido' WHERE pedido_id = $1`,
+        `UPDATE itens_pedido SET status = 'entregue' WHERE pedido_id = $1`,
         [pedido.id]
       );
       const { rows: updated } = await client.query(
@@ -856,6 +915,7 @@ module.exports = {
   avancarStatusItem,
   setStatusItem,
   setStatusPedido,
+  sincronizarStatusPedido,
   getSessao,
   getFilaCozinha,
   getFilaBar,

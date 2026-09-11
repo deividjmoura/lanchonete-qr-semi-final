@@ -68,3 +68,19 @@ node scripts/fix-setor-produtos.js
 
 Depois, no Admin, confira se as bebidas mostram o badge **bar**.  
 Pedido **novo** (ou mesa ainda aberta) deve separar automaticamente.
+
+## Entrega parcial (garçom) + status por item
+
+Incluído neste patch:
+
+1. Migration `db/migrations/0014_item_entregue.sql` — item pode ser `entregue`
+2. Fila do **garçom** lista pedidos com **qualquer item pronto** (não espera o pedido inteiro)
+3. Botão **Levar prontos (N)** — entrega só o que está `concluido` (ex.: bebidas do bar)
+4. Conta da mesa / cliente mostra status por item: na fila → preparando → pronto → entregue
+5. Valor da sessão só soma itens **já entregues**
+
+```bash
+npm run db:migrate   # aplica 0014
+```
+
+Fluxo: bar conclui bebida → garçom vê e entrega → cozinha continua o lanche → depois entrega o resto.

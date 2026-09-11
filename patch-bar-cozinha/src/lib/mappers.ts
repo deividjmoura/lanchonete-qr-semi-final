@@ -181,6 +181,10 @@ export function mapSessaoFromMesaApi(_token: string, mesaMeta: Mesa | undefined,
         escolha: null,
         obs: String(it.observacao || it.note || ""),
         totalUnit: qtd ? totalLinha / qtd : precoBase,
+        status: (["recebido","em_producao","concluido","entregue"].includes(String(it.status || ""))
+          ? (String(it.status) as any)
+          : "recebido"),
+        setor: (it.setor === "bar" ? "bar" : "cozinha") as const,
       };
     });
     const total = Number(p.totalPedido ?? itens.reduce((s, i) => s + i.totalUnit * i.qtd, 0));
@@ -221,6 +225,10 @@ export function mapCozinhaPedidos(rows: any[]): Pedido[] {
         escolha: null,
         obs: String(it.observacao || ""),
         totalUnit: precoBase + adds.reduce((s: number, a: any) => s + a.preco, 0),
+        status: (["recebido","em_producao","concluido","entregue"].includes(String(it.status || ""))
+          ? (String(it.status) as any)
+          : "recebido"),
+        setor: (it.setor === "bar" ? "bar" : "cozinha") as const,
       };
     });
     return {
@@ -304,6 +312,10 @@ export function mapCaixaSessoes(rows: any[]): { sessoes: Sessao[]; pedidos: Pedi
           escolha: null,
           obs: String(it.observacao || it.obs || ""),
           totalUnit: qtd > 0 ? sub / qtd : precoBase,
+          status: (["recebido","em_producao","concluido","entregue"].includes(String(it.status || ""))
+            ? (String(it.status) as any)
+            : "recebido"),
+          setor: (it.setor === "bar" ? "bar" : "cozinha") as const,
         };
       });
       const total = Number(p.total ?? p.totalPedido ?? itens.reduce((a, i) => a + i.totalUnit * i.qtd, 0));

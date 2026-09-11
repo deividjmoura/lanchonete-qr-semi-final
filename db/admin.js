@@ -59,7 +59,7 @@ function mapProdutoRow(p) {
     fotoUrl: p.foto_url,
     disponivel: p.disponivel,
     pedePontoCarne: p.pede_ponto_carne,
-    setor: p.setor,
+    setor: p.setor === 'bar' ? 'bar' : 'cozinha',
     controlaEstoque: Boolean(p.controla_estoque),
     estoque: p.estoque != null ? Number(p.estoque) : null,
     estoqueMinimo: Number(p.estoque_minimo || 0),

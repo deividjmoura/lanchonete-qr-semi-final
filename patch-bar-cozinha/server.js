@@ -301,11 +301,15 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/pedidos\/(\d+)\/entregar$/)) && req.method === 'POST') {
       try {
-        const out = await entregarComoGarcom(Number(m[2]), m[1]);
+        const payload = await body(req).catch(() => ({}));
+        const itemIds = payload && (payload.itemIds || payload.itens || payload.ids);
+        const out = await entregarComoGarcom(Number(m[2]), m[1], itemIds || null);
         broadcast('update', {
           type: 'status_alterado',
           pedidoId: Number(m[2]),
-          status: 'entregue',
+          status: out.status,
+          itensEntregues: out.itensEntregues,
+          parcial: out.parcial,
           garcom: out.garcom?.nome,
         });
         return json(res, 200, out);

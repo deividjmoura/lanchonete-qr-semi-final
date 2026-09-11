@@ -57,7 +57,7 @@ interface PubState {
   concluirPedido: (pedidoId: number, setor?: "cozinha" | "bar") => void;
 
   /* garçom */
-  entregarPedido: (pedidoId: number, garcomToken?: string) => void;
+  entregarPedido: (pedidoId: number, garcomToken?: string, itemIds?: number[]) => void;
 
   /* caixa */
   registrarPagamento: (sessaoId: number, valor: number, forma: FormaPagamento) => void;
@@ -473,7 +473,7 @@ export const usePub = create<PubState>((set, get) => ({
     })();
   },
 
-  entregarPedido: (pedidoId, garcomToken) => {
+  entregarPedido: (pedidoId, garcomToken, itemIds) => {
     /* otimista: tira da fila "pronto" na hora — evita sumiço dos outros cards */
     const antes = get().pedidos.find((p) => p.id === pedidoId);
     set({
@@ -484,7 +484,7 @@ export const usePub = create<PubState>((set, get) => ({
     void (async () => {
       try {
         if (garcomToken) {
-          await api.garcomEntregar(garcomToken, pedidoId);
+          await api.garcomEntregar(garcomToken, pedidoId, itemIds);
           await get().hydrateGarcom(garcomToken);
         } else {
           await api.statusPedido(pedidoId, statusToApi("entregue"));
