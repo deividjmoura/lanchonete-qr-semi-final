@@ -1,199 +1,159 @@
-<div align="center">
-
-# 🗺️ Roadmap — Lanchonete QR
+# 🗺️ Roadmap — Lanchonete QR · Major Pub
 
 Progresso do sistema de pedidos por QR Code  
-`Cliente → Cozinha → Garçom → Caixa`
-
-</div>
+`Cliente → Cozinha/Bar → Garçom → Caixa → Admin`
 
 ---
 
 ## 📊 Visão geral
 
 ```text
-v2.0 ████████████████████  MVP + Postgres          ✅
-v2.1 ████████████████████  Auth + SSE              ✅
-v2.2 ████████████████████  Dashboard + kanban      ✅
-v2.3 ████████████████████  Relatório PDF + purge   ✅
-v2.4 ████████████████████  Estoque                 ✅
-v2.5 ████████████████████  Desconto / taxa / foto  ✅
-v2.6 ████████████████████  PIX mesa + caixa        ✅
-v2.6+████████████████████  Escolher (bebidas)      ✅
-v2.7 ████████████████████  Divisão de conta        ✅
-v2.8 ████████████████████  PIX multi-aviso + alertas ops ✅
-v2.9 ████████████████████  Voz · upload WebP · UX  ✅
-v3.x ░░░░░░░░░░░░░░░░░░░░  Gateway · WA · PWA      ⬜
+v2.0  ████████████████████  MVP + Postgres              ✅
+v2.1  ████████████████████  Auth + SSE                  ✅
+v2.2  ████████████████████  Dashboard + kanban          ✅
+v2.3  ████████████████████  Relatório + purge           ✅
+v2.4  ████████████████████  Estoque                     ✅
+v2.5  ████████████████████  Desconto / taxa / foto      ✅
+v2.6  ████████████████████  PIX mesa + caixa            ✅
+v2.6+ ████████████████████  Escolher (bebidas)          ✅
+v2.7  ████████████████████  Divisão de conta            ✅
+v2.8  ████████████████████  PIX multi-aviso + alertas   ✅
+v2.9  ████████████████████  Setores · voz · WebP · UX   ✅
+v2.9+ ████████████████████  Fixes: dashboard real, TZ,  ✅
+                            relatório, histórico, setor
+v3.0  ░░░░░░░░░░░░░░░░░░░░  Gateway · mídia · PWA       ⬜
+v3.1  ░░░░░░░░░░░░░░░░░░░░  WhatsApp · delivery         ⬜
+v3.2  ░░░░░░░░░░░░░░░░░░░░  Multi-loja / tenant         ⬜
 ```
 
-**Barra do v2:** `████████████████████` **100%** (polimento contínuo à parte)
+**Barra do v2:** `████████████████████` **100%** no escopo de salão (polimento contínuo à parte)
 
 ---
 
-## ✅ Feito (v2.0 → v2.9)
+## ✅ Feito (v2.0 → v2.9+)
 
 ### Fundação
-- [x] PostgreSQL no **Neon** + migrations (`0001` … `0011`)
-- [x] Seed (mesas, cardápio, adicionais, removíveis)
-- [x] Token **UUID** por mesa (QR opaco)
+- [x] PostgreSQL (Neon) + migrations (`0001` … `0015`)
+- [x] Seed (mesas, cardápio, adicionais, removíveis, staff, setores)
+- [x] Token UUID por mesa (QR opaco)
 - [x] Sessão de mesa acumulativa (`mesa_sessoes`)
+- [x] Timezone de negócio configurável (`APP_TIMEZONE`, default `America/Sao_Paulo`)
 
 ### Fluxo operacional
-- [x] Cliente: cardápio, personalizar, carrinho, total da mesa
-- [x] **Escolher** para bebidas/variantes (opção única · rádio)
-- [x] Cozinha: fila `recebido` → `em_producao` → `concluido`
-- [x] Garçom: `concluido` → `entregue` (soma no total da sessão)
+- [x] Cliente: cardápio, personalizar, **Escolher**, carrinho, total da mesa
+- [x] Cozinha e **Bar** com filas por `produtos.setor`
+- [x] Status por item + sincronização do pedido-pai
+- [x] Garçom: entrega total ou **parcial**; valor só do entregue
 - [x] Caixa: fechar conta, formas de pagamento, desconto / taxa
-- [x] Admin: CRUD cardápio (criar, editar, pausar, **excluir**), mesas/QR, garçons
+- [x] Divisão de conta (pagamentos parciais)
+- [x] Admin: CRUD cardápio, mesas/QR, garçons, estoque, purge
 
-### Tempo real & segurança
-- [x] **SSE** (`GET /api/events`) + fallback
-- [x] Auth por papel (admin / cozinha / caixa)
-- [x] Rate limit em pedido e login
-- [x] Preço sempre recalculado no servidor
-- [x] Sessões de staff **persistentes** no Postgres (`staff_sessoes`)
+### Tempo real, auth e ops
+- [x] SSE (`GET /api/events`) com auth staff ou token de mesa
+- [x] Auth por papel (`admin` · `cozinha` · `bar` · `caixa`)
+- [x] Rate-limit básico (login / pedidos)
+- [x] Alertas de voz (Web Speech)
+- [x] Smoke test multi-mesa / multi-pessoa / divisão
 
-### Gestão
-- [x] Painel de pedidos **kanban** (só ativos; histórico sob busca)
-- [x] Dashboard do dia
-- [x] Relatório de vendas + **purge** de histórico
-- [x] Controle de estoque (baixa automática)
-- [x] Fotos de produto + CSP
+### PIX e mídia
+- [x] QR PIX EMV (chave / nome / cidade)
+- [x] Aviso “já paguei” + confirmação no caixa (multi-aviso)
+- [x] Upload de foto com sharp → WebP (persistência em `foto_url`)
 
-### Pagamento PIX (v2.6 → v2.8)
-- [x] QR / copia-e-cola na **mesa** e no **caixa**
-- [x] `PIX_CHAVE` / `PIX_NOME` / `PIX_CIDADE` no `.env`
-- [x] Normalização CPF/CNPJ/telefone/nome/cidade (EMV)
-- [x] Botão **Já paguei no PIX** → avisa o caixa (sem baixar valor sozinho)
-- [x] Vários avisos na mesma mesa (divisão entre pagantes)
-- [x] Caixa: badge + toast + beep a cada novo aviso + PIX pré-selecionado
-- [x] Bloco de pagamento **sempre** na conta da mesa
-
-### Divisão de conta (v2.7)
-- [x] Migration `sessao_pagamentos` + API `POST /api/caixa/sessoes/:id/pagamentos`
-- [x] Vários pagamentos parciais na mesma sessão (dinheiro, PIX, cartões)
-- [x] UX no caixa: painel **Divisão de conta**, valor/pessoa, badge pago/restante
-- [x] Ao **Fechar conta**, o restante é quitado automaticamente
-- [ ] *(futuro)* divisão por item · divisão na tela da mesa
-
-### Alertas operacionais (v2.8 → v2.9)
-- [x] Cozinha: toast + beep quando chega pedido `recebido`
-- [x] Garçom: toast + beep quando pedido fica `concluido`
-- [x] **Voz (Web Speech API)** — cozinha: mesa + nome do cliente; garçom: frases engraçadas só com nº da mesa; caixa: anúncio de PIX
-
-### Fotos leves (v2.9)
-- [x] Upload de arquivo no admin (**Escolher arquivo** / **Upload**)
-- [x] Link https também otimizado no servidor
-- [x] **sharp**: max ~480px, WebP ~q72
-- [x] Foto **persistida no Postgres** (data-URL) — sobrevive a redeploy
-- [x] HTTPS externo ainda suportado
-
-### UX cards / acordeão (v2.9)
-- [x] Cozinha, mesa (conta), caixa: cards **recolhidos** por padrão
-- [x] Caixa: acordeão por mesa **independente** (vários podem ficar abertos; sem `<details>` aninhados bugados)
-- [x] Admin cardápio: categorias recolhidas; várias podem ficar abertas
-- [x] Cards **independentes**: abrir/fechar um não afeta os outros; re-render/SSE preserva os que estavam abertos
-
-### Qualidade
-- [x] Smoke test automatizado (`npm run test:smoke`)
-- [x] Cenários: fluxo clássico · **2 pedidos concorrentes na mesma mesa** · **2ª mesa em paralelo** · PIX ×2 · divisão parcial · fechar ambas
-- [x] **Smoke OK em 2026-09-01** (local · mesas 1 e 3 · sessão compartilhada validada)
+### Dados e admin
+- [x] Dashboard com faturamento real do dia (sem hardcode)
+- [x] Histórico de 7 dias no gráfico da semana
+- [x] Relatório por período (CSV / PDF print)
+- [x] Histórico de pedidos expandível (itens / total)
+- [x] Purge de histórico antigo
 
 ---
 
-## ⬜ Próximo
+## ⬜ v3 — próximos saltos de valor
 
-### Polimento residual
-- [x] Confirmar PIX no caixa (rota + botão → `sessao_pagamentos`)
-- [x] PIX na conta só no expandido (pedido e total)
-- [x] Busca mesa pin após scroll; logo/chips desvanecem
-- [x] Script `npm run fotos:fix` (corrige `foto_url` em lote)
-- [ ] Revisar impressão de comanda (cozinha/garçom) se necessário
-- [ ] Aposentar restos legados (`data/db.json` = só seed de referência)
-- [x] Não depende de disco efêmero para fotos novas
-- [x] SSL Neon/Render: normalização `sslmode=verify-full` (sem SECURITY WARNING)
-- [x] `npm run db:reset-senha` para alinhar staff com `.env`
+Prioridade sugerida: **o que reduz risco operacional e o que permite cobrar de outros estabelecimentos**.
 
-### v3 — Gateway · delivery · alertas fora do browser
-- [ ] Gateway PIX (confirmação automática — MP / PagSeguro / similar)
-- [ ] Delivery / retirada
-- [ ] Multi-loja
-- [ ] **WhatsApp** — avisos em texto (pedido novo, PIX informado, status)
-- [ ] **PWA ops** (caixa / cozinha / garçom) + **push** no aparelho
-- [ ] Estratégia de **voz fora da aba** (limitação atual documentada abaixo)
+### v3.0 — Fundação “produto de verdade” (4–8 semanas)
 
----
+| Item | Por quê | Notas |
+|------|---------|--------|
+| **Object storage para fotos** (S3/R2/Cloudflare) | Base64 no Postgres não escala | Manter URL em `foto_url`; migrar data-URLs existentes |
+| **Gateway PIX real** (EFI/Gerencianet, Mercado Pago, Open PIX…) | Conciliação automática, menos dependência do “já paguei” | Webhook → marca pagamento; manter fluxo manual como fallback |
+| **PWA + install prompt** | Celular de garçom/caixa offline-ish, ícone na home | Service worker só para shell + cache de cardápio |
+| **Push (Web Push)** | Cozinha/garçom sem depender só de voz/SSE aberta | Opcional por papel |
+| **Rate-limit distribuído** (Redis/Upstash) | Hoje some com 2 instâncias | Mesma API `golpePermitido` por trás |
+| **Backup/export agendado** | Contas fechadas + cardápio | Job diário → CSV/Parquet no storage |
+| **Observabilidade mínima** | Saber por que deu 500 | Log estruturado + health `/api/health` + uptime |
 
-## 🚀 Futuro (v3+)
+**Critério de pronto v3.0:** uma loja sobe em produção com fotos fora do banco, healthcheck e PIX com pelo menos um provedor em sandbox/produção.
 
-| Ideia | Nota |
-|-------|------|
-| **WhatsApp** (avisos / pedidos) | Texto + som padrão do app; **não** substitui TTS do navegador |
-| **PWA + Web Push** | Notificação com o SO fechado (caixa/cozinha); base para alerta sonoro |
-| **Voz offline / sempre ligada** | Tablet na cozinha com aba aberta **ou** app nativo; TTS no browser só com página ativa |
-| Gateway PIX (MP / PagSeguro) | Confirmação automática de pagamento |
-| Delivery / retirada | Fora do fluxo de mesa |
-| Multi-loja | Um banco, vários pontos |
-| App garçom PWA | Offline leve + push |
-| Variantes nativas no admin | Hoje bebidas usam adicionais + UX Escolher |
-| CRM básico | Cliente recorrente (telefone) + cupom simples |
-| Multi-idioma | Cardápio dinâmico — esforço baixo, turismo |
-| **Menu / sidebar de navegação** | Admin e ops: lateral com seções; mesa: chips/âncoras de categoria |
+### v3.1 — Canal e operação estendida (4–6 semanas)
 
-### WhatsApp (v3 — planejado)
-- [ ] Aviso de **pedido novo** para cozinha/admin (texto)
-- [ ] Aviso de **PIX informado** pelo cliente (texto → caixa)
-- [ ] Opcional: status pronto/entregue para o cliente
-- [ ] API oficial Meta ou serviço intermediário (bridge)
-- [ ] Config no `.env` (token, número, templates)
-- [ ] **Escopo claro:** notificação WhatsApp = mensagem + som do app; voz “Mesa X…” continua no painel web/PWA
+| Item | Por quê |
+|------|---------|
+| **WhatsApp** (template: “pedido pronto”, “conta”, link de pagamento) | Canal que o cliente já usa |
+| **Delivery / retirada** (pedido sem mesa, endereço ou balcão) | Mesmo motor de produção, outra origem de sessão |
+| **Impressão de produção** (ESC/POS ou PDF cozinha) | Bares que ainda vivem de via |
+| **Turnos de caixa** (abertura/fechamento com sangria) | Fechamento contábil do dia |
+| **Roles mais finos** (ex.: só cardápio, só relatório) | Menos compartilhamento de senha admin |
+| **CSRF token** nas mutações de staff | Hardening |
 
-### PWA + notificações (v3 — planejado)
-- [ ] Manifest + service worker nos painéis ops
-- [ ] Web Push (VAPID) para pedido novo / PIX / chamada garçom
-- [ ] **Garçom:** push quando pedido fica **pronto/concluído** e quando há **chamada da mesa** (além da voz com aba aberta)
-- [ ] Som de alerta no dispositivo mesmo com navegador em segundo plano (limites do iOS a validar)
-- [ ] Fallback: manter **voz Web Speech** quando a aba estiver aberta (já existe)
+### v3.2 — Multi-loja / caminho SaaS (6–12 semanas)
 
-### Voz — o que já funciona vs v3
-| Situação | Hoje (v2) | v3 |
-|----------|-----------|-----|
-| Aba caixa/cozinha **aberta** | ✅ TTS (`voz-ops.js`) | Mantém |
-| App **fechado** / outra tela | ❌ Sem voz custom | Push e/ou WhatsApp texto; voz full só com PWA/app dedicado |
-| WhatsApp no celular da equipe | — | ✅ Aviso texto; som genérico do WhatsApp |
+| Item | Por quê |
+|------|---------|
+| **Tenant (`loja_id`) em todas as tabelas** | Isolamento real |
+| **Onboarding** (criar loja, mesas, staff, PIX) | Vender sem setup manual no SQL |
+| **Billing** (Stripe/Pagar.me) da mensalidade do software | Só se for SaaS |
+| **Painel super-admin** (lojas, uso, suporte) | Operação do produto |
+| **White-label leve** (logo, cor, domínio) | Ticket B2B maior |
 
+**Não começar multi-loja antes de v3.0 estável** — multiplica bug e suporte.
 
 ---
 
-## 🏗️ Decisões de arquitetura
+## 🔧 Dívida técnica (contínua, paralela ao v3)
 
-| Tema | Escolha |
-|------|--------|
-| Runtime | Node.js HTTP nativo (sem Express) |
-| Banco | PostgreSQL (Neon free-tier) |
-| Tempo real | SSE (`LQRRealtime`) |
-| PIX | Estático EMV (sem gateway por enquanto) |
-| Fotos | sharp → WebP data-URL no Postgres (persistente) |
-| Voz ops | Web Speech API (`voz-ops.js`) — só com aba aberta |
-| Alertas fora do browser | v3: WhatsApp texto e/ou PWA + Web Push |
-| Bebidas / tamanhos | Adicionais + botão **Escolher** (rádio) |
-| Auth staff | Cookie httpOnly + tabela `staff_sessoes` |
-| Commits | Conventional Commits |
-| Docs | README visual + ROADMAP; atualizar após cada feature |
-| UI mesa | Shell HTML + CSS/JS em módulos |
-| Testes | Smoke HTTP (`scripts/smoke.js`) multi-mesa |
+- [ ] Unificar UI: aposentar HTML legado em `public/` quando a SPA cobrir 100%
+- [ ] Validação de body com schema (Zod) nos endpoints críticos
+- [ ] Índices e `EXPLAIN` nas filas sob carga real de sexta à noite
+- [ ] Testes além do smoke (unitário em `setStatusPedido`, caixa, PIX)
+- [ ] Política de retenção + purge automático opcional
+- [ ] Documentar API (OpenAPI) para integrações
 
 ---
 
-## 📈 Capacidade (referência)
+## 🎯 Critérios de qualidade (o que “pronto” significa)
 
-- **Simultâneos:** dezenas de mesas com pouco delay; centenas exigem cuidado com SSE e CU-hours do Neon
-- **Storage free (~0,5 GB):** use **purge** no admin + relatório PDF antes de apagar histórico; fotos já entram leves em WebP
+| Área | Critério |
+|------|----------|
+| Operação | Smoke passa; 2 mesas + divisão + PIX aviso sobrevivem |
+| Dados | Dashboard e relatório batem com sessões **fechadas** no fuso do pub |
+| Produção | Item de bar não some na cozinha e vice-versa |
+| Dinheiro | Total do caixa = entregues − desconto + taxa; parciais não estouram |
+| Segurança | Staff sem cookie não acessa `/api/admin/*`; SSE não é público aberto |
 
 ---
 
-<div align="center">
+## 📌 Princípios para o v3
 
-**Lanchonete QR** · v2 completo · em evolução 🍔
+1. **Não quebrar o fluxo de salão** que já funciona — feature flag ou rota nova.  
+2. **Dinheiro e estoque só no servidor** — cliente nunca manda preço final.  
+3. **Uma loja perfeita > dez lojas frágeis.**  
+4. **Mídia e arquivos fora do Postgres.**  
+5. **PIX automático é complemento, não substituir o caixa humano no dia 1.**
 
-</div>
+---
+
+## Histórico curto de correções recentes (v2.9+)
+
+- Removidos hardcodes de demo no dashboard (`+620` / `+87`)
+- Dashboard e relatório no fuso `America/Sao_Paulo`
+- `setStatusPedido` com fallback quando o setor não tem itens (ex.: bebida + cozinha)
+- SSE com autenticação
+- Relatório: SQL de timezone corrigido + mensagem de erro explícita
+- Histórico de pedidos expandível (itens / total)
+
+---
+
+**Próximo passo recomendado:** v3.0 focado em **storage de fotos + health + gateway PIX (sandbox)** — máximo valor com menor risco de reescrever o núcleo de pedidos.

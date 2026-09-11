@@ -1,13 +1,13 @@
 <div align="center">
 
-# 🍔 Lanchonete QR
+# 🍔 Lanchonete QR · Major Pub
 
-**Pedidos por QR Code** — do celular do cliente até a cozinha, o garçom e o caixa.
+**Pedidos por QR Code** — do celular do cliente até a cozinha, o bar, o garçom e o caixa.
 
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Neon](https://img.shields.io/badge/Neon-00E599?style=for-the-badge&logo=neon&logoColor=black)](https://neon.tech/)
-[![License](https://img.shields.io/badge/status-v2.9%20completo-green?style=for-the-badge)](./ROADMAP.md)
+[![Status](https://img.shields.io/badge/status-v2.9%20operacional-22c55e?style=for-the-badge)](./ROADMAP.md)
 
 </div>
 
@@ -16,78 +16,34 @@
 ## 🎬 O fluxo
 
 ```text
-  📱 Cliente          👨‍🍳 Cozinha         🏃 Garçom          💵 Caixa
- ┌──────────┐       ┌──────────┐       ┌──────────┐       ┌──────────┐
- │ QR mesa  │ ───▶  │ prepara  │ ───▶  │ entrega  │ ───▶  │ fecha    │
- │ cardápio │       │ pedido   │       │ na mesa  │       │ + PIX    │
- └──────────┘       └──────────┘       └──────────┘       └──────────┘
-       │                                                      ▲
-       └──────── conta acumulativa da sessão ─────────────────┘
+  📱 Cliente          👨‍🍳 Cozinha / 🍸 Bar      🏃 Garçom          💵 Caixa
+ ┌──────────┐       ┌──────────┐            ┌──────────┐       ┌──────────┐
+ │ QR mesa  │ ───▶  │ prepara  │ ─────────▶ │ entrega  │ ───▶  │ fecha    │
+ │ cardápio │       │ por setor│            │ (parcial)│       │ + PIX    │
+ └──────────┘       └──────────┘            └──────────┘       └──────────┘
+       │                                                          ▲
+       └──────── conta acumulativa da sessão (comanda) ───────────┘
 ```
 
-Uma mesa pode fazer **vários pedidos** na mesma visita. O que vale no caixa é a **sessão** (comanda), não o pedido isolado.
+Uma mesa pode fazer **vários pedidos** na mesma visita. O que vale no caixa é a **sessão** (comanda), não o pedido isolado. Itens só entram no total depois de **entregues**.
 
 ---
 
-## 📊 Progresso do projeto
-
-<div align="center">
+## 📊 Status atual (v2.9)
 
 | Módulo | Status |
 |:------:|:------:|
-| 🗄️ Postgres + Neon | ![done](https://img.shields.io/badge/100%25-22c55e?style=flat-square) |
-| 📱 Mesa (QR + cardápio + Escolher) | ![done](https://img.shields.io/badge/100%25-22c55e?style=flat-square) |
-| 👨‍🍳 Cozinha · 🏃 Garçom · 🔊 voz | ![done](https://img.shields.io/badge/100%25-22c55e?style=flat-square) |
-| 💵 Caixa · Auth · SSE · divisão | ![done](https://img.shields.io/badge/100%25-22c55e?style=flat-square) |
-| 📦 Estoque · Dashboard · PDF/purge | ![done](https://img.shields.io/badge/100%25-22c55e?style=flat-square) |
-| 💠 PIX (QR + aviso multi) | ![done](https://img.shields.io/badge/100%25-22c55e?style=flat-square) |
-| 📷 Fotos WebP (upload + link) | ![done](https://img.shields.io/badge/100%25-22c55e?style=flat-square) |
-| 🚀 Gateway · Delivery · WhatsApp · PWA | ![todo](https://img.shields.io/badge/planejado-f59e0b?style=flat-square) |
+| Postgres + Neon + migrations | ✅ |
+| Mesa (QR + cardápio + Escolher / personalizar) | ✅ |
+| Cozinha · Bar (setores) · voz | ✅ |
+| Garçom (entrega parcial) | ✅ |
+| Caixa · auth · SSE · divisão de conta | ✅ |
+| Estoque · dashboard · relatório · purge | ✅ |
+| PIX (QR EMV + aviso multi) | ✅ |
+| Fotos WebP (upload + persistência) | ✅ |
+| Gateway pagamento · WhatsApp · PWA · multi-loja | ⬜ v3 |
 
-**Visão geral**
-
-`████████████████████` **v2 completo** · próximo: gateway · delivery · WhatsApp · PWA/push (v3)
-
-📌 Detalhes → **[ROADMAP.md](./ROADMAP.md)**
-
-</div>
-
----
-
-
-## 🖼️ Corrigir todas as fotos do cardápio
-
-As fotos “erradas” ficam no **Postgres** (`produtos.foto_url`) — muitas vezes como `data:image/...` pesado.
-
-```bash
-# ver o que mudaria
-npm run fotos:dry
-
-# gravar caminhos leves /assets/demo/*.webp coerentes com cada item
-npm run fotos:fix
-```
-
-Requer `DATABASE_URL` no `.env` (mesmo do Render/Neon).
-
-## 🚀 Tecnologias
-
-<div align="center">
-  <img height="56" alt="Node.js" src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nodejs/nodejs-original.svg"/>
-  &nbsp;
-  <img height="56" alt="JavaScript" src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/javascript/javascript-original.svg"/>
-  &nbsp;
-  <img height="56" alt="HTML5" src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/html5/html5-original.svg"/>
-  &nbsp;
-  <img height="56" alt="CSS3" src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/css3/css3-original.svg"/>
-  &nbsp;
-  <img height="56" alt="PostgreSQL" src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/postgresql/postgresql-original.svg"/>
-  &nbsp;
-  <img height="56" alt="Git" src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/git/git-original.svg"/>
-</div>
-
-<p align="center">
-  <b>Node.js</b> (HTTP nativo) · <b>PostgreSQL</b> (Neon) · <b>SSE</b> · <b>PIX</b> EMV · <b>sharp</b> (WebP) · <b>Web Speech</b> (voz)
-</p>
+Detalhes e plano → **[ROADMAP.md](./ROADMAP.md)**
 
 ---
 
@@ -96,45 +52,20 @@ Requer `DATABASE_URL` no `.env` (mesmo do Render/Neon).
 | Papel | Rota | O que faz |
 |:-----:|:-----|:----------|
 | 👤 Cliente | `/mesa/:token` | Cardápio, **Escolher**, personalizar, carrinho, conta + PIX |
-| 👨‍🍳 Cozinha | `/cozinha` | Fila + **alerta de voz** (mesa + cliente) |
-| 🏃 Garçom | `/garcom/:token` | Entrega + **voz engraçada** (nº da mesa) |
-| 💵 Caixa | `/caixa` | Fecha conta, **divisão**, desconto/taxa, PIX, alerta |
-| ⚙️ Admin | `/admin` | Cardápio (CRUD + **upload foto**), mesas, dashboard, relatório |
-| 🔐 Login | `/login` | Auth por papel (admin / cozinha / caixa) |
+| 👨‍🍳 Cozinha | `/cozinha` | Fila do setor cozinha + alerta de voz |
+| 🍸 Bar | `/bar` | Fila do setor bar |
+| 🏃 Garçom | `/garcom/:token` | Entrega (total ou parcial) + voz |
+| 💵 Caixa | `/caixa` | Fecha conta, divisão, desconto/taxa, confirma PIX |
+| ⚙️ Admin | `/admin` | Cardápio, mesas/QR, garçons, dashboard, relatório, histórico, purge |
+| 🔐 Login | `/login` | Auth por papel (`admin` · `cozinha` · `bar` · `caixa`) |
 
 ---
 
-## 📷 Fotos no cardápio (admin)
-
-1. **Escolher arquivo** ou colar link `https://…`
-2. Servidor otimiza (**~480px**, **WebP**)
-3. A foto **fica no Postgres** (`data:image/webp;base64,…` em `foto_url`) — **não some no redeploy**
-4. Links externos `https://…` também são aceitos
-
-`POST /api/admin/upload-foto` → `{ fotoUrl, bytes, storage: "db" }`
-
-> Requer `npm install` (**sharp**). Fotos antigas em `/uploads/…` podem ter sumido: **reenvie** no admin.
-
-
----
-
-## 🥤 Cardápio: Adicionar · Personalizar · Escolher
-
-| Tipo de produto | Botão | Como cadastrar |
-|-----------------|--------|----------------|
-| Simples | **Adicionar** | Sem opções extras |
-| Lanche com extras | **Adicionar** + **Personalizar** | Adicionais (multi) + removíveis |
-| Bebida / tamanho / sabor | **Escolher** | Categoria *Bebidas* (ou só adicionais) → **uma** opção (rádio) |
-
-Ex.: produto `Coca-Cola` + adicionais `Lata`, `600ml`, `2L` → o cliente toca **Escolher** e marca um tamanho.
-
----
-
-## ⚡ Subir local
+## 🚀 Subir local
 
 ```bash
 npm install
-cp .env.example .env   # edite DATABASE_URL e PIX_*
+cp .env.example .env   # edite DATABASE_URL, PIX_* e STAFF_SEED_PASSWORD
 npm run db:migrate
 npm run db:seed
 npm start
@@ -142,82 +73,64 @@ npm start
 
 Abre em `http://localhost:3000`.
 
+### SPA (React)
+
+```bash
+npm run build          # gera dist/
+npm start              # server.js serve a API + dist/ se existir
+# ou em dev:
+npm run dev:ui         # Vite
+npm run dev:api        # API na 3000
+```
+
 ### Variáveis importantes
 
 ```env
 DATABASE_URL=postgres://usuario:senha@host/db
 DATABASE_SSL=true
-STAFF_SEED_PASSWORD=troque-esta-senha
+# se o certificado do provedor falhar na validação:
+# DATABASE_SSL_REJECT_UNAUTHORIZED=false
 
-# Exemplos fictícios — use os dados do seu estabelecimento no .env local
+STAFF_SEED_PASSWORD=troque-esta-senha
+APP_TIMEZONE=America/Sao_Paulo
+
 PIX_CHAVE=00000000000
 PIX_NOME=NOME DO RECEBEDOR
 PIX_CIDADE=CIDADE
 ```
 
-> 💡 CPF/CNPJ com pontos ou traço também funcionam (normalizamos no EMV). **Não commite** chave real, CPF ou cidade no repositório.
+> CPF/CNPJ com pontuação funcionam (normalizamos no EMV). **Não commite** chave real no repositório.
 
 ### Scripts úteis
 
 ```bash
-npm run db:reset-senha   # alinha admin/cozinha/caixa com STAFF_SEED_PASSWORD
-npm run test:smoke       # fluxo completo + multi-mesa (servidor precisa estar up)
+npm run db:reset-senha   # alinha admin/cozinha/bar/caixa com STAFF_SEED_PASSWORD
+npm run test:smoke       # fluxo completo multi-mesa (servidor precisa estar up)
+npm run fotos:dry        # preview de correção de fotos do cardápio
+npm run fotos:fix        # grava caminhos leves /assets/demo/*.webp
 ```
 
 ---
 
 ## ✅ Testes (smoke)
 
-Com o servidor rodando (`npm start`), em outro terminal:
+Com o servidor rodando:
 
 ```bash
 npm run test:smoke
 ```
 
-**Última execução OK — 2026-09-01 (local)**
-
-```text
-🍔 Smoke Lanchonete QR · http://127.0.0.1:3000
-  ✓ servidor responde
-  ✓ produto #14 · Dog Tradicional · R$ 12.00
-  ✓ login admin → admin
-  ✓ login cozinha → cozinha
-  ✓ login caixa → caixa
-  ✓ mesa A=1 · mesa B=3
-  ✓ garçom Deivid
-  ── Cenário 1: fluxo clássico ──
-  ✓ pedido #96 (Alpha) criado
-  ✓ cozinha: em_producao → concluido
-  ✓ garçom entregou pedido 1
-  ✓ conta mesa A · R$ 12.00
-  ✓ dois avisos PIX ok
-  ── Cenário 2: 2 pessoas na mesma mesa ──
-  ✓ pedidos concorrentes #97 e #98 · mesma sessão #79
-  ✓ cozinha processou os 2 pedidos extras
-  ✓ garçom entregou os 2 pedidos extras
-  ✓ conta mesa A atualizada · R$ 56.00 (era 12.00)
-  ── Cenário 3: mesa B em paralelo ──
-  ✓ pedido mesa B #99
-  ✓ mesa B entregue
-  ── Caixa: divisão + fechar ──
-  ✓ parcial mesa A R$ 28.00 · resta R$ 28.00
-  ✓ mesa A fechada · cobrado R$ 56.00
-  ✓ mesa B fechada
-  ✓ ambas as mesas liberadas
-✅ Smoke OK — multi-mesa + multi-pessoa + divisão sobrevivem.
-```
-
-Cobre: login por papel, 2 mesas em paralelo, 2 pedidos concorrentes na mesma mesa (mesma sessão), PIX multi-aviso, pagamento parcial e fechamento.
+Cobre: login por papel, 2 mesas em paralelo, pedidos concorrentes na mesma sessão, avanço cozinha → entrega garçom, PIX multi-aviso, pagamento parcial e fechamento.
 
 ---
 
-## 💠 PIX na mesa e no caixa
+## 💠 PIX
 
 | Onde | Ação |
 |------|------|
-| **Mesa → Total** | Bloco de pagamento sempre visível; QR quando há total |
-| **Mesa** | Copiar código + **Já paguei no PIX** avisa o caixa |
-| **Caixa** | Toast + beep + voz · fecha a sessão |
+| **Mesa → Total** | QR + copia-e-cola quando há valor |
+| **Mesa** | **Já paguei no PIX** avisa o caixa |
+| **Caixa** | Toast + beep + voz · caixa confirma e registra |
 
 A conta **não** fecha sozinha — o caixa confirma.
 
@@ -230,10 +143,9 @@ POST /api/mesas/:token/pix-informado
 
 ## ✂️ Divisão de conta (caixa)
 
-1. Informe **N pessoas** → **Usar valor/pessoa**  
-2. Escolha a forma → **Registrar pagamento**  
-3. Repita; o badge mostra **pago / restante**  
-4. Ao **Fechar conta**, o que faltar é quitado  
+1. Informe N pessoas → valor por pessoa  
+2. Registre pagamentos parciais  
+3. Ao **Fechar conta**, o que faltar é quitado  
 
 ```http
 POST /api/caixa/sessoes/:id/pagamentos
@@ -242,15 +154,37 @@ Body: { "valor": 25.50, "formaPagamento": "pix" }
 
 ---
 
+## 📷 Fotos no cardápio
+
+1. Admin: arquivo ou link `https://…`  
+2. Servidor otimiza (~480px, WebP) via **sharp**  
+3. Persistência atual: `foto_url` no Postgres (data URL ou link externo)
+
+> Base64 no banco funciona e sobrevive a redeploy, mas **não escala bem**. Preferir arquivos em `/assets` ou object storage (planejado no v3).
+
+---
+
+## 🥤 Tipos de produto no cardápio
+
+| Tipo | Botão do cliente | Cadastro |
+|------|------------------|----------|
+| Simples | **Adicionar** | Sem extras |
+| Lanche com extras | **Adicionar** + **Personalizar** | Adicionais (multi) + removíveis |
+| Bebida / tamanho / sabor | **Escolher** | Uma opção (rádio) — típico de bebidas |
+
+Produtos têm **setor de produção**: `cozinha` ou `bar` (fila separada).
+
+---
+
 ## 🔊 Alertas de voz
 
 | Tela | Quando | Conteúdo |
 |------|--------|----------|
-| Cozinha | Pedido novo | Mesa + nome do cliente |
-| Garçom | Pedido pronto | Só nº da mesa (tom leve) |
+| Cozinha / Bar | Pedido novo / avanço | Mesa + cliente |
+| Garçom | Item pronto | Nº da mesa |
 | Caixa | PIX informado | Mesa + forma |
 
-Usa a **Web Speech API** do navegador (`public/js/voz-ops.js`). No primeiro toque na página a voz “desbloqueia”.
+Web Speech API no browser. No primeiro toque a voz “desbloqueia”.
 
 ---
 
@@ -258,24 +192,33 @@ Usa a **Web Speech API** do navegador (`public/js/voz-ops.js`). No primeiro toqu
 
 ```text
 lanchonete-qr/
-├── server.js
-├── db/           # Postgres, admin, foto (sharp), pedidos…
-├── public/       # HTML/CSS/JS + uploads/
-├── scripts/      # smoke + reset-senha
+├── server.js           # HTTP nativo — API + estáticos
+├── db/                 # Postgres: pedidos, caixa, auth, dashboard…
+│   └── migrations/     # 0001 … 0015+
+├── src/                # React (Vite) — telas operacionais + admin
+├── public/             # HTML legado / assets / favicons
+├── scripts/            # smoke, seed helpers, fotos
 ├── ROADMAP.md
 └── .env.example
 ```
 
 ---
 
+## 🔒 Segurança (resumo)
+
+- Sessão staff em cookie **httpOnly** (scrypt na senha)  
+- Rate-limit em memória em login e pedidos (por IP)  
+- Headers básicos (CSP, nosniff, frame-deny)  
+- SSE: staff autenticado **ou** `?mesa=<token-uuid>`  
+- Preços e regras de adicional/remoção **sempre no servidor**
+
+Limitações conhecidas: rate-limit não compartilha entre instâncias; CSRF formal ainda não implementado; PIX sem conciliação bancária automática.
+
+---
+
 ## 🗺️ Roadmap
 
-Detalhes em **[ROADMAP.md](./ROADMAP.md)**.
-
-| Agora | Depois |
-|:-----:|:------:|
-| ✅ **v2.9+** — fotos persistentes no banco | ⬜ WhatsApp · Gateway · PWA/push |
-| ✅ PIX · divisão · estoque · dashboard | ⬜ Delivery · multi-loja |
+Ver **[ROADMAP.md](./ROADMAP.md)** — v2 fechado no essencial operacional; v3 foca gateway, PWA, WhatsApp, storage de mídia e caminho multi-loja.
 
 ---
 
@@ -283,8 +226,4 @@ Detalhes em **[ROADMAP.md](./ROADMAP.md)**.
 
 **Feito com ☕ e QR Code** · [deividjmoura](https://github.com/deividjmoura)
 
-[![Portfolio](https://img.shields.io/badge/Portfolio-deividmoura.netlify.app-0A66C2?style=for-the-badge)](https://deividmoura.netlify.app/)
-
 </div>
-
-
