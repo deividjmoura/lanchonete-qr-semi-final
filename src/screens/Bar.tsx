@@ -13,38 +13,38 @@ import { ir, useAgora } from "../router";
 
 const COLUNAS = [
   { id: "na_fila", titulo: "Na fila", desc: "chegou agora", acento: "text-amber-300", borda: "border-amber-400/30", bg: "from-amber-400/15" },
-  { id: "em_producao", titulo: "Em produção", desc: "na chapa", acento: "text-sky-300", borda: "border-sky-400/30", bg: "from-sky-400/12" },
+  { id: "em_producao", titulo: "Em produção", desc: "no bar", acento: "text-sky-300", borda: "border-sky-400/30", bg: "from-sky-400/12" },
   { id: "pronto", titulo: "Prontos", desc: "aguardando garçom", acento: "text-lime-300", borda: "border-lime-400/30", bg: "from-lime-400/12" },
 ] as const;
 
-export default function Cozinha() {
+export default function Bar() {
   const auth = usePub((s) => s.auth);
   useEffect(() => {
     if (!auth) {
       ir("/login");
       return;
     }
-    if (auth.role !== "admin" && auth.role !== "cozinha") {
-      ir(auth.role === "bar" ? "/bar" : auth.role === "caixa" ? "/caixa" : "/login");
+    if (auth.role !== "admin" && auth.role !== "bar") {
+      ir(auth.role === "cozinha" ? "/cozinha" : auth.role === "caixa" ? "/caixa" : "/login");
     }
   }, [auth]);
 
-    useAnuncios("cozinha");
+    useAnuncios("bar");
   // lastError exibido abaixo
   useAgora(1000);
 
   const pedidos = usePub((s) => s.pedidos);
-  const hydrateCozinha = usePub((s) => s.hydrateCozinha);
+  const hydrateBar = usePub((s) => s.hydrateBar);
   const lastError = usePub((s) => s.lastError);
   useEffect(() => {
-    void hydrateCozinha();
-    const t = setInterval(() => void hydrateCozinha(), 5000);
-    const off = connectEvents(() => void hydrateCozinha());
+    void hydrateBar();
+    const t = setInterval(() => void hydrateBar(), 5000);
+    const off = connectEvents(() => void hydrateBar());
     return () => {
       clearInterval(t);
       off();
     };
-  }, [hydrateCozinha]);
+  }, [hydrateBar]);
 
   const ativos = pedidos.filter((p) => p.status !== "entregue");
 
@@ -52,13 +52,13 @@ export default function Cozinha() {
     <div className="flex items-center gap-2">
       {lastError && <Badge tone="rose">API: {lastError}</Badge>}
       <Badge tone="amber" pulse>{ativos.filter((p) => p.status === "na_fila").length} novos</Badge>
-      <Badge tone="sky">{ativos.filter((p) => p.status === "em_producao").length} na chapa</Badge>
+      <Badge tone="sky">{ativos.filter((p) => p.status === "em_producao").length} no bar</Badge>
       <Badge tone="lime">{ativos.filter((p) => p.status === "pronto").length} prontos</Badge>
     </div>
   );
 
   return (
-    <OpsShell ativo="cozinha" kicker="operação · cozinha" titulo={<>Chapa <span className="text-gradient">acesa</span></>} extra={extras}>
+    <OpsShell ativo="bar" kicker="operação · bar" titulo={<>Balcão <span className="text-gradient">gelado</span></>} extra={extras}>
       <div className="grid gap-4 md:grid-cols-3">
         {COLUNAS.map((col) => {
           const lista = ativos.filter((p) => p.status === col.id).sort((a, b) => a.criadoEm - b.criadoEm);
@@ -168,12 +168,12 @@ function CardPedido({ pedido, borda }: { pedido: Pedido; borda: string }) {
 
       <div className="mt-3.5 space-y-2">
         {pedido.status === "na_fila" && (
-          <Btn full size="sm" onClick={() => aceitar(pedido.id, "cozinha")}>
+          <Btn full size="sm" onClick={() => aceitar(pedido.id, "bar")}>
             <Flame className="size-4" /> Aceitar pedido
           </Btn>
         )}
         {pedido.status === "em_producao" && (
-          <Btn full size="sm" variant="lime" onClick={() => concluir(pedido.id, "cozinha")}>
+          <Btn full size="sm" variant="lime" onClick={() => concluir(pedido.id, "bar")}>
             <CheckCircle2 className="size-4" /> Concluir — chama o garçom
           </Btn>
         )}
