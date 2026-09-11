@@ -1533,173 +1533,6 @@ function Relatorio() {
 }
 
 /* ================= FUNÇÕES (estoque + relatório + histórico + purge) ================= */
-
-/* ================= HISTÓRICO EXPANDÍVEL ================= */
-function HistoricoPedidos({
-  histFrom,
-  setHistFrom,
-  histTo,
-  setHistTo,
-  hist,
-  histMsg,
-  busy,
-  onBuscar,
-}: {
-  histFrom: string;
-  setHistFrom: (v: string) => void;
-  histTo: string;
-  setHistTo: (v: string) => void;
-  hist: any[];
-  histMsg: string | null;
-  busy: boolean;
-  onBuscar: () => void;
-}) {
-  const [aberto, setAberto] = useState<number | null>(null);
-
-  const toggle = (id: number) => setAberto((cur) => (cur === id ? null : id));
-
-  return (
-    <section className="glass rounded-3xl p-5">
-      <h3 className="font-display text-2xl text-white mb-1">Histórico de pedidos</h3>
-      <p className="text-[11px] text-stone-500 mb-4">
-        Clique em um pedido para ver itens, adicionais e total.
-      </p>
-      <div className="flex flex-wrap gap-3 items-end">
-        <label className="text-xs text-stone-400">
-          De
-          <input
-            type="date"
-            value={histFrom}
-            onChange={(e) => setHistFrom(e.target.value)}
-            className="mt-1 block h-11 rounded-xl bg-black/40 border border-white/12 px-3 text-sm text-white"
-          />
-        </label>
-        <label className="text-xs text-stone-400">
-          Até
-          <input
-            type="date"
-            value={histTo}
-            onChange={(e) => setHistTo(e.target.value)}
-            className="mt-1 block h-11 rounded-xl bg-black/40 border border-white/12 px-3 text-sm text-white"
-          />
-        </label>
-        <Btn size="sm" disabled={busy} onClick={onBuscar}>
-          Buscar
-        </Btn>
-      </div>
-      {histMsg && <p className="mt-3 text-xs text-stone-400">{histMsg}</p>}
-      <div className="mt-4 max-h-[28rem] overflow-y-auto space-y-2">
-        {hist.length === 0 && !busy && (
-          <p className="text-sm text-stone-500 py-6 text-center">Nenhum pedido neste período.</p>
-        )}
-        {hist.slice(0, 100).map((p: any) => {
-          const id = Number(p.id);
-          const isOpen = aberto === id;
-          const itens = Array.isArray(p.itens) ? p.itens : [];
-          const total = Number(p.totalPedido ?? p.total ?? 0);
-          const criado = p.criado_em || p.criadoEm || "";
-          return (
-            <div
-              key={id || JSON.stringify(p)}
-              className="rounded-2xl border border-white/[0.08] bg-black/30 overflow-hidden"
-            >
-              <button
-                type="button"
-                onClick={() => toggle(id)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-white/[0.04] transition-colors cursor-pointer"
-              >
-                <span className="font-mono text-[11px] text-stone-500 shrink-0">#{id}</span>
-                <span
-                  className={cn(
-                    "rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider shrink-0",
-                    p.status === "entregue"
-                      ? "bg-lime-400/15 text-lime-300 border border-lime-400/25"
-                      : p.status === "concluido"
-                        ? "bg-amber-400/15 text-amber-300 border border-amber-400/25"
-                        : "bg-white/10 text-stone-400 border border-white/10"
-                  )}
-                >
-                  {p.status}
-                </span>
-                <span className="text-xs text-white font-semibold truncate">
-                  Mesa {p.mesa ?? p.mesa_numero ?? "—"}
-                  {(p.cliente_nome || p.clienteNome) && (
-                    <span className="text-stone-400 font-normal"> · {p.cliente_nome || p.clienteNome}</span>
-                  )}
-                </span>
-                <span className="ml-auto font-mono text-xs text-lime-300 shrink-0">
-                  {total > 0 ? BRL(total) : "—"}
-                </span>
-                <span className="text-stone-600 text-[10px] shrink-0">{isOpen ? "▲" : "▼"}</span>
-              </button>
-              {isOpen && (
-                <div className="border-t border-white/[0.06] px-3 py-3 space-y-2 bg-black/20">
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-stone-500">
-                    {criado && (
-                      <span>
-                        Criado: {String(criado).slice(0, 19).replace("T", " ")}
-                      </span>
-                    )}
-                    {(p.garcom_nome || p.garcomNome) && (
-                      <span>Garçom: {p.garcom_nome || p.garcomNome}</span>
-                    )}
-                    {(p.observacao_geral || p.observacaoGeral) && (
-                      <span>Obs: {p.observacao_geral || p.observacaoGeral}</span>
-                    )}
-                  </div>
-                  {itens.length === 0 ? (
-                    <p className="text-xs text-stone-500">Sem itens neste registro.</p>
-                  ) : (
-                    <ul className="space-y-1.5">
-                      {itens.map((it: any, idx: number) => (
-                        <li
-                          key={it.id ?? idx}
-                          className="flex items-start justify-between gap-2 text-xs text-stone-300"
-                        >
-                          <div className="min-w-0">
-                            <span className="font-semibold text-white">
-                              {it.quantidade || 1}× {it.nome}
-                            </span>
-                            {Array.isArray(it.adicionais) && it.adicionais.length > 0 && (
-                              <p className="text-[10px] text-amber-200/80">
-                                + {it.adicionais.map((a: any) => a.nome || a).join(", ")}
-                              </p>
-                            )}
-                            {Array.isArray(it.remocoes) && it.remocoes.length > 0 && (
-                              <p className="text-[10px] text-rose-300/80">
-                                sem {it.remocoes.join(", ")}
-                              </p>
-                            )}
-                            {it.ponto_carne && (
-                              <p className="text-[10px] text-stone-500">ponto: {it.ponto_carne}</p>
-                            )}
-                            {it.observacao && (
-                              <p className="text-[10px] text-stone-500">obs: {it.observacao}</p>
-                            )}
-                          </div>
-                          <span className="font-mono text-[11px] text-stone-400 shrink-0">
-                            {BRL(Number(it.totalLinha ?? (Number(it.preco_unitario || 0) * (it.quantidade || 1))))}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <div className="flex justify-end pt-1 border-t border-white/[0.05]">
-                    <span className="text-xs font-bold text-lime-300">
-                      Total {BRL(total)}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-
 function Funcoes() {
   const [sub, setSub] = useState<"estoque" | "relatorio" | "historico" | "purge">("estoque");
   const [histFrom, setHistFrom] = useState(() => {
@@ -1801,16 +1634,44 @@ function Funcoes() {
       {sub === "relatorio" && <Relatorio />}
 
       {sub === "historico" && (
-        <HistoricoPedidos
-          histFrom={histFrom}
-          setHistFrom={setHistFrom}
-          histTo={histTo}
-          setHistTo={setHistTo}
-          hist={hist}
-          histMsg={histMsg}
-          busy={busy}
-          onBuscar={() => void buscarHist()}
-        />
+        <section className="glass rounded-3xl p-5">
+          <h3 className="font-display text-2xl text-white mb-1">Histórico de pedidos</h3>
+          <p className="text-[11px] text-stone-500 mb-4">Consulta por período no Neon desta branch.</p>
+          <div className="flex flex-wrap gap-3 items-end">
+            <label className="text-xs text-stone-400">
+              De
+              <input
+                type="date"
+                value={histFrom}
+                onChange={(e) => setHistFrom(e.target.value)}
+                className="mt-1 block h-11 rounded-xl bg-black/40 border border-white/12 px-3 text-sm text-white"
+              />
+            </label>
+            <label className="text-xs text-stone-400">
+              Até
+              <input
+                type="date"
+                value={histTo}
+                onChange={(e) => setHistTo(e.target.value)}
+                className="mt-1 block h-11 rounded-xl bg-black/40 border border-white/12 px-3 text-sm text-white"
+              />
+            </label>
+            <Btn size="sm" disabled={busy} onClick={() => void buscarHist()}>
+              Buscar
+            </Btn>
+          </div>
+          {histMsg && <p className="mt-3 text-xs text-stone-400">{histMsg}</p>}
+          <div className="mt-4 max-h-80 overflow-y-auto space-y-1.5">
+            {hist.slice(0, 80).map((p: any) => (
+              <div
+                key={p.id || JSON.stringify(p)}
+                className="rounded-xl border border-white/[0.06] bg-black/25 px-3 py-2 text-[11px] text-stone-300 font-mono"
+              >
+                #{p.id} · {p.status} · mesa {p.mesa ?? p.mesa_numero ?? "—"} · {p.cliente_nome || p.clienteNome || ""}
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {sub === "purge" && (
