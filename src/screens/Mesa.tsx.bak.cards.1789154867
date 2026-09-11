@@ -587,7 +587,7 @@ export default function Mesa({ token }: { token: string }) {
                       <h3 className="font-display text-xl sm:text-2xl text-amber-200/95 tracking-wide">{g.nome}</h3>
                       <span className="h-px flex-1 bg-gradient-to-l from-amber-400/40 to-transparent" />
                     </div>
-                    <motion.div layout className="grid-cardapio grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3.5 w-full min-w-0">
+                    <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3.5 w-full min-w-0">
                       <AnimatePresence mode="popLayout">
                         {g.itens.map((p) => (
                           <ItemCard
@@ -605,7 +605,7 @@ export default function Mesa({ token }: { token: string }) {
                 ))}
               </div>
             ) : (
-              <motion.div layout className="grid-cardapio grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3.5 pb-28 lg:pb-10 w-full min-w-0">
+              <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3.5 pb-28 lg:pb-10 w-full min-w-0">
                 <AnimatePresence mode="popLayout">
                   {lista.map((p) => (
                     <ItemCard
@@ -734,46 +734,36 @@ function ItemCard({
   onAdd: (p: Produto) => void;
 }) {
   const esgotado = p.estoque !== null && p.estoque <= 0;
-  const meta =
-    p.tipo === "escolher"
-      ? "1 opção"
-      : p.tipo === "personalizavel"
-        ? `${p.adicionais.length} extra${p.adicionais.length === 1 ? "" : "s"}`
-        : "pronto";
-  const ctaLabel =
-    p.tipo === "escolher" ? "Escolher" : p.tipo === "personalizavel" ? "Montar" : "Add";
-
   return (
     <motion.article
       layout
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.97 }}
-      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
-        "card-produto card-img-zoom group relative flex h-full min-h-0 flex-col glass rounded-3xl overflow-hidden",
-        esgotado && "opacity-55 grayscale-[0.55]"
+        "card-img-zoom group relative glass rounded-3xl overflow-hidden",
+        esgotado && "opacity-60 grayscale-[0.6]"
       )}
     >
-      {/* Foto — altura fixa por aspect-ratio, nunca empurra o texto */}
       <button
         type="button"
         onClick={() => onOpen(p)}
-        className="relative block w-full shrink-0 aspect-[4/3] overflow-hidden cursor-pointer text-left bg-black/40"
+        className="relative block w-full aspect-[4/3] sm:aspect-[5/4] overflow-hidden cursor-pointer text-left"
         aria-label={`Ver ${p.nome}`}
       >
         <img
           src={fotoSrc(p.foto) || FOTO_PLACEHOLDER}
-          alt=""
+          alt={p.nome}
           loading="lazy"
           decoding="async"
-          className="card-produto-foto transition-transform duration-500 group-hover:scale-105"
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           onError={(e) => {
             (e.target as HTMLImageElement).src = FOTO_PLACEHOLDER;
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-coal-950/95 via-coal-950/20 to-transparent pointer-events-none" />
-        <div className="absolute top-2 left-2 right-2 flex flex-wrap gap-1 pointer-events-none z-[1]">
+        <div className="absolute inset-0 bg-gradient-to-t from-coal-950/90 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute top-2 left-2 flex flex-wrap gap-1 max-w-[90%] pointer-events-none">
           {p.estoque !== null && p.estoque > 0 && p.estoque <= 8 && (
             <Badge tone="rose" pulse>
               {p.estoque} un
@@ -781,52 +771,27 @@ function ItemCard({
           )}
           {esgotado && <Badge tone="zinc">esgotado</Badge>}
         </div>
-        <span className="absolute bottom-2 left-2 z-[1] rounded-lg bg-black/55 backdrop-blur-sm px-2 py-0.5 font-mono text-xs sm:text-sm font-bold text-white tabular-nums pointer-events-none">
+        <p className="absolute bottom-2 left-2.5 right-2 font-mono text-sm sm:text-lg font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] pointer-events-none">
           {BRL(p.preco)}
-        </span>
+        </p>
       </button>
 
-      {/* Corpo — flex column com rodapé sempre no fundo */}
-      <div className="flex flex-1 flex-col min-h-0 p-2.5 sm:p-3.5 gap-1.5">
-        <button
-          type="button"
-          onClick={() => onOpen(p)}
-          className="text-left cursor-pointer min-w-0"
-        >
-          <h3 className="font-semibold text-white leading-snug text-[13px] sm:text-sm line-clamp-2 min-h-[2.5em] break-words">
-            {p.nome}
-          </h3>
-          <p className="mt-0.5 text-[10px] sm:text-[11px] text-stone-400 leading-snug line-clamp-2 min-h-[2.4em] break-words">
-            {descricaoExibida(p.descricao, p.nome, p.categoria) || "\u00a0"}
-          </p>
-        </button>
-
-        <div className="mt-auto pt-1 flex flex-col gap-1.5 min-w-0">
-          <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.14em] font-bold text-stone-500 truncate">
-            {meta}
+      <div className="p-2.5 sm:p-4">
+        <h3 className="font-semibold text-white leading-tight text-sm sm:text-base line-clamp-2">{p.nome}</h3>
+        <p className="mt-1 text-[11px] sm:text-xs text-stone-400 leading-relaxed line-clamp-2 min-h-[2rem]">
+          {descricaoExibida(p.descricao, p.nome, p.categoria)}
+        </p>
+        <div className="mt-2.5 sm:mt-3 flex items-center justify-between gap-1.5">
+          <span className="text-[10px] uppercase tracking-wider font-bold text-stone-500">
+            {p.tipo === "escolher" ? "escolha 1 opção" : p.tipo === "personalizavel" ? `${p.adicionais.length} adicionais` : "do jeito da casa"}
           </span>
           {p.tipo === "simples" ? (
-            <Btn
-              size="sm"
-              full
-              disabled={esgotado}
-              onClick={() => onAdd(p)}
-              className="!h-9 !px-2 !text-[11px] sm:!text-xs shrink-0"
-            >
-              <Plus className="size-3.5 shrink-0" />
-              <span className="truncate">Adicionar</span>
+            <Btn size="sm" disabled={esgotado} onClick={() => onAdd(p)}>
+              <Plus className="size-4" /> Adicionar
             </Btn>
           ) : (
-            <Btn
-              size="sm"
-              variant="outline"
-              full
-              disabled={esgotado}
-              onClick={() => onOpen(p)}
-              className="!h-9 !px-2 !text-[11px] sm:!text-xs shrink-0"
-            >
-              <span className="truncate">{ctaLabel}</span>
-              <ChevronRight className="size-3.5 shrink-0 opacity-80" />
+            <Btn size="sm" variant="outline" disabled={esgotado} onClick={() => onOpen(p)}>
+              {p.tipo === "escolher" ? "Escolher" : "Personalizar"} <ChevronRight className="size-3.5" />
             </Btn>
           )}
         </div>

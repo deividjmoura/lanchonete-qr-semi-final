@@ -20,7 +20,9 @@
     "dev:ui": "vite",
     "start:api": "node server.js",
     "start:prod": "npm run build && node server.js",
-    "postbuild": "node -e \"console.log('SPA em dist/ \u2014 npm start serve o design React se dist/ existir')\""
+    "postbuild": "node -e \"console.log('SPA em dist/ — npm start serve o design React se dist/ existir')\"",
+    "fotos:demo": "node scripts/seed-fotos-demo.js",
+    "fotos:demo:dry": "node scripts/seed-fotos-demo.js --dry-run"
   },
   "dependencies": {
     "clsx": "2.1.1",

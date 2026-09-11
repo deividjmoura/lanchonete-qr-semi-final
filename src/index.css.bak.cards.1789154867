@@ -191,33 +191,13 @@ body {
   }
 }
 
-/* Mídia genérica — NÃO força height:auto em imgs de card (quebra object-cover) */
-video, canvas, svg {
+/* cards de produto: impede overflow horizontal de grid */
+img, video, canvas, svg {
   max-width: 100%;
   height: auto;
-}
-img {
-  max-width: 100%;
-}
-/* Cards do cardápio: imagem preenche o slot de aspect-ratio */
-.card-produto img.card-produto-foto {
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  object-fit: cover;
-  display: block;
 }
 
 /* inputs full-width sem estourar */
 input, textarea, select, button {
   max-width: 100%;
-}
-
-/* Grid de produtos: cards com altura uniforme */
-.grid-cardapio {
-  align-items: stretch;
-}
-.grid-cardapio > * {
-  height: 100%;
-  min-width: 0;
 }
