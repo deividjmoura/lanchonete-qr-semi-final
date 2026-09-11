@@ -1,4 +1,4 @@
-/* Formatação + payload PIX (EMV "BR Code" com CRC16) — mesmo comportamento do server.js */
+/* Formatação + payload PIX (EMV / BR Code) com CRC16-CCITT-FALSE */
 
 export const BRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -15,10 +15,8 @@ export const elapsed = (ts: number) => {
 };
 
 /* ---------------- PIX EMV (BR Code) ---------------- */
-const soDigitos = (s: string) => s.replace(/\D/g, "");
-const asciiLimpo = (s: string) =>
-  s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9 ]/g, "").toUpperCase().trim();
 
+/** CRC16/CCITT-FALSE (poly 0x1021, init 0xFFFF) — padrão BACEN/BR Code */
 function crc16(str: string): string {
   let crc = 0xffff;
   for (let i = 0; i < str.length; i++) {
@@ -31,7 +29,52 @@ function crc16(str: string): string {
   return crc.toString(16).toUpperCase().padStart(4, "0");
 }
 
-const emv = (id: string, valor: string) => `${id}${String(valor.length).padStart(2, "0")}${valor}`;
+const emv = (id: string, valor: string) =>
+  `${id}${String(valor.length).padStart(2, "0")}${valor}`;
+
+const asciiLimpo = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Za-z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
+
+/**
+ * Normaliza a chave PIX sem destruir e-mail nem chave aleatória (EVP).
+ * - e-mail → lowercase
+ * - telefone → +55… (só dígitos com +)
+ * - CPF (11) / CNPJ (14) → só dígitos
+ * - EVP / outros → trim, mantém letras e hífens
+ */
+export function normalizarChavePix(raw: string): string {
+  const s = String(raw || "").trim();
+  if (!s) return "";
+
+  if (s.includes("@")) return s.toLowerCase();
+
+  // Já está em formato E.164 (+55…)
+  if (s.startsWith("+")) return s.replace(/\s/g, "");
+
+  const digits = s.replace(/\D/g, "");
+
+  // CPF
+  if (digits.length === 11 && !/[a-zA-Z]/.test(s)) return digits;
+  // CNPJ
+  if (digits.length === 14 && !/[a-zA-Z]/.test(s)) return digits;
+  // Celular BR 10/11 dígitos → +55
+  if (digits.length === 10 || digits.length === 11) {
+    if (/^[1-9]/.test(digits)) return `+55${digits}`;
+  }
+  // Já veio com 55…
+  if (digits.length >= 12 && digits.length <= 13 && digits.startsWith("55")) {
+    return `+${digits}`;
+  }
+
+  // EVP (UUID) ou chave desconhecida: não stripa letras
+  return s.replace(/\s/g, "");
+}
 
 export function montarPixEMV(opts: {
   chave: string;
@@ -40,20 +83,35 @@ export function montarPixEMV(opts: {
   valor?: number | null;
   txid?: string;
 }): string {
-  const chave = soDigitos(opts.chave) || opts.chave.trim();
+  const chave = normalizarChavePix(opts.chave);
+  if (!chave || chave === "00000000000" || chave === "00000000000000") {
+    // Payload de placeholder que o banco rejeita — evita QR “bonito” mas inválido
+    console.warn("[PIX] chave vazia ou placeholder — configure PIX_CHAVE no servidor");
+  }
+
   const nome = asciiLimpo(opts.nome).slice(0, 25) || "RECEBEDOR";
   const cidade = asciiLimpo(opts.cidade).slice(0, 15) || "BRASIL";
   const gui = emv("00", "BR.GOV.BCB.PIX");
   const key = emv("01", chave);
-  const info = emv("26", gui + key);
-  const txid = (opts.txid || "***").replace(/[^A-Za-z0-9]/g, "").slice(0, 25) || "***";
+  const mai = emv("26", gui + key);
 
+  let txid = String(opts.txid || "***")
+    .replace(/[^A-Za-z0-9]/g, "")
+    .slice(0, 25);
+  if (!txid) txid = "***";
+
+  const valorStr =
+    opts.valor != null && Number(opts.valor) > 0
+      ? Number(opts.valor).toFixed(2)
+      : "";
+
+  // Payload estático (sem 01/12). Campo 54 só se houver valor.
   let payload =
     emv("00", "01") +
-    info +
+    mai +
     emv("52", "0000") +
     emv("53", "986") +
-    (opts.valor && opts.valor > 0 ? emv("54", opts.valor.toFixed(2)) : "") +
+    (valorStr ? emv("54", valorStr) : "") +
     emv("58", "BR") +
     emv("59", nome) +
     emv("60", cidade) +

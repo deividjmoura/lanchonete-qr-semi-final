@@ -243,11 +243,10 @@ export const STAFF: Record<string, { senha: string; role: "admin" | "cozinha" | 
   caixa: { senha: "pub123", role: "caixa", nome: "Caixa" },
 };
 
-// Fallback local APENAS se /api/config/pix falhar.
-// Em produção o Caixa/Mesa usam as variáveis do servidor (Railway).
+// Dados fictícios — mesmo padrão do .env.example do projeto
 export const PIX_CONFIG: PixConfig = {
-  chave: "",
-  nome: "MAJOR PUB",
+  chave: "00000000000",
+  nome: "MAJOR PUB LTDA",
   cidade: "SAO PAULO",
 };
 

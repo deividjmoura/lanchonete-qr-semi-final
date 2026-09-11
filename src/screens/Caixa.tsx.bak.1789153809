@@ -8,11 +8,10 @@ import { useEffect, useMemo, useState } from "react";
 import { OpsShell, useAnuncios } from "../components/OpsShell";
 import { Badge, Btn, LivePill } from "../components/ui";
 import { ir, useAgora } from "../router";
+import { PIX_CONFIG } from "../lib/data";
 import type { FormaPagamento, Sessao } from "../lib/types";
 import { FORMAS, consumoSessao, pagoSessao, usePub } from "../store/usePub";
-import { api } from "../lib/api";
 import { BRL, elapsed, montarPixEMV } from "../lib/utils";
-import type { PixConfig } from "../lib/types";
 import { cn } from "../utils/cn";
 
 export default function Caixa() {
@@ -192,32 +191,15 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
     setFechando(false);
   }, [sessao.id]);
 
-  const [pixCfg, setPixCfg] = useState<PixConfig | null>(null);
-  useEffect(() => {
-    let alive = true;
-    api
-      .configPix()
-      .then((c) => {
-        if (alive && c?.chave) setPixCfg({ chave: c.chave, nome: c.nome, cidade: c.cidade });
-      })
-      .catch(() => {
-        /* sem PIX configurado no servidor */
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  const pixCodigo = useMemo(() => {
-    if (!pixCfg?.chave) return "";
-    return montarPixEMV({
-      chave: pixCfg.chave,
-      nome: pixCfg.nome || "RECEBEDOR",
-      cidade: pixCfg.cidade || "BRASIL",
-      valor: restante > 0.005 ? restante : total,
-      txid: `SESSAO${sessao.id}`,
-    });
-  }, [pixCfg, restante, total, sessao.id]);
+  const pixCodigo = useMemo(
+    () =>
+      montarPixEMV({
+        ...PIX_CONFIG,
+        valor: restante > 0.005 ? restante : total,
+        txid: `SESSAO${sessao.id}`,
+      }),
+    [restante, total, sessao.id]
+  );
 
   const usarPorPessoa = () => {
     if (pessoas > 0) setValor((restante / pessoas).toFixed(2));
@@ -403,13 +385,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
           <div className="mt-4 rounded-2xl border border-amber-400/25 bg-gradient-to-br from-amber-400/10 to-transparent p-4">
             <div className="flex items-center gap-4">
               <div className="rounded-xl bg-white p-2.5 shadow-lg shrink-0">
-                {pixCodigo ? (
-                  <QRCodeSVG value={pixCodigo} size={86} fgColor="#131009" level="M" />
-                ) : (
-                  <div className="size-[86px] rounded-lg bg-black/40 border border-white/10 flex items-center justify-center text-[9px] text-stone-500 text-center px-1">
-                    Configure PIX_CHAVE no servidor
-                  </div>
-                )}
+                <QRCodeSVG value={pixCodigo} size={86} fgColor="#131009" level="M" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-bold text-white">PIX do restante · {BRL(restante)}</p>
