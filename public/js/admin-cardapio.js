@@ -11,7 +11,8 @@ function renderProduto(p) {
         ? '<span class="chip off">estoque ' + (p.estoque != null ? p.estoque : 0) + ' ⚠️</span>'
         : '<span class="chip">estoque ' + (p.estoque != null ? p.estoque : 0) + '</span>')
     : '';
-  const fotoChip = p.fotoUrl ? '<span class="chip on">foto</span>' : '';
+    const fotoChip = p.fotoUrl ? '<span class="chip on">foto</span>' : '';
+  const setorChip = '<span class="chip">' + (p.setor === 'bar' ? '🍹 bar' : '🍳 cozinha') + '</span>';
   const adds = (p.adicionais || []).map(a => esc(a.nome) + ' (' + br(a.preco) + ')').join(', ') || '—';
   const rems = (p.removiveis || []).join(', ') || '—';
   const addRows = (p.adicionais || []).map(a =>
@@ -22,13 +23,21 @@ function renderProduto(p) {
     fotoThumb(p.fotoUrl) +
     '<div style="flex:1;min-width:0">' +
     '<strong>' + esc(p.nome) + '</strong> · <span class="price">' + br(p.preco) + '</span>' +
-    '<div class="prod-meta" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">' + statusChip + stockChip + fotoChip + '<span class="chip">#' + p.id + '</span></div>' +
+    '<div class="prod-meta" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">' + statusChip + setorChip + stockChip + fotoChip + '<span class="chip">#' + p.id + '</span></div>' +
     (p.descricao ? '<p class="muted" style="margin:6px 0 0;font-size:.9rem">' + esc(p.descricao) + '</p>' : '') +
     '<p class="muted" style="margin:6px 0 0;font-size:.85rem"><b>Adicionais:</b> ' + adds + '</p>' +
     '<p class="muted" style="margin:2px 0 0;font-size:.85rem"><b>Removíveis:</b> ' + rems + '</p>' +
     '<div class="edit-panel" id="edit-' + p.id + '" style="display:none">' +
-    '<div class="grid2"><div><label>Nome</label><input id="e-nome-' + p.id + '" value="' + esc(p.nome) + '"></div>' +
+        '<div class="grid2"><div><label>Nome</label><input id="e-nome-' + p.id + '" value="' + esc(p.nome) + '"></div>' +
     '<div><label>Preço</label><input id="e-preco-' + p.id + '" type="number" step="0.01" min="0" value="' + p.preco + '"></div></div>' +
+    '<div style="margin-top:10px"><label>Setor</label><select id="e-setor-' + p.id + '">' +
+    '<option value="cozinha"' + (p.setor === 'bar' ? '' : ' selected') + '>🍳 Cozinha</option>' +
+    '<option value="bar"' + (p.setor === 'bar' ? ' selected' : '') + '>🍹 Bar</option>' +
+    '</select></div>' +
+    '<div style="margin-top:10px"><label>Setor</label><select id="e-setor-' + p.id + '">' +
+    '<option value="cozinha"' + (p.setor === 'bar' ? '' : ' selected') + '>🍳 Cozinha</option>' +
+    '<option value="bar"' + (p.setor === 'bar' ? ' selected' : '') + '>🍹 Bar</option>' +
+    '</select></div>' +
     '<div style="margin-top:10px"><label>Descrição</label><textarea id="e-desc-' + p.id + '">' + esc(p.descricao || '') + '</textarea></div>' +
     '<div style="margin-top:10px"><label>Foto</label>' +
     '<input id="e-foto-' + p.id + '" type="text" inputmode="url" autocomplete="off" placeholder="https://… ou /uploads/….webp" value="' + esc(p.fotoUrl || '') + '">' +
@@ -114,9 +123,10 @@ async function criarProd() {
   } catch (e) {
     return toast(e.message || 'Erro na foto');
   }
+  const setor = document.getElementById('prodSetor').value;
   const r = await fetch('/api/admin/produtos', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ categoriaId, nome, preco, pedePontoCarne: false, fotoUrl: fotoUrl || null }),
+    body: JSON.stringify({ categoriaId, nome, preco, setor, pedePontoCarne: false, fotoUrl: fotoUrl || null }),
   });
   const data = await r.json();
   if (!r.ok) return toast(data.error || 'Erro');
@@ -157,6 +167,7 @@ async function salvarProd(id) {
     descricao: document.getElementById('e-desc-' + id).value.trim(),
     disponivel: document.getElementById('e-disp-' + id).checked,
     pedePontoCarne: false,
+    setor: document.getElementById('e-setor-' + id).value,
     controlaEstoque: document.getElementById('e-stock-' + id).checked,
     estoque: estRaw === '' ? null : Number(estRaw),
     estoqueMinimo: Number(document.getElementById('e-estmin-' + id).value) || 0,

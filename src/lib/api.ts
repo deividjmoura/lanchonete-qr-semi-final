@@ -75,7 +75,8 @@ export const api = {
   mesasPublic: () => apiGet<any[]>("/api/mesas"),
   adminMesas: () => apiGet<any[]>("/api/admin/mesas"),
   adminCardapio: () => apiGet<any[]>("/api/admin/cardapio"),
-  adminDashboard: () => apiGet<any>("/api/admin/dashboard"),
+  // (duplicata removida — ver adminDashboard(params) mais abaixo, que substituía
+  // esta silenciosamente em runtime; TS só acusa o conflito com checagem estrita)
   reorderCategorias: (ids: number[]) =>
     apiSend("/api/admin/categorias/ordem", "PUT", { ids }),
   reorderProdutos: (categoriaId: number, ids: number[]) =>

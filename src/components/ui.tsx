@@ -150,7 +150,7 @@ export function Modal({
             <button
               type="button"
               onClick={onClose}
-              className="btn-press absolute top-4 right-4 z-10 grid place-items-center size-10 rounded-full bg-black/45 border border-white/10 text-stone-300 hover:text-white cursor-pointer"
+              className="btn-press absolute top-4 right-4 z-10 grid place-items-center size-10 rounded-full bg-black/60 backdrop-blur-sm border border-white/15 text-white hover:bg-black/75 cursor-pointer"
             >
               <X className="size-4.5" />
             </button>

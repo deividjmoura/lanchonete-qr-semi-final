@@ -322,50 +322,32 @@ async function editarPedidoCliente(token, pedidoId, body) {
     client.release();
   }
 }
-
-async function avancarStatus(pedidoId, novoStatus) {
+/** Avança o pedido para o próximo status do fluxo (TRANSICOES). Usado pela cozinha/bar. */
+async function avancarStatusItem(pedidoId) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
     const { rows } = await client.query(
-      'SELECT id, status, sessao_id FROM pedidos WHERE id = $1 FOR UPDATE',
-      [pedidoId]
+      `SELECT id, status, sessao_id FROM pedidos WHERE id = $1 FOR UPDATE`,
+      [Number(pedidoId)]
     );
     const pedido = rows[0];
     if (!pedido) throw new ErroPedido(404, 'Pedido não encontrado');
 
-    const proximoEsperado = TRANSICOES[pedido.status];
-    if (!proximoEsperado || proximoEsperado !== novoStatus) {
-      throw new ErroPedido(
-        409,
-        `Pedido está em '${pedido.status}', não pode ir direto para '${novoStatus}'`
-      );
+    const proximo = TRANSICOES[pedido.status];
+    if (!proximo) {
+      throw new ErroPedido(409, `Pedido em status "${pedido.status}" não pode avançar`);
     }
 
-    await client.query('UPDATE pedidos SET status = $1 WHERE id = $2', [novoStatus, pedidoId]);
-
-    if (novoStatus === 'entregue') {
-      const { rows: totalRows } = await client.query(
-        `SELECT COALESCE(SUM(
-           ip.quantidade * (ip.preco_unitario + COALESCE(ad.total_adicionais, 0))
-         ), 0) AS total
-         FROM itens_pedido ip
-         LEFT JOIN (
-           SELECT item_pedido_id, SUM(preco_unitario) AS total_adicionais
-           FROM itens_pedido_adicionais GROUP BY item_pedido_id
-         ) ad ON ad.item_pedido_id = ip.id
-         WHERE ip.pedido_id = $1`,
-        [pedidoId]
-      );
-      await client.query('UPDATE mesa_sessoes SET valor_total = valor_total + $1 WHERE id = $2', [
-        Number(totalRows[0].total),
-        pedido.sessao_id,
-      ]);
-    }
+    const { rows: updated } = await client.query(
+      `UPDATE pedidos SET status = $2 WHERE id = $1
+       RETURNING id, status, criado_em, editado_em, cliente_nome, sessao_id`,
+      [pedido.id, proximo]
+    );
 
     await client.query('COMMIT');
-    return { id: pedidoId, status: novoStatus };
+    return { ...updated[0], statusAnterior: pedido.status };
   } catch (err) {
     try {
       await client.query('ROLLBACK');
@@ -623,6 +605,44 @@ async function getFilaGarcom() {
   return listarPedidosPorStatus(['concluido']);
 }
 
+async function getFilaBar() {
+  const { rows: pedidos } = await pool.query(
+    `SELECT DISTINCT p.id, p.status, p.criado_em, p.observacao_geral, p.cliente_nome, p.garcom_nome,
+            p.editado_em, m.numero AS mesa
+     FROM pedidos p
+     JOIN mesa_sessoes s ON s.id = p.sessao_id
+     JOIN mesas m ON m.id = s.mesa_id
+     JOIN itens_pedido ip ON ip.pedido_id = p.id
+     JOIN produtos pr ON pr.id = ip.produto_id
+     WHERE p.status = ANY($1::text[]) AND pr.categoria = 'bebida'
+     ORDER BY p.criado_em`,
+    [['recebido', 'em_producao', 'concluido']]
+  );
+  if (!pedidos.length) return [];
+
+  const ids = pedidos.map((p) => p.id);
+  const { rows: itensRows } = await pool.query(
+    `SELECT ip.id, ip.pedido_id, pr.nome, ip.quantidade, ip.ponto_carne, ip.observacao
+     FROM itens_pedido ip
+     JOIN produtos pr ON pr.id = ip.produto_id
+     WHERE ip.pedido_id = ANY($1::int[]) AND pr.categoria = 'bebida'
+     ORDER BY ip.id`,
+    [ids]
+  );
+  await anexarExtrasAosItens(itensRows);
+
+  const byPedido = new Map();
+  for (const item of itensRows) {
+    if (!byPedido.has(item.pedido_id)) byPedido.set(item.pedido_id, []);
+    byPedido.get(item.pedido_id).push(item);
+  }
+  return pedidos.map((p) => ({
+    ...p,
+    editadoEm: p.editado_em || null,
+    itens: byPedido.get(p.id) || [],
+  }));
+}
+
 async function checkinCliente(token, body) {
   const nome = String(body.clienteNome || body.cliente_nome || body.nome || '')
     .trim()
@@ -650,9 +670,10 @@ async function checkinCliente(token, body) {
 
 module.exports = {
   criarPedido,
-  avancarStatus,
+  avancarStatusItem,
   getSessao,
   getFilaCozinha,
+  getFilaBar,
   getFilaGarcom,
   checkinCliente,
   cancelarPedidoCliente,

@@ -9,18 +9,20 @@ const SESSION_COOKIE = 'lqr_session';
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const SCRYPT_KEYLEN = 64;
 
-const PAPEIS = Object.freeze(['admin', 'cozinha', 'caixa']);
+const PAPEIS = Object.freeze(['admin', 'cozinha', 'bar', 'caixa']);
 
-// admin acessa tudo; cozinha e caixa só o próprio domínio
+// admin acessa tudo; cozinha, bar e caixa só o próprio domínio
 const ACESSO = Object.freeze({
-  admin: new Set(['admin', 'cozinha', 'caixa']),
+  admin: new Set(['admin', 'cozinha', 'bar', 'caixa']),
   cozinha: new Set(['cozinha']),
+  bar: new Set(['bar']),
   caixa: new Set(['caixa']),
 });
 
 const HOME_POR_PAPEL = Object.freeze({
   admin: '/admin',
   cozinha: '/cozinha',
+  bar: '/bar',
   caixa: '/caixa',
 });
 
@@ -103,9 +105,10 @@ async function garantirStaffSeed() {
 
   const senhaPadrao = process.env.STAFF_SEED_PASSWORD || process.env.ADMIN_PASSWORD || 'troque-esta-senha';
   const hash = await hashSenha(senhaPadrao);
-  const users = [
+    const users = [
     { nome: 'Administrador', login: 'admin', papel: 'admin' },
     { nome: 'Cozinha', login: 'cozinha', papel: 'cozinha' },
+    { nome: 'Bar', login: 'bar', papel: 'bar' },
     { nome: 'Caixa', login: 'caixa', papel: 'caixa' },
   ];
   for (const u of users) {

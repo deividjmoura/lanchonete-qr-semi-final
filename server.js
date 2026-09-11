@@ -6,9 +6,9 @@ const path = require('path');
 const { getCardapio, invalidarCardapio } = require('./db/cardapio');
 const {
   criarPedido,
-  avancarStatus,
   getSessao,
   getFilaCozinha,
+  getFilaBar,
   getFilaGarcom,
   checkinCliente,
   cancelarPedidoCliente,
@@ -370,11 +370,10 @@ const server = http.createServer(async (req, res) => {
         await exigirAcesso(req, 'admin');
       } else if (p.startsWith('/api/caixa')) {
         await exigirAcesso(req, 'caixa');
-      } else if (
-        p.startsWith('/api/cozinha') ||
-        (p.match(/^\/api\/pedidos\/\d+\/status$/) && req.method === 'PATCH')
-      ) {
+      } else if (p.startsWith('/api/cozinha')) {
         await exigirAcesso(req, 'cozinha');
+      } else if (p.startsWith('/api/bar')) {
+        await exigirAcesso(req, 'bar');
       }
     } catch (e) {
       if (e instanceof ErroAuth) return json(res, e.status, { error: e.message });
@@ -422,18 +421,7 @@ const server = http.createServer(async (req, res) => {
         throw e;
       }
     }
-    if ((m = p.match(/^\/api\/pedidos\/(\d+)\/status$/)) && req.method === 'PATCH') {
-      try {
-        const b = await body(req);
-        const out = await avancarStatus(Number(m[1]), b.status);
-        broadcast('update', { type: 'status_alterado', pedidoId: Number(m[1]), status: b.status });
-        return json(res, 200, out);
-      } catch (e) {
-        if (e instanceof ErroPedido) return json(res, e.status, { error: e.message });
-        throw e;
-      }
-    }
-
+    
     if (p === '/api/mesas' && req.method === 'GET') {
       try {
         const rows = await listMesas();
@@ -658,6 +646,7 @@ const server = http.createServer(async (req, res) => {
     const hashHome = (papel) => {
       if (papel === 'cozinha') return '/#/cozinha';
       if (papel === 'caixa') return '/#/caixa';
+      if (papel === 'bar') return '/#/bar';
       return '/#/admin';
     };
 
@@ -669,6 +658,10 @@ const server = http.createServer(async (req, res) => {
       }
       if (p === '/cozinha') {
         res.writeHead(302, { Location: '/#/cozinha' });
+        return res.end();
+      }
+      if (p === '/bar') {
+        res.writeHead(302, { Location: '/#/bar' });
         return res.end();
       }
       if (p === '/caixa') {

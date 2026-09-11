@@ -562,14 +562,24 @@ export const usePub = create<PubState>((set, get) => ({
           (p.removiveis || []).map((r) => r.nome).filter(Boolean)
         );
         /* sync adicionais por nome (case-insensitive): remove sumidos, cria novos */
-        const desejados = (p.adicionais || [])
+        const norm = (s: string) => s.trim().toLowerCase();
+        const desejadosBrutos = (p.adicionais || [])
           .map((a) => ({
             nome: String(a.nome || "").trim(),
             preco: Number(a.preco) || 0,
           }))
           .filter((a) => a.nome);
+        // dedup: o mesmo nome pode ter sido digitado 2x no campo de texto do Admin —
+        // sem isso, cada ocorrência vira uma linha nova no banco (bug visto no modal
+        // com marcas de bebida repetidas na seção "adições")
+        const vistos = new Set<string>();
+        const desejados = desejadosBrutos.filter((a) => {
+          const k = norm(a.nome);
+          if (vistos.has(k)) return false;
+          vistos.add(k);
+          return true;
+        });
         const existentes = (antes?.adicionais || []).filter((a) => a.nome);
-        const norm = (s: string) => s.trim().toLowerCase();
         const desejadosSet = new Set(desejados.map((a) => norm(a.nome)));
         for (const old of existentes) {
           if (!desejadosSet.has(norm(old.nome))) {
@@ -595,8 +605,14 @@ export const usePub = create<PubState>((set, get) => ({
       } else {
         const created = await api.criarProduto(body);
         produtoId = Number(created.id);
+        const vistosNovo = new Set<string>();
         for (const a of p.adicionais || []) {
-          if (a.nome) await api.criarAdicional(produtoId, { nome: a.nome, preco: a.preco || 0 });
+          const nome = String(a.nome || "").trim();
+          if (!nome) continue;
+          const k = nome.trim().toLowerCase();
+          if (vistosNovo.has(k)) continue;
+          vistosNovo.add(k);
+          await api.criarAdicional(produtoId, { nome, preco: a.preco || 0 });
         }
         const rems = (p.removiveis || []).map((r) => r.nome).filter(Boolean);
         if (rems.length) await api.setRemoviveis(produtoId, rems);
@@ -764,7 +780,7 @@ export const usePub = create<PubState>((set, get) => ({
       });
   },
 
-  login: (usuario, senha) => {
+  login: (_usuario, _senha) => {
     /* compat: preferir loginApi no Login.tsx */
     return null;
   },

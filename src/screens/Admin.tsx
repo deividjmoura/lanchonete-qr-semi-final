@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowDown, ArrowUp, Boxes, ChevronDown, ChevronRight, Camera, ChartNoAxesColumn, CircleAlert, Copy, Download, Eye, EyeOff,
   FileText, LayoutGrid, Link2, Pencil, Plus, QrCode, Receipt, Trash2,
-  TrendingUp, Trophy, UserPlus, Users, UtensilsCrossed, Wallet,
+  TrendingUp, Trophy, UserPlus, Users, UtensilsCrossed,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -13,9 +13,9 @@ import { api } from "../lib/api";
 import { descricaoPadrao } from "../lib/descricao";
 import { imprimirRelatorioPdf } from "../lib/print";
 import { CATEGORIAS } from "../lib/data";
-import type { FormaPagamento, Produto, TipoProduto } from "../lib/types";
-import { FORMAS, faturamentoSemana, pagoSessao, totalSessao, usePub } from "../store/usePub";
-import { BRL, hora } from "../lib/utils";
+import type { Produto, TipoProduto } from "../lib/types";
+import { faturamentoSemana, pagoSessao, totalSessao, usePub } from "../store/usePub";
+import { BRL } from "../lib/utils";
 import { cn } from "../utils/cn";
 
 const ABAS = [

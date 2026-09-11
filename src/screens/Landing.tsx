@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 import {
-  ArrowRight, ChefHat, ConciergeBell, QrCode, Receipt, Smartphone,
+  ArrowRight, ChefHat, ConciergeBell, QrCode, Smartphone,
   Split, Wallet, Boxes, ChartNoAxesColumn, UtensilsCrossed, Zap, Beer,
 } from "lucide-react";
-import { Badge, Btn, LivePill, Logo, Secao } from "../components/ui";
+import { Badge, LivePill, Logo, Secao } from "../components/ui";
 import { ir } from "../router";
 import { HERO_IMG } from "../lib/data";
 import { usePub, totalSessao } from "../store/usePub";
@@ -34,7 +34,6 @@ const RECURSOS = [
 ];
 
 export default function Landing() {
-  const mesas = usePub((s) => s.mesas);
   const hydrateCardapio = usePub((s) => s.hydrateCardapio);
   const hydrateMesas = usePub((s) => s.hydrateMesas);
   const hydrateMe = usePub((s) => s.hydrateMe);

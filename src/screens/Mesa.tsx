@@ -12,7 +12,6 @@ import {
   Search,
   Pencil,
   ShoppingBag,
-  Sparkles,
   Timer,
   Trash2,
   UtensilsCrossed,
@@ -55,7 +54,6 @@ export default function Mesa({ token }: { token: string }) {
   const pedidos = usePub((s) => s.pedidos);
   const criarPedido = usePub((s) => s.criarPedido);
   const cancelarPedido = usePub((s) => s.cancelarPedido);
-  const editarPedido = usePub((s) => s.editarPedido);
   const categoriasStore = usePub((s) => s.categorias);
   const hydrateMesaToken = usePub((s) => s.hydrateMesaToken);
   const loading = usePub((s) => s.loading);
@@ -567,170 +565,36 @@ export default function Mesa({ token }: { token: string }) {
                       <h3 className="font-display text-xl sm:text-2xl text-amber-200/95 tracking-wide">{g.nome}</h3>
                       <span className="h-px flex-1 bg-gradient-to-l from-amber-400/40 to-transparent" />
                     </div>
-                    <motion.div layout className="grid grid-cols-2 gap-2.5 sm:gap-3.5 w-full min-w-0">
+                    <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3.5 w-full min-w-0">
                       <AnimatePresence mode="popLayout">
-                        {g.itens.map((p) => {
-                  const esgotado = p.estoque !== null && p.estoque <= 0;
-                  return (
-                    <motion.article
-                      key={p.id}
-                      layout
-                      initial={{ opacity: 0, y: 24 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.96 }}
-                      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-                      className={cn(
-                        "card-img-zoom group relative glass rounded-3xl overflow-hidden",
-                        esgotado && "opacity-60 grayscale-[0.6]"
-                      )}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setProdutoModal(p)}
-                        className="relative block w-full aspect-[4/3] sm:aspect-[5/4] overflow-hidden cursor-pointer text-left"
-                        aria-label={`Ver ${p.nome}`}
-                      >
-                        <img
-                          src={fotoSrc(p.foto) || FOTO_PLACEHOLDER}
-                          alt={p.nome}
-                          loading="lazy"
-                          decoding="async"
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = FOTO_PLACEHOLDER;
-                          }}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-coal-950/90 via-transparent to-transparent pointer-events-none" />
-                        <div className="absolute top-2 left-2 flex flex-wrap gap-1 max-w-[90%] pointer-events-none">
-                          {p.vendidos > 90 && (
-                            <Badge tone="amber">
-                              <Sparkles className="size-3" /> hit
-                            </Badge>
-                          )}
-                          {p.estoque !== null && p.estoque > 0 && p.estoque <= 8 && (
-                            <Badge tone="rose" pulse>
-                              {p.estoque} un
-                            </Badge>
-                          )}
-                          {esgotado && <Badge tone="zinc">esgotado</Badge>}
-                        </div>
-                        <p className="absolute bottom-2 left-2.5 right-2 font-mono text-sm sm:text-lg font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] pointer-events-none">
-                          {BRL(p.preco)}
-                        </p>
-                      </button>
-
-                      <div className="p-2.5 sm:p-4">
-                        <h3 className="font-semibold text-white leading-tight text-sm sm:text-base line-clamp-2">{p.nome}</h3>
-                        <p className="mt-1 text-[11px] sm:text-xs text-stone-400 leading-relaxed line-clamp-2 min-h-[2rem]">{descricaoExibida(p.descricao, p.nome, p.categoria)}</p>
-                        <div className="mt-2.5 sm:mt-3 flex items-center justify-between gap-1.5">
-                          <span className="text-[10px] uppercase tracking-wider font-bold text-stone-500">
-                            {p.tipo === "escolher" ? "escolha 1 opção" : p.tipo === "personalizavel" ? `${p.adicionais.length} adicionais` : "do jeito da casa"}
-                          </span>
-                          {p.tipo === "simples" ? (
-                            <Btn
-                              size="sm"
-                              disabled={esgotado}
-                              onClick={() =>
-                                addCart({ uid: Math.random().toString(36).slice(2), produto: p, qtd: 1, adicionais: [], removidos: [], escolha: null, obs: "" })
-                              }
-                            >
-                              <Plus className="size-4" /> Adicionar
-                            </Btn>
-                          ) : (
-                            <Btn size="sm" variant="outline" disabled={esgotado} onClick={() => setProdutoModal(p)}>
-                              {p.tipo === "escolher" ? "Escolher" : "Personalizar"} <ChevronRight className="size-3.5" />
-                            </Btn>
-                          )}
-                        </div>
-                      </div>
-                    </motion.article>
-                  );
-                        })}
+                        {g.itens.map((p) => (
+                          <ItemCard
+                            key={p.id}
+                            produto={p}
+                            onOpen={setProdutoModal}
+                            onAdd={(prod) =>
+                              addCart({ uid: Math.random().toString(36).slice(2), produto: prod, qtd: 1, adicionais: [], removidos: [], escolha: null, obs: "" })
+                            }
+                          />
+                        ))}
                       </AnimatePresence>
                     </motion.div>
                   </section>
                 ))}
               </div>
             ) : (
-              <motion.div layout className="grid grid-cols-2 gap-2.5 sm:gap-3.5 pb-28 lg:pb-10 w-full min-w-0">
+              <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3.5 pb-28 lg:pb-10 w-full min-w-0">
                 <AnimatePresence mode="popLayout">
-                  {lista.map((p) => {
-                  const esgotado = p.estoque !== null && p.estoque <= 0;
-                  return (
-                    <motion.article
+                  {lista.map((p) => (
+                    <ItemCard
                       key={p.id}
-                      layout
-                      initial={{ opacity: 0, y: 24 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.96 }}
-                      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-                      className={cn(
-                        "card-img-zoom group relative glass rounded-3xl overflow-hidden",
-                        esgotado && "opacity-60 grayscale-[0.6]"
-                      )}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setProdutoModal(p)}
-                        className="relative block w-full aspect-[4/3] sm:aspect-[5/4] overflow-hidden cursor-pointer text-left"
-                        aria-label={`Ver ${p.nome}`}
-                      >
-                        <img
-                          src={fotoSrc(p.foto) || FOTO_PLACEHOLDER}
-                          alt={p.nome}
-                          loading="lazy"
-                          decoding="async"
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = FOTO_PLACEHOLDER;
-                          }}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-coal-950/90 via-transparent to-transparent pointer-events-none" />
-                        <div className="absolute top-2 left-2 flex flex-wrap gap-1 max-w-[90%] pointer-events-none">
-                          {p.vendidos > 90 && (
-                            <Badge tone="amber">
-                              <Sparkles className="size-3" /> hit
-                            </Badge>
-                          )}
-                          {p.estoque !== null && p.estoque > 0 && p.estoque <= 8 && (
-                            <Badge tone="rose" pulse>
-                              {p.estoque} un
-                            </Badge>
-                          )}
-                          {esgotado && <Badge tone="zinc">esgotado</Badge>}
-                        </div>
-                        <p className="absolute bottom-2 left-2.5 right-2 font-mono text-sm sm:text-lg font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] pointer-events-none">
-                          {BRL(p.preco)}
-                        </p>
-                      </button>
-
-                      <div className="p-2.5 sm:p-4">
-                        <h3 className="font-semibold text-white leading-tight text-sm sm:text-base line-clamp-2">{p.nome}</h3>
-                        <p className="mt-1 text-[11px] sm:text-xs text-stone-400 leading-relaxed line-clamp-2 min-h-[2rem]">{descricaoExibida(p.descricao, p.nome, p.categoria)}</p>
-                        <div className="mt-2.5 sm:mt-3 flex items-center justify-between gap-1.5">
-                          <span className="text-[10px] uppercase tracking-wider font-bold text-stone-500">
-                            {p.tipo === "escolher" ? "escolha 1 opção" : p.tipo === "personalizavel" ? `${p.adicionais.length} adicionais` : "do jeito da casa"}
-                          </span>
-                          {p.tipo === "simples" ? (
-                            <Btn
-                              size="sm"
-                              disabled={esgotado}
-                              onClick={() =>
-                                addCart({ uid: Math.random().toString(36).slice(2), produto: p, qtd: 1, adicionais: [], removidos: [], escolha: null, obs: "" })
-                              }
-                            >
-                              <Plus className="size-4" /> Adicionar
-                            </Btn>
-                          ) : (
-                            <Btn size="sm" variant="outline" disabled={esgotado} onClick={() => setProdutoModal(p)}>
-                              {p.tipo === "escolher" ? "Escolher" : "Personalizar"} <ChevronRight className="size-3.5" />
-                            </Btn>
-                          )}
-                        </div>
-                      </div>
-                    </motion.article>
-                  );
-                  })}
+                      produto={p}
+                      onOpen={setProdutoModal}
+                      onAdd={(prod) =>
+                        addCart({ uid: Math.random().toString(36).slice(2), produto: prod, qtd: 1, adicionais: [], removidos: [], escolha: null, obs: "" })
+                      }
+                    />
+                  ))}
                 </AnimatePresence>
               </motion.div>
             )}
@@ -833,6 +697,87 @@ export default function Mesa({ token }: { token: string }) {
 }
 
 /* ---------- painel com abas (desktop) ---------- */
+/**
+ * Card de item do cardápio — usada tanto na visão agrupada ("Tudo")
+ * quanto na visão filtrada/busca. Extraída para evitar duplicação de JSX
+ * (a causa raiz de cards com aparência divergente entre as duas listagens).
+ */
+function ItemCard({
+  produto: p,
+  onOpen,
+  onAdd,
+}: {
+  produto: Produto;
+  onOpen: (p: Produto) => void;
+  onAdd: (p: Produto) => void;
+}) {
+  const esgotado = p.estoque !== null && p.estoque <= 0;
+  return (
+    <motion.article
+      layout
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+      className={cn(
+        "card-img-zoom group relative glass rounded-3xl overflow-hidden",
+        esgotado && "opacity-60 grayscale-[0.6]"
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => onOpen(p)}
+        className="relative block w-full aspect-[4/3] sm:aspect-[5/4] overflow-hidden cursor-pointer text-left"
+        aria-label={`Ver ${p.nome}`}
+      >
+        <img
+          src={fotoSrc(p.foto) || FOTO_PLACEHOLDER}
+          alt={p.nome}
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = FOTO_PLACEHOLDER;
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-coal-950/90 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute top-2 left-2 flex flex-wrap gap-1 max-w-[90%] pointer-events-none">
+          {p.estoque !== null && p.estoque > 0 && p.estoque <= 8 && (
+            <Badge tone="rose" pulse>
+              {p.estoque} un
+            </Badge>
+          )}
+          {esgotado && <Badge tone="zinc">esgotado</Badge>}
+        </div>
+        <p className="absolute bottom-2 left-2.5 right-2 font-mono text-sm sm:text-lg font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] pointer-events-none">
+          {BRL(p.preco)}
+        </p>
+      </button>
+
+      <div className="p-2.5 sm:p-4">
+        <h3 className="font-semibold text-white leading-tight text-sm sm:text-base line-clamp-2">{p.nome}</h3>
+        <p className="mt-1 text-[11px] sm:text-xs text-stone-400 leading-relaxed line-clamp-2 min-h-[2rem]">
+          {descricaoExibida(p.descricao, p.nome, p.categoria)}
+        </p>
+        <div className="mt-2.5 sm:mt-3 flex items-center justify-between gap-1.5">
+          <span className="text-[10px] uppercase tracking-wider font-bold text-stone-500">
+            {p.tipo === "escolher" ? "escolha 1 opção" : p.tipo === "personalizavel" ? `${p.adicionais.length} adicionais` : "do jeito da casa"}
+          </span>
+          {p.tipo === "simples" ? (
+            <Btn size="sm" disabled={esgotado} onClick={() => onAdd(p)}>
+              <Plus className="size-4" /> Adicionar
+            </Btn>
+          ) : (
+            <Btn size="sm" variant="outline" disabled={esgotado} onClick={() => onOpen(p)}>
+              {p.tipo === "escolher" ? "Escolher" : "Personalizar"} <ChevronRight className="size-3.5" />
+            </Btn>
+          )}
+        </div>
+      </div>
+    </motion.article>
+  );
+}
+
 function PainelComAbas({
   cart,
   totalConta,

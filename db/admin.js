@@ -59,6 +59,7 @@ function mapProdutoRow(p) {
     fotoUrl: p.foto_url,
     disponivel: p.disponivel,
     pedePontoCarne: p.pede_ponto_carne,
+    setor: p.setor,
     controlaEstoque: Boolean(p.controla_estoque),
     estoque: p.estoque != null ? Number(p.estoque) : null,
     estoqueMinimo: Number(p.estoque_minimo || 0),
@@ -214,6 +215,14 @@ async function atualizarProduto(id, body) {
     campos.push(`controla_estoque = $${i++}`);
     vals.push(Boolean(body.controlaEstoque ?? body.controla_estoque));
   }
+  if (body.setor !== undefined) {
+    const setor = String(body.setor).trim();
+    if (!['cozinha', 'bar'].includes(setor)) {
+      throw new ErroAdmin(400, "setor precisa ser 'cozinha' ou 'bar'");
+    }
+    campos.push(`setor = $${i++}`);
+    vals.push(setor);
+  }
   if (body.estoque !== undefined) {
     campos.push(`estoque = $${i++}`);
     vals.push(body.estoque === null || body.estoque === '' ? null : Number(body.estoque));
@@ -226,8 +235,8 @@ async function atualizarProduto(id, body) {
 
   vals.push(id);
   const { rows } = await pool.query(
-    `UPDATE produtos SET ${campos.join(', ')} WHERE id = $${i}
-     RETURNING id, categoria_id, nome, descricao, preco, foto_url, disponivel, pede_ponto_carne, controla_estoque, estoque, estoque_minimo`,
+        `UPDATE produtos SET ${campos.join(', ')} WHERE id = $${i}
+     RETURNING id, categoria_id, nome, descricao, preco, foto_url, disponivel, pede_ponto_carne, setor, controla_estoque, estoque, estoque_minimo, ordem`,
     vals
   );
   if (!rows[0]) throw new ErroAdmin(404, 'Produto não encontrado');

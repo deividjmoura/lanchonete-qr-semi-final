@@ -1,15 +1,20 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { BellRing, CheckCheck, ChefHat, QrCode, Receipt, UtensilsCrossed } from "lucide-react";
+import { BellRing, CheckCheck, ChefHat, QrCode, Receipt, UtensilsCrossed, XCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { usePub } from "../store/usePub";
 import type { EventoTipo } from "../lib/types";
 import { hora } from "../lib/utils";
 
+// Mapa precisa cobrir todo EventoTipo — o TS acusa erro em build se faltar
+// uma chave, mas o `npm run build` (vite/esbuild) não faz checagem de tipos,
+// então um evento sem ícone só quebra em produção quando disparado
+// ("Element type is invalid"). Foi o caso de "pedido-cancelado" nesta branch.
 const ICONES: Record<EventoTipo, typeof BellRing> = {
   "pedido-novo": Receipt,
   "pedido-aceito": ChefHat,
   "pedido-pronto": UtensilsCrossed,
   "pedido-entregue": CheckCheck,
+  "pedido-cancelado": XCircle,
   "pix-avisado": QrCode,
   "sessao-fechada": BellRing,
 };

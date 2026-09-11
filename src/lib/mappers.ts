@@ -77,11 +77,20 @@ export function mapCardapio(apiCats: any[]): { categorias: Categoria[]; produtos
   const produtos: Produto[] = [];
   for (const c of apiCats || []) {
     for (const p of c.produtos || []) {
-      const adicionais = (p.adicionais || []).map((a: any) => ({
+      const adicionaisBrutos: { id: string; nome: string; preco: number }[] = (p.adicionais || []).map((a: any) => ({
         id: String(a.id),
         nome: String(a.nome),
         preco: Number(a.preco) || 0,
       }));
+      // blindagem: se já existem linhas duplicadas no banco (mesmo nome), o modal
+      // não deve exibir a mesma opção 2x — mantém a primeira ocorrência
+      const nomesVistos = new Set<string>();
+      const adicionais = adicionaisBrutos.filter((a: { id: string; nome: string; preco: number }) => {
+        const k = a.nome.trim().toLowerCase();
+        if (nomesVistos.has(k)) return false;
+        nomesVistos.add(k);
+        return true;
+      });
       const removiveis = (p.removiveis || []).map((nome: string, i: number) => ({
         id: `r-${p.id}-${i}`,
         nome: String(nome),
@@ -128,7 +137,7 @@ export function mapMesas(rows: any[]): Mesa[] {
   }));
 }
 
-export function mapSessaoFromMesaApi(token: string, mesaMeta: Mesa | undefined, data: any): {
+export function mapSessaoFromMesaApi(_token: string, mesaMeta: Mesa | undefined, data: any): {
   sessao: Sessao | null;
   pedidos: Pedido[];
 } {
