@@ -1,3 +1,29 @@
+#!/usr/bin/env bash
+# =============================================================================
+# Patch FINAL: elimina 500 do /api/admin/relatorio
+# - timezone só como literal validado (nunca $N)
+# - comparação por intervalo timestamptz (correto p/ Neon)
+# - erro devolve mensagem no JSON (não só 500 vazio)
+# Execute na RAIZ do projeto.
+# =============================================================================
+set -euo pipefail
+cd "$(dirname "$0")"
+
+if [[ ! -f db/relatorio.js ]]; then
+  echo "❌ Rode na raiz do projeto"
+  exit 1
+fi
+
+echo "▶ Aplicando fix definitivo do relatório..."
+
+cp -n db/relatorio.js "db/relatorio.js.bak.$(date +%s)" 2>/dev/null || true
+cp -n db/dashboard.js "db/dashboard.js.bak.$(date +%s)" 2>/dev/null || true
+cp -n server.js "server.js.bak.$(date +%s)" 2>/dev/null || true
+
+# ---------------------------------------------------------------------------
+# db/relatorio.js — robusto
+# ---------------------------------------------------------------------------
+cat > db/relatorio.js << 'JS'
 // Relatório de vendas por período (dados para PDF / impressão).
 const pool = require('./pool');
 const { resumoDia } = require('./dashboard');
@@ -181,3 +207,68 @@ async function relatorioVendas({ from, to }) {
 }
 
 module.exports = { relatorioVendas };
+JS
+echo "  ✓ db/relatorio.js"
+
+# ---------------------------------------------------------------------------
+# server.js — devolve mensagem no 500 do relatório (em vez de corpo vazio)
+# ---------------------------------------------------------------------------
+python3 << 'PY'
+from pathlib import Path
+p = Path("server.js")
+text = p.read_text(encoding="utf-8")
+
+old = '''    if (p === '/api/admin/relatorio' && req.method === 'GET') {
+      try {
+        const q = new URL(req.url, 'http://localhost').searchParams;
+        return json(res, 200, await relatorioVendas({ from: q.get('from'), to: q.get('to') }));
+      } catch (e) {
+        if (e.status) return json(res, e.status, { error: e.message });
+        throw e;
+      }
+    }'''
+
+new = '''    if (p === '/api/admin/relatorio' && req.method === 'GET') {
+      try {
+        const q = new URL(req.url, 'http://localhost').searchParams;
+        return json(res, 200, await relatorioVendas({ from: q.get('from'), to: q.get('to') }));
+      } catch (e) {
+        console.error('[api/admin/relatorio]', e && e.stack ? e.stack : e);
+        const status = (e && e.status) || 500;
+        return json(res, status, { error: (e && e.message) || 'Erro interno no relatório' });
+      }
+    }'''
+
+if old in text:
+    text = text.replace(old, new)
+    p.write_text(text, encoding="utf-8")
+    print("  ✓ server.js: erro do relatório agora retorna JSON com mensagem")
+else:
+    # versão mais tolerante
+    if "api/admin/relatorio" in text and "[api/admin/relatorio]" not in text:
+        import re
+        text2, n = re.subn(
+            r"if \(p === '/api/admin/relatorio' && req\.method === 'GET'\) \{[\s\S]*?\}",
+            new.strip(),
+            text,
+            count=1,
+        )
+        if n:
+            p.write_text(text2, encoding="utf-8")
+            print("  ✓ server.js atualizado (regex)")
+        else:
+            print("  ⚠ bloco server.js não encontrado — ok se já trata erro")
+    else:
+        print("  ✓ server.js já parece logar o erro do relatório")
+PY
+
+echo ""
+echo "✅ Aplicado."
+echo ""
+echo "OBRIGATÓRIO reiniciar o Node (o código fica em memória):"
+echo "  # pare o server (Ctrl+C) e:"
+echo "  npm start"
+echo ""
+echo "Depois abra de novo Funções → Relatório → Buscar."
+echo "Se ainda falhar, o toast deve mostrar a MENSAGEM real do erro (não só 'Erro interno')."
+echo "Copie essa mensagem e me envie."

@@ -568,9 +568,8 @@ const server = http.createServer(async (req, res) => {
         const q = new URL(req.url, 'http://localhost').searchParams;
         return json(res, 200, await relatorioVendas({ from: q.get('from'), to: q.get('to') }));
       } catch (e) {
-        console.error('[api/admin/relatorio]', e && e.stack ? e.stack : e);
-        const status = (e && e.status) || 500;
-        return json(res, status, { error: (e && e.message) || 'Erro interno no relatório' });
+        if (e.status) return json(res, e.status, { error: e.message });
+        throw e;
       }
     }
     if (p === '/api/admin/historico/purge' && req.method === 'POST') {
