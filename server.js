@@ -190,6 +190,24 @@ const server = http.createServer(async (req, res) => {
 
     let m;
     if (p === '/api/events' && req.method === 'GET') {
+      // Segurança: exige staff autenticado OU token de mesa válido na query
+      // (evita que qualquer visitante ouça broadcasts de pedidos/PIX)
+      let autorizado = false;
+      try {
+        const staff = await getStaffDaRequisicao(req);
+        if (staff) autorizado = true;
+      } catch (_) {}
+      if (!autorizado) {
+        const mesaToken = (u.searchParams.get('mesa') || u.searchParams.get('token') || '').trim();
+        if (mesaToken && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(mesaToken)) {
+          // Token de mesa presente — permite (cliente da mesa)
+          autorizado = true;
+        }
+      }
+      if (!autorizado) {
+        return json(res, 401, { error: 'SSE requer autenticação de staff ou token de mesa (?mesa=UUID)' });
+      }
+
       applySecurityHeaders(res);
       res.writeHead(200, {
         'Content-Type': 'text/event-stream; charset=utf-8',

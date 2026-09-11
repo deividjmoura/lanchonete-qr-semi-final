@@ -833,29 +833,10 @@ async function setStatusPedido(pedidoId, statusAlvo, setor = null) {
       return { ...updated[0], statusAnterior: pedido.status };
     }
 
-    // Conta quantos itens pertencem ao setor pedido (se houver filtro)
-    let setorEfetivo = setor;
+    // Avança itens do setor (ou todos se setor null)
     if (setor) {
-      const { rows: cnt } = await client.query(
-        `SELECT COUNT(*)::int AS n
-         FROM itens_pedido ip
-         JOIN produtos pr ON pr.id = ip.produto_id
-         WHERE ip.pedido_id = $1
-           AND COALESCE(pr.setor, 'cozinha') = $2`,
-        [pedido.id, setor]
-      );
-      // Se o pedido não tem NENHUM item deste setor (ex.: só bebida e quem
-      // chamou foi a cozinha), avança TODOS os itens — evita 200 "mentiroso"
-      // e o 409 posterior no garçom.
-      if (!cnt[0] || cnt[0].n === 0) {
-        setorEfetivo = null;
-      }
-    }
-
-    let rowCount = 0;
-    if (setorEfetivo) {
       if (alvo === 'em_producao') {
-        const r = await client.query(
+        await client.query(
           `UPDATE itens_pedido ip
            SET status = 'em_producao'
            FROM produtos pr
@@ -863,40 +844,34 @@ async function setStatusPedido(pedidoId, statusAlvo, setor = null) {
              AND ip.pedido_id = $1
              AND COALESCE(pr.setor, 'cozinha') = $2
              AND COALESCE(ip.status, 'recebido') = 'recebido'`,
-          [pedido.id, setorEfetivo]
+          [pedido.id, setor]
         );
-        rowCount = r.rowCount || 0;
       } else if (alvo === 'concluido') {
-        const r = await client.query(
+        await client.query(
           `UPDATE itens_pedido ip
            SET status = 'concluido'
            FROM produtos pr
            WHERE ip.produto_id = pr.id
              AND ip.pedido_id = $1
-             AND COALESCE(pr.setor, 'cozinha') = $2
-             AND COALESCE(ip.status, 'recebido') IN ('recebido', 'em_producao')`,
-          [pedido.id, setorEfetivo]
+             AND COALESCE(pr.setor, 'cozinha') = $2`,
+          [pedido.id, setor]
         );
-        rowCount = r.rowCount || 0;
       } else if (alvo === 'recebido') {
-        const r = await client.query(
+        await client.query(
           `UPDATE itens_pedido ip
            SET status = 'recebido'
            FROM produtos pr
            WHERE ip.produto_id = pr.id
              AND ip.pedido_id = $1
              AND COALESCE(pr.setor, 'cozinha') = $2`,
-          [pedido.id, setorEfetivo]
+          [pedido.id, setor]
         );
-        rowCount = r.rowCount || 0;
       }
     } else {
-      // Sem filtro de setor (ou fallback): avança todos os itens do pedido
-      const r = await client.query(
+      await client.query(
         `UPDATE itens_pedido SET status = $2 WHERE pedido_id = $1`,
         [pedido.id, alvo]
       );
-      rowCount = r.rowCount || 0;
     }
 
     const atualizado = await sincronizarStatusPedido(client, pedido.id);
@@ -904,8 +879,6 @@ async function setStatusPedido(pedidoId, statusAlvo, setor = null) {
     return {
       ...(atualizado || { id: pedido.id, status: pedido.status }),
       statusAnterior: pedido.status,
-      itensAtualizados: rowCount,
-      setorAplicado: setorEfetivo,
     };
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch (_) {}

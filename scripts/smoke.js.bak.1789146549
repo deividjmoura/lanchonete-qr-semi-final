@@ -132,21 +132,8 @@ async function main() {
   const produtos = extrairProdutos(cardapio);
   if (!produtos.length) fail('cardápio vazio — rode npm run db:seed');
   const disponiveis = produtos.filter((p) => p.disponivel !== false);
-  // Preferir produto de cozinha (comida) para o fluxo clássico do smoke.
-  // Bebidas (setor=bar) quebravam o teste quando a cozinha avançava o pedido.
-  const deCozinha = disponiveis.filter((p) => {
-    const s = (p.setor || p.setorProducao || '').toLowerCase();
-    const nome = (p.nome || p.name || '').toLowerCase();
-    const cat = (p.categoria || p.category || '').toLowerCase();
-    if (s === 'bar') return false;
-    if (s === 'cozinha') return true;
-    // heurística: evita água/refrigerante/cerveja quando o cardápio não traz setor
-    if (/água|agua|refrigerante|coca|suco|cerveja|chop|bebida/.test(nome)) return false;
-    if (/bebida/.test(cat)) return false;
-    return true;
-  });
-  const produto = deCozinha[0] || disponiveis[0] || produtos[0];
-  const produto2 = deCozinha[1] || disponiveis.find((x) => (x.id || x.productId) !== (produto.id || produto.productId)) || disponiveis[0] || produtos[0];
+  const produto = disponiveis[0] || produtos[0];
+  const produto2 = disponiveis[1] || disponiveis[0] || produtos[0];
   const produtoId = produto.id || produto.productId;
   const produtoId2 = produto2.id || produto2.productId;
   const preco = Number(produto.preco ?? produto.price ?? 0);
