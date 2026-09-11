@@ -25,14 +25,14 @@ async function relatorioVendas({ from, to }) {
   const resumo = await resumoDia({ from, to });
 
   const { rows: porDia } = await pool.query(
-    `SELECT (fechada_em AT TIME ZONE 'America/Sao_Paulo')::date AS dia,
+    `SELECT fechada_em::date AS dia,
             COUNT(*)::int AS contas,
             COALESCE(SUM(COALESCE(valor_cobrado, valor_total)), 0)::float AS faturamento
      FROM mesa_sessoes
      WHERE status = 'fechada'
-       AND (fechada_em AT TIME ZONE 'America/Sao_Paulo')::date >= $1::date
-       AND (fechada_em AT TIME ZONE 'America/Sao_Paulo')::date <= $2::date
-     GROUP BY (fechada_em AT TIME ZONE 'America/Sao_Paulo')::date
+       AND fechada_em::date >= $1::date
+       AND fechada_em::date <= $2::date
+     GROUP BY fechada_em::date
      ORDER BY dia`,
     [from, to]
   );
@@ -43,8 +43,8 @@ async function relatorioVendas({ from, to }) {
      FROM mesa_sessoes s
      JOIN mesas m ON m.id = s.mesa_id
      WHERE s.status = 'fechada'
-       AND s.(fechada_em AT TIME ZONE 'America/Sao_Paulo')::date >= $1::date
-       AND s.(fechada_em AT TIME ZONE 'America/Sao_Paulo')::date <= $2::date
+       AND s.fechada_em::date >= $1::date
+       AND s.fechada_em::date <= $2::date
      ORDER BY s.fechada_em DESC
      LIMIT 500`,
     [from, to]

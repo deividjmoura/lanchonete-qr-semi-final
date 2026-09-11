@@ -165,18 +165,10 @@ function Painel() {
       : [...produtos].sort((a, b) => (b.vendidos || 0) - (a.vendidos || 0)).slice(0, 5);
   const maxTop = Math.max(1, ...top.map((p) => p.vendidos || 0));
 
-  // Semana real: últimos 7 dias vindos da API (dash.porDia)
-  const semanaApi: { dia: string; label: string; faturamento: number; contas: number }[] =
-    Array.isArray(dash?.porDia) ? dash.porDia : [];
-  const semana =
-    semanaApi.length > 0
-      ? semanaApi.map((d) => ({
-          dia: d.label || d.dia,
-          valor: Number(d.faturamento || 0),
-        }))
-      : faturamentoSemana(sessoes).map((d) =>
-          d.dia === "Hoje" ? { ...d, valor: fatHoje + emAberto } : d
-        );
+  // Semana: por enquanto só preenche "Hoje" com dado real (histórico diário exige endpoint extra)
+  const semana = faturamentoSemana(sessoes).map((d) =>
+    d.dia === "Hoje" ? { ...d, valor: fatHoje + emAberto } : d
+  );
   const maxSemana = Math.max(1, ...semana.map((d) => d.valor));
 
   const cards = [
@@ -254,7 +246,9 @@ function Painel() {
               </div>
             ))}
           </div>
-          
+          <p className="mt-3 text-[10px] text-stone-600">
+            Histórico dos outros dias ainda é placeholder — use a aba Relatório para período real.
+          </p>
         </div>
 
         {/* top produtos */}

@@ -106,108 +106,25 @@ function Painel() {
   const pedidos = usePub((s) => s.pedidos);
   const produtos = usePub((s) => s.produtos);
 
-  const [dash, setDash] = useState<any>(null);
-  const [loadingDash, setLoadingDash] = useState(true);
+  const fechadas = sessoes.filter((s) => s.status === "fechada");
+  const fatHoje = fechadas.reduce((a, s) => a + pagoSessao(s), 0) + 620;
+  const emAberto = sessoes
+    .filter((s) => s.status === "aberta")
+    .reduce((a, s) => a + totalSessao(pedidos, s.id), 0);
+  const qtdPedidos = pedidos.length + 87;
+  const ticket = qtdPedidos ? (fatHoje + emAberto) / qtdPedidos : 0;
 
-  useEffect(() => {
-    let alive = true;
-    const load = () => {
-      api
-        .adminDashboard()
-        .then((d) => {
-          if (alive) {
-            setDash(d);
-            setLoadingDash(false);
-          }
-        })
-        .catch(() => {
-          if (alive) setLoadingDash(false);
-        });
-    };
-    load();
-    const t = setInterval(load, 30_000);
-    return () => {
-      alive = false;
-      clearInterval(t);
-    };
-  }, []);
+  const semana = faturamentoSemana(sessoes);
+  const maxSemana = Math.max(...semana.map((d) => d.valor));
 
-  // Fonte oficial: API /api/admin/dashboard (sessões fechadas de HOJE no banco)
-  const fatHoje = Number(dash?.faturamento ?? 0);
-  const qtdPedidos = Number(dash?.pedidosTotal ?? 0);
-  const ticketApi = Number(dash?.ticketMedio ?? 0);
-  // Consumo em aberto: soma valor_total das sessões abertas (já entregue)
-  const emAberto =
-    Number(dash?.emAberto?.valorEntregue ?? 0) ||
-    sessoes
-      .filter((s) => s.status === "aberta")
-      .reduce((a, s) => a + (s.valorTotal != null ? Number(s.valorTotal) : totalSessao(pedidos, s.id)), 0);
-
-  // Ticket médio oficial = faturamento / contas fechadas (não por pedido)
-  const ticket = ticketApi > 0 ? ticketApi : qtdPedidos ? fatHoje / Math.max(1, Number(dash?.contasFechadas || 1)) : 0;
-
-  // Campeões: preferir top da API; fallback para produtos.vendidos (quase sempre 0)
-  const topApi: { nome: string; quantidade: number; receita?: number }[] = Array.isArray(dash?.topProdutos)
-    ? dash.topProdutos
-    : [];
-  const top =
-    topApi.length > 0
-      ? topApi.slice(0, 5).map((t, i) => {
-          const prod = produtos.find((p) => p.nome === t.nome);
-          return {
-            id: prod?.id ?? i,
-            nome: t.nome,
-            vendidos: Number(t.quantidade || 0),
-            foto: prod?.foto || prod?.fotoUrl || "/assets/demo/placeholder.webp",
-            setor: prod?.setor,
-          };
-        })
-      : [...produtos].sort((a, b) => (b.vendidos || 0) - (a.vendidos || 0)).slice(0, 5);
-  const maxTop = Math.max(1, ...top.map((p) => p.vendidos || 0));
-
-  // Semana real: últimos 7 dias vindos da API (dash.porDia)
-  const semanaApi: { dia: string; label: string; faturamento: number; contas: number }[] =
-    Array.isArray(dash?.porDia) ? dash.porDia : [];
-  const semana =
-    semanaApi.length > 0
-      ? semanaApi.map((d) => ({
-          dia: d.label || d.dia,
-          valor: Number(d.faturamento || 0),
-        }))
-      : faturamentoSemana(sessoes).map((d) =>
-          d.dia === "Hoje" ? { ...d, valor: fatHoje + emAberto } : d
-        );
-  const maxSemana = Math.max(1, ...semana.map((d) => d.valor));
+  const top = [...produtos].sort((a, b) => b.vendidos - a.vendidos).slice(0, 5);
+  const maxTop = top[0]?.vendidos || 1;
 
   const cards = [
-    {
-      icon: CircleAlert,
-      label: "faturamento hoje",
-      valor: loadingDash ? "…" : BRL(fatHoje),
-      sub: "sessões fechadas no caixa",
-      tom: "from-amber-400/25 text-amber-300",
-    },
-    {
-      icon: Users,
-      label: "consumo em aberto",
-      valor: loadingDash ? "…" : BRL(emAberto),
-      sub: "comandas no salão",
-      tom: "from-sky-400/25 text-sky-300",
-    },
-    {
-      icon: Receipt,
-      label: "pedidos no dia",
-      valor: loadingDash ? "…" : String(qtdPedidos),
-      sub: "criados hoje",
-      tom: "from-violet-400/25 text-violet-300",
-    },
-    {
-      icon: TrendingUp,
-      label: "ticket médio",
-      valor: loadingDash ? "…" : BRL(ticket),
-      sub: "por conta fechada",
-      tom: "from-lime-400/25 text-lime-300",
-    },
+    { icon: CircleAlert, label: "faturamento hoje", valor: BRL(fatHoje), sub: "sessões fechadas + base", tom: "from-amber-400/25 text-amber-300" },
+    { icon: Users, label: "consumo em aberto", valor: BRL(emAberto), sub: "comandas no salão", tom: "from-sky-400/25 text-sky-300" },
+    { icon: Receipt, label: "pedidos no dia", valor: String(qtdPedidos), sub: "desde a abertura", tom: "from-violet-400/25 text-violet-300" },
+    { icon: TrendingUp, label: "ticket médio", valor: BRL(ticket), sub: "por pedido", tom: "from-lime-400/25 text-lime-300" },
   ];
 
   return (
@@ -241,20 +158,22 @@ function Painel() {
           <div className="flex items-end gap-2.5 sm:gap-4 h-44">
             {semana.map((d, i) => (
               <div key={d.dia} className="flex-1 flex flex-col items-center gap-2">
-                <div
+                <span className="font-mono text-[10px] text-stone-500 tabular">{BRL(d.valor).replace("R$", "").trim()}</span>
+                <motion.div
+                  initial={{ height: 0 }}
+                  animate={{ height: `${Math.max(6, (d.valor / maxSemana) * 100)}%` }}
+                  transition={{ delay: 0.15 + i * 0.06, type: "spring", stiffness: 140, damping: 18 }}
                   className={cn(
-                    "w-full rounded-t-lg transition-all",
+                    "w-full rounded-t-xl",
                     d.dia === "Hoje"
                       ? "bg-gradient-to-t from-amber-500 to-amber-300 shadow-[0_0_28px_-4px_rgba(255,150,20,0.5)]"
                       : "bg-white/[0.09]"
                   )}
-                  style={{ height: `${Math.max(4, (d.valor / maxSemana) * 100)}%` }}
                 />
                 <span className={cn("text-[10px] font-bold uppercase tracking-wider", d.dia === "Hoje" ? "text-amber-300" : "text-stone-500")}>{d.dia}</span>
               </div>
             ))}
           </div>
-          
         </div>
 
         {/* top produtos */}
@@ -266,12 +185,9 @@ function Painel() {
             <Badge tone="amber">top 5</Badge>
           </div>
           <div className="space-y-3">
-            {top.length === 0 && (
-              <p className="text-sm text-stone-500">Nenhuma venda registrada hoje.</p>
-            )}
             {top.map((p, i) => (
-              <div key={p.id ?? p.nome} className="flex items-center gap-3">
-                <img src={p.foto || "/assets/demo/placeholder.webp"} alt="" className="size-11 rounded-xl object-cover" />
+              <div key={p.id} className="flex items-center gap-3">
+                <img src={p.foto} alt="" className="size-11 rounded-xl object-cover" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold text-white truncate">
@@ -288,7 +204,7 @@ function Painel() {
                   <div className="mt-1.5 h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
-                      animate={{ width: `${((p.vendidos || 0) / maxTop) * 100}%` }}
+                      animate={{ width: `${(p.vendidos / maxTop) * 100}%` }}
                       transition={{ delay: 0.2 + i * 0.07, type: "spring", stiffness: 120, damping: 18 }}
                       className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500"
                     />
@@ -303,7 +219,7 @@ function Painel() {
   );
 }
 
-
+/* ================= CARDÁPIO (CRUD) ================= */
 function Cardapio() {
   const produtos = usePub((s) => s.produtos);
   const categorias = usePub((s) => s.categorias);

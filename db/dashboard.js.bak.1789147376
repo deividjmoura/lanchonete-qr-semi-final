@@ -1,39 +1,32 @@
 // Resumo do dia para o admin (faturamento, ticket, top produtos).
-// Timezone fixo: America/Sao_Paulo (Neon/Postgres costuma rodar em UTC).
 const pool = require('./pool');
-
-const TZ = process.env.APP_TIMEZONE || 'America/Sao_Paulo';
-
-/** Expressão SQL: data local do estabelecimento a partir de um timestamptz/timestamp. */
-function sqlDateLocal(col) {
-  return `(${col} AT TIME ZONE '${TZ}')::date`;
-}
 
 /**
  * @param {{ from?: string|null, to?: string|null }} [opts]
- * from/to em YYYY-MM-DD (opcional). Default: hoje no fuso do pub.
+ * from/to em YYYY-MM-DD (opcional). Default: hoje (timezone do servidor / DB).
  */
 async function resumoDia(opts = {}) {
   const from = opts.from || null;
   const to = opts.to || null;
 
-  const rangeSql = from && to ? { start: from, end: to } : null;
+  const rangeSql = from && to
+    ? { start: from, end: to }
+    : null;
 
-  // Sessões fechadas no período (faturamento real)
   const sessoesQ = rangeSql
     ? await pool.query(
         `SELECT id, valor_total, desconto, taxa_servico, valor_cobrado, forma_pagamento, fechada_em, aberta_em
          FROM mesa_sessoes
          WHERE status = 'fechada'
-           AND ${sqlDateLocal('fechada_em')} >= $1::date
-           AND ${sqlDateLocal('fechada_em')} <= $2::date`,
+           AND fechada_em::date >= $1::date
+           AND fechada_em::date <= $2::date`,
         [rangeSql.start, rangeSql.end]
       )
     : await pool.query(
         `SELECT id, valor_total, desconto, taxa_servico, valor_cobrado, forma_pagamento, fechada_em, aberta_em
          FROM mesa_sessoes
          WHERE status = 'fechada'
-           AND ${sqlDateLocal('fechada_em')} = (CURRENT_TIMESTAMP AT TIME ZONE '${TZ}')::date`
+           AND fechada_em::date = CURRENT_DATE`
       );
 
   const sessoes = sessoesQ.rows;
@@ -51,20 +44,18 @@ async function resumoDia(opts = {}) {
     porForma[k] = (porForma[k] || 0) + valorSessao(s);
   }
 
-  // Pedidos criados no período
   const pedidosQ = rangeSql
     ? await pool.query(
         `SELECT status, COUNT(*)::int AS n
          FROM pedidos
-         WHERE ${sqlDateLocal('criado_em')} >= $1::date
-           AND ${sqlDateLocal('criado_em')} <= $2::date
+         WHERE criado_em::date >= $1::date AND criado_em::date <= $2::date
          GROUP BY status`,
         [rangeSql.start, rangeSql.end]
       )
     : await pool.query(
         `SELECT status, COUNT(*)::int AS n
          FROM pedidos
-         WHERE ${sqlDateLocal('criado_em')} = (CURRENT_TIMESTAMP AT TIME ZONE '${TZ}')::date
+         WHERE criado_em::date = CURRENT_DATE
          GROUP BY status`
       );
 
@@ -95,11 +86,9 @@ async function resumoDia(opts = {}) {
     valorEntregue: Number(abertas[0].total || 0),
   };
 
-  // Top produtos do período
   const topQ = rangeSql
     ? await pool.query(
         `SELECT pr.nome,
-                COALESCE(pr.setor, 'cozinha') AS setor,
                 SUM(ip.quantidade)::int AS qtd,
                 SUM(
                   ip.quantidade * (
@@ -114,16 +103,14 @@ async function resumoDia(opts = {}) {
            FROM itens_pedido_adicionais
            GROUP BY item_pedido_id
          ) ad ON ad.item_pedido_id = ip.id
-         WHERE ${sqlDateLocal('p.criado_em')} >= $1::date
-           AND ${sqlDateLocal('p.criado_em')} <= $2::date
-         GROUP BY pr.nome, pr.setor
+         WHERE p.criado_em::date >= $1::date AND p.criado_em::date <= $2::date
+         GROUP BY pr.nome
          ORDER BY qtd DESC
          LIMIT 8`,
         [rangeSql.start, rangeSql.end]
       )
     : await pool.query(
         `SELECT pr.nome,
-                COALESCE(pr.setor, 'cozinha') AS setor,
                 SUM(ip.quantidade)::int AS qtd,
                 SUM(
                   ip.quantidade * (
@@ -138,64 +125,22 @@ async function resumoDia(opts = {}) {
            FROM itens_pedido_adicionais
            GROUP BY item_pedido_id
          ) ad ON ad.item_pedido_id = ip.id
-         WHERE ${sqlDateLocal('p.criado_em')} = (CURRENT_TIMESTAMP AT TIME ZONE '${TZ}')::date
-         GROUP BY pr.nome, pr.setor
+         WHERE p.criado_em::date = CURRENT_DATE
+         GROUP BY pr.nome
          ORDER BY qtd DESC
          LIMIT 8`
       );
 
   const topProdutos = topQ.rows.map((r) => ({
     nome: r.nome,
-    setor: r.setor || 'cozinha',
     quantidade: r.qtd,
     receita: Number(Number(r.receita || 0).toFixed(2)),
   }));
 
-  // Histórico dos últimos 7 dias (sempre no fuso do pub) — para o gráfico da semana
-  const { rows: porDiaRows } = await pool.query(
-    `WITH dias AS (
-       SELECT generate_series(
-         ((CURRENT_TIMESTAMP AT TIME ZONE '${TZ}')::date - 6),
-         (CURRENT_TIMESTAMP AT TIME ZONE '${TZ}')::date,
-         '1 day'::interval
-       )::date AS dia
-     )
-     SELECT d.dia,
-            COUNT(s.id)::int AS contas,
-            COALESCE(SUM(COALESCE(s.valor_cobrado, s.valor_total)), 0)::float AS faturamento
-     FROM dias d
-     LEFT JOIN mesa_sessoes s
-       ON s.status = 'fechada'
-      AND ${sqlDateLocal('s.fechada_em')} = d.dia
-     GROUP BY d.dia
-     ORDER BY d.dia`
-  );
-
-  const DIAS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-  const hojeLocal = porDiaRows.length
-    ? String(porDiaRows[porDiaRows.length - 1].dia).slice(0, 10)
-    : null;
-
-  const porDia = porDiaRows.map((r) => {
-    const diaStr =
-      r.dia instanceof Date
-        ? r.dia.toISOString().slice(0, 10)
-        : String(r.dia).slice(0, 10);
-    // weekday a partir da data YYYY-MM-DD em UTC noon para evitar shift
-    const wd = new Date(diaStr + 'T12:00:00Z').getUTCDay();
-    const label = diaStr === hojeLocal ? 'Hoje' : DIAS_PT[wd];
-    return {
-      dia: diaStr,
-      label,
-      contas: r.contas,
-      faturamento: Number(Number(r.faturamento || 0).toFixed(2)),
-    };
-  });
-
   return {
     periodo: rangeSql
       ? { from: rangeSql.start, to: rangeSql.end }
-      : { from: null, to: null, label: 'hoje', timezone: TZ },
+      : { from: null, to: null, label: 'hoje' },
     faturamento: Number(faturamento.toFixed(2)),
     contasFechadas,
     ticketMedio: Number(ticketMedio.toFixed(2)),
@@ -205,9 +150,9 @@ async function resumoDia(opts = {}) {
     mesas,
     emAberto,
     topProdutos,
-    porDia, // últimos 7 dias — gráfico da semana
   };
 }
+
 
 /** Top produtos do dia (público — só id, nome, qtd). */
 async function topProdutosHoje(limit = 6) {
@@ -222,7 +167,7 @@ async function topProdutosHoje(limit = 6) {
      FROM itens_pedido ip
      JOIN produtos pr ON pr.id = ip.produto_id
      JOIN pedidos p ON p.id = ip.pedido_id
-     WHERE ${sqlDateLocal('p.criado_em')} = (CURRENT_TIMESTAMP AT TIME ZONE '${TZ}')::date
+     WHERE p.criado_em::date = CURRENT_DATE
        AND p.status <> 'cancelado'
      GROUP BY pr.id, pr.nome, pr.descricao, pr.preco, pr.foto_url
      ORDER BY quantidade DESC, pr.nome ASC
@@ -240,3 +185,4 @@ async function topProdutosHoje(limit = 6) {
 }
 
 module.exports = { resumoDia, topProdutosHoje };
+
