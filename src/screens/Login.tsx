@@ -145,15 +145,6 @@ export default function Login() {
             )}
           </AnimatePresence>
 
-          <p className="mt-6 text-center text-[11px] text-stone-500 leading-relaxed">
-            Ambiente demo — senha de todos os papéis:{" "}
-            <button
-              onClick={() => setSenha("pub123")}
-              className="font-mono text-amber-300/90 hover:text-amber-200 underline decoration-dotted underline-offset-2 cursor-pointer"
-            >
-              pub123
-            </button>
-          </p>
         </div>
       </motion.div>
     </div>

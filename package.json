@@ -8,7 +8,6 @@
     "preview": "vite preview",
     "server": "node server.js",
     "start": "node server.js",
-    "qr": "python3 generate_qr.py",
     "db:migrate": "node db/migrate.js",
     "db:seed": "node db/seed.js",
     "db:reset-senha": "node scripts/reset-senha.js",
@@ -20,9 +19,7 @@
     "dev:ui": "vite",
     "start:api": "node server.js",
     "start:prod": "npm run build && node server.js",
-    "postbuild": "node -e \"console.log('SPA em dist/ — npm start serve o design React se dist/ existir')\"",
-    "fotos:demo": "node scripts/seed-fotos-demo.js",
-    "fotos:demo:dry": "node scripts/seed-fotos-demo.js --dry-run"
+    "postbuild": "node -e \"console.log('SPA em dist/ — npm start serve o design React se dist/ existir')\""
   },
   "dependencies": {
     "clsx": "2.1.1",

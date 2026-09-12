@@ -7,7 +7,6 @@
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Neon](https://img.shields.io/badge/Neon-00E599?style=for-the-badge&logo=neon&logoColor=black)](https://neon.tech/)
-[![Status](https://img.shields.io/badge/status-v2.9%20operacional-22c55e?style=for-the-badge)](./ROADMAP.md)
 
 </div>
 
@@ -29,7 +28,7 @@ Uma mesa pode fazer **vários pedidos** na mesma visita. O que vale no caixa é 
 
 ---
 
-## 📊 Status atual (v2.9)
+## 📊 Status atual
 
 | Módulo | Status |
 |:------:|:------:|
@@ -41,9 +40,7 @@ Uma mesa pode fazer **vários pedidos** na mesma visita. O que vale no caixa é 
 | Estoque · dashboard · relatório · purge | ✅ |
 | PIX (QR EMV + aviso multi) | ✅ |
 | Fotos WebP (upload + persistência) | ✅ |
-| Gateway pagamento · WhatsApp · PWA · multi-loja | ⬜ v3 |
-
-Detalhes e plano → **[ROADMAP.md](./ROADMAP.md)**
+| Gateway pagamento · WhatsApp · PWA · multi-loja | ⬜ planejado |
 
 ---
 
@@ -58,69 +55,6 @@ Detalhes e plano → **[ROADMAP.md](./ROADMAP.md)**
 | 💵 Caixa | `/caixa` | Fecha conta, divisão, desconto/taxa, confirma PIX |
 | ⚙️ Admin | `/admin` | Cardápio, mesas/QR, garçons, dashboard, relatório, histórico, purge |
 | 🔐 Login | `/login` | Auth por papel (`admin` · `cozinha` · `bar` · `caixa`) |
-
----
-
-## 🚀 Subir local
-
-```bash
-npm install
-cp .env.example .env   # edite DATABASE_URL, PIX_* e STAFF_SEED_PASSWORD
-npm run db:migrate
-npm run db:seed
-npm start
-```
-
-Abre em `http://localhost:3000`.
-
-### SPA (React)
-
-```bash
-npm run build          # gera dist/
-npm start              # server.js serve a API + dist/ se existir
-# ou em dev:
-npm run dev:ui         # Vite
-npm run dev:api        # API na 3000
-```
-
-### Variáveis importantes
-
-```env
-DATABASE_URL=postgres://usuario:senha@host/db
-DATABASE_SSL=true
-# se o certificado do provedor falhar na validação:
-# DATABASE_SSL_REJECT_UNAUTHORIZED=false
-
-STAFF_SEED_PASSWORD=troque-esta-senha
-APP_TIMEZONE=America/Sao_Paulo
-
-PIX_CHAVE=00000000000
-PIX_NOME=NOME DO RECEBEDOR
-PIX_CIDADE=CIDADE
-```
-
-> CPF/CNPJ com pontuação funcionam (normalizamos no EMV). **Não commite** chave real no repositório.
-
-### Scripts úteis
-
-```bash
-npm run db:reset-senha   # alinha admin/cozinha/bar/caixa com STAFF_SEED_PASSWORD
-npm run test:smoke       # fluxo completo multi-mesa (servidor precisa estar up)
-npm run fotos:dry        # preview de correção de fotos do cardápio
-npm run fotos:fix        # grava caminhos leves /assets/demo/*.webp
-```
-
----
-
-## ✅ Testes (smoke)
-
-Com o servidor rodando:
-
-```bash
-npm run test:smoke
-```
-
-Cobre: login por papel, 2 mesas em paralelo, pedidos concorrentes na mesma sessão, avanço cozinha → entrega garçom, PIX multi-aviso, pagamento parcial e fechamento.
 
 ---
 
@@ -143,9 +77,9 @@ POST /api/mesas/:token/pix-informado
 
 ## ✂️ Divisão de conta (caixa)
 
-1. Informe N pessoas → valor por pessoa  
-2. Registre pagamentos parciais  
-3. Ao **Fechar conta**, o que faltar é quitado  
+1. Informe N pessoas → valor por pessoa
+2. Registre pagamentos parciais
+3. Ao **Fechar conta**, o que faltar é quitado
 
 ```http
 POST /api/caixa/sessoes/:id/pagamentos
@@ -156,11 +90,9 @@ Body: { "valor": 25.50, "formaPagamento": "pix" }
 
 ## 📷 Fotos no cardápio
 
-1. Admin: arquivo ou link `https://…`  
-2. Servidor otimiza (~480px, WebP) via **sharp**  
+1. Admin: arquivo ou link `https://…`
+2. Servidor otimiza (~480px, WebP) via **sharp**
 3. Persistência atual: `foto_url` no Postgres (data URL ou link externo)
-
-> Base64 no banco funciona e sobrevive a redeploy, mas **não escala bem**. Preferir arquivos em `/assets` ou object storage (planejado no v3).
 
 ---
 
@@ -197,28 +129,20 @@ lanchonete-qr/
 │   └── migrations/     # 0001 … 0015+
 ├── src/                # React (Vite) — telas operacionais + admin
 ├── public/             # HTML legado / assets / favicons
-├── scripts/            # smoke, seed helpers, fotos
-├── ROADMAP.md
-└── .env.example
+└── scripts/            # smoke, seed helpers, fotos
 ```
 
 ---
 
 ## 🔒 Segurança (resumo)
 
-- Sessão staff em cookie **httpOnly** (scrypt na senha)  
-- Rate-limit em memória em login e pedidos (por IP)  
-- Headers básicos (CSP, nosniff, frame-deny)  
-- SSE: staff autenticado **ou** `?mesa=<token-uuid>`  
+- Sessão staff em cookie **httpOnly** (scrypt na senha)
+- Rate-limit em memória em login e pedidos (por IP)
+- Headers básicos (CSP, nosniff, frame-deny)
+- SSE: staff autenticado **ou** `?mesa=<token-uuid>`
 - Preços e regras de adicional/remoção **sempre no servidor**
 
 Limitações conhecidas: rate-limit não compartilha entre instâncias; CSRF formal ainda não implementado; PIX sem conciliação bancária automática.
-
----
-
-## 🗺️ Roadmap
-
-Ver **[ROADMAP.md](./ROADMAP.md)** — v2 fechado no essencial operacional; v3 foca gateway, PWA, WhatsApp, storage de mídia e caminho multi-loja.
 
 ---
 
