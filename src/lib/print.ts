@@ -125,9 +125,8 @@ const CSS_CUPOM = `
 `;
 
 /**
- * Impressão confiável via iframe oculto (não depende de pop-up).
- * window.open("", ...) + noopener no Chrome abre about:blank branco e
- * bloqueia document.write — por isso a página ficava vazia.
+ * Impressão via iframe same-origin + document.write.
+ * Blob URL é bloqueado pelo CSP (frame-src default-src 'self') — não usar blob em iframe.
  */
 function openPrintWindow(title: string, bodyHtml: string, autoPrint = true) {
   const html = `<!DOCTYPE html>
@@ -142,94 +141,83 @@ ${bodyHtml}
 </body>
 </html>`;
 
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
+  const printFromIframe = (): boolean => {
+    try {
+      const iframe = document.createElement("iframe");
+      iframe.setAttribute("title", title);
+      iframe.setAttribute("aria-hidden", "true");
+      iframe.style.cssText =
+        "position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none;";
+      document.body.appendChild(iframe);
 
-  /* 1) tenta iframe (melhor p/ impressora térmica, sem aba extra) */
-  try {
-    const iframe = document.createElement("iframe");
-    iframe.setAttribute("title", title);
-    iframe.style.cssText =
-      "position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none;";
-    document.body.appendChild(iframe);
+      const doc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!doc) {
+        iframe.remove();
+        return false;
+      }
 
-    const finish = () => {
-      try {
-        URL.revokeObjectURL(url);
-      } catch (_) {}
-      setTimeout(() => {
-        try {
-          iframe.remove();
-        } catch (_) {}
-      }, 1500);
-    };
+      doc.open();
+      doc.write(html);
+      doc.close();
 
-    iframe.onload = () => {
-      try {
-        const win = iframe.contentWindow;
-        if (!win) throw new Error("sem contentWindow");
-        if (autoPrint) {
-          setTimeout(() => {
-            try {
-              win.focus();
-              win.print();
-            } catch (_) {}
-            finish();
-          }, 200);
-        } else {
-          finish();
-        }
-      } catch (e) {
-        console.warn("[print iframe]", e);
-        /* fallback: abre blob numa aba */
-        const w = window.open(url, "_blank");
-        if (!w) {
-          alert("Permita pop-ups para imprimir o cupom");
-        } else if (autoPrint) {
-          setTimeout(() => {
-            try {
-              w.focus();
-              w.print();
-            } catch (_) {}
-          }, 400);
-        }
+      const win = iframe.contentWindow;
+      if (!win) {
+        iframe.remove();
+        return false;
+      }
+
+      const cleanup = () => {
         setTimeout(() => {
           try {
-            URL.revokeObjectURL(url);
+            iframe.remove();
           } catch (_) {}
-        }, 60_000);
-        try {
-          iframe.remove();
-        } catch (_) {}
+        }, 1500);
+      };
+
+      if (autoPrint) {
+        setTimeout(() => {
+          try {
+            win.focus();
+            win.print();
+          } catch (e) {
+            console.warn("[print]", e);
+          }
+          cleanup();
+        }, 250);
+      } else {
+        cleanup();
       }
-    };
+      return true;
+    } catch (e) {
+      console.warn("[print iframe]", e);
+      return false;
+    }
+  };
 
-    iframe.src = url;
-    return;
-  } catch (e) {
-    console.warn("[print]", e);
-  }
+  if (printFromIframe()) return;
 
-  /* 2) fallback absoluto: nova aba com blob URL (sem document.write) */
-  const w = window.open(url, "_blank");
+  /* Fallback: nova aba same-origin com document.write (sem noopener) */
+  const w = window.open("about:blank", "_blank", "width=420,height=720");
   if (!w) {
     alert("Permita pop-ups para imprimir o cupom");
-    URL.revokeObjectURL(url);
     return;
   }
-  if (autoPrint) {
-    setTimeout(() => {
-      try {
-        w.focus();
-        w.print();
-      } catch (_) {}
-    }, 400);
+  try {
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    if (autoPrint) {
+      setTimeout(() => {
+        try {
+          w.focus();
+          w.print();
+        } catch (_) {}
+      }, 300);
+    }
+  } catch (e) {
+    console.warn("[print window]", e);
+    alert("Não foi possível preparar a impressão. Tente novamente.");
   }
-  setTimeout(() => {
-    try {
-      URL.revokeObjectURL(url);
-    } catch (_) {}
-  }, 60_000);
 }
 
 function extrasLinhas(it: ItemPedido): string[] {
@@ -621,18 +609,17 @@ export function imprimirRelatorioPdf(opts: {
 </body>
 </html>`;
 
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const w = window.open(url, "_blank", "width=960,height=800");
+  const w = window.open("about:blank", "_blank", "width=960,height=800");
   if (!w) {
     alert("Permita pop-ups para abrir o relatório");
-    URL.revokeObjectURL(url);
     return;
   }
-  /* revoga depois; a aba já carregou o blob */
-  setTimeout(() => {
-    try {
-      URL.revokeObjectURL(url);
-    } catch (_) {}
-  }, 120_000);
+  try {
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  } catch (e) {
+    console.warn("[relatorio]", e);
+    alert("Não foi possível abrir o relatório.");
+  }
 }

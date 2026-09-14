@@ -105,6 +105,8 @@ function applySecurityHeaders(res) {
         "font-src 'self' https://fonts.gstatic.com data:",
         "script-src 'self' 'unsafe-inline'",
         "connect-src 'self'",
+        "frame-src 'self' blob:",
+        "child-src 'self' blob:",
         "frame-ancestors 'none'",
         "base-uri 'self'",
         "form-action 'self'",
