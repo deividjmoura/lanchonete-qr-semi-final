@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowDown, ArrowUp, Boxes, ChevronDown, ChevronRight, Camera, ChartNoAxesColumn, CircleAlert, Copy, Download, Eye, EyeOff,
-  FileText, LayoutGrid, Link2, Pencil, Plus, QrCode, Receipt, Trash2,
+  FileText, LayoutGrid, Link2, Pencil, Plus, Printer, QrCode, Receipt, Trash2,
   TrendingUp, Trophy, UserPlus, Users, UtensilsCrossed,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -11,7 +11,8 @@ import { Badge, Btn, Input, Modal } from "../components/ui";
 import { ir } from "../router";
 import { api } from "../lib/api";
 import { descricaoPadrao } from "../lib/descricao";
-import { imprimirRelatorioPdf } from "../lib/print";
+import { imprimirComandaHistorico, imprimirRelatorioPdf } from "../lib/print";
+import type { ItemPedido, Pedido } from "../lib/types";
 import { CATEGORIAS } from "../lib/data";
 import type { Produto, TipoProduto } from "../lib/types";
 import { faturamentoSemana, pagoSessao, totalSessao, usePub } from "../store/usePub";
@@ -1535,6 +1536,76 @@ function Relatorio() {
 
 /* ================= FUNÇÕES (estoque + relatório + histórico + purge) ================= */
 
+
+/** Converte linha do histórico (API) em Pedido para o cupom de impressão. */
+function pedidoFromHistorico(p: any): Pedido {
+  const itensRaw = Array.isArray(p.itens) ? p.itens : [];
+  const itens: ItemPedido[] = itensRaw.map((it: any, idx: number) => {
+    const qtd = Number(it.qtd ?? it.quantidade ?? 1) || 1;
+    const precoBase = Number(it.precoBase ?? it.preco_unitario ?? it.preco ?? 0);
+    const rawUnit = it.totalUnit ?? it.preco_total_unit ?? (Number(it.subtotal ?? it.total ?? 0) / qtd);
+    const totalUnit = Number(rawUnit) || precoBase;
+    const adicionais = Array.isArray(it.adicionais)
+      ? it.adicionais.map((a: any) =>
+          typeof a === "string"
+            ? { id: a, nome: a, preco: 0 }
+            : { id: String(a.id ?? a.nome), nome: String(a.nome ?? a), preco: Number(a.preco ?? 0) }
+        )
+      : [];
+    const removidos = Array.isArray(it.removidos)
+      ? it.removidos.map((r: any) => (typeof r === "string" ? r : String(r.nome ?? r)))
+      : Array.isArray(it.removiveis)
+        ? it.removiveis.map((r: any) => String(r.nome ?? r))
+        : [];
+    let escolha = null as ItemPedido["escolha"];
+    if (it.escolha) {
+      escolha =
+        typeof it.escolha === "string"
+          ? { id: it.escolha, nome: it.escolha, preco: 0 }
+          : {
+              id: String(it.escolha.id ?? it.escolha.nome),
+              nome: String(it.escolha.nome ?? it.escolha),
+              preco: Number(it.escolha.preco ?? 0),
+            };
+    }
+    return {
+      id: String(it.id ?? `h-${idx}`),
+      produtoId: Number(it.produtoId ?? it.produto_id ?? 0),
+      nome: String(it.nome ?? it.produto_nome ?? "Item"),
+      qtd,
+      precoBase,
+      adicionais,
+      removidos,
+      escolha,
+      obs: String(it.obs ?? it.observacao ?? ""),
+      totalUnit,
+      status: it.status,
+      setor: it.setor === "bar" ? "bar" : it.setor === "cozinha" ? "cozinha" : undefined,
+    };
+  });
+
+  const criadoRaw = p.criado_em || p.criadoEm || Date.now();
+  const criadoEm =
+    typeof criadoRaw === "number" ? criadoRaw : new Date(criadoRaw).getTime() || Date.now();
+
+  const mesaNome =
+    p.mesaNome ||
+    (p.mesa != null ? `Mesa ${p.mesa}` : null) ||
+    (p.mesa_numero != null ? `Mesa ${p.mesa_numero}` : "Mesa");
+
+  return {
+    id: Number(p.id),
+    sessaoId: Number(p.sessaoId ?? p.sessao_id ?? 0),
+    mesaId: Number(p.mesaId ?? p.mesa_id ?? 0),
+    mesaNome: String(mesaNome),
+    clienteNome: String(p.cliente_nome || p.clienteNome || p.cliente || ""),
+    itens,
+    status: (p.status as Pedido["status"]) || "entregue",
+    criadoEm,
+    total: Number(p.totalPedido ?? p.total ?? 0),
+  };
+}
+
 /* ================= HISTÓRICO EXPANDÍVEL ================= */
 function HistoricoPedidos({
   histFrom,
@@ -1563,7 +1634,7 @@ function HistoricoPedidos({
     <section className="glass rounded-3xl p-5">
       <h3 className="font-display text-2xl text-white mb-1">Histórico de pedidos</h3>
       <p className="text-[11px] text-stone-500 mb-4">
-        Clique em um pedido para ver itens, adicionais e total.
+        Clique em um pedido para ver itens, adicionais, total e imprimir o cupom.
       </p>
       <div className="flex flex-wrap gap-3 items-end">
         <label className="text-xs text-stone-400">
@@ -1685,7 +1756,24 @@ function HistoricoPedidos({
                       ))}
                     </ul>
                   )}
-                  <div className="flex justify-end pt-1 border-t border-white/[0.05]">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/[0.05]">
+                    <Btn
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const forma =
+                          p.forma_pagamento ||
+                          p.formaPagamento ||
+                          p.forma ||
+                          p.pagamento_forma ||
+                          null;
+                        imprimirComandaHistorico(pedidoFromHistorico(p), {
+                          formaPagamento: forma,
+                        });
+                      }}
+                    >
+                      <Printer className="size-3.5" /> Imprimir cupom
+                    </Btn>
                     <span className="text-xs font-bold text-lime-300">
                       Total {BRL(total)}
                     </span>

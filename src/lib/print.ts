@@ -293,17 +293,53 @@ const TITULO_SETOR: Record<SetorComanda, string> = {
  * - cozinha / bar: só mesa, pedido, cliente, hora e itens (sem preço)
  * - garcom: itens prontos para levar
  */
+function renderItensComPreco(itens: ItemPedido[]): string {
+  if (!itens.length) {
+    return `<div class="meta center">— sem itens —</div>`;
+  }
+  return itens
+    .map((it) => {
+      const unit = Number(it.totalUnit ?? it.precoBase ?? 0);
+      const line = unit * (Number(it.qtd) || 1);
+      const extras = extrasLinhas(it)
+        .map((e) => `<div class="item-extra">${esc(e)}</div>`)
+        .join("");
+      return `<div class="item">
+        <div class="item-head" style="display:flex;justify-content:space-between;gap:8px">
+          <span>${esc(String(it.qtd))}x ${esc(it.nome)}</span>
+          <span>${esc(BRL(line))}</span>
+        </div>
+        ${extras}
+      </div>`;
+    })
+    .join("");
+}
+
 export function imprimirComanda(
   pedido: Pedido,
-  opts?: { setor?: SetorComanda; soProntos?: boolean }
+  opts?: {
+    setor?: SetorComanda;
+    soProntos?: boolean;
+    /** histórico / admin: mostra preços e total */
+    comPrecos?: boolean;
+    formaPagamento?: string | null;
+    tituloExtra?: string;
+  }
 ) {
   const setor: SetorComanda = opts?.setor || "geral";
   const soProntos = opts?.soProntos ?? setor === "garcom";
+  const comPrecos = !!opts?.comPrecos;
   const itens = filtrarItens(pedido, setor, soProntos);
-  const titulo = TITULO_SETOR[setor];
+  const titulo = opts?.tituloExtra || TITULO_SETOR[setor];
   const mesaNum = String(pedido.mesaNome || "")
     .replace(/^Mesa\s*/i, "")
     .trim() || "—";
+
+  const total =
+    Number(pedido.total) ||
+    itens.reduce((a, i) => a + Number(i.totalUnit || i.precoBase || 0) * (Number(i.qtd) || 1), 0);
+
+  const forma = opts?.formaPagamento ? formaLabel(opts.formaPagamento) : "";
 
   const body = `
   <div class="center">
@@ -318,6 +354,7 @@ export function imprimirComanda(
   <div class="meta" style="margin-top:6px">
     ${pedido.clienteNome ? `<div><b>Cliente:</b> ${esc(pedido.clienteNome)}</div>` : ""}
     <div><b>Hora:</b> ${esc(fmtHora(pedido.criadoEm))}</div>
+    ${pedido.status ? `<div><b>Status:</b> ${esc(String(pedido.status))}</div>` : ""}
     ${
       setor === "garcom"
         ? `<div><b>Itens:</b> ${itens.reduce((a, i) => a + (Number(i.qtd) || 1), 0)}</div>`
@@ -325,14 +362,36 @@ export function imprimirComanda(
     }
   </div>
   <hr class="line"/>
-  ${renderItensProducao(itens)}
+  ${comPrecos ? renderItensComPreco(itens) : renderItensProducao(itens)}
   <hr class="line"/>
+  ${
+    comPrecos
+      ? `<div class="meta" style="display:flex;justify-content:space-between;font-size:14px;font-weight:800;margin:6px 0">
+          <span>TOTAL</span><span>${esc(BRL(total))}</span>
+        </div>
+        ${forma ? `<div class="meta"><b>Pagamento:</b> ${esc(forma)}</div>` : ""}
+        <hr class="line"/>`
+      : ""
+  }
   <div class="foot">
     ${fmtHoraCurta(Date.now())} · ${esc(titulo)}
   </div>
   `;
 
   openPrintWindow(`${titulo} #${pedido.id}`, body, true);
+}
+
+/** Cupom completo do histórico (itens + preços + total + forma se houver). */
+export function imprimirComandaHistorico(
+  pedido: Pedido,
+  opts?: { formaPagamento?: string | null }
+) {
+  imprimirComanda(pedido, {
+    setor: "geral",
+    comPrecos: true,
+    tituloExtra: "PEDIDO",
+    formaPagamento: opts?.formaPagamento,
+  });
 }
 
 /** Alias explícito por tela */
