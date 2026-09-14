@@ -547,6 +547,9 @@ async function anexarExtrasAosItens(itens) {
 async function listarPedidosPorStatus(statuses, setor = null) {
   let pedidos;
   if (setor) {
+    // Só pedidos com trabalho pendente neste setor (recebido/em_producao).
+    // Itens já "concluido" saem da fila da cozinha/bar e vão para o garçom.
+    // Isso evita o card "zumbi" e o flicker de sumir/voltar quando o último item do setor fica pronto.
     const { rows } = await pool.query(
       `SELECT DISTINCT p.id, p.status, p.criado_em, p.observacao_geral, p.cliente_nome, p.garcom_nome,
               p.editado_em, m.numero AS mesa
@@ -558,7 +561,7 @@ async function listarPedidosPorStatus(statuses, setor = null) {
        WHERE p.status = ANY($1::text[])
          AND COALESCE(pr.setor, 'cozinha') = $2
          AND p.status <> 'entregue'
-         AND COALESCE(ip.status, 'recebido') <> 'entregue'
+         AND COALESCE(ip.status, 'recebido') IN ('recebido', 'em_producao')
        ORDER BY p.criado_em`,
       [statuses, setor]
     );

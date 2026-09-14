@@ -359,16 +359,31 @@ document.addEventListener('click',function(ev){
   const btn=ev.target.closest('[data-print-pedido]');
   if(btn){imprimirPedidoAdmin(Number(btn.dataset.printPedido));}
 });
+let __adminBoardSig='';
+function adminBoardSignature(list){
+  return (list||[]).map(function(p){
+    const itens=(p.itens||[]).map(function(i){return i.id+':'+(i.status||'');}).join(',');
+    return p.id+'|'+(p.status||'')+'|'+(p.editado_em||p.editadoEm||'')+'|'+itens;
+  }).join(';');
+}
 async function loadPedidosBoard(){
   const el=document.getElementById('pedidosBoard');const statsEl=document.getElementById('pedidosStats');
   if(!el)return;
   const list=await(await fetch('/api/admin/pedidos?ativos=1')).json();
   pedidosAtivosCache=list;
+  const sig=adminBoardSignature(list);
+  // Evita reescrever o kanban se nada mudou (SSE/poll) — corta o flicker "some e volta"
+  if(sig===__adminBoardSig && el.children.length){
+    if(statsEl)statsEl.innerHTML=list.length?'<span class="badge">'+list.length+' ativo(s)</span>':'<span class="badge">Fila limpa</span>';
+    return;
+  }
+  __adminBoardSig=sig;
   const by={recebido:[],em_producao:[],concluido:[]};
   for(const p of list){if(by[p.status])by[p.status].push(p);}
   if(statsEl)statsEl.innerHTML=list.length?'<span class="badge">'+list.length+' ativo(s)</span>':'<span class="badge">Fila limpa</span>';
   if(!list.length){el.innerHTML='<div class="empty-state-big" style="grid-column:1/-1"><span class="big-ico" aria-hidden="true">✅</span><span class="empty-title">Nenhum pedido em andamento</span><span class="empty-sub">Aproveite o momento de calmaria!</span></div>';return;}
   const openPids=new Set([...document.querySelectorAll('#pedidosBoard details.pk-card[open]')].map(d=>d.getAttribute('data-pid')).filter(Boolean));
+  const __scroll=window.scrollY||document.documentElement.scrollTop||0;
   el.innerHTML=STATUS_COLS.map(col=>{
     const items=by[col.key]||[];
     const body=items.length
@@ -376,6 +391,7 @@ async function loadPedidosBoard(){
       : '<div class="empty-col"><span class="big-ico" aria-hidden="true">—</span>Vazio</div>';
     return '<div class="pk-col"><div class="pk-col-head"><h3 style="margin:0;font-size:.95rem">'+col.icon+' '+col.label+'</h3><span class="pk-count">'+items.length+'</span></div><div class="pk-col-body">'+body+'</div></div>';
   }).join('');
+  requestAnimationFrame(function(){window.scrollTo(0,__scroll);});
   el.querySelectorAll('details.pk-card[data-pid]').forEach(function(d){
     if(openPids.has(d.getAttribute('data-pid'))) d.open=true;
   });
@@ -395,8 +411,11 @@ function limparHistorico(){
 }
 if(typeof defaultRelDates==='function')defaultRelDates();
 loadDashboard();loadMesas();loadCardapio();loadGarcons();loadPedidosBoard();
-if(window.LQRRealtime){LQRRealtime.connect(()=>{loadPedidosBoard();loadMesas();loadDashboard();},{fallbackMs:25000,debounceMs:200});}
-else if(typeof EventSource!=='undefined'){const es=new EventSource('/api/events');es.addEventListener('update',()=>{loadPedidosBoard();loadMesas();loadDashboard();});}
+const __adminRefresh = (window.LQRRealtime && LQRRealtime.createLoader)
+  ? LQRRealtime.createLoader(async function(){ await loadPedidosBoard(); await loadMesas(); await loadDashboard(); })
+  : async function(){ await loadPedidosBoard(); await loadMesas(); await loadDashboard(); };
+if(window.LQRRealtime){LQRRealtime.connect(()=>{__adminRefresh();},{fallbackMs:25000,debounceMs:250});}
+else if(typeof EventSource!=='undefined'){const es=new EventSource('/api/events');es.addEventListener('update',()=>{__adminRefresh();});}
 </script>
 <script src="/js/admin-cardapio.js"></script>
 <script src="/js/cookies.js"></script>

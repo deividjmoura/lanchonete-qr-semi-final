@@ -277,6 +277,51 @@ function beepNovo() {
 let advancing = false;
 const vistosRecebido = new Set();
 let primeiroLoad = true;
+let lastRenderSig = '';
+
+/** Assinatura estável dos pedidos/itens — evita re-pintar o DOM se nada mudou (SSE/poll). */
+function filaSignature(pedidos) {
+  return (pedidos || []).map(function (p) {
+    const itens = (p.itens || []).map(function (i) {
+      return i.id + ':' + (i.status || '');
+    }).join(',');
+    return p.id + '|' + (p.status || '') + '|' + (p.editado_em || p.editadoEm || '') + '|' + itens;
+  }).join(';');
+}
+
+function renderFila(pedidos) {
+  const novos = pedidos.filter((p) => p.status === 'recebido');
+  const prep = pedidos.filter((p) => p.status === 'em_producao').length;
+  document.getElementById('stats').textContent = pedidos.length
+    ? `${pedidos.length} na fila · ${novos.length} novo(s) · ${prep} em produção`
+    : 'Fila vazia';
+
+  const root = document.getElementById('orders');
+  const sig = filaSignature(pedidos);
+  // Não reescreve o HTML se a fila não mudou — elimina o "some e volta"
+  if (sig === lastRenderSig && root.children.length) return;
+  lastRenderSig = sig;
+
+  if (!pedidos.length) {
+    root.innerHTML =
+      '<div class="panel empty-state"><div class="big">✅</div><div>Nenhum pedido na fila da cozinha.</div></div>';
+    return;
+  }
+  // Cards independentes: vários podem ficar abertos; preserva no re-render/SSE
+  const openIds = new Set([
+    ...(window.__cozinhaOpenIds || []),
+    ...[...document.querySelectorAll('#orders details.order-card[open]')].map(d => d.getAttribute('data-id')).filter(Boolean),
+  ]);
+  const __opsScroll = window.scrollY || document.documentElement.scrollTop || 0;
+  root.innerHTML = pedidos.map(card).join('');
+  requestAnimationFrame(function(){ window.scrollTo(0, __opsScroll); });
+  const still = new Set();
+  root.querySelectorAll('details.order-card[data-id]').forEach(function(d){
+    const id = d.getAttribute('data-id');
+    if (openIds.has(id)) { d.open = true; still.add(id); }
+  });
+  window.__cozinhaOpenIds = still;
+}
 
 const load = (window.LQRRealtime && LQRRealtime.createLoader
   ? LQRRealtime.createLoader
@@ -289,6 +334,8 @@ const load = (window.LQRRealtime && LQRRealtime.createLoader
         finally { loading = false; }
       };
     })(async () => {
+  // Durante o PATCH local, não busca de novo (o próprio avancarItem já atualiza e recarrega).
+  // Marca dirty no createLoader não é possível daqui — só evita flicker de SSE concorrente.
   if (advancing) return;
   const res = await fetch('/api/cozinha/pedidos');
   if (res.status === 401) { location.href = '/login?next=' + encodeURIComponent('/cozinha'); return; }
@@ -323,32 +370,7 @@ const load = (window.LQRRealtime && LQRRealtime.createLoader
     }
   }
   primeiroLoad = false;
-
-  const prep = pedidos.filter((p) => p.status === 'em_producao').length;
-  document.getElementById('stats').textContent = pedidos.length
-    ? `${pedidos.length} na fila · ${novos.length} novo(s) · ${prep} em produção`
-    : 'Fila vazia';
-
-  const root = document.getElementById('orders');
-  if (!pedidos.length) {
-    root.innerHTML =
-      '<div class="panel empty-state"><div class="big">✅</div><div>Nenhum pedido na fila da cozinha.</div></div>';
-  } else {
-    // Cards independentes: vários podem ficar abertos; preserva no re-render/SSE
-    const openIds = new Set([
-      ...(window.__cozinhaOpenIds || []),
-      ...[...document.querySelectorAll('#orders details.order-card[open]')].map(d => d.getAttribute('data-id')).filter(Boolean),
-    ]);
-    const __opsScroll = window.scrollY || document.documentElement.scrollTop || 0;
-    root.innerHTML = pedidos.map(card).join('');
-    requestAnimationFrame(function(){ window.scrollTo(0, __opsScroll); });
-    const still = new Set();
-    root.querySelectorAll('details.order-card[data-id]').forEach(function(d){
-      const id = d.getAttribute('data-id');
-      if (openIds.has(id)) { d.open = true; still.add(id); }
-    });
-    window.__cozinhaOpenIds = still;
-  }
+  renderFila(pedidos);
 });
 
 async function avancarItem(itemId, status) {
@@ -359,6 +381,23 @@ async function avancarItem(itemId, status) {
     btn.disabled = true;
     btn.innerHTML = '…';
   }
+  // Atualização otimista no cache: UI responde na hora, sem sumir/aparecer
+  try {
+    for (const p of pedidosCache) {
+      for (const it of (p.itens || [])) {
+        if (Number(it.id) === Number(itemId)) {
+          it.status = status;
+        }
+      }
+      // Espelha sincronizarStatusPedido (simplificado) para o badge do pedido
+      const st = (p.itens || []).map((i) => i.status || 'recebido');
+      if (st.length && st.every((s) => s === 'concluido' || s === 'entregue')) p.status = 'concluido';
+      else if (st.some((s) => s === 'em_producao' || s === 'concluido' || s === 'entregue')) p.status = 'em_producao';
+    }
+    lastRenderSig = ''; // força re-render com o status otimista
+    renderFila(pedidosCache);
+  } catch (_) {}
+
   try {
     const res = await fetch(`/api/cozinha/itens/${itemId}/status`, {
       method: 'PATCH',
@@ -368,16 +407,21 @@ async function avancarItem(itemId, status) {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       toast(data.error || 'Não foi possível avançar o status', true);
+      lastRenderSig = '';
+      advancing = false;
       await load();
       return;
     }
-    // Recarrega a fila: se era o último item pendente desse pedido no setor,
-    // o pedido some da lista sozinho (o servidor já não devolve mais ele).
     toast(status === 'em_producao' ? 'Item em preparo' : 'Item pronto');
+    // Sincroniza com o servidor (pode remover o pedido se não houver mais itens pendentes do setor)
+    lastRenderSig = '';
+    advancing = false;
     await load();
   } catch (e) {
     console.error(e);
     toast('Erro de rede', true);
+    lastRenderSig = '';
+    advancing = false;
     await load();
   } finally {
     advancing = false;
