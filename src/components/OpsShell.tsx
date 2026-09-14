@@ -87,13 +87,13 @@ export function OpsShell({
     <div className="relative min-h-dvh">
       {/* ambientes */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
-        <div className="glow-orb absolute -top-40 left-1/4 size-[34rem] bg-amber-500/14" />
-        <div className="glow-orb absolute top-1/3 -right-40 size-[28rem] bg-orange-600/10" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,transparent_0%,#0c0a07_78%)]" />
+        <div className="glow-orb absolute -top-40 left-1/4 size-[34rem] bg-brand-500/12" />
+        <div className="glow-orb absolute top-1/3 -right-40 size-[28rem] bg-navy-500/10" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(0,196,180,0.07),transparent_62%)]" />
       </div>
 
       {/* header */}
-      <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-coal-950/78 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-3 sm:px-6 h-14 sm:h-16 flex items-center gap-1.5 sm:gap-3 min-w-0">
           <button
             onClick={() => {
@@ -107,27 +107,27 @@ export function OpsShell({
           >
             <Logo size="sm" />
           </button>
-          <span className="hidden md:block h-6 w-px bg-white/10" />
-          <p className="hidden md:flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.3em] text-stone-400">
+          <span className="hidden md:block h-6 w-px bg-slate-200" />
+          <p className="hidden md:flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.3em] text-slate-500">
             {kicker} <LivePill />
           </p>
 
           <div className="flex-1 min-w-0" />
 
-          <nav className="flex items-center gap-0.5 sm:gap-1 rounded-full bg-white/[0.05] border border-white/[0.08] p-0.5 sm:p-1 overflow-x-auto no-scrollbar max-w-[55vw] sm:max-w-none shrink">
+          <nav className="flex items-center gap-0.5 sm:gap-1 rounded-full bg-slate-100/70 border border-slate-200 p-0.5 sm:p-1 overflow-x-auto no-scrollbar max-w-[55vw] sm:max-w-none shrink">
             {nav.map((n) => (
               <button
                 key={n.id}
                 onClick={() => ir(n.to)}
                 className={cn(
                   "btn-press relative flex items-center gap-1.5 rounded-full px-3 sm:px-3.5 h-9 text-xs font-semibold cursor-pointer transition-colors",
-                  ativo === n.id ? "text-zinc-950" : "text-stone-400 hover:text-white"
+                  ativo === n.id ? "text-white" : "text-slate-500 hover:text-navy-800"
                 )}
               >
                 {ativo === n.id && (
                   <motion.span
                     layoutId="ops-nav"
-                    className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-400 to-orange-500"
+                    className="absolute inset-0 rounded-full bg-gradient-to-br from-brand-500 to-teal-600"
                     transition={{ type: "spring", stiffness: 420, damping: 32 }}
                   />
                 )}
@@ -143,8 +143,8 @@ export function OpsShell({
             className={cn(
               "btn-press grid place-items-center size-10 rounded-full border cursor-pointer transition-colors",
               somLigado
-                ? "bg-amber-400/12 border-amber-400/35 text-amber-300"
-                : "bg-white/[0.05] border-white/10 text-stone-500"
+                ? "bg-brand-500/10 border-brand-500/40 text-brand-600"
+                : "bg-slate-100/70 border-slate-200 text-slate-500"
             )}
           >
             {somLigado ? <Volume2 className="size-4.5" /> : <VolumeX className="size-4.5" />}
@@ -154,7 +154,7 @@ export function OpsShell({
               ir("/");
             }}
             title="Início"
-            className="btn-press hidden sm:grid place-items-center size-10 rounded-full bg-white/[0.05] border border-white/10 text-stone-400 hover:text-white cursor-pointer"
+            className="btn-press hidden sm:grid place-items-center size-10 rounded-full bg-slate-100/70 border border-slate-200 text-slate-500 hover:text-navy-800 cursor-pointer"
           >
             <House className="size-4.5" />
           </button>
@@ -164,7 +164,7 @@ export function OpsShell({
               ir("/login");
             }}
             title="Sair"
-            className="btn-press hidden sm:grid place-items-center size-10 rounded-full bg-white/[0.05] border border-white/10 text-stone-400 hover:text-rose-300 cursor-pointer"
+            className="btn-press hidden sm:grid place-items-center size-10 rounded-full bg-slate-100/70 border border-slate-200 text-slate-500 hover:text-rose-600 cursor-pointer"
           >
             <LogOut className="size-4.5" />
           </button>
@@ -174,8 +174,8 @@ export function OpsShell({
       <main className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10 pb-24">
         <div className="flex flex-wrap items-end justify-between gap-4 mb-6 sm:mb-8">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-amber-400/90">{kicker}</p>
-            <h1 className="font-display text-4xl sm:text-6xl lg:text-7xl leading-[0.95] text-white mt-1 break-words">{titulo}</h1>
+            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-brand-600">{kicker}</p>
+            <h1 className="font-display text-4xl sm:text-6xl lg:text-7xl leading-[0.95] text-navy-900 mt-1 break-words">{titulo}</h1>
           </div>
           {extra}
         </div>

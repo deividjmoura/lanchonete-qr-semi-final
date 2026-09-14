@@ -5,26 +5,15 @@ import { cn } from "../utils/cn";
 
 /* ---------- Logo ---------- */
 export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
-  const s = size === "sm" ? "text-2xl" : size === "lg" ? "text-6xl sm:text-7xl" : "text-4xl";
-  const img =
-    size === "sm" ? "h-8 w-8" : size === "lg" ? "h-14 w-14 sm:h-16 sm:w-16" : "h-10 w-10";
+  const h = size === "sm" ? "h-8" : size === "lg" ? "h-20 sm:h-24" : "h-10";
   return (
-    <span className={cn("inline-flex items-center gap-2.5 select-none", s)}>
+    <span className="inline-flex items-center select-none">
       <img
-        src="/assets/logo-cliente.png"
-        alt=""
-        width={size === "lg" ? 64 : size === "sm" ? 32 : 40}
-        height={size === "lg" ? 64 : size === "sm" ? 32 : 40}
-        className={cn(
-          img,
-          "rounded-full object-cover ring-1 ring-amber-400/40 shadow-[0_0_24px_-6px_rgba(255,182,39,0.45)] shrink-0"
-        )}
+        src="/logo/qradmin-horizontal.png"
+        alt="QRAdmin"
+        className={cn(h, "w-auto object-contain shrink-0")}
         draggable={false}
       />
-      <span className="font-display leading-none tracking-wide">
-        <span className="text-white">MAJOR</span>
-        <span className="text-gradient">PUB</span>
-      </span>
     </span>
   );
 }
@@ -61,13 +50,13 @@ export function Btn({
         size === "lg" && "h-13 px-7 text-base",
         full && "w-full",
         variant === "brand" &&
-          "bg-gradient-to-br from-amber-400 to-orange-500 text-zinc-950 shadow-[0_10px_30px_-8px_rgba(255,150,20,0.55)] hover:shadow-[0_14px_38px_-6px_rgba(255,150,20,0.7)]",
+          "bg-gradient-to-br from-brand-500 to-teal-600 text-white shadow-[0_10px_30px_-8px_rgba(0,196,180,0.5)] hover:shadow-[0_14px_38px_-6px_rgba(0,196,180,0.65)]",
         variant === "lime" &&
-          "bg-gradient-to-br from-lime-300 to-lime-500 text-zinc-950 shadow-[0_10px_30px_-8px_rgba(163,230,53,0.45)]",
-        variant === "ghost" && "bg-white/[0.06] text-stone-200 hover:bg-white/[0.12] border border-white/10",
-        variant === "glass" && "glass text-stone-100 hover:border-amber-400/40",
-        variant === "outline" && "border border-amber-400/50 text-amber-300 hover:bg-amber-400/10",
-        variant === "danger" && "bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25",
+          "bg-gradient-to-br from-teal-400 to-teal-600 text-white shadow-[0_10px_30px_-8px_rgba(20,184,166,0.45)]",
+        variant === "ghost" && "bg-slate-100/70 text-slate-700 hover:bg-slate-100 border border-slate-200",
+        variant === "glass" && "glass text-slate-800 hover:border-brand-500/50",
+        variant === "outline" && "border border-brand-500/50 text-brand-600 hover:bg-brand-500/10",
+        variant === "danger" && "bg-rose-600/10 text-rose-600 border border-rose-500/40 hover:bg-rose-600/10",
         className
       )}
     >
@@ -92,12 +81,12 @@ export function Badge({
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest",
-        tone === "amber" && "bg-amber-400/12 text-amber-300 border border-amber-400/25",
-        tone === "lime" && "bg-lime-400/12 text-lime-300 border border-lime-400/25",
-        tone === "sky" && "bg-sky-400/12 text-sky-300 border border-sky-400/25",
-        tone === "rose" && "bg-rose-400/12 text-rose-300 border border-rose-400/25",
-        tone === "violet" && "bg-violet-400/12 text-violet-300 border border-violet-400/25",
-        tone === "zinc" && "bg-white/[0.07] text-stone-300 border border-white/10",
+        tone === "amber" && "bg-amber-500/10 text-amber-700 border border-amber-500/30",
+        tone === "lime" && "bg-teal-500/10 text-teal-700 border border-teal-500/30",
+        tone === "sky" && "bg-navy-700/10 text-navy-700 border border-navy-700/25",
+        tone === "rose" && "bg-rose-600/10 text-rose-600 border border-rose-400/40",
+        tone === "violet" && "bg-violet-500/10 text-violet-700 border border-violet-500/30",
+        tone === "zinc" && "bg-slate-100/80 text-slate-600 border border-slate-200",
         className
       )}
     >
@@ -150,7 +139,7 @@ export function Modal({
             <button
               type="button"
               onClick={onClose}
-              className="btn-press absolute top-4 right-4 z-10 grid place-items-center size-10 rounded-full bg-black/60 backdrop-blur-sm border border-white/15 text-white hover:bg-black/75 cursor-pointer"
+              className="btn-press absolute top-4 right-4 z-10 grid place-items-center size-10 rounded-full bg-slate-100 border border-slate-200 text-navy-900 hover:bg-slate-200 cursor-pointer"
             >
               <X className="size-4.5" />
             </button>
@@ -175,21 +164,21 @@ export function Qtd({
   return (
     <div
       className={cn(
-        "inline-flex items-center rounded-full bg-black/40 border border-white/12",
+        "inline-flex items-center rounded-full bg-slate-100 border border-slate-200",
         size === "sm" ? "h-8" : "h-10"
       )}
     >
       <button
-        className="btn-press h-full aspect-square grid place-items-center text-stone-300 hover:text-amber-300 cursor-pointer text-lg font-bold"
+        className="btn-press h-full aspect-square grid place-items-center text-slate-600 hover:text-brand-600 cursor-pointer text-lg font-bold"
         onClick={() => onChange(Math.max(1, valor - 1))}
       >
         −
       </button>
-      <span className={cn("tabular font-mono font-semibold text-white", size === "sm" ? "w-6 text-xs" : "w-8 text-sm", "text-center")}>
+      <span className={cn("tabular font-mono font-semibold text-navy-900", size === "sm" ? "w-6 text-xs" : "w-8 text-sm", "text-center")}>
         {valor}
       </span>
       <button
-        className="btn-press h-full aspect-square grid place-items-center text-stone-300 hover:text-amber-300 cursor-pointer text-lg font-bold"
+        className="btn-press h-full aspect-square grid place-items-center text-slate-600 hover:text-brand-600 cursor-pointer text-lg font-bold"
         onClick={() => onChange(valor + 1)}
       >
         +
@@ -201,10 +190,10 @@ export function Qtd({
 /* ---------- Live pill ---------- */
 export function LivePill({ label = "ao vivo" }: { label?: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-lime-400/10 border border-lime-400/25 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-lime-300">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-500/10 border border-teal-500/30 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-teal-600">
       <span className="relative flex size-1.5">
-        <span className="absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75 animate-ping" />
-        <span className="relative inline-flex size-1.5 rounded-full bg-lime-400" />
+        <span className="absolute inline-flex h-full w-full rounded-full bg-teal-500 opacity-75 animate-ping" />
+        <span className="relative inline-flex size-1.5 rounded-full bg-teal-500" />
       </span>
       {label}
     </span>
@@ -216,10 +205,10 @@ export function Secao({ kicker, titulo, right }: { kicker: string; titulo: React
   return (
     <div className="flex items-end justify-between gap-4">
       <div>
-        <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.28em] text-amber-400/90">
+        <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.28em] text-brand-600">
           <Flame className="size-3.5" /> {kicker}
         </p>
-        <h2 className="font-display text-4xl sm:text-5xl leading-none mt-1 text-white">{titulo}</h2>
+        <h2 className="font-display text-4xl sm:text-5xl leading-none mt-1 text-navy-900">{titulo}</h2>
       </div>
       {right}
     </div>
@@ -245,7 +234,7 @@ export function Input({
   return (
     <div className={cn("relative", className)}>
       {prefix && (
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-stone-500">{prefix}</span>
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">{prefix}</span>
       )}
       <input
         type={type}
@@ -253,8 +242,8 @@ export function Input({
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         className={cn(
-          "w-full h-12 rounded-2xl bg-black/40 border border-white/12 text-sm text-white placeholder:text-stone-500",
-          "focus:outline-none focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/15 transition",
+          "w-full h-12 rounded-2xl bg-slate-100 border border-slate-200 text-sm text-navy-900 placeholder:text-slate-400",
+          "focus:outline-none focus:border-brand-500/60 focus:ring-2 focus:ring-brand-500/20 transition",
           prefix ? "pl-11 pr-4" : "px-4"
         )}
       />

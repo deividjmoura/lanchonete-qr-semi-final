@@ -57,11 +57,11 @@ export function Toasts() {
               transition={{ type: "spring", stiffness: 380, damping: 26 }}
               className="pointer-events-auto flex items-center gap-3 rounded-2xl glass-deep noise pl-3 pr-4 py-2.5 shadow-2xl max-w-sm w-full"
             >
-              <span className="grid place-items-center size-9 rounded-xl bg-gradient-to-br from-amber-400/25 to-orange-500/20 border border-amber-400/25 text-amber-300">
+              <span className="grid place-items-center size-9 rounded-xl bg-gradient-to-br from-brand-500/20 to-teal-600/15 border border-brand-500/30 text-brand-600">
                 <Icon className="size-4.5" />
               </span>
-              <p className="flex-1 text-[13px] font-medium text-stone-100 leading-tight">{t.texto}</p>
-              <span className="text-[10px] font-mono text-stone-500">{hora(t.em)}</span>
+              <p className="flex-1 text-[13px] font-medium text-slate-800 leading-tight">{t.texto}</p>
+              <span className="text-[10px] font-mono text-slate-500">{hora(t.em)}</span>
             </motion.div>
           );
         })}

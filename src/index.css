@@ -5,16 +5,23 @@
   --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
-  --color-coal-950: #0c0a07;
-  --color-coal-900: #13100b;
-  --color-coal-850: #171310;
-  --color-coal-800: #1d1812;
-  --color-coal-700: #2a2318;
-  --color-coal-600: #3a3020;
+  /* ---------- QRAdmin · navy (primária) ---------- */
+  --color-navy-950: #061a2e;
+  --color-navy-900: #0a2540;
+  --color-navy-800: #0f2c4a;
+  --color-navy-700: #1a3a5c;
+  --color-navy-600: #23486e;
+  --color-navy-500: #2e5a87;
 
-  --color-amber-brand: #ffb627;
-  --color-amber-deep: #f59e0b;
-  --color-ember: #ff6b1a;
+  /* ---------- QRAdmin · teal (destaque) ---------- */
+  --color-brand-50: #effcfa;
+  --color-brand-100: #d7f7f3;
+  --color-brand-200: #a9eee6;
+  --color-brand-300: #6fe3d8;
+  --color-brand-400: #2dd4bf;
+  --color-brand-500: #00c4b4;
+  --color-brand-600: #00a79a;
+  --color-brand-700: #04877d;
 
   --animate-pulse-soft: pulseSoft 2.6s ease-in-out infinite;
   --animate-shimmer: shimmer 2.2s linear infinite;
@@ -49,25 +56,26 @@ html {
 }
 
 body {
-  background: var(--color-coal-950);
-  color: #f5efE6;
+  background: #f8fafc;
+  color: #0a2540;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
 ::selection {
-  background: #ffb627;
-  color: #0c0a07;
+  background: #00c4b4;
+  color: #ffffff;
 }
 
 /* ---------- scrollbar ---------- */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #3a3020 transparent;
+  scrollbar-color: #cbd5e1 transparent;
 }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
-*::-webkit-scrollbar-thumb { background: #3a3020; border-radius: 99px; }
+*::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+*::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 *::-webkit-scrollbar-track { background: transparent; }
 
 /* ---------- signature utilities ---------- */
@@ -76,42 +84,38 @@ body {
   letter-spacing: 0.02em;
 }
 
+/* superfície clara — card branco com sombra suave */
 .glass {
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018));
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(18px);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(10, 37, 64, 0.04), 0 10px 28px -18px rgba(10, 37, 64, 0.18);
 }
 
 .glass-deep {
-  background: linear-gradient(165deg, rgba(29, 24, 18, 0.9), rgba(19, 16, 11, 0.94));
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(22px);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(10, 37, 64, 0.05), 0 18px 44px -20px rgba(10, 37, 64, 0.22);
 }
 
 .ring-brand {
-  box-shadow: 0 0 0 1px rgba(255, 182, 39, 0.35), 0 8px 40px -8px rgba(255, 182, 39, 0.35);
+  box-shadow: 0 0 0 1px rgba(0, 196, 180, 0.4), 0 8px 32px -10px rgba(0, 196, 180, 0.35);
 }
 
 .text-gradient {
-  background: linear-gradient(94deg, #ffe9b0 0%, #ffb627 45%, #ff6b1a 100%);
+  background: linear-gradient(94deg, #0a2540 0%, #1a3a5c 45%, #00c4b4 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
 .stroke-text {
-  -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.22);
+  -webkit-text-stroke: 1.5px rgba(10, 37, 64, 0.28);
   color: transparent;
 }
 
+/* textura desativada no tema claro (visual limpo) */
 .noise::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.5;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.34'/%3E%3C/svg%3E");
+  content: none;
 }
 
 .glow-orb {
@@ -121,7 +125,7 @@ body {
 }
 
 .shine {
-  background: linear-gradient(110deg, #ffb627 35%, #ffe9b0 50%, #ffb627 65%);
+  background: linear-gradient(110deg, #00a79a 35%, #2dd4bf 50%, #00a79a 65%);
   background-size: 200% 100%;
   animation: shimmer 2.2s linear infinite;
   -webkit-background-clip: text;

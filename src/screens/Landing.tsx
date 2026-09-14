@@ -6,7 +6,6 @@ import {
 } from "lucide-react";
 import { Badge, LivePill, Logo, Secao } from "../components/ui";
 import { ir } from "../router";
-import { HERO_IMG } from "../lib/data";
 import { usePub, totalSessao } from "../store/usePub";
 import { BRL } from "../lib/utils";
 
@@ -18,10 +17,10 @@ const fadeUp = {
 };
 
 const FLUXO = [
-  { icon: Smartphone, passo: "01", titulo: "Cliente", texto: "Escaneia o QR da mesa, monta o pedido no celular e personaliza tudo — sem app, sem fila.", tom: "text-sky-300" },
-  { icon: ChefHat, passo: "02", titulo: "Cozinha", texto: "Recebe na hora com alerta de voz: mesa + cliente. Aceita, produz e marca como pronto.", tom: "text-amber-300" },
-  { icon: ConciergeBell, passo: "03", titulo: "Garçom", texto: "Voz leve anunciando o nº da mesa. Entrega e confirma com um toque.", tom: "text-violet-300" },
-  { icon: Wallet, passo: "04", titulo: "Caixa", texto: "Fecha a sessão acumulativa, divide a conta, aplica desconto e confirma o PIX.", tom: "text-lime-300" },
+  { icon: Smartphone, passo: "01", titulo: "Cliente", texto: "Escaneia o QR da mesa, monta o pedido no celular e personaliza tudo — sem app, sem fila.", tom: "text-sky-700" },
+  { icon: ChefHat, passo: "02", titulo: "Cozinha", texto: "Recebe na hora com alerta de voz: mesa + cliente. Aceita, produz e marca como pronto.", tom: "text-brand-600" },
+  { icon: ConciergeBell, passo: "03", titulo: "Garçom", texto: "Voz leve anunciando o nº da mesa. Entrega e confirma com um toque.", tom: "text-violet-700" },
+  { icon: Wallet, passo: "04", titulo: "Caixa", texto: "Fecha a sessão acumulativa, divide a conta, aplica desconto e confirma o PIX.", tom: "text-teal-600" },
 ];
 
 const RECURSOS = [
@@ -56,8 +55,8 @@ export default function Landing() {
     <div className="relative min-h-dvh overflow-x-clip w-full max-w-[100vw]">
       {/* fundo */}
       <div className="fixed inset-0 -z-10">
-        <div className="glow-orb absolute -top-32 left-[8%] size-[30rem] bg-amber-500/16" />
-        <div className="glow-orb absolute bottom-0 right-[-6rem] size-[26rem] bg-orange-700/12" />
+        <div className="glow-orb absolute -top-32 left-[8%] size-[30rem] bg-brand-500/15" />
+        <div className="glow-orb absolute bottom-0 right-[-6rem] size-[26rem] bg-brand-500/10" />
         <div className="noise absolute inset-0" />
       </div>
 
@@ -71,14 +70,10 @@ export default function Landing() {
 
       {/* HERO */}
       <section className="relative mx-auto max-w-7xl px-5 sm:px-8 pt-8 sm:pt-12">
-        <div className="relative overflow-hidden rounded-[2rem] sm:rounded-[3rem] border border-white/10">
-          <img
-            src={HERO_IMG}
-            alt="Ambiente do Major Pub"
-            className="absolute inset-0 h-full w-full object-cover opacity-55 mask-fade-b"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-coal-950 via-coal-950/55 to-coal-950/15" />
-          <div className="absolute inset-0 bg-gradient-to-r from-coal-950/80 via-transparent to-transparent" />
+        <div className="relative overflow-hidden rounded-[2rem] sm:rounded-[3rem] border border-slate-200">
+          <div className="absolute inset-0 bg-gradient-to-br from-white via-slate-50 to-brand-50" />
+          <div className="glow-orb absolute -top-24 right-[10%] size-[22rem] bg-brand-500/15" />
+          <div className="glow-orb absolute -bottom-32 left-[5%] size-[20rem] bg-navy-500/10" />
 
           <div className="relative px-6 sm:px-12 pt-14 sm:pt-20 pb-10">
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}>
@@ -87,21 +82,21 @@ export default function Landing() {
                 <Badge tone="zinc">nesse dispositivo · sem app</Badge>
               </div>
               <h1 className="font-display leading-[0.85] text-[clamp(4.5rem,14vw,12rem)]">
-                <span className="block text-white">SENTOU.</span>
+                <span className="block text-navy-900">SENTOU.</span>
                 <span className="block stroke-text">ESCANEOU.</span>
                 <span className="block shine">PEDIU.</span>
               </h1>
-              <p className="mt-6 max-w-xl text-stone-300/90 text-base sm:text-lg leading-relaxed">
-                Do celular do cliente até a <b className="text-white">cozinha</b>, o <b className="text-white">garçom</b> e o{" "}
-                <b className="text-white">caixa</b> — tudo conectado em tempo real. Uma comanda por visita, vários pedidos,
+              <p className="mt-6 max-w-xl text-slate-600 text-base sm:text-lg leading-relaxed">
+                Do celular do cliente até a <b className="text-navy-900">cozinha</b>, o <b className="text-navy-900">garçom</b> e o{" "}
+                <b className="text-navy-900">caixa</b> — tudo conectado em tempo real. Uma comanda por visita, vários pedidos,
                 PIX na mesa e divisão de conta sem dor de cabeça.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-3">
-                <div className="inline-flex items-center gap-3 rounded-2xl border border-amber-400/25 bg-amber-400/10 px-4 py-3">
-                  <QrCode className="size-6 text-amber-300 shrink-0" />
-                  <p className="text-sm text-stone-200 leading-snug max-w-xs">
-                    <b className="text-white">Cliente:</b> escaneie o QR Code da sua mesa — o número já vem no link.
+                <div className="inline-flex items-center gap-3 rounded-2xl border border-brand-500/30 bg-brand-500/10 px-4 py-3">
+                  <QrCode className="size-6 text-brand-600 shrink-0" />
+                  <p className="text-sm text-slate-700 leading-snug max-w-xs">
+                    <b className="text-navy-900">Cliente:</b> escaneie o QR Code da sua mesa — o número já vem no link.
                   </p>
                 </div>
               </div>
@@ -121,7 +116,7 @@ export default function Landing() {
               ].map((m) => (
                 <div key={m.l} className="glass rounded-2xl px-4 py-3.5">
                   <p className="font-display text-3xl sm:text-4xl text-gradient leading-none">{m.v}</p>
-                  <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-stone-400 font-semibold">{m.l}</p>
+                  <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-slate-500 font-semibold">{m.l}</p>
                 </div>
               ))}
             </motion.div>
@@ -130,13 +125,13 @@ export default function Landing() {
       </section>
 
       {/* marquee */}
-      <div className="relative mt-10 border-y border-white/[0.07] bg-white/[0.02] py-3 overflow-hidden">
+      <div className="relative mt-10 border-y border-slate-200 bg-slate-100/40 py-3 overflow-hidden">
         <div className="flex w-max animate-marquee gap-10 whitespace-nowrap">
           {Array.from({ length: 2 }).map((_, r) => (
-            <div key={r} className="flex items-center gap-10 text-[13px] font-semibold uppercase tracking-[0.3em] text-stone-500">
+            <div key={r} className="flex items-center gap-10 text-[13px] font-semibold uppercase tracking-[0.3em] text-slate-500">
               {["cardápio digital", "alerta de voz", "pix na mesa", "divisão de conta", "estoque vivo", "dashboard em tempo real", "comanda acumulativa"].map((t) => (
                 <span key={t} className="flex items-center gap-10">
-                  {t} <Beer className="size-4 text-amber-500/70" />
+                  {t} <Beer className="size-4 text-brand-500" />
                 </span>
               ))}
             </div>
@@ -155,15 +150,15 @@ export default function Landing() {
               key={f.passo}
               {...fadeUp}
               transition={{ ...fadeUp.transition, delay: i * 0.08 }}
-              className="group relative glass rounded-3xl p-6 overflow-hidden hover:border-amber-400/25 transition-colors"
+              className="group relative glass rounded-3xl p-6 overflow-hidden hover:border-brand-500/40 transition-colors"
             >
-              <span className="font-display text-7xl leading-none text-white/[0.06] absolute -top-2 right-3 group-hover:text-amber-400/10 transition-colors">
+              <span className="font-display text-7xl leading-none text-navy-900/[0.07] absolute -top-2 right-3 group-hover:text-brand-500/10 transition-colors">
                 {f.passo}
               </span>
               <f.icon className={`size-7 ${f.tom}`} />
-              <h3 className="font-display text-3xl mt-4 text-white">{f.titulo}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-stone-400">{f.texto}</p>
-              {i < 3 && <ArrowRight className="absolute bottom-6 right-6 size-4 text-stone-600 group-hover:text-amber-400 group-hover:translate-x-1 transition-all" />}
+              <h3 className="font-display text-3xl mt-4 text-navy-900">{f.titulo}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-500">{f.texto}</p>
+              {i < 3 && <ArrowRight className="absolute bottom-6 right-6 size-4 text-slate-400 group-hover:text-brand-500 group-hover:translate-x-1 transition-all" />}
             </motion.div>
           ))}
         </div>
@@ -180,13 +175,13 @@ export default function Landing() {
               key={r.titulo}
               {...fadeUp}
               transition={{ ...fadeUp.transition, delay: i * 0.06 }}
-              className="glass rounded-3xl p-6 hover:bg-white/[0.06] transition-colors"
+              className="glass rounded-3xl p-6 hover:bg-slate-100 transition-colors"
             >
-              <div className="grid place-items-center size-11 rounded-2xl bg-gradient-to-br from-amber-400/20 to-orange-500/10 border border-amber-400/20">
-                <r.icon className="size-5 text-amber-300" />
+              <div className="grid place-items-center size-11 rounded-2xl bg-gradient-to-br from-brand-500/15 to-teal-600/10 border border-brand-500/25">
+                <r.icon className="size-5 text-brand-600" />
               </div>
-              <h3 className="mt-4 font-semibold text-white">{r.titulo}</h3>
-              <p className="mt-1.5 text-sm text-stone-400 leading-relaxed">{r.texto}</p>
+              <h3 className="mt-4 font-semibold text-navy-900">{r.titulo}</h3>
+              <p className="mt-1.5 text-sm text-slate-500 leading-relaxed">{r.texto}</p>
             </motion.div>
           ))}
         </div>
@@ -194,20 +189,20 @@ export default function Landing() {
 
 
       {/* footer */}
-      <footer className="border-t border-white/[0.07]">
+      <footer className="border-t border-slate-200">
         <div className="mx-auto max-w-7xl px-5 sm:px-8 py-10 flex flex-col sm:flex-row items-center justify-between gap-5">
           <div>
             <Logo size="sm" />
-            <p className="mt-2 text-xs text-stone-500 max-w-sm">
+            <p className="mt-2 text-xs text-slate-500 max-w-sm">
               Pedidos por QR Code — do celular do cliente até a cozinha, o garçom e o caixa. Redesign completo do repositório
-              <span className="font-mono text-stone-400"> lanchonete-qr</span>.
+              <span className="font-mono text-slate-500"> lanchonete-qr</span>.
             </p>
           </div>
           <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={() => ir("/login")}
-              className="text-[11px] text-stone-600 hover:text-stone-400 transition-colors cursor-pointer"
+              className="text-[11px] text-slate-400 hover:text-slate-500 transition-colors cursor-pointer"
             >
               equipe
             </button>
