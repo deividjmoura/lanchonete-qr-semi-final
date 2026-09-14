@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#f8fafc" />
+    <meta name="description" content="QRAdmin — Pedidos por QR Code: do celular do cliente até a cozinha, o garçom e o caixa." />
+    <title>QRAdmin · Pedidos por QR Code</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" type="image/png" href="/logo/favicon.png" />
+    <script>
+      /* tema claro/escuro antes do primeiro paint (evita flash) */
+      try {
+        var t = localStorage.getItem("qradmin-tema");
+        if (t !== "claro" && t !== "escuro")
+          t = matchMedia("(prefers-color-scheme: dark)").matches ? "escuro" : "claro";
+        document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
+    <script type="module" crossorigin src="/assets/index-Sb2Fpkk3.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-4AQrrlOU.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

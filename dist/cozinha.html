@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0a0908">
+  <title>Cozinha · Major Pub</title>
+  <link rel="icon" type="image/svg+xml" href="/favicons/cozinha.svg">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/style-ops.css">
+  <link rel="stylesheet" href="/icons.css">
+  <link rel="stylesheet" href="/theme-glass.css">
+  <style>
+    @media print {
+      body * { visibility: hidden !important; }
+      #printArea, #printArea * { visibility: visible !important; }
+      #printArea {
+        position: absolute; left: 0; top: 0; width: 72mm;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px; color: #000; background: #fff;
+      }
+      .no-print { display: none !important; }
+    }
+    #printArea { display: none; }
+    .order .nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  </style>
+</head>
+<body class="page-cozinha">
+<main class="wrap no-print">
+  <div class="glass-nav">
+    <div class="logo-mark" title="Major Pub">
+      <img src="/assets/logo-cliente.png" alt="Major Pub" width="64" height="64" style="width:88%;height:88%;object-fit:contain;border-radius:50%">
+    </div>
+    <div style="flex:1;min-width:0">
+      <div class="brand" style="margin:0">Cozinha</div>
+      <div class="muted" style="font-size:.85rem">Fila ao vivo · recebido → preparo → pronto</div>
+    </div>
+    <div class="nav glass-actions ops-actions">
+      <a class="btn btn-ghost" href="/admin" title="Admin"><span class="i-admin ico" aria-hidden="true"></span>Admin</a>
+      <a class="btn btn-ghost" href="/caixa" title="Caixa"><span class="i-cash ico" aria-hidden="true"></span>Caixa</a>
+      <a class="btn btn-ghost" href="/" title="Início"><span class="i-home ico" aria-hidden="true"></span>Início</a>
+    </div>
+  </div>
+
+  <div id="stats" class="muted" style="margin-bottom:14px" aria-live="polite" role="status"></div>
+  <div id="orders" class="kgrid"></div>
+</main>
+<div id="toast" class="toast no-print"></div>
+<div id="printArea" aria-hidden="true"></div>
+
+<script src="/js/safe-dom.js"></script>
+<script src="/js/realtime.js"></script>
+<script src="/js/voz-ops.js"></script>
+
+<script>
+const LABELS = {
+  recebido: 'Novo',
+  em_producao: 'Preparando',
+  concluido: 'Concluído',
+  entregue: 'Entregue',
+};
+
+const PONTO = {
+  MAL_PASSADO: 'Mal passado',
+  AO_PONTO: 'Ao ponto',
+  BEM_PASSADO: 'Bem passado',
+};
+
+const PROXIMO = {
+  recebido: 'em_producao',
+  em_producao: 'concluido',
+};
+
+const ACAO = {
+  recebido: 'Começar preparo',
+  em_producao: 'Marcar concluído',
+};
+
+let pedidosCache = [];
+
+function fmtHora(iso) {
+  try {
+    return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '—';
+  }
+}
+
+function fmtDataHora(iso) {
+  try {
+    return new Date(iso).toLocaleString('pt-BR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  } catch {
+    return '—';
+  }
+}
+
+function idadeMinutos(iso) {
+  const ms = Date.now() - new Date(iso).getTime();
+  return Math.max(0, Math.floor(ms / 60000));
+}
+
+function ageClass(min) {
+  if (min >= 15) return 'hot';
+  if (min >= 8) return 'warn';
+  return '';
+}
+
+function extrasHtml(item) {
+  const parts = [];
+  if (item.ponto_carne && PONTO[item.ponto_carne]) {
+    parts.push(`<span class="ponto">Ponto: ${PONTO[item.ponto_carne]}</span>`);
+  }
+  const adds = Array.isArray(item.adicionais) ? item.adicionais : [];
+  if (adds.length) {
+    parts.push(`<span class="com">+ ${adds.map((a) => a.nome).join(', ')}</span>`);
+  }
+  const rems = Array.isArray(item.remocoes) ? item.remocoes : [];
+  if (rems.length) {
+    parts.push(`<span class="sem">sem ${rems.join(', ')}</span>`);
+  }
+  if (item.observacao) {
+    parts.push(`Obs.: ${esc(item.observacao)}`);
+  }
+  return parts.length ? `<small class="item-extra">${parts.join(' · ')}</small>` : '';
+}
+
+const esc = (s) => {
+  if (window.SafeDOM && typeof SafeDOM.escapeHtml === 'function') {
+    return SafeDOM.escapeHtml(s);
+  }
+  return String(s ?? '').replace(/[&<>"']/g, (m) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
+  }[m]));
+};
+
+function card(p) {
+  const min = idadeMinutos(p.criado_em);
+  const nItens = (p.itens || []).reduce((a, i) => a + (Number(i.quantidade) || 1), 0);
+  const preview = (p.itens || []).slice(0, 2).map((i) => i.quantidade + '× ' + i.nome).join(' · ');
+  const mais = (p.itens || []).length > 2 ? '…' : '';
+  // Cada ITEM tem seu próprio status/botão agora — um pedido pode ter parte
+  // pronta e parte ainda em preparo (ex.: cozinha e bar no mesmo pedido).
+  const itens = (p.itens || [])
+    .map((i) => {
+      const proximoItem = PROXIMO[i.status];
+      const acaoItem = ACAO[i.status];
+      const acaoIcoItem = i.status === 'recebido' ? 'i-play' : 'i-check';
+      const acaoShortItem = i.status === 'recebido' ? 'Preparar' : 'Pronto';
+      return `<div class="row">
+          <span><b>${i.quantidade}×</b> ${esc(i.nome)}${extrasHtml(i)}
+            <span class="badge ${i.status}" style="margin-left:6px">${LABELS[i.status] || i.status}</span>
+          </span>
+          ${
+            proximoItem
+              ? `<button class="btn primary btn-chip" data-advance-item="${i.id}" data-status="${proximoItem}" title="${acaoItem}"><span class="${acaoIcoItem} ico" aria-hidden="true"></span> ${acaoShortItem}</button>`
+              : ''
+          }
+        </div>`;
+    })
+    .join('');
+  const isNew = p.status === 'recebido';
+  const editado = (p.editadoEm || p.editado_em)
+    ? '<span class="badge" style="background:#fef3c7;color:#92400e">Editado</span>'
+    : '';
+  return `<details class="order-card order ${isNew ? 'new' : ''} ${ageClass(min)}" data-id="${p.id}">
+    <summary>
+      <div class="order-sum-left">
+        <div class="big">Mesa ${p.mesa} <span class="muted" style="font-weight:600">#${p.id}</span></div>
+        <div class="order-sum-meta">
+          <span class="badge ${p.status}">${LABELS[p.status] || p.status}</span>
+          ${editado}
+          <span class="age ${ageClass(min)}">${min === 0 ? 'agora' : min + ' min'}</span>
+          <span>${nItens} item${nItens === 1 ? '' : 's'}</span>
+        </div>
+        <div class="order-preview">${esc(preview)}${mais}</div>
+      </div>
+    </summary>
+    <div class="order-body">
+      ${p.cliente_nome ? `<div class="muted" style="margin-bottom:8px">Cliente: <b>${esc(p.cliente_nome)}</b></div>` : ''}
+      ${itens || '<p class="muted">Sem itens</p>'}
+      ${p.observacao_geral ? `<p style="margin-top:8px"><b>Obs.:</b> ${esc(p.observacao_geral)}</p>` : ''}
+      <p class="muted" style="margin-top:6px;font-size:.8rem">${fmtHora(p.criado_em)}</p>
+      <div class="nav">
+        <button class="btn btn-icon" type="button" data-print="${p.id}" title="Imprimir comanda" aria-label="Imprimir comanda"><span class="i-print ico" aria-hidden="true"></span></button>
+      </div>
+    </div>
+  </details>`;
+}
+
+function ticketHtml(p) {
+  const linhas = (p.itens || []).map((i) => {
+    const extras = [];
+    if (i.ponto_carne && PONTO[i.ponto_carne]) extras.push('Ponto: ' + PONTO[i.ponto_carne]);
+    const adds = Array.isArray(i.adicionais) ? i.adicionais : [];
+    if (adds.length) extras.push('+ ' + adds.map((a) => a.nome).join(', '));
+    const rems = Array.isArray(i.remocoes) ? i.remocoes : [];
+    if (rems.length) extras.push('sem ' + rems.join(', '));
+    if (i.observacao) extras.push(i.observacao);
+    return `<div style="margin:6px 0"><b>${i.quantidade}x ${esc(i.nome)}</b>` +
+      (extras.length ? `<div style="padding-left:8px;font-size:11px">${esc(extras.join(' · '))}</div>` : '') +
+      `</div>`;
+  }).join('');
+
+  return `
+    <div style="text-align:center;border-bottom:1px dashed #000;padding-bottom:8px;margin-bottom:8px">
+      <div style="font-size:16px;font-weight:800">COMANDA COZINHA</div>
+      <div>Pedido #${p.id}</div>
+    </div>
+    <div><b>Mesa:</b> ${esc(String(p.mesa ?? ''))}</div>
+    ${p.cliente_nome ? `<div><b>Cliente:</b> ${esc(p.cliente_nome)}</div>` : ''}
+    <div><b>Hora:</b> ${fmtDataHora(p.criado_em)}</div>
+    <div><b>Status:</b> ${LABELS[p.status] || p.status}</div>
+    <hr style="border:none;border-top:1px dashed #000;margin:10px 0">
+    ${linhas || '<div>Sem itens</div>'}
+    ${p.observacao_geral ? `<hr style="border:none;border-top:1px dashed #000;margin:10px 0"><div><b>Obs.:</b> ${esc(p.observacao_geral)}</div>` : ''}
+    <hr style="border:none;border-top:1px dashed #000;margin:10px 0">
+    <div style="text-align:center;font-size:11px">Major Pub</div>
+  `;
+}
+
+function imprimirPedido(id) {
+  const p = pedidosCache.find((x) => Number(x.id) === Number(id));
+  if (!p) {
+    toast('Pedido não encontrado na fila', true);
+    return;
+  }
+  const area = document.getElementById('printArea');
+  area.innerHTML = ticketHtml(p);
+  area.style.display = 'block';
+  const after = () => {
+    area.style.display = 'none';
+    area.innerHTML = '';
+    window.removeEventListener('afterprint', after);
+  };
+  window.addEventListener('afterprint', after);
+  setTimeout(() => window.print(), 50);
+}
+
+function toast(msg, isErr) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (isErr ? ' err' : '');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => {
+    el.className = 'toast';
+  }, 2800);
+}
+
+function beepNovo() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'square';
+    o.frequency.value = 660;
+    g.gain.value = 0.07;
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start();
+    setTimeout(() => {
+      try {
+        o.frequency.value = 880;
+      } catch (_) {}
+    }, 120);
+    setTimeout(() => {
+      try {
+        o.stop();
+        ctx.close();
+      } catch (_) {}
+    }, 280);
+  } catch (_) {}
+}
+
+let advancing = false;
+const vistosRecebido = new Set();
+let primeiroLoad = true;
+let lastRenderSig = '';
+
+/** Assinatura estável dos pedidos/itens — evita re-pintar o DOM se nada mudou (SSE/poll). */
+function filaSignature(pedidos) {
+  return (pedidos || []).map(function (p) {
+    const itens = (p.itens || []).map(function (i) {
+      return i.id + ':' + (i.status || '');
+    }).join(',');
+    return p.id + '|' + (p.status || '') + '|' + (p.editado_em || p.editadoEm || '') + '|' + itens;
+  }).join(';');
+}
+
+function renderFila(pedidos) {
+  const novos = pedidos.filter((p) => p.status === 'recebido');
+  const prep = pedidos.filter((p) => p.status === 'em_producao').length;
+  document.getElementById('stats').textContent = pedidos.length
+    ? `${pedidos.length} na fila · ${novos.length} novo(s) · ${prep} em produção`
+    : 'Fila vazia';
+
+  const root = document.getElementById('orders');
+  const sig = filaSignature(pedidos);
+  // Não reescreve o HTML se a fila não mudou — elimina o "some e volta"
+  if (sig === lastRenderSig && root.children.length) return;
+  lastRenderSig = sig;
+
+  if (!pedidos.length) {
+    root.innerHTML =
+      '<div class="panel empty-state"><div class="big">✅</div><div>Nenhum pedido na fila da cozinha.</div></div>';
+    return;
+  }
+  // Cards independentes: vários podem ficar abertos; preserva no re-render/SSE
+  const openIds = new Set([
+    ...(window.__cozinhaOpenIds || []),
+    ...[...document.querySelectorAll('#orders details.order-card[open]')].map(d => d.getAttribute('data-id')).filter(Boolean),
+  ]);
+  const __opsScroll = window.scrollY || document.documentElement.scrollTop || 0;
+  root.innerHTML = pedidos.map(card).join('');
+  requestAnimationFrame(function(){ window.scrollTo(0, __opsScroll); });
+  const still = new Set();
+  root.querySelectorAll('details.order-card[data-id]').forEach(function(d){
+    const id = d.getAttribute('data-id');
+    if (openIds.has(id)) { d.open = true; still.add(id); }
+  });
+  window.__cozinhaOpenIds = still;
+}
+
+const load = (window.LQRRealtime && LQRRealtime.createLoader
+  ? LQRRealtime.createLoader
+  : (fn) => {
+      let loading = false, dirty = false;
+      return async function load() {
+        if (loading) { dirty = true; return; }
+        loading = true;
+        try { do { dirty = false; await fn(); } while (dirty); }
+        finally { loading = false; }
+      };
+    })(async () => {
+  // Durante o PATCH local, não busca de novo (o próprio avancarItem já atualiza e recarrega).
+  // Marca dirty no createLoader não é possível daqui — só evita flicker de SSE concorrente.
+  if (advancing) return;
+  const res = await fetch('/api/cozinha/pedidos');
+  if (res.status === 401) { location.href = '/login?next=' + encodeURIComponent('/cozinha'); return; }
+  if (!res.ok) throw new Error('Falha ao carregar fila');
+  const pedidos = await res.json();
+  pedidosCache = pedidos;
+
+  const novos = pedidos.filter((p) => p.status === 'recebido');
+  const idsAtivos = new Set(pedidos.map((p) => p.id));
+  const chegaram = [];
+  for (const p of novos) {
+    if (!vistosRecebido.has(p.id)) {
+      vistosRecebido.add(p.id);
+      if (!primeiroLoad) chegaram.push(p);
+    }
+  }
+  for (const id of [...vistosRecebido]) {
+    if (!idsAtivos.has(id)) vistosRecebido.delete(id);
+  }
+  if (chegaram.length) {
+    const mesas = [...new Set(chegaram.map((p) => p.mesa))].join(', ');
+    toast(
+      chegaram.length === 1
+        ? `Pedido novo · Mesa ${mesas} · #${chegaram[0].id}`
+        : `${chegaram.length} pedidos novos · Mesas ${mesas}`
+    );
+    beepNovo();
+    if (window.anunciarCozinha) {
+      for (const p of chegaram) {
+        anunciarCozinha({ mesa: p.mesa, clienteNome: p.cliente_nome || p.clienteNome || '' });
+      }
+    }
+  }
+  primeiroLoad = false;
+  renderFila(pedidos);
+});
+
+async function avancarItem(itemId, status) {
+  if (advancing) return;
+  advancing = true;
+  const btn = document.querySelector(`[data-advance-item="${itemId}"]`);
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '…';
+  }
+  // Atualização otimista no cache: UI responde na hora, sem sumir/aparecer
+  try {
+    for (const p of pedidosCache) {
+      for (const it of (p.itens || [])) {
+        if (Number(it.id) === Number(itemId)) {
+          it.status = status;
+        }
+      }
+      // Espelha sincronizarStatusPedido (simplificado) para o badge do pedido
+      const st = (p.itens || []).map((i) => i.status || 'recebido');
+      if (st.length && st.every((s) => s === 'concluido' || s === 'entregue')) p.status = 'concluido';
+      else if (st.some((s) => s === 'em_producao' || s === 'concluido' || s === 'entregue')) p.status = 'em_producao';
+    }
+    lastRenderSig = ''; // força re-render com o status otimista
+    renderFila(pedidosCache);
+  } catch (_) {}
+
+  try {
+    const res = await fetch(`/api/cozinha/itens/${itemId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      toast(data.error || 'Não foi possível avançar o status', true);
+      lastRenderSig = '';
+      advancing = false;
+      await load();
+      return;
+    }
+    toast(status === 'em_producao' ? 'Item em preparo' : 'Item pronto');
+    // Sincroniza com o servidor (pode remover o pedido se não houver mais itens pendentes do setor)
+    lastRenderSig = '';
+    advancing = false;
+    await load();
+  } catch (e) {
+    console.error(e);
+    toast('Erro de rede', true);
+    lastRenderSig = '';
+    advancing = false;
+    await load();
+  } finally {
+    advancing = false;
+  }
+}
+
+document.getElementById('orders').addEventListener('click', (ev) => {
+  const printBtn = ev.target.closest('[data-print]');
+  if (printBtn) {
+    imprimirPedido(Number(printBtn.dataset.print));
+    return;
+  }
+  const btn = ev.target.closest('[data-advance-item]');
+  if (!btn) return;
+  avancarItem(Number(btn.dataset.advanceItem), btn.dataset.status);
+});
+// Cards independentes (não fecha os outros ao abrir um)
+document.getElementById('orders').addEventListener('toggle', function(ev) {
+  const d = ev.target;
+  if (!d || d.tagName !== 'DETAILS' || !d.classList.contains('order-card')) return;
+  window.__cozinhaOpenIds = window.__cozinhaOpenIds || new Set();
+  const id = d.getAttribute('data-id');
+  if (d.open) window.__cozinhaOpenIds.add(id);
+  else window.__cozinhaOpenIds.delete(id);
+}, true);
+
+load();
+if (window.LQRRealtime) {
+  LQRRealtime.connect(() => load(), { fallbackMs: 20000, debounceMs: 120 });
+} else if (typeof EventSource !== 'undefined') {
+  const es = new EventSource('/api/events');
+  es.addEventListener('update', () => load());
+  es.addEventListener('hello', () => load());
+  setInterval(load, 15000);
+} else {
+  setInterval(load, 3000);
+}
+</script>
+<script src="/js/cookies.js"></script>
+</body>
+</html>

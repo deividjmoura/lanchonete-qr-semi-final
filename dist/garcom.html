@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0a0908">
+  <title>Garçom · Major Pub</title>
+  <link rel="icon" type="image/svg+xml" href="/favicons/garcom.svg">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/style-ops.css">
+  <link rel="stylesheet" href="/icons.css">
+  <link rel="stylesheet" href="/theme-glass.css">
+  <style>
+    @media print {
+      body * { visibility: hidden !important; }
+      #printArea, #printArea * { visibility: visible !important; }
+      #printArea {
+        position: absolute; left: 0; top: 0; width: 72mm;
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        font-size: 12px; color: #000; background: #fff;
+      }
+      .no-print { display: none !important; }
+    }
+    #printArea { display: none; }
+  </style>
+</head>
+<body class="page-garcom">
+<main class="wrap no-print">
+  <div class="glass-nav">
+    <div class="logo-mark" title="Major Pub">
+      <img src="/assets/logo-cliente.png" alt="Major Pub" width="64" height="64" style="width:88%;height:88%;object-fit:contain;border-radius:50%">
+    </div>
+    <div style="flex:1;min-width:0">
+      <div class="brand" style="margin:0">Garçom</div>
+      <div class="muted" style="font-size:.85rem" id="who">Carregando…</div>
+    </div>
+  </div>
+  <div id="stats" class="muted" style="margin-bottom:14px" aria-live="polite"></div>
+  <div id="orders" class="kgrid"></div>
+</main>
+<div id="toast" class="toast no-print"></div>
+<div id="printArea" aria-hidden="true"></div>
+<script src="/js/safe-dom.js"></script>
+<script src="/js/realtime.js"></script>
+<script src="/js/voz-ops.js"></script>
+<script>
+const path = location.pathname.split('/').filter(Boolean);
+const garcomToken = path[path.length - 1];
+let me = null;
+let advancing = false;
+
+function fmtHora(iso){try{return new Date(iso).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}catch{return'—'}}
+function idadeMinutos(iso){return Math.max(0,Math.floor((Date.now()-new Date(iso).getTime())/60000))}
+function ageClass(min){if(min>=10)return'hot';if(min>=5)return'warn';return''}
+function esc(s) {
+  if (window.SafeDOM && typeof SafeDOM.escapeHtml === 'function') {
+    return SafeDOM.escapeHtml(s);
+  }
+  return String(s ?? '').replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+}
+function extrasHtml(item){
+  const parts = [];
+  (item.adicionais || []).forEach((a) => parts.push('+' + (a.nome || a)));
+  (item.remocoes || []).forEach((r) => parts.push('sem ' + r));
+  if (item.ponto_carne) parts.push(String(item.ponto_carne).replace(/_/g, ' ').toLowerCase());
+  if (item.observacao) parts.push(item.observacao);
+  return parts.length ? ` <span class="muted">(${parts.map(esc).join(', ')})</span>` : '';
+}
+function card(p){
+  const min=idadeMinutos(p.criado_em);
+  const nItens=(p.itens||[]).reduce((a,i)=>a+(Number(i.quantidade)||1),0);
+  const preview=(p.itens||[]).slice(0,2).map(i=>i.quantidade+'× '+i.nome).join(' · ');
+  const mais=(p.itens||[]).length>2?'…':'';
+  const itens=(p.itens||[]).map(i=>`<div class="row"><span><b>${i.quantidade}×</b> ${esc(i.nome)}${extrasHtml(i)}</span></div>`).join('');
+  const cliente=p.cliente_nome?`<div class="muted" style="margin-bottom:8px">Cliente: <b>${esc(p.cliente_nome)}</b></div>`:'';
+  return `<details class="order-card kcard ${ageClass(min)}" data-id="${p.id}">
+    <summary>
+      <div class="order-sum-left">
+        <div class="big">Mesa ${esc(String(p.mesa))} <span class="muted" style="font-weight:600">#${p.id}</span></div>
+        <div class="order-sum-meta">
+          <span class="badge">Pronto</span>
+          <span>${min===0?'agora':min+' min'}</span>
+          <span>${nItens} item${nItens===1?'':'s'}</span>
+        </div>
+        <div class="order-preview">${esc(preview)}${mais}</div>
+      </div>
+    </summary>
+    <div class="order-body">
+      ${cliente}
+      ${itens||'<span class="muted">Sem itens</span>'}
+      ${p.observacao_geral?`<p class="muted" style="margin:8px 0 0">Obs.: ${esc(p.observacao_geral)}</p>`:''}
+      <div class="nav">
+        <button class="btn btn-icon" type="button" data-print="${p.id}" title="Imprimir comanda" aria-label="Imprimir"><span class="i-print ico" aria-hidden="true"></span></button>
+        <button class="btn primary btn-chip" type="button" data-deliver="${p.id}" title="Entregar e assinar como ${esc(me?.nome||'')}">
+          <span class="i-check ico" aria-hidden="true"></span> Entregar
+        </button>
+      </div>
+    </div>
+  </details>`;
+}
+function ticketHtml(p) {
+  const linhas = (p.itens || []).map((i) => {
+    const extras = extrasHtml(i).replace(/<[^>]+>/g, ' ').trim();
+    return `${i.quantidade}x ${i.nome}${extras ? ' (' + extras + ')' : ''}`;
+  }).join('\n');
+  const cliente = p.cliente_nome ? `Cliente: ${p.cliente_nome}\n` : '';
+  const obs = p.observacao_geral ? `Obs: ${p.observacao_geral}\n` : '';
+  return `<pre style="margin:0;white-space:pre-wrap">=== COMANDA ===
+Mesa ${p.mesa}  #${p.id}
+${cliente}${obs}---------------
+${linhas || '(sem itens)'}
+---------------
+${fmtHora(p.criado_em)}
+Garçom: ${(me && me.nome) || '-'}
+</pre>`;
+}
+function imprimirPedido(id) {
+  const pedidos = window.__lastPedidos || [];
+  const p = pedidos.find((x) => Number(x.id) === Number(id));
+  if (!p) return toast('Pedido não encontrado', 'err');
+  const area = document.getElementById('printArea');
+  area.innerHTML = ticketHtml(p);
+  area.style.display = 'block';
+  const after = () => {
+    area.style.display = 'none';
+    area.innerHTML = '';
+    window.removeEventListener('afterprint', after);
+  };
+  window.addEventListener('afterprint', after);
+  setTimeout(() => window.print(), 50);
+}
+function toast(msg,kind){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show '+(kind||'');clearTimeout(toast._t);toast._t=setTimeout(()=>{el.className='toast'},2800)}
+
+function beepPronto() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.value = 523;
+    g.gain.value = 0.09;
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start();
+    setTimeout(() => { try { o.frequency.value = 659; } catch (_) {} }, 140);
+    setTimeout(() => { try { o.frequency.value = 784; } catch (_) {} }, 280);
+    setTimeout(() => { try { o.stop(); ctx.close(); } catch (_) {} }, 420);
+  } catch (_) {}
+}
+
+async function loadMe(){
+  const res=await fetch('/api/garcom/'+garcomToken+'/me');
+  if(!res.ok){document.body.innerHTML='<main class="wrap"><div class="panel"><h2>Link inválido</h2><p class="muted">Peça um novo link ao admin.</p></div></main>';throw new Error('unauth')}
+  me=await res.json();
+  document.getElementById('who').textContent=me.nome+' · só pedidos prontos para entregar';
+}
+
+const vistosPronto = new Set();
+let primeiroLoad = true;
+
+const load = (window.LQRRealtime && LQRRealtime.createLoader
+  ? LQRRealtime.createLoader
+  : (fn) => {
+      let loading = false, dirty = false;
+      return async function load() {
+        if (loading) { dirty = true; return; }
+        loading = true;
+        try { do { dirty = false; await fn(); } while (dirty); }
+        finally { loading = false; }
+      };
+    })(async () => {
+  if (advancing) return;
+  const res = await fetch('/api/garcom/' + garcomToken + '/pedidos');
+  if (!res.ok) throw new Error('fail');
+  const pedidos = await res.json();
+  window.__lastPedidos = pedidos;
+
+  const idsAtivos = new Set(pedidos.map((p) => p.id));
+  const chegaram = [];
+  for (const p of pedidos) {
+    if (!vistosPronto.has(p.id)) {
+      vistosPronto.add(p.id);
+      if (!primeiroLoad) chegaram.push(p);
+    }
+  }
+  for (const id of [...vistosPronto]) {
+    if (!idsAtivos.has(id)) vistosPronto.delete(id);
+  }
+  if (chegaram.length) {
+    const mesas = [...new Set(chegaram.map((p) => p.mesa))].join(', ');
+    toast(
+      chegaram.length === 1
+        ? `Pedido pronto · Mesa ${mesas} · #${chegaram[0].id}`
+        : `${chegaram.length} pedidos prontos · Mesas ${mesas}`,
+      'ok'
+    );
+    beepPronto();
+    // Voz engraçada: só número da mesa
+    if (window.anunciarGarcom) {
+      const mesasUnicas = [...new Set(chegaram.map((p) => p.mesa))];
+      for (const mesa of mesasUnicas) {
+        anunciarGarcom({ mesa });
+      }
+    }
+  }
+  primeiroLoad = false;
+
+  document.getElementById('stats').textContent = pedidos.length
+    ? `${pedidos.length} pronto(s) para entregar`
+    : 'Nenhum pedido aguardando entrega';
+  // Preserva cards abertos de forma independente (vários podem ficar abertos)
+  const openIds = new Set([
+    ...(window.__garcomOpenIds || []),
+    ...[...document.querySelectorAll('#orders details.order-card[open]')].map(d => d.getAttribute('data-id')).filter(Boolean),
+  ]);
+  const __opsScroll = window.scrollY || document.documentElement.scrollTop || 0;
+  const root = document.getElementById('orders');
+  root.innerHTML = pedidos.length
+    ? pedidos.map(card).join('')
+    : '<div class="panel empty-state"><div class="big">✅</div><div>Fila vazia.</div></div>';
+  requestAnimationFrame(function(){ window.scrollTo(0, __opsScroll); });
+  const still = new Set();
+  root.querySelectorAll('details.order-card[data-id]').forEach(function(d) {
+    const id = d.getAttribute('data-id');
+    if (openIds.has(id)) { d.open = true; still.add(id); }
+  });
+  window.__garcomOpenIds = still;
+});
+async function entregar(id){
+  if(advancing)return;advancing=true;
+  const art = document.querySelector(`[data-id="${id}"]`);
+  if (art) art.remove();
+  try{
+    const res=await fetch(`/api/garcom/${garcomToken}/pedidos/${id}/entregar`,{method:'POST'});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok){toast(data.error||'Não foi possível entregar','err');await load();return}
+    toast('Entregue e assinado por '+(data.garcom?.nome||me.nome),'ok');
+    await load();
+  }catch(e){toast('Erro de rede','err');await load();}
+  finally{advancing=false}
+}
+document.getElementById('orders').addEventListener('click',(ev)=>{
+  const printBtn=ev.target.closest('[data-print]');
+  if(printBtn){imprimirPedido(Number(printBtn.dataset.print));return;}
+  const btn=ev.target.closest('[data-deliver]');if(!btn)return;entregar(Number(btn.dataset.deliver));
+});
+// Cards independentes: só atualiza o Set do card clicado (não fecha os outros)
+document.getElementById('orders').addEventListener('toggle', function(ev) {
+  const d = ev.target;
+  if (!d || d.tagName !== 'DETAILS' || !d.classList.contains('order-card')) return;
+  window.__garcomOpenIds = window.__garcomOpenIds || new Set();
+  const id = d.getAttribute('data-id');
+  if (d.open) window.__garcomOpenIds.add(id);
+  else window.__garcomOpenIds.delete(id);
+}, true);
+(async()=>{
+  await loadMe();
+  await load();
+  if (window.LQRRealtime) {
+    LQRRealtime.connect(() => load(), { fallbackMs: 20000, debounceMs: 120 });
+  } else if (typeof EventSource !== 'undefined') {
+    const es = new EventSource('/api/events');
+    es.addEventListener('update', () => load());
+    es.addEventListener('hello', () => load());
+    setInterval(load, 20000);
+  } else setInterval(load, 3000);
+})();
+</script>
+<script src="/js/cookies.js"></script>
+</body>
+</html>

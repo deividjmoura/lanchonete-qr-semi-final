@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0a0908">
+  <title>Caixa · Major Pub</title>
+  <link rel="icon" type="image/svg+xml" href="/favicons/caixa.svg">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/style-ops.css">
+  <link rel="stylesheet" href="/icons.css">
+  <link rel="stylesheet" href="/theme-glass.css">
+  <style>
+    .sessao-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow);padding:0;overflow:hidden}
+    .sessao-fold > .sessao-sum{padding:14px 16px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px;user-select:none;width:100%;border:0;background:transparent;color:inherit;font:inherit;text-align:left}
+    .sessao-fold > .sessao-sum:hover{background:var(--surface-2)}
+    .sessao-fold > .sessao-sum::after{content:"▾";opacity:.45;font-size:.85rem;flex:0 0 auto}
+    .sessao-fold.open > .sessao-sum::after{content:"▴"}
+    .sessao-fold .order-body{display:none !important;padding:0 16px 16px;border-top:1px solid var(--line);padding-top:12px}
+    .sessao-fold.open > .order-body{display:block !important}
+    /* garante que só o card clicado abre — sem afetar irmãos */
+    .grid-caixa .sessao-fold:not(.open) > .order-body{display:none !important}
+    .sessao-fold .order-sum-meta .badge{font-size:.75rem}
+    details.pedido{margin-top:10px}
+    .sessao-card.blocked{opacity:.88}
+    .sessao-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+    .valor-big{font-size:1.65rem;font-weight:800;font-family:var(--font-mono)}
+    .badge.warn{background:var(--warning-soft);color:var(--warning)}
+    .badge.ok{background:var(--success-soft);color:var(--success)}
+    .itens-list{margin:14px 0 0;padding:0;list-style:none}
+    .itens-list li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:.92rem}
+    .pay-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+    .pay-row label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer;font-weight:600;font-size:.875rem;margin:0}
+    .pay-row label:has(input:checked){border-color:var(--dark);background:var(--dark);color:var(--bg)}
+    .adjust-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+    .adjust-row label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;font-weight:600;color:var(--muted);margin:0}
+    .adjust-row input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--text);font-family:var(--font-mono);font-weight:700}
+    .cobrado-line{margin-top:10px;display:flex;justify-content:space-between;align-items:center;font-weight:700}
+    .cobrado-line .valor-cobrado{font-family:var(--font-mono);font-size:1.15rem}
+    .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+    .grid-caixa{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+    details.pedido{border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;margin-top:10px;background:var(--surface-2)}
+    details.pedido summary{cursor:pointer;font-weight:700}
+    .pix-box{margin-top:14px;padding:14px;border:1px dashed var(--line);border-radius:var(--radius);background:var(--surface-2);text-align:center}
+    .pix-box img{display:block;margin:0 auto;border-radius:12px;background:#fff;padding:8px}
+    .sessao-card.pix-wait{border-color:#16a34a;box-shadow:0 0 0 2px rgba(22,163,74,.25)}
+    .badge.pix{background:#dcfce7;color:#166534;font-weight:700}
+    .badge.parcial{background:#fef3c7;color:#92400e;font-weight:700}
+  </style>
+</head>
+<body class="page-caixa">
+<main class="wrap">
+  <div class="glass-nav">
+    <div class="logo-mark" title="Major Pub">
+      <img src="/assets/logo-cliente.png" alt="Major Pub" width="64" height="64" style="width:88%;height:88%;object-fit:contain;border-radius:50%">
+    </div>
+    <div style="flex:1;min-width:0">
+      <div class="brand" style="margin:0">Caixa</div>
+      <div class="muted" style="font-size:.85rem">Sessões abertas · fecha conta e libera a mesa</div>
+    </div>
+    <div class="nav glass-actions ops-actions">
+      <a class="btn btn-ghost" href="/admin" title="Admin"><span class="i-admin ico" aria-hidden="true"></span>Admin</a>
+      <a class="btn btn-ghost" href="/cozinha" title="Cozinha"><span class="i-kitchen ico" aria-hidden="true"></span>Cozinha</a>
+      <a class="btn btn-ghost" href="/" title="Início"><span class="i-home ico" aria-hidden="true"></span>Início</a>
+      <button class="btn btn-ghost" id="btnSair" type="button" title="Sair"><span class="i-logout ico" aria-hidden="true"></span>Sair</button>
+    </div>
+  </div>
+  <div id="stats" class="muted" style="margin-bottom:14px"></div>
+  <div id="lista" class="grid-caixa"></div>
+</main>
+<div id="toast" class="toast"></div>
+<script src="/js/safe-dom.js"></script>
+<script src="/js/realtime.js"></script>
+<script src="/js/pix.js"></script>
+<script src="/js/caixa-divisao.js"></script>
+<script src="/js/voz-ops.js"></script>
+<script>
+(function () {
+  const _fetch = window.fetch;
+  window.fetch = async function (...args) {
+    const res = await _fetch(...args);
+    if (res.status === 401) location.href = '/login?next=' + encodeURIComponent(location.pathname);
+    return res;
+  };
+})();
+document.getElementById('btnSair').addEventListener('click', async () => {
+  try { await fetch('/api/logout', { method: 'POST' }); } catch (e) {}
+  location.href = '/login';
+});
+const FORMAS = [
+  { id: 'dinheiro', label: 'Dinheiro' },
+  { id: 'pix', label: 'PIX' },
+  { id: 'cartao_debito', label: 'Débito' },
+  { id: 'cartao_credito', label: 'Crédito' },
+];
+function montarPixCopiaCola(valor) {
+  return (window.LQRPix && LQRPix.montarPayload(valor)) || '';
+}
+function qrUrlPix(valor) {
+  return (window.LQRPix && LQRPix.qrUrl(valor)) || '';
+}
+function pixNome() {
+  return (window.LQRPix && LQRPix.config && LQRPix.config.nome) || 'PIX';
+}
+const esc = (s) => {
+  if (window.SafeDOM && typeof SafeDOM.escapeHtml === 'function') return SafeDOM.escapeHtml(s);
+  return String(s ?? '').replace(/[&<>"']/g, (m) => ({'&':'&','<':'<','>':'>','"':'"',"'":'&#039;'}[m]));
+};
+function money(n) {
+  return 'R$ ' + Number(n || 0).toFixed(2).replace('.', ',');
+}
+function parseMoneyInput(el) {
+  if (!el) return 0;
+  const n = Number(String(el.value || '0').replace(',', '.'));
+  return Number.isFinite(n) && n >= 0 ? Number(n.toFixed(2)) : 0;
+}
+function fmtHora(iso) {
+  try {
+    return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  } catch { return '—'; }
+}
+function itemLine(i) {
+  const extras = [];
+  if (i.adicionais?.length) extras.push('+ ' + i.adicionais.map((a) => a.nome).join(', '));
+  if (i.remocoes?.length) extras.push('sem ' + i.remocoes.join(', '));
+  if (i.ponto_carne) extras.push('ponto: ' + i.ponto_carne.replace(/_/g, ' ').toLowerCase());
+  if (i.observacao) extras.push(i.observacao);
+  return `<li><span><b>${i.quantidade}×</b> ${esc(i.nome)}${extras.length ? `<small>${esc(extras.join(' · '))}</small>` : ''}</span><span>${money(i.subtotal)}</span></li>`;
+}
+function valorCobradoFromCard(id, baseTotal) {
+  const desconto = parseMoneyInput(document.getElementById('desconto-' + id));
+  const taxa = parseMoneyInput(document.getElementById('taxa-' + id));
+  return Number((Number(baseTotal) - desconto + taxa).toFixed(2));
+}
+/** Valor ainda a pagar no fechamento (total ajustado − já pago). */
+function valorAPagarFromCard(id, baseTotal, jaPago) {
+  const cobrado = valorCobradoFromCard(id, baseTotal);
+  return Number(Math.max(0, cobrado - Number(jaPago || 0)).toFixed(2));
+}
+function refreshCobrado(id, baseTotal) {
+  const art = document.querySelector(`[data-id="${id}"]`);
+  const jaPago = Number(art?.dataset.pago || 0);
+  const aPagar = valorAPagarFromCard(id, baseTotal, jaPago);
+  const el = document.getElementById('cobrado-' + id);
+  if (el) el.textContent = money(aPagar);
+  refreshPix(id, aPagar);
+}
+function refreshPix(id, valor) {
+  const box = document.getElementById('pix-' + id);
+  if (!box) return;
+  const img = box.querySelector('img');
+  const ta = document.getElementById('pix-payload-' + id);
+  const label = box.querySelector('[data-pix-label]');
+  if (img) img.src = qrUrlPix(valor) || img.src;
+  if (ta) ta.value = montarPixCopiaCola(valor);
+  if (label) label.textContent = 'PIX · ' + money(valor) + ' · ' + pixNome();
+}
+
+window.__caixaOpenIds = window.__caixaOpenIds || new Set();
+function toggleSessaoCard(id) {
+  id = String(id);
+  const art = document.querySelector('article.sessao-fold[data-id="' + CSS.escape(id) + '"]');
+  if (!art) return;
+  const open = art.classList.toggle('open');
+  const btn = art.querySelector('[data-toggle-sessao]');
+  if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) window.__caixaOpenIds.add(id);
+  else window.__caixaOpenIds.delete(id);
+}
+
+function card(s) {
+  const valorPago = Number(s.valorPago || 0);
+  const valorRestante = Number(
+    s.valorRestante != null ? s.valorRestante : Math.max(0, Number(s.valorTotal) - valorPago)
+  );
+    const pedidosHtml = (s.pedidosEntregues || []).map((p) => {
+    const itens = (p.itens || []).map(itemLine).join('');
+    const quem = p.clienteNome ? ` · ${esc(p.clienteNome)}` : '';
+    return `<details class="pedido" data-pid="${p.id}"><summary>Pedido #${p.id}${quem} · ${money(p.total)}</summary><ul class="itens-list">${itens || '<li class="muted">Sem itens</li>'}</ul></details>`;
+  }).join('');
+  const pay = FORMAS.map((f, idx) =>
+    `<label><input type="radio" name="pay-${s.id}" value="${f.id}" ${idx === 1 ? 'checked' : ''}> ${f.label}</label>`
+  ).join('');
+  const bloqueio = s.pedidosPendentes > 0
+    ? `<span class="badge warn">${s.pedidosPendentes} em andamento</span>`
+    : `<span class="badge ok">Pronto para fechar</span>`;
+  const pixAviso = s.pixInformadoEm
+    ? `<span class="badge pix" title="Cliente tocou em Já paguei no PIX">PIX informado pelo cliente</span>`
+    : '';
+  const parcialBadge = valorPago > 0.009
+    ? `<span class="badge parcial" title="Pagamentos parciais registrados">Pago ${money(valorPago)} · resta ${money(valorRestante)}</span>`
+    : '';
+  const pixOk = window.LQRPix && LQRPix.disponivel();
+  const avisos = Array.isArray(s.pixAvisos) ? s.pixAvisos : [];
+  const avisosHtml = avisos.length
+    ? `<div class="pix-avisos-box" style="margin:12px 0;padding:12px;border-radius:12px;border:1px solid rgba(251,191,36,.45);background:rgba(251,191,36,.1)">
+        <div style="font-weight:700;margin-bottom:8px">PIX informado pelo cliente</div>
+        ${avisos.map(a => {
+          const quem = a.clienteNome ? esc(a.clienteNome) : 'Cliente';
+          const ped = a.pedidoId ? (' · pedido') : ' · total da conta';
+          return `<div class="pix-aviso-row" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.1)">
+            <div style="font-size:.88rem"><b>${quem}</b>${ped}<br><span class="muted">Valor: <b>${money(a.valor)}</b></span></div>
+            <button type="button" class="btn primary btn-chip" data-confirm-pix-aviso="${s.id}" data-aviso-id="${a.id}" data-aviso-valor="${a.valor}">
+              Confirmar PIX ${money(a.valor)}
+            </button>
+          </div>`;
+        }).join('')}
+      </div>`
+    : '';
+
+  const nPed = (s.pedidosEntregues || []).length;
+  const isOpen = window.__caixaOpenIds && window.__caixaOpenIds.has(String(s.id));
+  return `<article class="sessao-fold sessao-card ${s.podeFechar ? '' : 'blocked'}${s.pixInformadoEm ? ' pix-wait' : ''}${isOpen ? ' open' : ''}" data-id="${s.id}" data-total="${Number(s.valorTotal)}" data-pago="${valorPago}" data-restante="${valorRestante}" data-pix="${s.pixInformadoEm ? '1' : '0'}">
+    <button type="button" class="sessao-sum" data-toggle-sessao="${s.id}" aria-expanded="${isOpen ? 'true' : 'false'}">
+      <div class="order-sum-left">
+        <div class="big">Mesa ${s.mesa}</div>
+        <div class="order-sum-meta">
+          ${bloqueio}${pixAviso}${parcialBadge}
+          <span>${nPed} pedido${nPed === 1 ? '' : 's'}</span>
+          <span class="muted">#${s.id}</span>
+        </div>
+      </div>
+      <div class="order-sum-right"><div class="valor-big">${money(valorRestante > 0.009 && valorPago > 0.009 ? valorRestante : s.valorTotal)}</div>
+        <div class="muted" style="font-size:.75rem">${valorPago > 0.009 ? 'a cobrar' : 'total'}</div>
+      </div>
+    </button>
+    <div class="order-body">
+      <div class="muted" style="font-size:.85rem;margin-bottom:8px">Aberta em ${fmtHora(s.abertaEm)}</div>
+      ${pedidosHtml || '<p class="muted">Nenhum pedido entregue ainda.</p>'}
+      ${avisosHtml}
+      <div class="adjust-row">
+        <label>Desconto (R$)<input type="number" min="0" step="0.01" inputmode="decimal" id="desconto-${s.id}" value="0" data-adjust="${s.id}"></label>
+        <label>Taxa de serviço (R$)<input type="number" min="0" step="0.01" inputmode="decimal" id="taxa-${s.id}" value="0" data-adjust="${s.id}"></label>
+      </div>
+      <div class="cobrado-line"><span class="muted">A cobrar${valorPago > 0.009 ? ' (restante)' : ''}</span><span class="valor-cobrado" id="cobrado-${s.id}">${money(valorRestante)}</span></div>
+      <div class="pay-row" data-pay="${s.id}">${pay}</div>
+      <div class="pix-box" id="pix-${s.id}" style="display:none">
+        ${pixOk ? `<img src="${qrUrlPix(valorRestante)}" alt="QR Code PIX" width="220" height="220" loading="lazy">
+        <p class="muted" style="margin:10px 0 6px;font-size:.85rem" data-pix-label>PIX · ${money(valorRestante)} · ${esc(pixNome())}</p>
+        <button class="btn btn-chip" type="button" data-copy-pix="${s.id}"><span class="i-copy ico" aria-hidden="true"></span> Copiar PIX</button>
+        <textarea id="pix-payload-${s.id}" readonly hidden>${esc(montarPixCopiaCola(valorRestante))}</textarea>`
+        : `<p class="muted">Configure PIX_CHAVE no .env</p>`}
+      </div>
+      <div class="actions">
+        <button class="btn primary btn-chip" data-close="${s.id}" ${s.podeFechar ? '' : 'disabled title="Aguarde pedidos em andamento"'}><span class="i-check ico" aria-hidden="true"></span> Fechar</button>
+      </div>
+    </div>
+  </article>`;
+}
+function toast(msg, kind) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (kind === 'err' ? ' err' : kind === 'ok' ? ' ok' : '');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { el.className = 'toast'; }, 2800);
+}
+let closing = false;
+// Chave = sessaoId → último pixInformadoEm visto (permite re-aviso do próximo pagante)
+const pixAvisados = new Map();
+let pixPrimeiroLoad = true;
+function beepPix() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.value = 880;
+    g.gain.value = 0.08;
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start();
+    setTimeout(() => { try { o.stop(); ctx.close(); } catch (_) {} }, 180);
+  } catch (_) {}
+}
+const load = (window.LQRRealtime && LQRRealtime.createLoader
+  ? LQRRealtime.createLoader
+  : (fn) => {
+      let loading = false, dirty = false;
+      return async function load() {
+        if (loading) { dirty = true; return; }
+        loading = true;
+        try { do { dirty = false; await fn(); } while (dirty); }
+        finally { loading = false; }
+      };
+    })(async () => {
+  if (closing) return;
+  const res = await fetch('/api/caixa/sessoes');
+  if (!res.ok) throw new Error('Falha ao carregar');
+  const sessoes = await res.json();
+  const novos = [];
+  const idsAtivos = new Set();
+  for (const s of sessoes) {
+    idsAtivos.add(s.id);
+    if (s.pixInformadoEm) {
+      const visto = pixAvisados.get(s.id);
+      if (visto !== s.pixInformadoEm) {
+        pixAvisados.set(s.id, s.pixInformadoEm);
+        if (!pixPrimeiroLoad) novos.push(s);
+      }
+    } else {
+      pixAvisados.delete(s.id);
+    }
+  }
+  for (const id of [...pixAvisados.keys()]) {
+    if (!idsAtivos.has(id)) pixAvisados.delete(id);
+  }
+  if (novos.length) {
+    const mesas = novos.map((s) => s.mesa).join(', ');
+    toast(
+      novos.length === 1
+        ? `Mesa ${mesas}: cliente informou pagamento PIX`
+        : `Mesas ${mesas}: PIX informado pelo cliente`,
+      'ok'
+    );
+    beepPix();
+    novos.forEach((s) => window.anunciarPagamento && window.anunciarPagamento({ mesa: s.mesa, forma: 'pix' }));
+  }
+  pixPrimeiroLoad = false;
+  const totalAberto = sessoes.reduce((s, x) => s + Number(x.valorTotal || 0), 0);
+  const pixPend = sessoes.filter((s) => s.pixInformadoEm).length;
+  document.getElementById('stats').textContent = sessoes.length
+    ? `${sessoes.length} mesa(s) aberta(s) · total em aberto ${money(totalAberto)}` +
+      (pixPend ? ` · ${pixPend} PIX aguardando confirmação` : '')
+    : 'Nenhuma mesa com conta aberta';
+  const root = document.getElementById('lista');
+  if (!sessoes.length) {
+    root.innerHTML = '<div class="panel empty-state" style="grid-column:1/-1"><div class="big">✅</div><div>Nenhuma sessão aberta no momento.</div></div>';
+  } else {
+    const openPed = new Set([...document.querySelectorAll('#lista details.pedido[open]')].map(d => d.getAttribute('data-pid')).filter(Boolean));
+    window.__caixaOpenPedidos = openPed;
+    const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    root.innerHTML = sessoes.map(card).join('');
+    if (openPed.size) {
+      root.querySelectorAll('details.pedido[data-pid]').forEach(function(d){
+        if (openPed.has(d.getAttribute('data-pid'))) d.open = true;
+      });
+    }
+    requestAnimationFrame(function(){ window.scrollTo(0, scrollY); });
+    sessoes.forEach((s) => {
+      if (s.pixInformadoEm) {
+        const radio = document.querySelector(`input[name="pay-${s.id}"][value="pix"]`);
+        if (radio) radio.checked = true;
+      }
+      syncPixBox(s.id);
+    });
+  }
+});
+async function fechar(id) {
+  if (closing) return;
+  const radio = document.querySelector(`input[name="pay-${id}"]:checked`);
+  if (!radio) { toast('Escolha a forma de pagamento', 'err'); return; }
+  const art = document.querySelector(`[data-id="${id}"]`);
+  const baseTotal = Number(art?.dataset.total || 0);
+  const jaPago = Number(art?.dataset.pago || 0);
+  const desconto = parseMoneyInput(document.getElementById('desconto-' + id));
+  const taxaServico = parseMoneyInput(document.getElementById('taxa-' + id));
+  if (desconto > baseTotal) { toast('Desconto maior que o total', 'err'); return; }
+  const cobrado = Number((baseTotal - desconto + taxaServico).toFixed(2));
+  const aPagar = Number(Math.max(0, cobrado - jaPago).toFixed(2));
+  const msg = `Confirmar fechamento?\nSubtotal ${money(baseTotal)}` +
+    (desconto ? `\nDesconto -${money(desconto)}` : '') +
+    (taxaServico ? `\nTaxa +${money(taxaServico)}` : '') +
+    (jaPago > 0.009 ? `\nJá pago ${money(jaPago)}` : '') +
+    `\nA cobrar agora ${money(aPagar)} · ${radio.value}` +
+    (aPagar <= 0.009 ? '\n(restante zerado — só fecha a sessão)' : '');
+  if (!confirm(msg)) return;
+  closing = true;
+  try {
+    const res = await fetch(`/api/caixa/sessoes/${id}/fechar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ formaPagamento: radio.value, desconto, taxaServico }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { toast(data.error || 'Não foi possível fechar', 'err'); return; }
+    const pago = data.valorCobrado != null ? data.valorCobrado : data.valorTotal;
+    toast(`Mesa ${data.mesa} fechada · ${money(pago)} · ${data.formaPagamento}`, 'ok');
+    await load();
+  } catch (e) {
+    toast('Erro de rede', 'err');
+  } finally { closing = false; }
+}
+function syncPixBox(sessaoId) {
+  const radio = document.querySelector(`input[name="pay-${sessaoId}"]:checked`);
+  const box = document.getElementById('pix-' + sessaoId);
+  if (!box) return;
+  box.style.display = radio && radio.value === 'pix' ? 'block' : 'none';
+  const art = document.querySelector(`[data-id="${sessaoId}"]`);
+  refreshCobrado(sessaoId, Number(art?.dataset.total || 0));
+}
+document.getElementById('lista').addEventListener('input', (ev) => {
+  const input = ev.target.closest('[data-adjust]');
+  if (!input) return;
+  const id = input.dataset.adjust;
+  const art = document.querySelector(`[data-id="${id}"]`);
+  refreshCobrado(id, Number(art?.dataset.total || 0));
+});
+document.getElementById('lista').addEventListener('change', (ev) => {
+  const input = ev.target.closest('input[type="radio"][name^="pay-"]');
+  if (!input) return;
+  syncPixBox(input.name.replace('pay-', ''));
+});
+document.getElementById('lista').addEventListener('click', async (ev) => {
+  const toggleBtn = ev.target.closest('[data-toggle-sessao]');
+  if (toggleBtn) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    toggleSessaoCard(toggleBtn.getAttribute('data-toggle-sessao'));
+    return;
+  }
+  const copyBtn = ev.target.closest('[data-copy-pix]');
+  if (copyBtn) {
+    const ta = document.getElementById('pix-payload-' + copyBtn.dataset.copyPix);
+    if (ta) navigator.clipboard.writeText(ta.value).then(() => toast('Código PIX copiado', 'ok'), () => toast('Não foi possível copiar', 'err'));
+    return;
+  }
+  const confPix = ev.target.closest('[data-confirm-pix-aviso]');
+  if (confPix) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    const sessaoId = confPix.getAttribute('data-confirm-pix-aviso');
+    const avisoId = confPix.getAttribute('data-aviso-id');
+    const valor = confPix.getAttribute('data-aviso-valor');
+    if (!sessaoId || !avisoId) return;
+    if (confPix.disabled) return;
+    confPix.disabled = true;
+    try {
+      const r = await fetch('/api/caixa/sessoes/' + sessaoId + '/pix-avisos/' + avisoId + '/confirmar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: '{}',
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        toast(data.error || 'Não foi possível confirmar o PIX', 'err');
+        confPix.disabled = false;
+        return;
+      }
+      toast('PIX confirmado' + (valor ? ' · ' + money(Number(valor)) : ''), 'ok');
+      await load();
+    } catch (e) {
+      toast('Falha de rede ao confirmar PIX', 'err');
+      confPix.disabled = false;
+    }
+    return;
+  }
+  const btn = ev.target.closest('[data-close]');
+  if (!btn || btn.disabled) return;
+  fechar(Number(btn.dataset.close));
+});
+window.__caixaReload = load;
+(async () => {
+  if (window.LQRPix) await LQRPix.loadConfig();
+  await load();
+  if (window.LQRRealtime) {
+    LQRRealtime.connect(() => load(), { fallbackMs: 20000, debounceMs: 150 });
+  } else {
+    setInterval(load, 5000);
+  }
+})();
+</script>
+<script src="/js/cookies.js"></script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Entrar · Major Pub</title>
+<link rel="icon" type="image/svg+xml" href="/favicons/login.svg">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/style-ops.css">
+<link rel="stylesheet" href="/theme-glass.css">
+<style>
+  body{ background:radial-gradient(circle at 50% -10%, var(--surface) 0%, var(--bg) 55%); }
+  .login-shell{ max-width:400px; margin:14vh auto 0; padding:0 16px; position:relative; }
+  .login-card{ text-align:center; padding:clamp(28px,6vw,44px) clamp(24px,5vw,36px); }
+  .login-lock{
+    display:grid; place-items:center;
+    width:56px; height:56px; margin:0 auto 18px;
+    border-radius:16px; background:var(--dark); color:var(--bg); font-size:1.5rem;
+  }
+  .login-card h1{ font-size:1.5rem; margin-bottom:6px; }
+  .login-card p.muted{ margin-bottom:26px; }
+  .login-card form{ text-align:left; }
+  .login-card label{ display:block; margin-top:12px; margin-bottom:6px; }
+  .login-card .btn.primary{ width:100%; margin-top:18px; min-height:44px; }
+  .login-card .btn.primary[disabled]{ opacity:.7; cursor:default; transform:none; }
+  .login-error{
+    display:none; margin-top:14px; padding:10px 14px; border-radius:10px;
+    background:var(--danger-soft); color:var(--danger); font-size:.86rem; font-weight:700; text-align:center;
+  }
+  .login-error.show{ display:block; }
+  .login-back{ display:block; text-align:center; margin-top:18px; color:var(--muted); font-size:.86rem; transition:color .2s ease; }
+  .login-back:hover{ color:var(--text); }
+  .login-theme{ position:absolute; top:-48px; right:16px; }
+  .login-hint{ margin-top:16px; font-size:.78rem; color:var(--muted); line-height:1.4; }
+</style>
+</head>
+<body class="page-login">
+<div class="login-shell">
+  <button type="button" class="theme-toggle login-theme" onclick="toggleTheme()" aria-label="Alternar tema" title="Tema claro/escuro">🌓</button>
+  <section class="panel login-card">
+    <div class="login-lock">🔒</div>
+    <h1>Área restrita</h1>
+    <p class="muted">Login da equipe — admin, cozinha ou caixa</p>
+    <form id="loginForm" autocomplete="on">
+      <label for="usuario">Usuário</label>
+      <input type="text" id="usuario" name="usuario" autocomplete="username" autofocus required placeholder="admin">
+      <label for="senha">Senha</label>
+      <input type="password" id="senha" name="senha" autocomplete="current-password" required>
+      <button class="btn primary" type="submit">Entrar</button>
+    </form>
+    <div id="erro" class="login-error" role="alert" aria-live="assertive"></div>
+    <p class="login-hint">Usuários iniciais após migrate: <code>admin</code>, <code>cozinha</code>, <code>caixa</code> (senha do seed / <code>ADMIN_PASSWORD</code>).</p>
+  </section>
+  <a class="login-back" href="/">← Início</a>
+</div>
+
+<script src="/js/safe-dom.js"></script>
+
+<script>
+const params = new URLSearchParams(location.search);
+const nextParam = params.get('next');
+const form = document.getElementById('loginForm');
+const erroEl = document.getElementById('erro');
+const btn = form.querySelector('button');
+
+function destinoPadrao(home, next) {
+  if (!next || next === '/' || next === '/login') return home || '/admin';
+  if (next.startsWith('/') && !next.startsWith('//')) return next;
+  return home || '/admin';
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  erroEl.className = 'login-error';
+  btn.disabled = true;
+  btn.textContent = 'Entrando…';
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        usuario: document.getElementById('usuario').value.trim(),
+        senha: document.getElementById('senha').value,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      erroEl.textContent = data.error || 'Não foi possível entrar';
+      erroEl.className = 'login-error show';
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+      return;
+    }
+    location.href = destinoPadrao(data.home, nextParam);
+  } catch (err) {
+    erroEl.textContent = 'Erro de rede. Tente novamente.';
+    erroEl.className = 'login-error show';
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+  }
+});
+
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const next = cur === 'dark' ? 'light' : cur === 'light' ? 'dark' : (matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('lq-theme', next); } catch (_) {}
+}
+(function () {
+  try {
+    const t = localStorage.getItem('lq-theme');
+    if (t) document.documentElement.setAttribute('data-theme', t);
+  } catch (_) {}
+})();
+</script>
+<script src="/js/cookies.js"></script>
+</body>
+</html>

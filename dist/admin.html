@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Admin · Major Pub</title>
+  <link rel="icon" type="image/svg+xml" href="/favicons/admin.svg">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/style-ops.css">
+  <link rel="stylesheet" href="/icons.css">
+  <link rel="stylesheet" href="/theme-glass.css">
+  <style>
+    .prod-row{display:flex;gap:14px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--line)}
+    .prod-row:last-child{border-bottom:0}
+    .prod-thumb{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--line);flex-shrink:0;background:var(--surface-2)}
+    .prod-thumb-lg{max-width:160px;max-height:120px;object-fit:cover;border-radius:12px;border:1px solid var(--line)}
+    .cat-acc-head{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border:0;background:transparent;cursor:pointer;text-align:left;color:var(--text);font:inherit}
+    .cat-acc-head:hover{background:var(--surface-2)}
+    .cat-acc-chev{opacity:.55;font-size:.85rem;transition:transform .2s ease}
+    .cat-accordion.open .cat-acc-chev{transform:rotate(180deg)}
+    .cat-acc-body{padding:0 16px 14px;border-top:1px solid var(--line)}
+    .dash-pedidos{margin-top:18px}
+    .pk-card summary{cursor:pointer;list-style:none}
+    .pk-card .pk-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+    #printArea{display:none}
+    @media print{
+      body *{visibility:hidden!important}
+      #printArea,#printArea *{visibility:visible!important}
+      #printArea{position:absolute;left:0;top:0;width:72mm;display:block!important;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:#000;background:#fff}
+    }
+  </style>
+</head>
+<body class="page-admin">
+<main class="wrap">
+  <div class="glass-nav">
+<div class="logo-mark" title="Major Pub">
+      <img src="/assets/logo-cliente.png" alt="Major Pub" width="64" height="64" style="width:88%;height:88%;object-fit:contain;border-radius:50%">
+    </div>
+    <div class="admin-tabs glass-tabs">
+      <button type="button" class="active" data-tab="dashboard"><span class="i-dashboard ico" aria-hidden="true"></span>Dashboard</button>
+      <button type="button" data-tab="mesas"><span class="i-table ico" aria-hidden="true"></span>Mesas</button>
+      <button type="button" data-tab="cardapio"><span class="i-menu ico" aria-hidden="true"></span>Cardápio</button>
+      <button type="button" data-tab="garcons"><span class="i-waiter ico" aria-hidden="true"></span>Garçons</button>
+      <button type="button" data-tab="funcoes"><span class="i-tools ico" aria-hidden="true"></span>Funções</button>
+    </div>
+    <div class="nav glass-actions">
+      <a class="btn btn-ghost" href="/caixa" title="Caixa"><span class="i-cash ico" aria-hidden="true"></span>Caixa</a>
+      <a class="btn btn-ghost" href="/cozinha" title="Cozinha"><span class="i-kitchen ico" aria-hidden="true"></span>Cozinha</a>
+      <a class="btn btn-ghost" href="/bar" title="Bar"><span class="i-bar ico" aria-hidden="true"></span>Bar</a>
+      <a class="btn btn-ghost" href="/" title="Início"><span class="i-home ico" aria-hidden="true"></span>Início</a>
+      <button class="btn btn-ghost" id="btnSair" type="button" title="Sair"><span class="i-logout ico" aria-hidden="true"></span>Sair</button>
+    </div>
+  </div>
+  <section id="sec-dashboard" class="admin-section active">
+    <div class="panel glass-shell">
+      <div class="dash-head">
+        <div>
+          <h2 class="dash-title">Dashboard do dia</h2>
+          <p class="muted dash-sub" id="dashSub">
+            <span class="date-badge" id="dashDateBadge">Hoje</span>
+          </p>
+        </div>
+        <div class="dash-head-actions">
+          <span class="live-pill" id="livePill"><span class="dot-live"></span> Atualizado agora</span>
+          <button class="btn btn-ghost btn-refresh btn-icon" type="button" title="Atualizar" aria-label="Atualizar" onclick="loadDashboard();loadPedidosBoard()"><span class="i-refresh ico" aria-hidden="true"></span></button>
+        </div>
+      </div>
+      <div class="dash-top-grid">
+        <div class="panel dash-pedidos inner-glass">
+          <div class="card-head">
+            <h3><span class="dot-live"></span> Pedidos ativos</h3>
+            <div id="pedidosStats" class="meta-row"></div>
+          </div>
+          <div id="pedidosBoard" class="pedidos-kanban"></div>
+        </div>
+        <div id="kpiGrid" class="kpi-grid"></div>
+      </div>
+      <div class="dash-grid">
+        <div class="panel inner-glass">
+          <h3 class="card-title"><span class="ico-fire"></span> Top produtos hoje</h3>
+          <ul id="topProdutos" class="dash-list"><li class="muted">Carregando…</li></ul>
+        </div>
+        <div class="panel inner-glass">
+          <h3 class="card-title"><span class="ico-gear"></span> Operação</h3>
+          <div id="dashOps" class="ops-list muted">Carregando…</div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section id="sec-mesas" class="admin-section"><div class="panel"><h2>Mesas</h2><div id="mesas" class="qrgrid" style="margin-top:18px"></div></div></section>
+  <section id="sec-cardapio" class="admin-section">
+    <div class="panel" style="margin-bottom:18px"><h2>Nova categoria</h2>
+      <div class="form-inline"><div><label>Nome</label><input id="catNome"></div><div><label>Ordem</label><input id="catOrdem" type="number" value="0" style="width:80px"></div>
+      <button class="btn primary" type="button" onclick="criarCat()">Adicionar</button></div></div>
+    <div class="panel" style="margin-bottom:18px"><h2>Novo produto</h2>
+      <div class="form-inline"><div><label>Categoria</label><select id="prodCat"></select></div><div><label>Nome</label><input id="prodNome"></div>
+      <div><label>Preço</label><input id="prodPreco" type="number" step="0.01" min="0" style="width:100px"></div>
+      <div><label>Setor</label><select id="prodSetor"><option value="cozinha">🍳 Cozinha</option><option value="bar">🍹 Bar</option></select></div>
+      <button class="btn primary" type="button" onclick="criarProd()">Adicionar</button></div>
+      <div class="foto-upload-box" style="margin-top:14px;padding:14px;border:1px dashed var(--line);border-radius:12px;background:var(--surface-2)">
+        <label style="font-weight:700;font-size:.9rem">📷 Foto do produto (opcional)</label>
+        <div class="form-inline" style="margin-top:10px;align-items:center">
+          <input id="prodFotoFile" type="file" accept="image/*" hidden onchange="onFotoFileNovo()">
+          <button class="btn primary" type="button" onclick="document.getElementById('prodFotoFile').click()">Escolher arquivo</button>
+          <span class="muted" id="prodFotoFileName" style="font-size:.85rem"></span>
+        </div>
+        <div class="form-inline" style="margin-top:10px">
+          <input id="prodFoto" type="text" inputmode="url" autocomplete="off" placeholder="ou cole um link https://… ou /uploads/…" style="min-width:200px;flex:1">
+          <button class="btn" type="button" id="btnOtimizarFotoNovo" onclick="otimizarFotoNovo()">Otimizar link</button>
+        </div>
+        <p class="muted" style="margin:10px 0 0;font-size:.8rem">Arquivo ou link → redimensiona (~480px WebP) e <b>salva no banco</b> (não some no redeploy). Links https:// externos também valem.</p>
+        <div id="prodFotoPreview" style="margin-top:10px"></div>
+        <input type="hidden" id="prodFotoFinal" value="">
+      </div>
+    </div>
+    <div id="cardapio"></div>
+  </section>
+  <section id="sec-garcons" class="admin-section"><div class="panel"><h2>Garçons</h2>
+    <div class="form-inline"><input id="garcomNome" placeholder="Nome" maxlength="80">
+    <button class="btn primary" type="button" onclick="criarGarcom()">Adicionar</button></div>
+    <div id="garconsList" style="margin-top:18px"></div></div></section>
+  <section id="sec-funcoes" class="admin-section">
+    <div class="panel">
+      <h2 style="margin-top:0">🛠️ Funções</h2>
+      <p class="muted" style="margin:0 0 16px">Histórico, relatórios e limpeza. A opção de apagar fica por último de propósito.</p>
+      <div class="panel" style="margin:0 0 14px;box-shadow:none;border:1px solid var(--line)">
+        <h3 style="margin:0 0 6px;font-size:1rem">📜 Histórico de pedidos</h3>
+        <p class="muted" style="margin:0 0 12px;font-size:.9rem">Consulta pedidos por período (inclui entregues e cancelados no intervalo).</p>
+        <div class="form-inline"><label>De<input type="date" id="histFrom"></label><label>Até<input type="date" id="histTo"></label>
+        <button class="btn primary" type="button" onclick="buscarHistorico()">Buscar</button>
+        <button class="btn" type="button" onclick="limparHistorico()">Limpar filtros</button></div>
+        <div id="pedidosHistorico" style="margin-top:16px"><p class="muted">Escolha um período.</p></div>
+      </div>
+      <div class="panel" style="margin:0 0 14px;box-shadow:none;border:1px solid var(--line)">
+        <h3 style="margin:0 0 6px;font-size:1rem">📄 Relatório de vendas (PDF)</h3>
+        <p class="muted" style="margin:0 0 12px;font-size:.9rem">Use <b>Salvar como PDF</b> na impressão do navegador.</p>
+        <div class="form-inline" style="align-items:end">
+          <label>De<input type="date" id="relFrom"></label>
+          <label>Até<input type="date" id="relTo"></label>
+          <button class="btn primary" type="button" onclick="gerarRelatorioPdf()">📄 Gerar PDF</button>
+        </div>
+      </div>
+      <div class="panel" style="margin:0;box-shadow:none;border:1px solid var(--line);border-color:#fca5a5">
+        <h3 style="margin:0 0 6px;font-size:1rem">🗑️ Limpar histórico (perigoso)</h3>
+        <p class="muted" style="margin:0 0 12px;font-size:.9rem">
+          Apaga <b>permanentemente</b> de <b>todos os lugares</b> (histórico, relatório e totais antigos do dashboard)
+          as contas <b>fechadas</b> com data de fechamento <b>antes</b> da data informada.
+          Não mexe em mesas abertas nem pedidos em andamento. <b>Não dá para desfazer.</b>
+        </p>
+        <div class="form-inline" style="align-items:end">
+          <label>Antes de<input type="date" id="purgeBefore"></label>
+          <button class="btn" type="button" onclick="previewPurge()">Ver quantos</button>
+          <button class="btn" type="button" style="border-color:var(--danger);color:var(--danger)" onclick="executarPurge()">Apagar definitivamente</button>
+        </div>
+        <p id="purgeMsg" class="muted" style="margin:12px 0 0;font-size:.9rem"></p>
+      </div>
+    </div>
+  </section>
+</main>
+<div id="printArea" aria-hidden="true"></div>
+<div class="toast" id="toast"></div>
+<script src="/js/safe-dom.js"></script>
+<script src="/js/realtime.js"></script>
+<script src="/js/admin-relatorio.js"></script>
+<script>
+(function(){const _f=window.fetch;window.fetch=async function(...a){const r=await _f(...a);if(r.status===401)location.href='/login?next='+encodeURIComponent(location.pathname);return r;};})();
+document.getElementById('btnSair').addEventListener('click',async()=>{try{await fetch('/api/logout',{method:'POST'});}catch(e){}location.href='/login';});
+const host=location.origin;
+const br=n=>'R$ '+Number(n).toFixed(2).replace('.',',');
+const esc=(s)=>{if(window.SafeDOM&&SafeDOM.escapeHtml)return SafeDOM.escapeHtml(s);return String(s??'').replace(/[&<>"']/g,m=>({'&':'&','<':'<','>':'>','"':'"',"'":'&#039;'}[m]));};
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2200);}
+document.querySelectorAll('.admin-tabs button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.admin-tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.admin-section').forEach(s=>s.classList.remove('active'));
+    btn.classList.add('active');
+    const t=btn.dataset.tab;
+    document.getElementById('sec-'+t).classList.add('active');
+    if(t==='dashboard'){if(typeof defaultRelDates==='function')defaultRelDates();loadDashboard();loadPedidosBoard();}
+    if(t==='mesas')loadMesas();
+    if(t==='cardapio')loadCardapio();
+    if(t==='garcons')loadGarcons();
+    if(t==='funcoes'){if(typeof defaultRelDates==='function')defaultRelDates();}
+  });
+});
+async function loadDashboard(){
+  const kpi=document.getElementById('kpiGrid'),top=document.getElementById('topProdutos'),ops=document.getElementById('dashOps');
+  if(!kpi)return;
+  try{
+    const d=await(await fetch('/api/admin/dashboard')).json();
+    const brl=n=>'R$ '+Number(n||0).toFixed(2).replace('.',',');
+    const hoje=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+    const badge=document.getElementById('dashDateBadge');
+    if(badge)badge.textContent='Hoje, '+hoje;
+    const live=document.getElementById('livePill');
+    if(live)live.innerHTML='<span class="dot-live"></span> Atualizado agora';
+    const mesasTot=(d.mesas&&(d.mesas.total||((d.mesas.ocupada||0)+(d.mesas.livre||0))))||0;
+    const ocup=(d.mesas&&d.mesas.ocupada)||0;
+    kpi.innerHTML=`<div class="kpi-card accent"><div class="kpi-icon kpi-i-fat"></div><div class="kpi-label">Faturamento</div><div class="kpi-value">${brl(d.faturamento)}</div><div class="kpi-hint">${d.contasFechadas||0} conta(s)</div></div>
+      <div class="kpi-card"><div class="kpi-icon kpi-i-ticket"></div><div class="kpi-label">Ticket Médio</div><div class="kpi-value">${brl(d.ticketMedio)}</div></div>
+      <div class="kpi-card success"><div class="kpi-icon kpi-i-bag"></div><div class="kpi-label">Pedidos Hoje</div><div class="kpi-value">${d.pedidosTotal||0}</div></div>
+      <div class="kpi-card warning"><div class="kpi-icon kpi-i-mesa"></div><div class="kpi-label">Mesas Ocupadas</div><div class="kpi-value">${ocup}</div><div class="kpi-hint">de ${mesasTot||ocup} mesas</div></div>`;
+    const maxQ=Math.max(1,...(d.topProdutos||[]).map(x=>x.quantidade));
+    top.innerHTML=(d.topProdutos&&d.topProdutos.length)?d.topProdutos.map(p=>`<li><span>${esc(p.nome)}</span><div class="bar"><span style="width:${Math.round(100*p.quantidade/maxQ)}%"></span></div><b>${p.quantidade}×</b></li>`).join(''):'<li class="empty-state-big"><span class="big-ico" aria-hidden="true">🍺</span><span class="empty-title">Nenhum produto vendido hoje</span><span class="empty-sub">Os pedidos realizados aparecerão aqui.</span></li>';
+    const st=d.pedidosPorStatus||{};
+    const ativos=(st.recebido||0)+(st.em_producao||0)+(st.concluido||0);
+    const mov=ativos>=8?'Alto':ativos>=3?'Médio':'Baixo';
+    const movClass=ativos>=8?'ops-hot':ativos>=3?'ops-mid':'ops-low';
+    ops.innerHTML=`<div class="ops-row"><span>Status da Operação</span><b class="ops-ok">Aberto</b></div>
+      <div class="ops-row"><span>Movimento</span><b class="${movClass}">${mov}</b></div>
+      <div class="ops-row"><span>Na cozinha</span><b>${st.em_producao||0}</b></div>
+      <div class="ops-row"><span>Prontos</span><b>${st.concluido||0}</b></div>
+      <div class="ops-row"><span>Fila (recebidos)</span><b>${st.recebido||0}</b></div>
+      <p class="ops-updated muted">Atualizado · ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</p>`;
+  }catch(e){kpi.innerHTML='<div class="muted">Erro no dashboard.</div>';}
+}
+async function loadMesas(){
+  const mesas=await(await fetch('/api/admin/mesas')).json();
+  const el=document.getElementById('mesas');
+  if(!mesas.length){el.innerHTML='<div class="panel">Nenhuma mesa.</div>';return;}
+  el.innerHTML=mesas.map(m=>{
+    const url=host+'/mesa/'+m.token;
+    const qr='https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(url);
+    const badge=m.sessaoAberta?'<span class="badge badge-ocupada">ocupada</span>':'<span class="badge badge-livre">livre</span>';
+    return '<article class="panel"><div class="row"><h2 style="margin:0">Mesa '+m.numero+'</h2>'+badge+'</div><img src="'+qr+'" width="160" height="160" alt="QR"><button class="btn primary" type="button" style="width:100%;margin-top:8px" onclick="navigator.clipboard.writeText(\''+url+'\').then(()=>toast(\'Copiado\'))">Copiar link</button></article>';
+  }).join('');
+}
+let cardapioCache=[];
+async function loadCardapio(){
+  cardapioCache=await(await fetch('/api/admin/cardapio')).json();
+  document.getElementById('prodCat').innerHTML=cardapioCache.map(c=>'<option value="'+c.id+'">'+esc(c.nome)+'</option>').join('');
+  const root=document.getElementById('cardapio');
+  const openSet=new Set((root.dataset.openCats||'').split(',').filter(Boolean));
+  root.innerHTML=cardapioCache.map(cat=>{
+    const n=(cat.produtos&&cat.produtos.length)||0;
+    const isOpen=openSet.has(String(cat.id));
+    const prods=n?cat.produtos.map(p=>renderProduto(p)).join(''):'<p class="muted">Nenhum produto.</p>';
+    return '<div class="panel cat-accordion'+(isOpen?' open':'')+'" data-cat-id="'+cat.id+'" style="margin-bottom:12px;padding:0;overflow:hidden">'+
+      '<button type="button" class="cat-acc-head" onclick="toggleAdminCat(this)">'+
+      '<span><b>'+esc(cat.nome)+'</b> <span class="muted" style="font-weight:600;font-size:.85rem">· '+n+' item(ns)</span></span>'+
+      '<span class="cat-acc-chev" aria-hidden="true">▼</span></button>'+
+      '<div class="cat-acc-body" style="'+(isOpen?'':'display:none')+'">'+prods+'</div></div>';
+  }).join('')||'<p class="muted">Nenhuma categoria.</p>';
+}
+function toggleAdminCat(btn){
+  const panel=btn&&btn.closest('.cat-accordion');
+  if(!panel)return;
+  const body=panel.querySelector('.cat-acc-body');
+  const root=document.getElementById('cardapio');
+  const wasOpen=panel.classList.contains('open');
+  if(wasOpen){
+    panel.classList.remove('open');
+    if(body)body.style.display='none';
+  }else{
+    panel.classList.add('open');
+    if(body)body.style.display='block';
+  }
+  // preserva lista de abertas no reload
+  if(root){
+    const openIds=[...document.querySelectorAll('#cardapio .cat-accordion.open')].map(el=>el.dataset.catId).filter(Boolean);
+    root.dataset.openCats=openIds.join(',');
+  }
+}
+async function loadGarcons(){
+  const list=await(await fetch('/api/admin/garcons')).json();
+  const el=document.getElementById('garconsList');
+  if(!list.length){el.innerHTML='<p class="muted">Nenhum.</p>';return;}
+  el.innerHTML=list.map(g=>{
+    const link=host+'/garcom/'+g.token;
+    const ativo=g.ativo!==false;
+    return '<div class="panel" style="margin-bottom:12px">'+
+      '<div class="row" style="justify-content:space-between;gap:10px;flex-wrap:wrap">'+
+      '<div><b>'+esc(g.nome)+'</b> '+
+      (ativo?'<span class="chip on">ativo</span>':'<span class="chip off">inativo</span>')+
+      '</div></div>'+
+      '<div class="form-inline" style="margin-top:10px">'+
+      '<input readonly value="'+esc(link)+'" style="flex:1">'+
+      '<button class="btn" type="button" onclick="navigator.clipboard.writeText(\''+link+'\');toast(\'Copiado\')">Copiar</button>'+
+      '<button class="btn" type="button" onclick="toggleGarcom('+g.id+','+(!ativo)+')">'+(ativo?'Desativar':'Ativar')+'</button>'+
+      '<button class="btn" type="button" style="border-color:var(--danger);color:var(--danger)" onclick="excluirGarcom('+g.id+')">Excluir</button>'+
+      '</div></div>';
+  }).join('');
+}
+async function criarGarcom(){
+  const nome=document.getElementById('garcomNome').value.trim();if(!nome)return toast('Nome');
+  const r=await fetch('/api/admin/garcons',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome})});
+  const d=await r.json();if(!r.ok)return toast(d.error||'Erro');
+  document.getElementById('garcomNome').value='';toast('OK');loadGarcons();
+}
+async function toggleGarcom(id, ativo){
+  const r=await fetch('/api/admin/garcons/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({ativo})});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)return toast(d.error||'Erro');
+  toast(ativo?'Garçom ativado':'Garçom desativado');
+  loadGarcons();
+}
+async function excluirGarcom(id){
+  if(!confirm('Excluir este garçom? O link dele deixa de funcionar.'))return;
+  const r=await fetch('/api/admin/garcons/'+id,{method:'DELETE'});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)return toast(d.error||'Erro ao excluir');
+  toast('Garçom excluído');
+  loadGarcons();
+}
+const STATUS_COLS=[{key:'recebido',label:'Recebido',icon:'📥'},{key:'em_producao',label:'Na cozinha',icon:'👨‍🍳'},{key:'concluido',label:'Pronto',icon:'✅'}];
+const STATUS_LABEL={recebido:'Recebido',em_producao:'Na cozinha',concluido:'Pronto',entregue:'Entregue'};
+let pedidosAtivosCache=[];
+function fmtHora(iso){try{return new Date(iso).toLocaleString('pt-BR',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'});}catch{return'—';}}
+function itemLinhaResumo(i){
+  const extras=[];
+  if(i.ponto_carne)extras.push(String(i.ponto_carne).replace(/_/g,' ').toLowerCase());
+  if((i.adicionais||[]).length)extras.push('+ '+(i.adicionais.map(a=>a.nome).join(', ')));
+  if((i.remocoes||[]).length)extras.push('sem '+i.remocoes.join(', '));
+  if(i.observacao)extras.push(i.observacao);
+  return '<div style="font-size:.85rem;margin:4px 0"><b>'+i.quantidade+'×</b> '+esc(i.nome)+(extras.length?' <span class="muted">('+esc(extras.join(' · '))+')</span>':'')+'</div>';
+}
+function pedidoCardAtivo(p){
+  const itens=(p.itens||[]).map(itemLinhaResumo).join('')||'<p class="muted" style="margin:6px 0;font-size:.85rem">Sem itens</p>';
+  const cli=p.cliente_nome?' · '+esc(p.cliente_nome):'';
+  return '<details class="pk-card" data-pid="'+p.id+'"><summary><b>#'+p.id+'</b> · Mesa '+esc(String(p.mesa))+cli+'<div class="muted" style="font-size:.8rem">'+fmtHora(p.criado_em)+(p.totalPedido!=null?' · '+br(p.totalPedido):'')+'</div></summary>'+
+    itens+(p.observacao_geral?'<p class="muted" style="font-size:.85rem;margin:6px 0">Obs: '+esc(p.observacao_geral)+'</p>':'')+
+    '<div class="pk-actions"><button type="button" data-print-pedido="'+p.id+'" class="btn btn-icon" title="Imprimir" aria-label="Imprimir"><span class="i-print ico" aria-hidden="true"></span></button></div></details>';
+}
+function pedidoCardHist(p){
+  const itens=(p.itens||[]).map(itemLinhaResumo).join('');
+  return '<details class="hist-card" data-pid="'+p.id+'"><summary><b>#'+p.id+'</b> · Mesa '+esc(String(p.mesa))+' · '+fmtHora(p.criado_em)+(p.status?' · '+esc(STATUS_LABEL[p.status]||p.status):'')+'</summary>'+itens+
+    '<div class="pk-actions" style="margin-top:8px"><button type="button" data-print-pedido="'+p.id+'" class="btn btn-icon" title="Imprimir" aria-label="Imprimir"><span class="i-print ico" aria-hidden="true"></span></button></div></details>';
+}
+function ticketHtmlAdmin(p){
+  const linhas=(p.itens||[]).map(i=>{
+    const extras=[];
+    if(i.ponto_carne)extras.push('Ponto: '+String(i.ponto_carne).replace(/_/g,' '));
+    if((i.adicionais||[]).length)extras.push('+ '+i.adicionais.map(a=>a.nome).join(', '));
+    if((i.remocoes||[]).length)extras.push('sem '+i.remocoes.join(', '));
+    if(i.observacao)extras.push(i.observacao);
+    return '<div style="margin:6px 0"><b>'+i.quantidade+'x '+esc(i.nome)+'</b>'+(extras.length?'<div style="padding-left:8px;font-size:11px">'+esc(extras.join(' · '))+'</div>':'')+'</div>';
+  }).join('');
+  return '<div style="text-align:center;border-bottom:1px dashed #000;padding-bottom:8px;margin-bottom:8px"><div style="font-size:16px;font-weight:800">COMANDA</div><div>Pedido #'+p.id+'</div></div>'+
+    '<div><b>Mesa:</b> '+esc(String(p.mesa??''))+'</div>'+(p.cliente_nome?'<div><b>Cliente:</b> '+esc(p.cliente_nome)+'</div>':'')+
+    '<div><b>Hora:</b> '+fmtHora(p.criado_em)+'</div><div><b>Status:</b> '+esc(STATUS_LABEL[p.status]||p.status||'')+'</div>'+
+    '<hr style="border:none;border-top:1px dashed #000;margin:10px 0">'+
+    (linhas||'<div>Sem itens</div>')+
+    (p.observacao_geral?'<hr style="border:none;border-top:1px dashed #000;margin:10px 0"><div><b>Obs.:</b> '+esc(p.observacao_geral)+'</div>':'')+
+    '<hr style="border:none;border-top:1px dashed #000;margin:10px 0"><div style="text-align:center;font-size:11px">Major Pub</div>';
+}
+function imprimirPedidoAdmin(id){
+  let p=pedidosAtivosCache.find(x=>Number(x.id)===Number(id));
+  if(!p&&window.__histPedidos)p=window.__histPedidos.find(x=>Number(x.id)===Number(id));
+  if(!p){toast('Pedido não encontrado');return;}
+  const area=document.getElementById('printArea');
+  if(!area){toast('Área de impressão indisponível');return;}
+  area.innerHTML=ticketHtmlAdmin(p);
+  area.style.display='block';
+  const after=()=>{area.style.display='none';area.innerHTML='';window.removeEventListener('afterprint',after);};
+  window.addEventListener('afterprint',after);
+  setTimeout(()=>window.print(),50);
+}
+document.addEventListener('click',function(ev){
+  const btn=ev.target.closest('[data-print-pedido]');
+  if(btn){imprimirPedidoAdmin(Number(btn.dataset.printPedido));}
+});
+let __adminBoardSig='';
+function adminBoardSignature(list){
+  return (list||[]).map(function(p){
+    const itens=(p.itens||[]).map(function(i){return i.id+':'+(i.status||'');}).join(',');
+    return p.id+'|'+(p.status||'')+'|'+(p.editado_em||p.editadoEm||'')+'|'+itens;
+  }).join(';');
+}
+async function loadPedidosBoard(){
+  const el=document.getElementById('pedidosBoard');const statsEl=document.getElementById('pedidosStats');
+  if(!el)return;
+  const list=await(await fetch('/api/admin/pedidos?ativos=1')).json();
+  pedidosAtivosCache=list;
+  const sig=adminBoardSignature(list);
+  // Evita reescrever o kanban se nada mudou (SSE/poll) — corta o flicker "some e volta"
+  if(sig===__adminBoardSig && el.children.length){
+    if(statsEl)statsEl.innerHTML=list.length?'<span class="badge">'+list.length+' ativo(s)</span>':'<span class="badge">Fila limpa</span>';
+    return;
+  }
+  __adminBoardSig=sig;
+  const by={recebido:[],em_producao:[],concluido:[]};
+  for(const p of list){if(by[p.status])by[p.status].push(p);}
+  if(statsEl)statsEl.innerHTML=list.length?'<span class="badge">'+list.length+' ativo(s)</span>':'<span class="badge">Fila limpa</span>';
+  if(!list.length){el.innerHTML='<div class="empty-state-big" style="grid-column:1/-1"><span class="big-ico" aria-hidden="true">✅</span><span class="empty-title">Nenhum pedido em andamento</span><span class="empty-sub">Aproveite o momento de calmaria!</span></div>';return;}
+  const openPids=new Set([...document.querySelectorAll('#pedidosBoard details.pk-card[open]')].map(d=>d.getAttribute('data-pid')).filter(Boolean));
+  const __scroll=window.scrollY||document.documentElement.scrollTop||0;
+  el.innerHTML=STATUS_COLS.map(col=>{
+    const items=by[col.key]||[];
+    const body=items.length
+      ? items.map(pedidoCardAtivo).join('')
+      : '<div class="empty-col"><span class="big-ico" aria-hidden="true">—</span>Vazio</div>';
+    return '<div class="pk-col"><div class="pk-col-head"><h3 style="margin:0;font-size:.95rem">'+col.icon+' '+col.label+'</h3><span class="pk-count">'+items.length+'</span></div><div class="pk-col-body">'+body+'</div></div>';
+  }).join('');
+  requestAnimationFrame(function(){window.scrollTo(0,__scroll);});
+  el.querySelectorAll('details.pk-card[data-pid]').forEach(function(d){
+    if(openPids.has(d.getAttribute('data-pid'))) d.open=true;
+  });
+}
+async function buscarHistorico(){
+  const from=document.getElementById('histFrom').value,to=document.getElementById('histTo').value,el=document.getElementById('pedidosHistorico');
+  if(!from&&!to){el.innerHTML='<p class="muted">Informe uma data.</p>';return;}
+  const q=new URLSearchParams();if(from)q.set('from',from);if(to)q.set('to',to);q.set('limit','120');
+  try{
+    const list=await(await fetch('/api/admin/pedidos?'+q)).json();
+    window.__histPedidos=list;el.innerHTML=list.length?'<p class="muted">'+list.length+' pedido(s)</p>'+list.map(pedidoCardHist).join(''):'<p class="muted">Nenhum.</p>';
+  }catch(e){el.innerHTML='<p class="muted">Erro.</p>';}
+}
+function limparHistorico(){
+  document.getElementById('histFrom').value='';document.getElementById('histTo').value='';
+  document.getElementById('pedidosHistorico').innerHTML='<p class="muted">Escolha um período.</p>';
+}
+if(typeof defaultRelDates==='function')defaultRelDates();
+loadDashboard();loadMesas();loadCardapio();loadGarcons();loadPedidosBoard();
+const __adminRefresh = (window.LQRRealtime && LQRRealtime.createLoader)
+  ? LQRRealtime.createLoader(async function(){ await loadPedidosBoard(); await loadMesas(); await loadDashboard(); })
+  : async function(){ await loadPedidosBoard(); await loadMesas(); await loadDashboard(); };
+if(window.LQRRealtime){LQRRealtime.connect(()=>{__adminRefresh();},{fallbackMs:25000,debounceMs:250});}
+else if(typeof EventSource!=='undefined'){const es=new EventSource('/api/events');es.addEventListener('update',()=>{__adminRefresh();});}
+</script>
+<script src="/js/admin-cardapio.js"></script>
+<script src="/js/cookies.js"></script>
+</body>
+</html>

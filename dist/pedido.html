@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#c2410c">
+<title>Acompanhamento</title>
+<link rel="icon" type="image/svg+xml" href="/favicons/mesa.svg">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/style-ops.css">
+<link rel="stylesheet" href="/theme-glass.css">
+</head>
+<body class="page-admin">
+<header class="mobile-header">
+  <div>
+    <strong>🍔 Major Pub</strong>
+    <small>acompanhamento</small>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+<a id="back" class="cart-pill">Cardápio</a>
+  </div>
+</header>
+<main class="wrap tracking" id="app">Carregando pedido...</main>
+<script>
+const id=Number(location.pathname.split('/').pop()),br=n=>'R$ '+Number(n).toFixed(2).replace('.',','),esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&','<':'<','>':'>','"':'"',"'":'&#039;'}[m]));
+const steps=[['PENDING','Pedido recebido','Recebemos seu pedido e ele já está na fila.'],['PREPARING','Na cozinha','A cozinha está preparando seu pedido.'],['READY','Pronto para entregar','Seu pedido ficou pronto. Chame o atendente ou aguarde a entrega.'],['DELIVERED','Entregue','Bom apetite! Esperamos que tenha gostado.']];
+async function load(){
+ const r=await fetch('/api/orders/'+id);if(!r.ok){document.getElementById('app').innerHTML='<div class="panel"><h2>Pedido não encontrado</h2></div>';return}
+ const o=await r.json(),idx=steps.findIndex(s=>s[0]===o.status);
+ document.getElementById('back').href='/mesa/'+o.table;
+ document.getElementById('app').innerHTML=`<div class="tracking-top"><div><span class="badge">PEDIDO #${o.id}</span><h1>Mesa ${o.table}</h1><p class="muted">${new Date(o.createdAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</p></div><strong class="big">${br(o.total)}</strong></div>
+ <div class="status-card"><h2>${o.status==='CANCELLED'?'❌ Pedido cancelado':'Acompanhe seu pedido'}</h2>${o.status!=='CANCELLED'?`<div class="timeline">${steps.map((s,i)=>`<div class="step ${i<idx?'done ':''}${i===idx?'current ':''}"><span>${i<idx?'✓':i===idx?'●':'○'}</span><div><b>${s[1]}</b><small>${i===idx?s[2]:''}</small></div></div>`).join('')}</div>`:'<p>Se precisar, procure um atendente.</p>'}</div>
+ <div class="panel"><h3>Itens do pedido</h3>${o.items.map(i=>`<div class="order-line"><div><b>${i.qty}× ${esc(i.name)}</b>${i.meatPoint?`<small>🥩 ${i.meatPoint==='MAL_PASSADO'?'Mal passado':i.meatPoint==='BEM_PASSADO'?'Bem passado':'Ao ponto'}</small>`:''}${i.additions?.length?`<small>+ ${i.additions.map(a=>esc(a.name)).join(', ')}</small>`:''}${i.removals?.length?`<small>Sem: ${i.removals.map(esc).join(', ')}</small>`:''}${i.note?`<small>📝 ${esc(i.note)}</small>`:''}</div><b>${br(i.unitTotal*i.qty)}</b></div>`).join('')}${o.note?`<hr><small>Observação do pedido: ${esc(o.note)}</small>`:''}</div>`;
+}
+
+load();setInterval(load,2000);
+</script>
+</body>
+</html>
