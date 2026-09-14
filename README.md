@@ -19,24 +19,18 @@ Identidade visual **QRAdmin** (navy + teal) com **tema claro/escuro** em todas a
 > funciona servido pelo servidor Node abaixo.
 
 1. **Node.js LTS** instalado (nodejs.org) e um **Postgres** acessível (local, Neon, Supabase…).
-2. Na pasta do projeto:
+2. Na pasta do projeto, um único comando cria o `.env`, roda migrations e seed:
    ```bash
    npm install
+   npm run setup
    ```
-3. Crie o `.env` com a URL do banco (se já existia, mantenha):
-   ```ini
-   DATABASE_URL=postgres://usuario:senha@host:5432/nomedb
-   ```
-4. Migrações (uma vez) + seed inicial:
-   ```bash
-   npm run db:migrate
-   npm run db:seed
-   ```
-5. Suba o servidor:
+   Se o seu Postgres não for `postgres://usuario:senha@localhost:5432/lanchonete_qr`,
+   ajuste o `DATABASE_URL` no `.env` gerado e rode `npm run setup` de novo.
+3. Suba o servidor:
    ```bash
    npm start
    ```
-6. Abra **http://localhost:3000** no navegador.
+4. Abra **http://localhost:3000** no navegador.
    - Login de teste: `admin` / `admin123` (também `cozinha`, `bar`, `caixa`).
    - **Tema claro/escuro**: botão de lua/sol no topo de qualquer tela — a escolha fica salva no dispositivo.
 

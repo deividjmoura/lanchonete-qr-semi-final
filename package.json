@@ -19,7 +19,8 @@
     "dev:ui": "vite",
     "start:api": "node server.js",
     "start:prod": "npm run build && node server.js",
-    "postbuild": "node -e \"console.log('SPA em dist/ — npm start serve o design React se dist/ existir')\""
+    "postbuild": "node -e \"console.log('SPA em dist/ — npm start serve o design React se dist/ existir')\"",
+    "setup": "node scripts/setup-local.js"
   },
   "dependencies": {
     "clsx": "2.1.1",
