@@ -7,7 +7,7 @@ import type { Pedido } from "../lib/types";
 import { usePub } from "../store/usePub";
 import { connectEvents } from "../lib/api";
 import { elapsed } from "../lib/utils";
-import { imprimirComanda } from "../lib/print";
+import { imprimirComandaCozinha } from "../lib/print";
 import { cn } from "../utils/cn";
 import { ir, useAgora } from "../router";
 
@@ -183,7 +183,7 @@ function CardPedido({ pedido, borda }: { pedido: Pedido; borda: string }) {
             <BellRing className="size-3.5 animate-pulse-soft" /> aguardando retirada
           </p>
         )}
-        <Btn full size="sm" variant="outline" onClick={() => imprimirComanda(pedido)}>
+        <Btn full size="sm" variant="outline" onClick={() => imprimirComandaCozinha(pedido)}>
           <Printer className="size-4" /> Imprimir comanda
         </Btn>
       </div>

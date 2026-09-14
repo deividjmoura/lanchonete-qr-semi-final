@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { BellRing, CheckCheck, ConciergeBell, Footprints, Sparkles, Timer } from "lucide-react";
+import { BellRing, CheckCheck, ConciergeBell, Footprints, Printer, Sparkles, Timer } from "lucide-react";
 import { OpsShell, useAnuncios } from "../components/OpsShell";
 import { Badge, Btn } from "../components/ui";
 import { ir, useAgora } from "../router";
@@ -9,6 +9,7 @@ import type { Pedido } from "../lib/types";
 import { usePub } from "../store/usePub";
 import { connectEvents } from "../lib/api";
 import { elapsed } from "../lib/utils";
+import { imprimirComandaGarcom } from "../lib/print";
 
 export default function Garcom({ token }: { token: string }) {
   useAnuncios("garcom");
@@ -237,6 +238,9 @@ function CardPronto({
       </p>
 
       <div className="mt-4 space-y-2">
+        <Btn full size="sm" variant="outline" onClick={() => imprimirComandaGarcom(pedido)}>
+          <Printer className="size-4" /> Imprimir cupom
+        </Btn>
         {idsProntos.length > 0 && (
           <Btn full size="lg" variant="lime" onClick={() => onEntregar(idsProntos)}>
             <Footprints className="size-5" />

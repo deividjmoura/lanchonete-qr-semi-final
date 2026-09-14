@@ -1407,6 +1407,7 @@ function Relatorio() {
               resumo,
               contas,
               porDia,
+              topProdutos: top,
             })
           }
         >

@@ -1,130 +1,491 @@
-/** Utilitários de impressão (comanda + relatório PDF via janela do browser). */
+/** Cupons / comandas de impressão (térmica 58–80mm) + relatório de vendas. */
 
-import type { Pedido } from "./types";
+import type { ItemPedido, Pedido } from "./types";
 import { BRL } from "./utils";
 
-export function imprimirComanda(pedido: Pedido) {
-  const itens = (pedido.itens || [])
-    .map((it) => {
-      const extras = [
-        ...(it.adicionais || []).map((a) => `+ ${a.nome}`),
-        ...(it.removidos || []).map((r) => `sem ${r}`),
-        it.escolha ? `→ ${it.escolha.nome}` : "",
-        it.obs ? `(${it.obs})` : "",
-      ]
-        .filter(Boolean)
-        .join(" ");
-      return `<tr>
-        <td style="padding:4px 0;vertical-align:top">${it.qtd}x</td>
-        <td style="padding:4px 0">${it.nome}${extras ? `<br><small style="color:#444">${extras}</small>` : ""}</td>
-      </tr>`;
-    })
-    .join("");
+export type SetorComanda = "cozinha" | "bar" | "garcom" | "geral";
 
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Comanda #${pedido.id}</title>
-<style>
-  body{font-family:system-ui,sans-serif;padding:16px;color:#000;max-width:320px;margin:0 auto}
-  h1{font-size:1.25rem;margin:0 0 4px}
-  .meta{font-size:.85rem;color:#333;margin-bottom:12px}
-  table{width:100%;border-collapse:collapse;font-size:.95rem}
-  hr{border:none;border-top:1px dashed #999;margin:12px 0}
-  @media print{body{padding:0}}
-</style></head><body>
-  <h1>Comanda #${pedido.id}</h1>
-  <div class="meta">
-    <div><b>${pedido.mesaNome || "Mesa"}</b></div>
-    <div>${pedido.clienteNome || "—"}</div>
-    <div>${new Date(pedido.criadoEm).toLocaleString("pt-BR")}</div>
-    <div>Status: ${pedido.status}</div>
-  </div>
-  <hr/>
-  <table>${itens || "<tr><td>Sem itens</td></tr>"}</table>
-  <hr/>
-  <p style="text-align:right;font-weight:700;font-size:1.1rem">Total ${BRL(pedido.total || 0)}</p>
-  <script>window.onload=function(){setTimeout(function(){window.print()},200)}</script>
-</body></html>`;
+const FORMA_LABEL: Record<string, string> = {
+  pix: "PIX",
+  dinheiro: "Dinheiro",
+  credito: "Cartão crédito",
+  debíto: "Cartão débito",
+  debito: "Cartão débito",
+  cartao_credito: "Cartão crédito",
+  cartao_debito: "Cartão débito",
+  credito_credito: "Cartão crédito",
+};
 
-  const w = window.open("", "_blank", "noopener,noreferrer,width=420,height=640");
+function esc(s: unknown): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function formaLabel(raw: unknown): string {
+  const k = String(raw || "").trim().toLowerCase();
+  if (!k) return "—";
+  return FORMA_LABEL[k] || String(raw);
+}
+
+function fmtHora(ts: number | string | Date | undefined | null): string {
+  try {
+    const d = ts instanceof Date ? ts : new Date(ts || Date.now());
+    return d.toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "—";
+  }
+}
+
+function fmtHoraCurta(ts: number | string | Date | undefined | null): string {
+  try {
+    const d = ts instanceof Date ? ts : new Date(ts || Date.now());
+    return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "—";
+  }
+}
+
+/** CSS base cupom térmico (58mm ≈ 220px @ 96dpi; usa 72mm útil). */
+const CSS_CUPOM = `
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 8px 10px 16px;
+    color: #000;
+    background: #fff;
+    font-family: ui-monospace, "Cascadia Mono", "Consolas", "Courier New", monospace;
+    font-size: 12px;
+    line-height: 1.35;
+    width: 72mm;
+    max-width: 100%;
+  }
+  .center { text-align: center; }
+  .right { text-align: right; }
+  .bold { font-weight: 700; }
+  .title {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin: 0 0 2px;
+  }
+  .sub {
+    font-size: 11px;
+    margin: 0 0 6px;
+  }
+  .mesa {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    margin: 4px 0 2px;
+  }
+  .line {
+    border: none;
+    border-top: 1px dashed #000;
+    margin: 8px 0;
+  }
+  .line-solid {
+    border: none;
+    border-top: 2px solid #000;
+    margin: 8px 0;
+  }
+  .meta { font-size: 11px; }
+  .meta b { font-weight: 700; }
+  .item {
+    margin: 6px 0;
+    page-break-inside: avoid;
+  }
+  .item-head {
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .item-extra {
+    font-size: 11px;
+    padding-left: 14px;
+    margin-top: 1px;
+  }
+  .foot {
+    font-size: 10px;
+    text-align: center;
+    margin-top: 10px;
+  }
+  @media print {
+    body { padding: 0; width: 72mm; }
+    @page { margin: 4mm; size: auto; }
+  }
+`;
+
+function openPrintWindow(title: string, bodyHtml: string, autoPrint = true) {
+  const w = window.open("", "_blank", "noopener,noreferrer,width=420,height=720");
   if (!w) {
-    alert("Permita pop-ups para imprimir a comanda");
+    alert("Permita pop-ups para imprimir o cupom");
     return;
   }
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <title>${esc(title)}</title>
+  <style>${CSS_CUPOM}</style>
+</head>
+<body>
+${bodyHtml}
+${autoPrint ? `<script>
+  window.onload = function () {
+    setTimeout(function () {
+      try { window.focus(); window.print(); } catch (e) {}
+    }, 250);
+  };
+</script>` : ""}
+</body>
+</html>`;
   w.document.open();
   w.document.write(html);
   w.document.close();
 }
 
+function extrasLinhas(it: ItemPedido): string[] {
+  const lines: string[] = [];
+  if (it.escolha?.nome) lines.push(`→ ${it.escolha.nome}`);
+  for (const a of it.adicionais || []) {
+    if (a?.nome) lines.push(`+ ${a.nome}`);
+  }
+  for (const r of it.removidos || []) {
+    if (r) lines.push(`sem ${r}`);
+  }
+  if (it.obs) lines.push(`Obs: ${it.obs}`);
+  return lines;
+}
+
+function renderItensProducao(itens: ItemPedido[]): string {
+  if (!itens.length) {
+    return `<div class="meta center">— sem itens —</div>`;
+  }
+  return itens
+    .map((it) => {
+      const extras = extrasLinhas(it)
+        .map((e) => `<div class="item-extra">${esc(e)}</div>`)
+        .join("");
+      return `<div class="item">
+        <div class="item-head">${esc(String(it.qtd))}x ${esc(it.nome)}</div>
+        ${extras}
+      </div>`;
+    })
+    .join("");
+}
+
+function filtrarItens(
+  pedido: Pedido,
+  setor?: SetorComanda,
+  soProntos?: boolean
+): ItemPedido[] {
+  let itens = [...(pedido.itens || [])];
+  if (setor === "cozinha" || setor === "bar") {
+    itens = itens.filter((i) => (i.setor || "cozinha") === setor);
+  }
+  if (soProntos) {
+    itens = itens.filter((i) => i.status === "concluido" || i.status === "entregue");
+  }
+  /* produção: não lista o que já foi entregue */
+  if (setor === "cozinha" || setor === "bar") {
+    itens = itens.filter((i) => i.status !== "entregue");
+  }
+  return itens;
+}
+
+const TITULO_SETOR: Record<SetorComanda, string> = {
+  cozinha: "COMANDA COZINHA",
+  bar: "COMANDA BAR",
+  garcom: "ENTREGA · GARÇOM",
+  geral: "COMANDA",
+};
+
+/**
+ * Cupom de produção / entrega.
+ * - cozinha / bar: só mesa, pedido, cliente, hora e itens (sem preço)
+ * - garcom: itens prontos para levar
+ */
+export function imprimirComanda(
+  pedido: Pedido,
+  opts?: { setor?: SetorComanda; soProntos?: boolean }
+) {
+  const setor: SetorComanda = opts?.setor || "geral";
+  const soProntos = opts?.soProntos ?? setor === "garcom";
+  const itens = filtrarItens(pedido, setor, soProntos);
+  const titulo = TITULO_SETOR[setor];
+  const mesaNum = String(pedido.mesaNome || "")
+    .replace(/^Mesa\s*/i, "")
+    .trim() || "—";
+
+  const body = `
+  <div class="center">
+    <p class="title">${esc(titulo)}</p>
+    <p class="sub">Major Pub</p>
+  </div>
+  <hr class="line-solid"/>
+  <div class="center">
+    <div class="mesa">MESA ${esc(mesaNum)}</div>
+    <div class="meta bold">Pedido #${esc(pedido.id)}</div>
+  </div>
+  <div class="meta" style="margin-top:6px">
+    ${pedido.clienteNome ? `<div><b>Cliente:</b> ${esc(pedido.clienteNome)}</div>` : ""}
+    <div><b>Hora:</b> ${esc(fmtHora(pedido.criadoEm))}</div>
+    ${
+      setor === "garcom"
+        ? `<div><b>Itens:</b> ${itens.reduce((a, i) => a + (Number(i.qtd) || 1), 0)}</div>`
+        : ""
+    }
+  </div>
+  <hr class="line"/>
+  ${renderItensProducao(itens)}
+  <hr class="line"/>
+  <div class="foot">
+    ${fmtHoraCurta(Date.now())} · ${esc(titulo)}
+  </div>
+  `;
+
+  openPrintWindow(`${titulo} #${pedido.id}`, body, true);
+}
+
+/** Alias explícito por tela */
+export function imprimirComandaCozinha(pedido: Pedido) {
+  imprimirComanda(pedido, { setor: "cozinha" });
+}
+export function imprimirComandaBar(pedido: Pedido) {
+  imprimirComanda(pedido, { setor: "bar" });
+}
+export function imprimirComandaGarcom(pedido: Pedido) {
+  imprimirComanda(pedido, { setor: "garcom", soProntos: true });
+}
+
+/**
+ * Relatório de vendas (A4) — faturamento, formas de pagamento e contas fechadas.
+ */
 export function imprimirRelatorioPdf(opts: {
   from: string;
   to: string;
   resumo: Record<string, unknown>;
   contas: any[];
   porDia?: any[];
+  topProdutos?: any[];
 }) {
-  const { from, to, resumo, contas, porDia = [] } = opts;
+  const { from, to, resumo, contas, porDia = [], topProdutos = [] } = opts;
   const fat = Number(resumo.faturamento ?? 0);
   const qtd = Number(resumo.contasFechadas ?? contas.length);
   const ticket = Number(resumo.ticketMedio ?? (qtd ? fat / qtd : 0));
-  const porForma = (resumo.porFormaPagamento || {}) as Record<string, number>;
 
-  const rows = contas
+  const porFormaRaw =
+    (resumo.porFormaPagamento as Record<string, number> | undefined) ||
+    (resumo.por_forma as Record<string, number> | undefined) ||
+    {};
+
+  /* agrega formas a partir das contas se o resumo vier vazio */
+  const porForma: Record<string, number> = { ...porFormaRaw };
+  if (!Object.keys(porForma).length) {
+    for (const c of contas) {
+      const forma = String(c.forma || c.formaPagamento || c.forma_pagamento || "outros");
+      const val = Number(c.valorCobrado ?? c.valor ?? 0);
+      porForma[forma] = (porForma[forma] || 0) + val;
+    }
+  }
+
+  const formasRows = Object.entries(porForma)
+    .sort((a, b) => Number(b[1]) - Number(a[1]))
     .map(
-      (c) =>
+      ([k, v]) =>
         `<tr>
-          <td>${c.id}</td><td>${c.mesa ?? ""}</td><td>${c.cliente ?? "—"}</td>
-          <td style="text-align:right">${BRL(Number(c.valorCobrado ?? c.valor ?? 0))}</td>
-          <td>${c.forma ?? ""}</td>
-          <td>${c.fechadaEm ? String(c.fechadaEm).slice(0, 16).replace("T", " ") : ""}</td>
+          <td>${esc(formaLabel(k))}</td>
+          <td class="num">${esc(BRL(Number(v || 0)))}</td>
+          <td class="num">${fat > 0 ? ((Number(v || 0) / fat) * 100).toFixed(1) + "%" : "—"}</td>
         </tr>`
     )
     .join("");
 
-  const dias = porDia
+  const contasRows = contas
+    .map((c) => {
+      const forma = formaLabel(c.forma ?? c.formaPagamento ?? c.forma_pagamento);
+      const valor = Number(c.valorCobrado ?? c.valor ?? 0);
+      const desconto = Number(c.desconto ?? 0);
+      const taxa = Number(c.taxaServico ?? c.taxa ?? 0);
+      const fechada =
+        c.fechadaEm || c.fechada_em
+          ? String(c.fechadaEm || c.fechada_em).slice(0, 16).replace("T", " ")
+          : "—";
+      return `<tr>
+        <td>${esc(c.id)}</td>
+        <td>${esc(c.mesa ?? "")}</td>
+        <td>${esc(c.cliente || "—")}</td>
+        <td class="num">${esc(BRL(valor))}</td>
+        <td>${desconto ? esc(BRL(desconto)) : "—"}</td>
+        <td>${taxa ? esc(BRL(taxa)) : "—"}</td>
+        <td><b>${esc(forma)}</b></td>
+        <td>${esc(fechada)}</td>
+      </tr>`;
+    })
+    .join("");
+
+  const diasRows = porDia
     .map(
       (d) =>
-        `<tr><td>${d.dia}</td><td>${d.contas}</td><td style="text-align:right">${BRL(Number(d.faturamento || 0))}</td></tr>`
+        `<tr>
+          <td>${esc(d.dia)}</td>
+          <td class="num">${esc(d.contas)}</td>
+          <td class="num">${esc(BRL(Number(d.faturamento || 0)))}</td>
+        </tr>`
     )
     .join("");
 
-  const formas = Object.entries(porForma)
-    .map(([k, v]) => `<tr><td>${k}</td><td style="text-align:right">${BRL(Number(v || 0))}</td></tr>`)
+  const topRows = (topProdutos || [])
+    .slice(0, 15)
+    .map((p: any, i: number) => {
+      const nome = p.nome || p.produto || "—";
+      const q = p.qtd ?? p.quantidade ?? p.vendidos ?? "—";
+      return `<tr><td>${i + 1}</td><td>${esc(nome)}</td><td class="num">${esc(q)}</td></tr>`;
+    })
     .join("");
 
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
-<title>Relatório ${from} — ${to}</title>
-<style>
-  body{font-family:system-ui,sans-serif;padding:24px;color:#111;max-width:900px;margin:0 auto}
-  h1{font-size:1.5rem;margin:0 0 8px}
-  .kpis{display:flex;gap:16px;flex-wrap:wrap;margin:16px 0}
-  .kpi{border:1px solid #ddd;border-radius:8px;padding:12px 16px;min-width:120px}
-  .kpi span{display:block;font-size:.75rem;color:#666;text-transform:uppercase}
-  .kpi b{font-size:1.15rem}
-  table{width:100%;border-collapse:collapse;font-size:.9rem;margin:12px 0 24px}
-  th,td{border-bottom:1px solid #e5e5e5;padding:8px 6px;text-align:left}
-  th{font-size:.7rem;text-transform:uppercase;color:#666}
-  @media print{button{display:none}}
-</style></head><body>
-  <button onclick="window.print()" style="padding:10px 16px;font-weight:600;cursor:pointer;margin-bottom:12px">Imprimir / Salvar PDF</button>
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <title>Relatório ${esc(from)} — ${esc(to)}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      padding: 24px;
+      color: #111;
+      max-width: 960px;
+      margin: 0 auto;
+      font-size: 13px;
+    }
+    h1 { font-size: 1.45rem; margin: 0 0 4px; }
+    h2 {
+      font-size: 0.95rem;
+      margin: 22px 0 8px;
+      padding-bottom: 4px;
+      border-bottom: 2px solid #111;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .muted { color: #555; font-size: 0.85rem; }
+    .kpis { display: flex; gap: 12px; flex-wrap: wrap; margin: 16px 0; }
+    .kpi {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 12px 16px;
+      min-width: 140px;
+    }
+    .kpi span { display: block; font-size: 0.7rem; color: #666; text-transform: uppercase; letter-spacing: 0.04em; }
+    .kpi b { font-size: 1.2rem; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0 16px; font-size: 0.88rem; }
+    th, td { border-bottom: 1px solid #e2e2e2; padding: 7px 6px; text-align: left; vertical-align: top; }
+    th { font-size: 0.68rem; text-transform: uppercase; color: #666; letter-spacing: 0.03em; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .btn {
+      display: inline-block;
+      padding: 10px 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 14px;
+      border: 1px solid #111;
+      background: #111;
+      color: #fff;
+      border-radius: 6px;
+    }
+    .foot { margin-top: 28px; font-size: 0.75rem; color: #777; text-align: center; }
+    @media print {
+      .btn { display: none; }
+      body { padding: 0; }
+      @page { margin: 12mm; }
+    }
+  </style>
+</head>
+<body>
+  <button class="btn" type="button" onclick="window.print()">Imprimir / Salvar PDF</button>
   <h1>Relatório de vendas</h1>
-  <p>Período: <b>${from}</b> → <b>${to}</b> · Gerado em ${new Date().toLocaleString("pt-BR")}</p>
-  <div class="kpis">
-    <div class="kpi"><span>Faturamento</span><b>${BRL(fat)}</b></div>
-    <div class="kpi"><span>Contas</span><b>${qtd}</b></div>
-    <div class="kpi"><span>Ticket médio</span><b>${BRL(ticket)}</b></div>
-  </div>
-  ${formas ? `<h2>Por forma de pagamento</h2><table><thead><tr><th>Forma</th><th>Total</th></tr></thead><tbody>${formas}</tbody></table>` : ""}
-  ${dias ? `<h2>Por dia</h2><table><thead><tr><th>Dia</th><th>Contas</th><th>Faturamento</th></tr></thead><tbody>${dias}</tbody></table>` : ""}
-  <h2>Contas fechadas</h2>
-  <table>
-    <thead><tr><th>#</th><th>Mesa</th><th>Cliente</th><th>Valor</th><th>Forma</th><th>Fechada</th></tr></thead>
-    <tbody>${rows || "<tr><td colspan=6>Nenhuma conta no período</td></tr>"}</tbody>
-  </table>
-  <p style="font-size:.8rem;color:#666">Use “Salvar como PDF” na impressão do navegador.</p>
-</body></html>`;
+  <p class="muted">
+    Período: <b>${esc(from)}</b> → <b>${esc(to)}</b>
+    · Gerado em ${esc(fmtHora(Date.now()))}
+    · Major Pub
+  </p>
 
-  const w = window.open("", "_blank", "noopener,noreferrer,width=900,height=700");
+  <div class="kpis">
+    <div class="kpi"><span>Faturamento</span><b>${esc(BRL(fat))}</b></div>
+    <div class="kpi"><span>Contas fechadas</span><b>${esc(qtd)}</b></div>
+    <div class="kpi"><span>Ticket médio</span><b>${esc(BRL(ticket))}</b></div>
+  </div>
+
+  <h2>Formas de pagamento</h2>
+  ${
+    formasRows
+      ? `<table>
+        <thead><tr><th>Forma</th><th class="num">Total</th><th class="num">%</th></tr></thead>
+        <tbody>${formasRows}</tbody>
+      </table>`
+      : `<p class="muted">Sem dados de forma de pagamento neste período.</p>`
+  }
+
+  ${
+    diasRows
+      ? `<h2>Por dia</h2>
+      <table>
+        <thead><tr><th>Dia</th><th class="num">Contas</th><th class="num">Faturamento</th></tr></thead>
+        <tbody>${diasRows}</tbody>
+      </table>`
+      : ""
+  }
+
+  ${
+    topRows
+      ? `<h2>Top produtos</h2>
+      <table>
+        <thead><tr><th>#</th><th>Produto</th><th class="num">Qtd</th></tr></thead>
+        <tbody>${topRows}</tbody>
+      </table>`
+      : ""
+  }
+
+  <h2>Contas fechadas</h2>
+  ${
+    contasRows
+      ? `<table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Mesa</th>
+            <th>Cliente</th>
+            <th class="num">Cobrado</th>
+            <th class="num">Desc.</th>
+            <th class="num">Taxa</th>
+            <th>Forma de pagamento</th>
+            <th>Fechada em</th>
+          </tr>
+        </thead>
+        <tbody>${contasRows}</tbody>
+      </table>`
+      : `<p class="muted">Nenhuma conta fechada neste intervalo.</p>`
+  }
+
+  <p class="foot">Major Pub · Relatório operacional · ${esc(from)} a ${esc(to)}</p>
+  <script>
+    /* não auto-print: usuário confirma layout antes de salvar PDF */
+  </script>
+</body>
+</html>`;
+
+  const w = window.open("", "_blank", "noopener,noreferrer,width=960,height=800");
   if (!w) {
-    alert("Permita pop-ups para gerar o PDF");
+    alert("Permita pop-ups para imprimir o relatório");
     return;
   }
   w.document.open();
