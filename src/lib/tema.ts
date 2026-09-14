@@ -12,7 +12,7 @@ export const EVENTO_TEMA = "qradmin-tema";
 
 /* Bloco dark idêntico ao de src/index.css — injetado em runtime. */
 const DARK_CSS = `
-[data-theme="dark"]{
+[data-theme="escuro"]{
   --qr-white:#12233a;
   --qr-slate-50:#0b1524;
   --qr-slate-100:#1a2c44;
@@ -55,8 +55,8 @@ const DARK_CSS = `
   --qr-scrollbar:#3c5876;
   color-scheme:dark;
 }
-[data-theme="dark"] .text-white{color:#fff}
-[data-theme="dark"] .border-white{border-color:#fff}
+[data-theme="escuro"] .text-white{color:#fff}
+[data-theme="escuro"] .border-white{border-color:#fff}
 `;
 
 function garantirStyleDark() {
@@ -81,6 +81,15 @@ export function temaAtual(): Tema {
 export function aplicarTema(t: Tema) {
   garantirStyleDark();
   document.documentElement.dataset.theme = t;
+  // Fallback físico: aplica o fundo/cor diretamente via style inline no
+  // <body> e no #root, de modo que a troca seja visível mesmo que alguma
+  // camada (proxy/cache/CSS bloqueado) impeça as variáveis de funcionarem.
+  const escuro = t === "escuro";
+  for (const el of [document.body, document.getElementById("root")]) {
+    if (!el) continue;
+    el.style.background = escuro ? "#0b1524" : "";
+    el.style.color = escuro ? "#eaf2fb" : "";
+  }
   try {
     localStorage.setItem(KEY, t);
   } catch {

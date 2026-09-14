@@ -45,7 +45,7 @@
 /* ---------- cores dinâmicas (claro/escuro) ----------
    Com `@theme inline`, as utilidades embutem var(--qr-*) e as
    variantes /alpha viram color-mix em runtime — tudo troca em
-   [data-theme="dark"]. */
+   [data-theme="escuro"]. */
 @theme inline {
   --color-white: var(--qr-white);
   --color-slate-50: var(--qr-slate-50);
@@ -128,7 +128,7 @@
 }
 
 /* ================= TEMA ESCURO ================= */
-[data-theme="dark"] {
+[data-theme="escuro"] {
   --qr-white: #12233a;
   --qr-slate-50: #0b1524;
   --qr-slate-100: #1a2c44;
@@ -277,8 +277,13 @@ body {
 
 /* ---------- tema escuro: correções pontuais ---------- */
 /* texto/borda brancos sobre teal permanecem brancos no dark */
-[data-theme="dark"] .text-white { color: #ffffff; }
-[data-theme="dark"] .border-white { border-color: #ffffff; }
+[data-theme="escuro"] .text-white { color: #ffffff; }
+[data-theme="escuro"] .border-white { border-color: #ffffff; }
+
+/* troca da logo conforme o tema (claro/escuro) */
+.qr-logo-dark { display: none; }
+[data-theme="escuro"] .qr-logo-light { display: none; }
+[data-theme="escuro"] .qr-logo-dark { display: inline-block; }
 
 /* papel do QR Code sempre branco (legibilidade do QR) */
 .qr-paper { background: #ffffff !important; }

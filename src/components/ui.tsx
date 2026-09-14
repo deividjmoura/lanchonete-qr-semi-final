@@ -12,7 +12,13 @@ export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
       <img
         src="/logo/qradmin-horizontal.png"
         alt="QRAdmin"
-        className={cn(h, "w-auto object-contain shrink-0")}
+        className={cn(h, "w-auto object-contain shrink-0 qr-logo-light")}
+        draggable={false}
+      />
+      <img
+        src="/logo/qradmin-horizontal-dark.png"
+        alt="QRAdmin"
+        className={cn(h, "w-auto object-contain shrink-0 qr-logo-dark")}
         draggable={false}
       />
     </span>
