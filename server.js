@@ -870,6 +870,22 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, async () => {
   console.log(`🍔 Lanchonete QR V2: http://localhost:${PORT}`);
+  // Auto-migrate best-effort: aplica migrations pendentes na inicialização
+  // (idempotente — já aplicadas são puladas). Nunca derruba o servidor.
+  try {
+    const { spawnSync } = require('child_process');
+    const r = spawnSync(process.execPath, [require('path').join(__dirname, 'db', 'migrate.js')], {
+      encoding: 'utf8',
+      timeout: 30000,
+    });
+    if (r.status === 0) {
+      console.log('🧬 Migrations verificadas/aplicadas na inicialização.');
+    } else {
+      console.warn('⚠️ Auto-migrate pulado:', String(r.stderr || r.stdout || '').slice(0, 200));
+    }
+  } catch (e) {
+    console.warn('⚠️ Auto-migrate indisponível:', (e && e.message) || e);
+  }
   try {
     const seed = await garantirStaffSeed();
     if (seed.created) {
