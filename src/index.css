@@ -7,21 +7,12 @@
 
   /* ---------- QRAdmin · navy (primária) ---------- */
   --color-navy-950: #061a2e;
-  --color-navy-900: #0a2540;
-  --color-navy-800: #0f2c4a;
-  --color-navy-700: #1a3a5c;
   --color-navy-600: #23486e;
-  --color-navy-500: #2e5a87;
 
   /* ---------- QRAdmin · teal (destaque) ---------- */
-  --color-brand-50: #effcfa;
   --color-brand-100: #d7f7f3;
   --color-brand-200: #a9eee6;
   --color-brand-300: #6fe3d8;
-  --color-brand-400: #2dd4bf;
-  --color-brand-500: #00c4b4;
-  --color-brand-600: #00a79a;
-  --color-brand-700: #04877d;
 
   --animate-pulse-soft: pulseSoft 2.6s ease-in-out infinite;
   --animate-shimmer: shimmer 2.2s linear infinite;
@@ -51,13 +42,145 @@
   }
 }
 
+/* ---------- cores dinâmicas (claro/escuro) ----------
+   Com `@theme inline`, as utilidades embutem var(--qr-*) e as
+   variantes /alpha viram color-mix em runtime — tudo troca em
+   [data-theme="dark"]. */
+@theme inline {
+  --color-white: var(--qr-white);
+  --color-slate-50: var(--qr-slate-50);
+  --color-slate-100: var(--qr-slate-100);
+  --color-slate-200: var(--qr-slate-200);
+  --color-slate-300: var(--qr-slate-300);
+  --color-slate-400: var(--qr-slate-400);
+  --color-slate-500: var(--qr-slate-500);
+  --color-slate-600: var(--qr-slate-600);
+  --color-slate-700: var(--qr-slate-700);
+  --color-slate-800: var(--qr-slate-800);
+  --color-navy-500: var(--qr-navy-500);
+  --color-navy-700: var(--qr-navy-700);
+  --color-navy-800: var(--qr-navy-800);
+  --color-navy-900: var(--qr-navy-900);
+  --color-brand-50: var(--qr-brand-50);
+  --color-brand-400: var(--qr-brand-400);
+  --color-brand-500: var(--qr-brand-500);
+  --color-brand-600: var(--qr-brand-600);
+  --color-brand-700: var(--qr-brand-700);
+  --color-teal-400: var(--qr-teal-400);
+  --color-teal-500: var(--qr-teal-500);
+  --color-teal-600: var(--qr-teal-600);
+  --color-teal-700: var(--qr-teal-700);
+  --color-amber-500: var(--qr-amber-500);
+  --color-amber-700: var(--qr-amber-700);
+  --color-rose-400: var(--qr-rose-400);
+  --color-rose-500: var(--qr-rose-500);
+  --color-rose-600: var(--qr-rose-600);
+  --color-rose-700: var(--qr-rose-700);
+  --color-violet-500: var(--qr-violet-500);
+  --color-violet-700: var(--qr-violet-700);
+  --color-sky-500: var(--qr-sky-500);
+  --color-sky-700: var(--qr-sky-700);
+}
+
+/* ================= TEMA CLARO (padrão) ================= */
+:root {
+  --qr-white: #ffffff;
+  --qr-slate-50: #f8fafc;
+  --qr-slate-100: #f1f5f9;
+  --qr-slate-200: #e2e8f0;
+  --qr-slate-300: #cbd5e1;
+  --qr-slate-400: #94a3b8;
+  --qr-slate-500: #64748b;
+  --qr-slate-600: #475569;
+  --qr-slate-700: #334155;
+  --qr-slate-800: #1e293b;
+  --qr-navy-500: #2e5a87;
+  --qr-navy-700: #1a3a5c;
+  --qr-navy-800: #0f2c4a;
+  --qr-navy-900: #0a2540;
+  --qr-brand-50: #effcfa;
+  --qr-brand-400: #2dd4bf;
+  --qr-brand-500: #00c4b4;
+  --qr-brand-600: #00a79a;
+  --qr-brand-700: #04877d;
+  --qr-teal-400: #2dd4bf;
+  --qr-teal-500: #14b8a6;
+  --qr-teal-600: #0d9488;
+  --qr-teal-700: #0f766e;
+  --qr-amber-500: #f59e0b;
+  --qr-amber-700: #b45309;
+  --qr-rose-400: #fb7185;
+  --qr-rose-500: #f43f5e;
+  --qr-rose-600: #e11d48;
+  --qr-rose-700: #be123c;
+  --qr-violet-500: #8b5cf6;
+  --qr-violet-700: #6d28d9;
+  --qr-sky-500: #0ea5e9;
+  --qr-sky-700: #0369a1;
+
+  --qr-page: #f8fafc;
+  --qr-text: #0a2540;
+  --qr-grad-from: #0a2540;
+  --qr-stroke: rgba(10, 37, 64, 0.28);
+  --qr-card-shadow: 0 1px 2px rgba(10, 37, 64, 0.04), 0 10px 28px -18px rgba(10, 37, 64, 0.18);
+  --qr-card-shadow-deep: 0 2px 4px rgba(10, 37, 64, 0.05), 0 18px 44px -20px rgba(10, 37, 64, 0.22);
+  --qr-scrollbar: #cbd5e1;
+}
+
+/* ================= TEMA ESCURO ================= */
+[data-theme="dark"] {
+  --qr-white: #12233a;
+  --qr-slate-50: #0b1524;
+  --qr-slate-100: #1a2c44;
+  --qr-slate-200: #274059;
+  --qr-slate-300: #3c5876;
+  --qr-slate-400: #8fa7c0;
+  --qr-slate-500: #a3b7cd;
+  --qr-slate-600: #bccadb;
+  --qr-slate-700: #cfdbe8;
+  --qr-slate-800: #e2ebf4;
+  --qr-navy-500: #6d94bd;
+  --qr-navy-700: #a5c8ec;
+  --qr-navy-800: #c3daf3;
+  --qr-navy-900: #eaf2fb;
+  --qr-brand-50: #0d2f31;
+  --qr-brand-400: #2dd4bf;
+  --qr-brand-500: #00c4b4;
+  --qr-brand-600: #22d3c5;
+  --qr-brand-700: #67e8dc;
+  --qr-teal-400: #2dd4bf;
+  --qr-teal-500: #14b8a6;
+  --qr-teal-600: #2dd4bf;
+  --qr-teal-700: #5eead4;
+  --qr-amber-500: #f59e0b;
+  --qr-amber-700: #fcd34d;
+  --qr-rose-400: #fb7185;
+  --qr-rose-500: #f43f5e;
+  --qr-rose-600: #fb7185;
+  --qr-rose-700: #fda4af;
+  --qr-violet-500: #8b5cf6;
+  --qr-violet-700: #c4b5fd;
+  --qr-sky-500: #0ea5e9;
+  --qr-sky-700: #7dd3fc;
+
+  --qr-page: #0b1524;
+  --qr-text: #eaf2fb;
+  --qr-grad-from: #eaf2fb;
+  --qr-stroke: rgba(234, 242, 251, 0.32);
+  --qr-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 30px -18px rgba(0, 0, 0, 0.6);
+  --qr-card-shadow-deep: 0 2px 4px rgba(0, 0, 0, 0.45), 0 20px 48px -20px rgba(0, 0, 0, 0.65);
+  --qr-scrollbar: #3c5876;
+
+  color-scheme: dark;
+}
+
 html {
   scroll-behavior: smooth;
 }
 
 body {
-  background: #f8fafc;
-  color: #0a2540;
+  background: var(--qr-page);
+  color: var(--qr-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
@@ -71,11 +194,11 @@ body {
 /* ---------- scrollbar ---------- */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: var(--qr-scrollbar) transparent;
 }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
-*::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
-*::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+*::-webkit-scrollbar-thumb { background: var(--qr-scrollbar); border-radius: 99px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--qr-slate-400); }
 *::-webkit-scrollbar-track { background: transparent; }
 
 /* ---------- signature utilities ---------- */
@@ -84,17 +207,17 @@ body {
   letter-spacing: 0.02em;
 }
 
-/* superfície clara — card branco com sombra suave */
+/* superfície clara/escura — card com sombra suave */
 .glass {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 2px rgba(10, 37, 64, 0.04), 0 10px 28px -18px rgba(10, 37, 64, 0.18);
+  background: var(--qr-white);
+  border: 1px solid var(--qr-slate-200);
+  box-shadow: var(--qr-card-shadow);
 }
 
 .glass-deep {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 4px rgba(10, 37, 64, 0.05), 0 18px 44px -20px rgba(10, 37, 64, 0.22);
+  background: var(--qr-white);
+  border: 1px solid var(--qr-slate-200);
+  box-shadow: var(--qr-card-shadow-deep);
 }
 
 .ring-brand {
@@ -102,18 +225,18 @@ body {
 }
 
 .text-gradient {
-  background: linear-gradient(94deg, #0a2540 0%, #1a3a5c 45%, #00c4b4 100%);
+  background: linear-gradient(94deg, var(--qr-grad-from) 0%, var(--qr-navy-500) 45%, #00c4b4 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
 .stroke-text {
-  -webkit-text-stroke: 1.5px rgba(10, 37, 64, 0.28);
+  -webkit-text-stroke: 1.5px var(--qr-stroke);
   color: transparent;
 }
 
-/* textura desativada no tema claro (visual limpo) */
+/* textura desativada (visual limpo) */
 .noise::after {
   content: none;
 }
@@ -151,6 +274,14 @@ body {
 .card-img-zoom:hover img {
   transform: scale(1.07) rotate(-0.5deg);
 }
+
+/* ---------- tema escuro: correções pontuais ---------- */
+/* texto/borda brancos sobre teal permanecem brancos no dark */
+[data-theme="dark"] .text-white { color: #ffffff; }
+[data-theme="dark"] .border-white { border-color: #ffffff; }
+
+/* papel do QR Code sempre branco (legibilidade do QR) */
+.qr-paper { background: #ffffff !important; }
 
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {

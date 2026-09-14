@@ -4,7 +4,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { usePub } from "../store/usePub";
 import { ir } from "../router";
 import { cn } from "../utils/cn";
-import { LivePill, Logo } from "./ui";
+import { LivePill, Logo, ThemeToggle } from "./ui";
 import { audioMudo, beepAlerta, beepDuplo, falar, setMudo } from "../lib/sonus";
 import { FRASES_GARCOM } from "../lib/data";
 
@@ -137,6 +137,7 @@ export function OpsShell({
             ))}
           </nav>
 
+          <ThemeToggle />
           <button
             onClick={toggleSom}
             title={somLigado ? "Silenciar alertas de voz" : "Ativar alertas de voz"}

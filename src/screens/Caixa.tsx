@@ -402,7 +402,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
           {/* PIX + fechar */}
           <div className="mt-4 rounded-2xl border border-brand-500/30 bg-gradient-to-br from-brand-500/10 to-transparent p-4">
             <div className="flex items-center gap-4">
-              <div className="rounded-xl bg-white p-2.5 shadow-lg shrink-0">
+              <div className="rounded-xl qr-paper p-2.5 shadow-lg shrink-0">
                 {pixCodigo ? (
                   <QRCodeSVG value={pixCodigo} size={86} fgColor="#0a2540" level="M" />
                 ) : (

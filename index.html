@@ -13,6 +13,15 @@
       rel="stylesheet"
     />
     <link rel="icon" type="image/png" href="/logo/favicon.png" />
+    <script>
+      /* tema claro/escuro antes do primeiro paint (evita flash) */
+      try {
+        var t = localStorage.getItem("qradmin-tema");
+        if (t !== "claro" && t !== "escuro")
+          t = matchMedia("(prefers-color-scheme: dark)").matches ? "escuro" : "claro";
+        document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

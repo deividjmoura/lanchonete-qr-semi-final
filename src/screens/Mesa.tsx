@@ -18,7 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Badge, Btn, Input, Logo, Modal, Qtd } from "../components/ui";
+import { Badge, Btn, Input, Logo, Modal, Qtd, ThemeToggle } from "../components/ui";
 import type { Opcao, Pedido, Produto } from "../lib/types";
 import { usePub, sessaoDaMesa, totalSessao } from "../store/usePub";
 import { FOTO_PLACEHOLDER, fotoSrc } from "../lib/mappers";
@@ -456,6 +456,7 @@ export default function Mesa({ token }: { token: string }) {
           <Badge tone="amber" className="ml-1">{mesa.nome}</Badge>
           {sessao && sessao.pixAvisos > 0 && <Badge tone="lime">pix {sessao.pixAvisos}×</Badge>}
           <div className="flex-1" />
+          <ThemeToggle />
           <button
             onClick={() => setSheet("conta")}
             className="btn-press lg:hidden flex items-center gap-2 rounded-full bg-slate-100/70 border border-slate-200 h-10 pl-3.5 pr-4 text-xs font-bold text-slate-700 cursor-pointer"

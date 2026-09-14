@@ -1,7 +1,8 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Flame } from "lucide-react";
-import type { ReactNode } from "react";
+import { X, Flame, Moon, Sun } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "../utils/cn";
+import { alternarTema, temaAtual, EVENTO_TEMA, type Tema } from "../lib/tema";
 
 /* ---------- Logo ---------- */
 export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
@@ -15,6 +16,31 @@ export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
         draggable={false}
       />
     </span>
+  );
+}
+
+/* ---------- Alternador de tema (claro/escuro) ---------- */
+export function ThemeToggle({ className }: { className?: string }) {
+  const [tema, setTema] = useState<Tema>(() => temaAtual());
+  useEffect(() => {
+    const fn = (e: Event) => setTema((e as CustomEvent<Tema>).detail);
+    window.addEventListener(EVENTO_TEMA, fn);
+    return () => window.removeEventListener(EVENTO_TEMA, fn);
+  }, []);
+  return (
+    <button
+      type="button"
+      onClick={alternarTema}
+      title={tema === "claro" ? "Ativar tema escuro" : "Ativar tema claro"}
+      aria-label={tema === "claro" ? "Ativar tema escuro" : "Ativar tema claro"}
+      className={cn(
+        "btn-press grid place-items-center size-10 rounded-full border cursor-pointer transition-colors",
+        "border-slate-200 bg-slate-100/70 text-slate-500 hover:text-navy-800",
+        className
+      )}
+    >
+      {tema === "claro" ? <Moon className="size-4.5" /> : <Sun className="size-4.5" />}
+    </button>
   );
 }
 

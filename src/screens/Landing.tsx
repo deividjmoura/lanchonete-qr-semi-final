@@ -4,7 +4,7 @@ import {
   ArrowRight, ChefHat, ConciergeBell, QrCode, Smartphone,
   Split, Wallet, Boxes, ChartNoAxesColumn, UtensilsCrossed, Zap, Beer,
 } from "lucide-react";
-import { Badge, LivePill, Logo, Secao } from "../components/ui";
+import { Badge, LivePill, Logo, Secao, ThemeToggle } from "../components/ui";
 import { ir } from "../router";
 import { usePub, totalSessao } from "../store/usePub";
 import { BRL } from "../lib/utils";
@@ -65,6 +65,7 @@ export default function Landing() {
         <Logo />
         <div className="flex items-center gap-2.5">
           <Badge tone="lime" pulse>salão aberto</Badge>
+          <ThemeToggle />
         </div>
       </header>
 

@@ -1111,7 +1111,7 @@ function Mesas() {
               <p className="font-display text-4xl sm:text-5xl text-navy-900 mt-3 leading-none">{m.numero}</p>
               <p className="text-[10px] uppercase tracking-[0.24em] text-slate-500 mt-1">{m.nome}</p>
 
-              <div className="mt-4 mx-auto w-fit rounded-2xl bg-white p-2.5">
+              <div className="mt-4 mx-auto w-fit rounded-2xl qr-paper p-2.5">
                 <QRCodeSVG value={url} size={108} fgColor="#0a2540" level="M" includeMargin={false} />
               </div>
 

@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, ChefHat, KeyRound, LayoutGrid, LogIn, ShieldAlert, Wallet, Wine } from "lucide-react";
 import { useState } from "react";
-import { Logo } from "../components/ui";
+import { Logo, ThemeToggle } from "../components/ui";
 import { ir } from "../router";
 import { usePub } from "../store/usePub";
 import { cn } from "../utils/cn";
@@ -57,6 +57,10 @@ export default function Login() {
       >
         <ArrowLeft className="size-4" /> voltar ao pub
       </button>
+
+      <div className="absolute top-5 right-5 sm:right-8">
+        <ThemeToggle />
+      </div>
 
       <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.98 }}
