@@ -124,12 +124,12 @@ const CSS_CUPOM = `
   }
 `;
 
+/**
+ * Impressão confiável via iframe oculto (não depende de pop-up).
+ * window.open("", ...) + noopener no Chrome abre about:blank branco e
+ * bloqueia document.write — por isso a página ficava vazia.
+ */
 function openPrintWindow(title: string, bodyHtml: string, autoPrint = true) {
-  const w = window.open("", "_blank", "noopener,noreferrer,width=420,height=720");
-  if (!w) {
-    alert("Permita pop-ups para imprimir o cupom");
-    return;
-  }
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -139,18 +139,97 @@ function openPrintWindow(title: string, bodyHtml: string, autoPrint = true) {
 </head>
 <body>
 ${bodyHtml}
-${autoPrint ? `<script>
-  window.onload = function () {
-    setTimeout(function () {
-      try { window.focus(); window.print(); } catch (e) {}
-    }, 250);
-  };
-</script>` : ""}
 </body>
 </html>`;
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
+
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+
+  /* 1) tenta iframe (melhor p/ impressora térmica, sem aba extra) */
+  try {
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("title", title);
+    iframe.style.cssText =
+      "position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none;";
+    document.body.appendChild(iframe);
+
+    const finish = () => {
+      try {
+        URL.revokeObjectURL(url);
+      } catch (_) {}
+      setTimeout(() => {
+        try {
+          iframe.remove();
+        } catch (_) {}
+      }, 1500);
+    };
+
+    iframe.onload = () => {
+      try {
+        const win = iframe.contentWindow;
+        if (!win) throw new Error("sem contentWindow");
+        if (autoPrint) {
+          setTimeout(() => {
+            try {
+              win.focus();
+              win.print();
+            } catch (_) {}
+            finish();
+          }, 200);
+        } else {
+          finish();
+        }
+      } catch (e) {
+        console.warn("[print iframe]", e);
+        /* fallback: abre blob numa aba */
+        const w = window.open(url, "_blank");
+        if (!w) {
+          alert("Permita pop-ups para imprimir o cupom");
+        } else if (autoPrint) {
+          setTimeout(() => {
+            try {
+              w.focus();
+              w.print();
+            } catch (_) {}
+          }, 400);
+        }
+        setTimeout(() => {
+          try {
+            URL.revokeObjectURL(url);
+          } catch (_) {}
+        }, 60_000);
+        try {
+          iframe.remove();
+        } catch (_) {}
+      }
+    };
+
+    iframe.src = url;
+    return;
+  } catch (e) {
+    console.warn("[print]", e);
+  }
+
+  /* 2) fallback absoluto: nova aba com blob URL (sem document.write) */
+  const w = window.open(url, "_blank");
+  if (!w) {
+    alert("Permita pop-ups para imprimir o cupom");
+    URL.revokeObjectURL(url);
+    return;
+  }
+  if (autoPrint) {
+    setTimeout(() => {
+      try {
+        w.focus();
+        w.print();
+      } catch (_) {}
+    }, 400);
+  }
+  setTimeout(() => {
+    try {
+      URL.revokeObjectURL(url);
+    } catch (_) {}
+  }, 60_000);
 }
 
 function extrasLinhas(it: ItemPedido): string[] {
@@ -483,12 +562,18 @@ export function imprimirRelatorioPdf(opts: {
 </body>
 </html>`;
 
-  const w = window.open("", "_blank", "noopener,noreferrer,width=960,height=800");
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url, "_blank", "width=960,height=800");
   if (!w) {
-    alert("Permita pop-ups para imprimir o relatório");
+    alert("Permita pop-ups para abrir o relatório");
+    URL.revokeObjectURL(url);
     return;
   }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
+  /* revoga depois; a aba já carregou o blob */
+  setTimeout(() => {
+    try {
+      URL.revokeObjectURL(url);
+    } catch (_) {}
+  }, 120_000);
 }
