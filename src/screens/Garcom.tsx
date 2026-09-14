@@ -19,7 +19,7 @@ export default function Garcom({ token }: { token: string }) {
   useEffect(() => {
     if (!token) return;
     void hydrateGarcom(token);
-    const t = setInterval(() => void hydrateGarcom(token), 5000);
+    const t = setInterval(() => void hydrateGarcom(token), 8000);
     const off = connectEvents(() => void hydrateGarcom(token));
     return () => {
       clearInterval(t);
@@ -31,7 +31,7 @@ export default function Garcom({ token }: { token: string }) {
   const lastError = usePub((s) => s.lastError);
 
   const prontos = pedidos
-    .filter((p) => p.status === "pronto" || p.itens.some((i) => i.status === "concluido"))
+    .filter((p) => p.status !== "entregue" && p.itens.some((i) => i.status === "concluido"))
     .sort((a, b) => a.criadoEm - b.criadoEm);
   const entregues = pedidos
     .filter((p) => p.status === "entregue")
@@ -64,7 +64,7 @@ export default function Garcom({ token }: { token: string }) {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* prontos */}
         <section className="lg:col-span-2">
-          <AnimatePresence mode="popLayout">
+          <AnimatePresence mode="sync">
             {prontos.length === 0 ? (
               <motion.div
                 key="vazio"
@@ -173,10 +173,11 @@ function CardPronto({
   return (
     <motion.article
       layout
-      initial={{ opacity: 0, scale: 0.9, y: 26 }}
+      layoutId={`garcom-${pedido.id}`}
+      initial={{ opacity: 0, scale: 0.96, y: 16 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9, y: -20, transition: { duration: 0.25 } }}
-      transition={{ type: "spring", stiffness: 260, damping: 22 }}
+      exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}
+      transition={{ type: "spring", stiffness: 320, damping: 28 }}
       className="relative overflow-hidden rounded-3xl glass-deep noise p-6 text-center"
     >
       <div className="glow-orb absolute -top-16 -right-16 size-44 bg-amber-500/16" />

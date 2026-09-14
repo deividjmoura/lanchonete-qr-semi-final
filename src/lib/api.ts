@@ -140,7 +140,7 @@ export function connectEvents(onUpdate: () => void): () => void {
   let timer: ReturnType<typeof setTimeout> | null = null;
   const bounce = () => {
     if (timer) clearTimeout(timer);
-    timer = setTimeout(() => onUpdate(), 200);
+    timer = setTimeout(() => onUpdate(), 350);
   };
   try {
     es = new EventSource("/api/events");

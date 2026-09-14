@@ -38,7 +38,7 @@ export default function Bar() {
   const lastError = usePub((s) => s.lastError);
   useEffect(() => {
     void hydrateBar();
-    const t = setInterval(() => void hydrateBar(), 5000);
+    const t = setInterval(() => void hydrateBar(), 8000);
     const off = connectEvents(() => void hydrateBar());
     return () => {
       clearInterval(t);
@@ -75,7 +75,7 @@ export default function Bar() {
               </header>
 
               <div className="space-y-3">
-                <AnimatePresence mode="popLayout">
+                <AnimatePresence mode="sync">
                   {lista.length === 0 && (
                     <motion.div
                       key="vazio"
@@ -112,10 +112,11 @@ function CardPedido({ pedido, borda }: { pedido: Pedido; borda: string }) {
   return (
     <motion.article
       layout
-      initial={{ opacity: 0, y: 26, scale: 0.97 }}
+      layoutId={`ops-bar-${pedido.id}`}
+      initial={{ opacity: 0, y: 16, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.94, x: 30 }}
-      transition={{ type: "spring", stiffness: 300, damping: 26 }}
+      exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.12 } }}
+      transition={{ type: "spring", stiffness: 380, damping: 32 }}
       className={cn("relative overflow-hidden rounded-2xl glass-deep noise p-4 border", borda)}
     >
       {atrasado && (

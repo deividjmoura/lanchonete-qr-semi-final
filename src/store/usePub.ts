@@ -118,6 +118,27 @@ const ajustesCaixaLocais = new Map<number, { desconto: number; taxa: number }>()
 let anuncioCozinhaPronto = false;
 let anuncioGarcomPronto = false;
 
+/** Evita que SSE/poll sobrescreva UI no meio de um PATCH (flicker some/volta). */
+let opsMutating = 0;
+function beginOpsMutation() {
+  opsMutating += 1;
+}
+function endOpsMutation() {
+  opsMutating = Math.max(0, opsMutating - 1);
+}
+
+/** Assinatura estável da fila — se igual, não chama set() (sem re-render). */
+function filaSig(list: { id: number; status: string; itens?: { id: string; status?: string }[] }[]) {
+  return list
+    .map((p) => {
+      const itens = (p.itens || [])
+        .map((i) => `${i.id}:${i.status || ""}`)
+        .join(",");
+      return `${p.id}|${p.status}|${itens}`;
+    })
+    .join(";");
+}
+
 export const usePub = create<PubState>((set, get) => ({
   mesas: [],
   produtos: [],
@@ -227,8 +248,10 @@ export const usePub = create<PubState>((set, get) => ({
   },
 
   hydrateBar: async () => {
+    if (opsMutating > 0) return;
     try {
       const rows = await api.barPedidos();
+      if (opsMutating > 0) return;
       const fila = mapCozinhaPedidos(rows);
       const prev = get().pedidos;
       const prevIds = new Set(prev.map((p) => p.id));
@@ -244,7 +267,12 @@ export const usePub = create<PubState>((set, get) => ({
       }
       const ativosIds = new Set(fila.map((p) => p.id));
       const rest = prev.filter((p) => !ativosIds.has(p.id) && p.status === "entregue");
-      set({ pedidos: [...fila, ...rest], lastError: null, apiReady: true });
+      const next = [...fila, ...rest];
+      if (filaSig(next) === filaSig(prev)) {
+        set({ lastError: null, apiReady: true });
+        return;
+      }
+      set({ pedidos: next, lastError: null, apiReady: true });
     } catch (e: any) {
       const msg = e.message || "Falha ao carregar bar";
       set({ lastError: msg });
@@ -253,8 +281,10 @@ export const usePub = create<PubState>((set, get) => ({
   },
 
   hydrateCozinha: async () => {
+    if (opsMutating > 0) return;
     try {
       const rows = await api.cozinhaPedidos();
+      if (opsMutating > 0) return;
       const cozinha = mapCozinhaPedidos(rows);
       const prev = get().pedidos;
       const prevIds = new Set(prev.map((p) => p.id));
@@ -278,7 +308,12 @@ export const usePub = create<PubState>((set, get) => ({
       const rest = prev.filter(
         (p) => !ativosIds.has(p.id) && p.status === "entregue"
       );
-      set({ pedidos: [...cozinha, ...rest], lastError: null, apiReady: true });
+      const next = [...cozinha, ...rest];
+      if (filaSig(next) === filaSig(prev)) {
+        set({ lastError: null, apiReady: true });
+        return;
+      }
+      set({ pedidos: next, lastError: null, apiReady: true });
     } catch (e: any) {
       const msg = e.message || "Falha ao carregar cozinha";
       set({ lastError: msg });
@@ -287,13 +322,16 @@ export const usePub = create<PubState>((set, get) => ({
   },
 
   hydrateGarcom: async (token: string) => {
+    if (opsMutating > 0) return;
     try {
       const rows = await api.garcomPedidos(token);
+      if (opsMutating > 0) return;
       /* fila do garçom = só concluido no backend → status UI "pronto" */
       const prontos = mapCozinhaPedidos(rows).map((p) => ({ ...p, status: "pronto" as const }));
       const prontoIds = new Set(prontos.map((p) => p.id));
+      const prev = get().pedidos;
       const prevProntos = new Set(
-        get().pedidos.filter((p) => p.status === "pronto").map((p) => p.id)
+        prev.filter((p) => p.status === "pronto").map((p) => p.id)
       );
       if (anuncioGarcomPronto) {
         for (const p of prontos) {
@@ -303,10 +341,16 @@ export const usePub = create<PubState>((set, get) => ({
         }
       }
       anuncioGarcomPronto = true;
-      /* não apaga na_fila/em_producao/entregue; só atualiza o conjunto "pronto" */
-      const others = get().pedidos.filter((p) => p.status !== "pronto" || prontoIds.has(p.id));
-      const othersSemProntosAntigos = others.filter((p) => p.status !== "pronto");
-      set({ pedidos: [...prontos, ...othersSemProntosAntigos], lastError: null });
+      /* não apaga na_fila/em_producao; entrega local fica; prontos vêm só da API */
+      const othersSemProntosAntigos = prev.filter(
+        (p) => p.status !== "pronto" && (p.status !== "entregue" || !prontoIds.has(p.id))
+      );
+      const next = [...prontos, ...othersSemProntosAntigos];
+      if (filaSig(next) === filaSig(prev)) {
+        set({ lastError: null });
+        return;
+      }
+      set({ pedidos: next, lastError: null });
     } catch (e: any) {
       set({ lastError: e.message || "Falha ao carregar fila do garçom" });
     }
@@ -423,17 +467,31 @@ export const usePub = create<PubState>((set, get) => ({
 
   aceitarPedido: (pedidoId, setor) => {
     const antes = get().pedidos.find((x) => x.id === pedidoId);
+    beginOpsMutation();
     set({
       pedidos: get().pedidos.map((p) =>
-        p.id === pedidoId ? { ...p, status: "em_producao" as const } : p
+        p.id === pedidoId
+          ? {
+              ...p,
+              status: "em_producao" as const,
+              itens: p.itens.map((it) =>
+                !setor || it.setor === setor
+                  ? { ...it, status: it.status === "recebido" ? ("em_producao" as const) : it.status }
+                  : it
+              ),
+            }
+          : p
       ),
     });
     void (async () => {
       try {
         await api.statusPedido(pedidoId, statusToApi("em_producao"), setor);
         emit(get, set, "pedido-aceito", `Pedido #${pedidoId} em produção`, antes?.mesaNome);
-        await get().hydrateCozinha();
+        endOpsMutation();
+        if (setor === "bar") await get().hydrateBar();
+        else await get().hydrateCozinha();
       } catch (e: any) {
+        endOpsMutation();
         if (antes) {
           set({
             pedidos: get().pedidos.map((p) => (p.id === pedidoId ? antes : p)),
@@ -446,10 +504,31 @@ export const usePub = create<PubState>((set, get) => ({
 
   concluirPedido: (pedidoId, setor) => {
     const antes = get().pedidos.find((x) => x.id === pedidoId);
+    beginOpsMutation();
     set({
-      pedidos: get().pedidos.map((p) =>
-        p.id === pedidoId ? { ...p, status: "pronto" as const } : p
-      ),
+      pedidos: get().pedidos.map((p) => {
+        if (p.id !== pedidoId) return p;
+        const itens = p.itens.map((it) =>
+          !setor || it.setor === setor
+            ? {
+                ...it,
+                status:
+                  it.status === "recebido" || it.status === "em_producao"
+                    ? ("concluido" as const)
+                    : it.status,
+              }
+            : it
+        );
+        /* Se ainda há itens de outro setor em produção, não marca o pedido inteiro como pronto */
+        const aindaPend = itens.some(
+          (it) => it.status === "recebido" || it.status === "em_producao"
+        );
+        return {
+          ...p,
+          itens,
+          status: aindaPend ? ("em_producao" as const) : ("pronto" as const),
+        };
+      }),
     });
     void (async () => {
       try {
@@ -461,8 +540,11 @@ export const usePub = create<PubState>((set, get) => ({
           `Pronto · ${antes?.clienteNome || "cliente"}`,
           antes?.mesaNome
         );
-        await get().hydrateCozinha();
+        endOpsMutation();
+        if (setor === "bar") await get().hydrateBar();
+        else await get().hydrateCozinha();
       } catch (e: any) {
+        endOpsMutation();
         if (antes) {
           set({
             pedidos: get().pedidos.map((p) => (p.id === pedidoId ? antes : p)),
@@ -474,20 +556,47 @@ export const usePub = create<PubState>((set, get) => ({
   },
 
   entregarPedido: (pedidoId, garcomToken, itemIds) => {
-    /* otimista: tira da fila "pronto" na hora — evita sumiço dos outros cards */
+    /* otimista: marca itens entregues; se sobrar concluido, mantém na fila do garçom */
     const antes = get().pedidos.find((p) => p.id === pedidoId);
+    const idsSet =
+      Array.isArray(itemIds) && itemIds.length
+        ? new Set(itemIds.map((n) => Number(n)))
+        : null;
+    beginOpsMutation();
     set({
-      pedidos: get().pedidos.map((p) =>
-        p.id === pedidoId ? { ...p, status: "entregue" as const } : p
-      ),
+      pedidos: get().pedidos.map((p) => {
+        if (p.id !== pedidoId) return p;
+        const itens = p.itens.map((it) => {
+          const idNum = Number(it.id);
+          const target =
+            it.status === "concluido" &&
+            (idsSet == null || idsSet.has(idNum));
+          return target ? { ...it, status: "entregue" as const } : it;
+        });
+        const aindaPronto = itens.some((it) => it.status === "concluido");
+        const tudoEntregue = itens.every((it) => it.status === "entregue");
+        return {
+          ...p,
+          itens,
+          status: tudoEntregue
+            ? ("entregue" as const)
+            : aindaPronto
+              ? ("pronto" as const)
+              : p.status === "pronto"
+                ? ("em_producao" as const)
+                : p.status,
+        };
+      }),
     });
     void (async () => {
       try {
         if (garcomToken) {
           await api.garcomEntregar(garcomToken, pedidoId, itemIds);
+          endOpsMutation();
           await get().hydrateGarcom(garcomToken);
         } else {
           await api.statusPedido(pedidoId, statusToApi("entregue"));
+          endOpsMutation();
           await get().hydrateCozinha();
         }
         emit(
@@ -499,13 +608,30 @@ export const usePub = create<PubState>((set, get) => ({
         );
         await get().hydrateCaixa().catch(() => null);
       } catch (e: any) {
-        /* reverte se falhou */
+        endOpsMutation();
+        const msg = String(e?.message || "");
+        /* Já entregue no servidor: NÃO reverte — senão o card volta como zumbi */
+        if (/já.*entregue|totalmente entregue|already/i.test(msg)) {
+          set({
+            pedidos: get().pedidos.map((p) =>
+              p.id === pedidoId
+                ? {
+                    ...p,
+                    status: "entregue" as const,
+                    itens: p.itens.map((it) => ({ ...it, status: "entregue" as const })),
+                  }
+                : p
+            ),
+          });
+          if (garcomToken) await get().hydrateGarcom(garcomToken).catch(() => null);
+          return;
+        }
         if (antes) {
           set({
             pedidos: get().pedidos.map((p) => (p.id === pedidoId ? antes : p)),
           });
         }
-        alert(e.message || "Erro ao entregar");
+        alert(msg || "Erro ao entregar");
       }
     })();
   },
