@@ -116,7 +116,7 @@ export function mapCardapio(apiCats: any[]): { categorias: Categoria[]; produtos
         categoriaOrdem: c.ordem != null ? Number(c.ordem) : 0,
         ordem: p.ordem != null ? Number(p.ordem) : 0,
         foto: fotoSrc(p.fotoUrl || p.foto_url || "") || FOTO_PLACEHOLDER,
-        setor: (p.setor === "bar" ? "bar" : "cozinha") as const,
+        setor: p.setor === "bar" ? "bar" : "cozinha",
         tipo,
         adicionais,
         removiveis,
@@ -184,7 +184,7 @@ export function mapSessaoFromMesaApi(_token: string, mesaMeta: Mesa | undefined,
         status: (["recebido","em_producao","concluido","entregue"].includes(String(it.status || ""))
           ? (String(it.status) as any)
           : "recebido"),
-        setor: (it.setor === "bar" ? "bar" : "cozinha") as const,
+        setor: it.setor === "bar" ? "bar" as const : "cozinha" as const,
       };
     });
     const total = Number(p.totalPedido ?? itens.reduce((s, i) => s + i.totalUnit * i.qtd, 0));
@@ -228,7 +228,7 @@ export function mapCozinhaPedidos(rows: any[]): Pedido[] {
         status: (["recebido","em_producao","concluido","entregue"].includes(String(it.status || ""))
           ? (String(it.status) as any)
           : "recebido"),
-        setor: (it.setor === "bar" ? "bar" : "cozinha") as const,
+        setor: it.setor === "bar" ? "bar" as const : "cozinha" as const,
       };
     });
     return {
@@ -315,7 +315,7 @@ export function mapCaixaSessoes(rows: any[]): { sessoes: Sessao[]; pedidos: Pedi
           status: (["recebido","em_producao","concluido","entregue"].includes(String(it.status || ""))
             ? (String(it.status) as any)
             : "recebido"),
-          setor: (it.setor === "bar" ? "bar" : "cozinha") as const,
+          setor: it.setor === "bar" ? "bar" as const : "cozinha" as const,
         };
       });
       const total = Number(p.total ?? p.totalPedido ?? itens.reduce((a, i) => a + i.totalUnit * i.qtd, 0));

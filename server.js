@@ -58,6 +58,9 @@ const {
 } = require('./db/auth');
 const { golpePermitido } = require('./db/rateLimit');
 const { subscribe, broadcast } = require('./db/events');
+const pool = require('./db/pool');
+const { getMesaPorToken } = require('./db/queries');
+const { eventAccess } = require('./db/event-access');
 const {
   ErroGarcom,
   listGarcons,
@@ -192,22 +195,13 @@ const server = http.createServer(async (req, res) => {
 
     let m;
     if (p === '/api/events' && req.method === 'GET') {
-      // Segurança: exige staff autenticado OU token de mesa válido na query
-      // (evita que qualquer visitante ouça broadcasts de pedidos/PIX)
-      let autorizado = false;
-      try {
-        const staff = await getStaffDaRequisicao(req);
-        if (staff) autorizado = true;
-      } catch (_) {}
-      if (!autorizado) {
-        const mesaToken = (u.searchParams.get('mesa') || u.searchParams.get('token') || '').trim();
-        if (mesaToken && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(mesaToken)) {
-          // Token de mesa presente — permite (cliente da mesa)
-          autorizado = true;
-        }
-      }
-      if (!autorizado) {
-        return json(res, 401, { error: 'SSE requer autenticação de staff ou token de mesa (?mesa=UUID)' });
+      const access = await eventAccess(u.searchParams, {
+        staff: await getStaffDaRequisicao(req),
+        findMesa: (token) => getMesaPorToken(pool, token),
+        findGarcom: getGarcomPorToken,
+      });
+      if (!access) {
+        return json(res, 401, { error: 'SSE requer staff autenticado ou token válido de mesa/garçom' });
       }
 
       applySecurityHeaders(res);
@@ -222,7 +216,7 @@ const server = http.createServer(async (req, res) => {
       }
       res.write(`event: hello\ndata: ${JSON.stringify({ ok: true, at: Date.now() })}\n\n`);
       if (typeof res.flushHeaders === 'function') res.flushHeaders();
-      subscribe(res);
+      subscribe(res, { publicClient: access === 'public' });
       const hb = setInterval(() => {
         try {
           res.write(`: ping ${Date.now()}\n\n`);

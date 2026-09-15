@@ -74,7 +74,7 @@ export default function Mesa({ token }: { token: string }) {
     const t = setInterval(() => void hydrateMesaToken(token), 8000);
     const off = connectEvents(() => {
       void hydrateMesaToken(token);
-    });
+    }, { mesa: token });
     return () => {
       alive = false;
       clearInterval(t);

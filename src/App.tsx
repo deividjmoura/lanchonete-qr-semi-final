@@ -29,10 +29,10 @@ export default function App() {
       <Toasts />
       {rota.path === "home" && <Landing />}
       {rota.path === "login" && <Login />}
-      {rota.path === "mesa" && <Mesa token={rota.params.token || ""} />}
+      {rota.path === "mesa" && <Mesa key={rota.params.token} token={rota.params.token || ""} />}
       {rota.path === "cozinha" && <Cozinha />}
       {rota.path === "bar" && <Bar />}
-      {rota.path === "garcom" && <Garcom token={rota.params.token || ""} />}
+      {rota.path === "garcom" && <Garcom key={rota.params.token} token={rota.params.token || ""} />}
       {rota.path === "caixa" && <Caixa />}
       {rota.path === "admin" && <Admin />}
       {!["home", "login", "mesa", "cozinha", "bar", "garcom", "caixa", "admin"].includes(rota.path) && <Landing />}

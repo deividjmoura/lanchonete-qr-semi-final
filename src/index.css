@@ -84,6 +84,7 @@
 
 /* ================= TEMA CLARO (padrão) ================= */
 :root {
+  color-scheme: light;
   --qr-white: #ffffff;
   --qr-slate-50: #f8fafc;
   --qr-slate-100: #f1f5f9;

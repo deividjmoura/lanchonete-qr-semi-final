@@ -15,15 +15,14 @@
     <link rel="icon" type="image/png" href="/logo/favicon.png" />
     <script>
       /* tema claro/escuro antes do primeiro paint (evita flash) */
-      try {
-        var t = localStorage.getItem("qradmin-tema");
-        if (t !== "claro" && t !== "escuro")
-          t = matchMedia("(prefers-color-scheme: dark)").matches ? "escuro" : "claro";
-        document.documentElement.dataset.theme = t;
-      } catch (e) {}
+      var t;
+      try { t = localStorage.getItem("qradmin-tema"); } catch (e) {}
+      if (t !== "claro" && t !== "escuro")
+        t = window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "escuro" : "claro";
+      document.documentElement.dataset.theme = t;
     </script>
-    <script type="module" crossorigin src="/assets/index-CCj9X5Wl.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-NMHUINtH.css">
+    <script type="module" crossorigin src="/assets/index-G_eAUekZ.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BClZdhKH.css">
   </head>
   <body>
     <div id="root"></div>

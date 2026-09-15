@@ -21,7 +21,7 @@ export default function Garcom({ token }: { token: string }) {
     if (!token) return;
     void hydrateGarcom(token);
     const t = setInterval(() => void hydrateGarcom(token), 8000);
-    const off = connectEvents(() => void hydrateGarcom(token));
+    const off = connectEvents(() => void hydrateGarcom(token), { garcom: token });
     return () => {
       clearInterval(t);
       off();
@@ -207,7 +207,6 @@ function CardPronto({
       <ul className="mx-auto mt-4 max-w-xs space-y-1.5 rounded-2xl bg-slate-100 border border-slate-200 p-3.5 text-left">
         {pedido.itens.map((i) => {
           const st = labelItemStatus(i.status);
-          const pronto = i.status === "concluido";
           return (
             <li key={i.id} className="text-[13px] text-slate-700 leading-snug flex items-start justify-between gap-2">
               <span>

@@ -15,7 +15,7 @@ import { imprimirComandaHistorico, imprimirRelatorioPdf } from "../lib/print";
 import type { ItemPedido, Pedido } from "../lib/types";
 import { CATEGORIAS } from "../lib/data";
 import type { Produto, TipoProduto } from "../lib/types";
-import { faturamentoSemana, pagoSessao, totalSessao, usePub } from "../store/usePub";
+import { faturamentoSemana, totalSessao, usePub } from "../store/usePub";
 import { BRL } from "../lib/utils";
 import { cn } from "../utils/cn";
 
@@ -159,7 +159,7 @@ function Painel() {
             id: prod?.id ?? i,
             nome: t.nome,
             vendidos: Number(t.quantidade || 0),
-            foto: prod?.foto || prod?.fotoUrl || "/assets/demo/placeholder.webp",
+            foto: prod?.foto || "/assets/demo/placeholder.webp",
             setor: prod?.setor,
           };
         })
@@ -240,7 +240,7 @@ function Painel() {
             <Badge tone="zinc">faturamento / dia</Badge>
           </div>
           <div className="flex items-end gap-2.5 sm:gap-4 h-44">
-            {semana.map((d, i) => (
+            {semana.map((d) => (
               <div key={d.dia} className="flex-1 flex flex-col items-center gap-2">
                 <div
                   className={cn(

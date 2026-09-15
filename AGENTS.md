@@ -153,6 +153,7 @@ Liste bugs, limitações e melhorias pendentes.
 ## 5. Estado Atual do Trabalho (atualize sempre)
 
 ### Última sincronização
+- **Atualização por Codex:** 2026-09-15 23:47 UTC; integrado `d1b3161` sem conflitos; correções abaixo prontas para envio. O registro inicial foi preservado.
 - **Data:** 2026-09-15
 - **Agente inicial:** Grok (análise completa do repositório)
 - **Observações:** Repositório estável, funcionalidades core implementadas. Front já buildado em `dist/`. Identidade visual QRAdmin (navy + teal) com tema claro/escuro.
@@ -178,9 +179,12 @@ Liste bugs, limitações e melhorias pendentes.
 - [ ] Documentação de API completa (OpenAPI?)
 
 #### ✅ Concluído recentemente
+- Correções de alternância do tema, login legado, tokens SSE, validação de acesso aos eventos, isolamento de dados dos avisos públicos, estado da tela ao trocar mesa e erros de TypeScript. Seis testes de regressão adicionados; `dist/` reconstruído.
 - Core de pedidos, setores, entrega parcial, caixa, PIX aviso, auth, SSE, fotos WebP, dashboard, relatório, purge.
 
 ### Problemas Conhecidos / Débito Técnico
+- Correções desta revisão ainda precisam de validação visual e integração com PostgreSQL real; Chromium não pôde ser baixado no ambiente e não há banco de testes configurado.
+- Bundle principal acima de 500 kB (aviso do Vite); otimização pendente.
 - Rate-limit em memória (não compartilha entre instâncias).
 - CSRF formal ainda não implementado.
 - PIX sem conciliação bancária automática.
@@ -193,6 +197,26 @@ Liste bugs, limitações e melhorias pendentes.
 ---
 
 ## 6. Log de Atividades
+
+### [2026-09-15 23:47 UTC] Agente: Codex · Papel: Frontend / Backend / QA
+**Tarefa:** Corrigir tema escuro e problemas encontrados; salvar no GitHub a pedido do proprietário.
+**Status:** 🟢 concluído (implementação e testes locais); envio ao GitHub em execução.
+**Arquivos tocados:** `src/lib/tema.ts`, `src/index.css`, `index.html`, `public/login.html`, `src/lib/api.ts`, `src/screens/Mesa.tsx`, `src/screens/Garcom.tsx`, `src/App.tsx`, `server.js`, `db/events.js`, `db/event-access.js`, `src/lib/mappers.ts`, `src/screens/Admin.tsx`, `tsconfig.json`, `package.json`, `tests/regressions.cjs`, `dist/`, `CORRECOES.md`, `AGENTS.md`.
+**O que foi feito / proposto:**
+- Tema atual passa a usar estado no HTML quando localStorage está bloqueado; preferência do sistema preservada; cores centralizadas no CSS.
+- Login legado deixa de carregar stylesheet que forçava cores escuras nos dois modos.
+- Mesa e garçom enviam tokens SSE; backend valida existência e atividade do garçom. Avisos públicos não levam dados operacionais de outras mesas.
+- Tela remonta ao trocar token de mesa; corrigidos erros de TypeScript e campo de foto no dashboard.
+- Build e seis testes passaram. Checagem de tipos e testes repetidos antes do envio.
+- O protocolo AGENTS.md chegou no remoto durante o envio; integrado por rebase sem conflitos, preservando o trabalho do outro agente.
+**Decisões tomadas:**
+- Preservar a interface por hash e o build versionado; não alterar dados nem migrations.
+- Manter payload completo dos eventos para staff e apenas invalidação para clientes por token.
+**Próximos passos sugeridos:**
+- Validar visualmente claro/escuro e o fluxo de pedidos, entrega e pagamentos com banco de testes.
+- Confirmar implantação no provedor de hospedagem após o push.
+**Dependências / perguntas para outros agentes:**
+- Nenhum bloqueio para envio; integração e validação visual permanecem pendentes.
 
 ### [2026-09-15] Agente: Grok · Papel: Arquiteto / Analista
 **Tarefa:** Análise completa do repositório + criação deste protocolo de colaboração
