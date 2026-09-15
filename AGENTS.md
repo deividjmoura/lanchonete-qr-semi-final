@@ -1,0 +1,252 @@
+# 🤖 Protocolo de Colaboração entre Agentes de IA
+## Projeto: Lanchonete QR · QRAdmin (Major Pub)
+
+**Repositório:** https://github.com/deividjmoura/lanchonete-qr-semi-final  
+**Versão analisada:** main (commit a45d7fef) · v3.0.0-style  
+**Data da análise inicial:** 2026-09-15  
+**Objetivo deste documento:** Servir como **canal único de comunicação, coordenação e memória compartilhada** entre agentes de IA que trabalham neste projeto.
+
+---
+
+## 1. Regras de Ouro (obrigatórias para todos os agentes)
+
+1. **Leia este arquivo inteiro** no início de cada sessão de trabalho.
+2. **Atualize este arquivo** antes de terminar qualquer tarefa significativa (ver seção 4).
+3. **Nunca sobrescreva** seções de outros agentes sem marcar claramente (use `~~texto~~` + comentário).
+4. **Seja objetivo e estruturado.** Use os templates abaixo.
+5. **Priorize o estado atual** sobre histórico antigo (mova itens resolvidos para "Arquivo").
+6. **Comunique decisões técnicas** aqui antes de implementar mudanças grandes.
+7. **Não assuma contexto** — se algo não estiver documentado, pergunte ou investigue e registre.
+8. **Mantenha o português** (idioma do projeto e do dono).
+
+---
+
+## 2. Visão Geral do Projeto (resumo técnico)
+
+Sistema full-stack de **pedidos por QR Code** para lanchonete/pub.
+
+### Fluxo principal
+```
+Cliente (QR mesa) → Cardápio + personalização → Pedido
+       ↓
+Cozinha / Bar (setores separados) → prepara (voz)
+       ↓
+Garçom (entrega parcial ou total) → voz
+       ↓
+Caixa → fecha sessão (comanda) + PIX + divisão de conta
+```
+
+- Uma mesa = várias pedidos na **mesma sessão** (comanda).
+- Itens só entram no total **depois de entregues**.
+- PIX: cliente informa → caixa confirma (não fecha sozinho).
+
+### Stack
+| Camada | Tecnologia |
+|--------|------------|
+| Frontend | React 19 + Vite 7 + Tailwind 4 + Zustand + Framer Motion + Lucide |
+| Backend  | Node.js (HTTP nativo, sem Express) |
+| Banco    | PostgreSQL (Neon ou local) + migrations SQL |
+| Realtime | SSE (`/api/events`) |
+| Imagens  | sharp → WebP |
+| Auth     | Cookie httpOnly + scrypt + papéis (admin, cozinha, bar, caixa) |
+| PIX      | QR EMV estático (chave + nome + cidade) |
+
+### Estrutura principal
+```
+├── server.js              # Roteamento HTTP + API completa
+├── db/                    # Lógica de negócio + Postgres
+│   ├── pedidos.js         # Core de pedidos/sessões/status
+│   ├── caixa.js, auth.js, admin.js, garcons.js, ...
+│   └── migrations/        # 0001 → 0015+
+├── src/                   # React (telas: Mesa, Cozinha, Bar, Garçom, Caixa, Admin, Login)
+├── public/                # Assets + HTML legado
+├── dist/                  # Build do front (já incluso)
+├── scripts/               # setup, smoke tests, fotos
+└── data/                  # db.json (legado?)
+```
+
+### Status atual (conforme README)
+- ✅ Core completo: mesa, setores, garçom, caixa, auth, SSE, PIX, estoque, dashboard, relatório, purge, fotos WebP
+- ⬜ Planejado: gateway de pagamento, WhatsApp, PWA, multi-loja
+
+### Como rodar
+```bash
+npm install
+npm run setup          # cria .env + migrate + seed
+npm start              # http://localhost:3000
+# Logins: admin/admin123, cozinha, bar, caixa
+```
+
+---
+
+## 3. Papéis dos Agentes (sugestão de especialização)
+
+| Agente | Responsabilidade principal | Áreas de foco |
+|--------|---------------------------|---------------|
+| **Arquiteto** | Visão geral, decisões de design, refatorações grandes | server.js, estrutura db/, contratos de API |
+| **Backend** | Lógica de negócio, SQL, segurança, performance | db/*.js, migrations, rate-limit, SSE |
+| **Frontend** | UI/UX, componentes React, estado (Zustand), temas | src/, Tailwind, animações |
+| **QA / Testes** | Smoke tests, cenários de regressão, edge cases | scripts/smoke*.js, fluxos completos |
+| **DevOps / Infra** | Deploy, env, Neon, segurança de produção | .env, headers, CSP, rate-limit |
+| **Product** | Priorização de features, UX de fluxo, documentação de usuário | README, telas, roadmap |
+
+Um agente pode assumir vários papéis. Sempre declare o papel no log.
+
+---
+
+## 4. Como se comunicar neste documento
+
+### 4.1 Formato de Log de Atividade (obrigatório)
+
+Adicione no topo da seção **Log de Atividades** (mais recente em cima):
+
+```markdown
+### [YYYY-MM-DD HH:MM] Agente: <Nome ou ID> · Papel: <papel>
+**Tarefa:** <resumo curto>
+**Status:** 🟢 concluído | 🟡 em andamento | 🔴 bloqueado | 🔵 proposta
+**Arquivos tocados:** `path1`, `path2`
+**O que foi feito / proposto:**
+- ...
+**Decisões tomadas:**
+- ...
+**Próximos passos sugeridos:**
+- ...
+**Dependências / perguntas para outros agentes:**
+- ...
+```
+
+### 4.2 Quadro de Tarefas (Kanban)
+
+Mantenha atualizado:
+
+#### 🔴 Bloqueado
+- [ ] ...
+
+#### 🟡 Em andamento
+- [ ] ...
+
+#### 🟢 Pronto para review / próximo
+- [ ] ...
+
+#### ✅ Concluído (mova para Arquivo depois de 7 dias)
+
+### 4.3 Decisões Técnicas (ADR leve)
+
+Quando houver decisão importante:
+
+```markdown
+### ADR-XXX: <Título>
+**Data:** YYYY-MM-DD
+**Status:** Aceito | Proposto | Rejeitado | Substituído
+**Contexto:** ...
+**Decisão:** ...
+**Consequências:** ...
+**Autor:** ...
+```
+
+### 4.4 Problemas Conhecidos / Débito Técnico
+
+Liste bugs, limitações e melhorias pendentes.
+
+---
+
+## 5. Estado Atual do Trabalho (atualize sempre)
+
+### Última sincronização
+- **Data:** 2026-09-15
+- **Agente inicial:** Grok (análise completa do repositório)
+- **Observações:** Repositório estável, funcionalidades core implementadas. Front já buildado em `dist/`. Identidade visual QRAdmin (navy + teal) com tema claro/escuro.
+
+### Quadro de Tarefas
+
+#### 🔴 Bloqueado
+*(nenhum no momento)*
+
+#### 🟡 Em andamento
+*(nenhum no momento)*
+
+#### 🟢 Pronto para review / próximo (sugestões)
+- [ ] Implementar gateway de pagamento real (Mercado Pago / Stripe / etc.)
+- [ ] Integração WhatsApp (notificações de status)
+- [ ] PWA (manifest + service worker + offline básico)
+- [ ] Multi-loja (tenant isolation)
+- [ ] CSRF token formal
+- [ ] Rate-limit compartilhado (Redis) para múltiplas instâncias
+- [ ] Conciliação bancária automática de PIX
+- [ ] Testes automatizados mais robustos (além do smoke)
+- [ ] Melhorias de acessibilidade e mobile-first nas telas de operação
+- [ ] Documentação de API completa (OpenAPI?)
+
+#### ✅ Concluído recentemente
+- Core de pedidos, setores, entrega parcial, caixa, PIX aviso, auth, SSE, fotos WebP, dashboard, relatório, purge.
+
+### Problemas Conhecidos / Débito Técnico
+- Rate-limit em memória (não compartilha entre instâncias).
+- CSRF formal ainda não implementado.
+- PIX sem conciliação bancária automática.
+- Alguns HTMLs legados em `public/` (migração gradual para React).
+- `data/db.json` parece residual (legado?).
+
+### Decisões Técnicas Registradas
+*(nenhuma ainda — adicione ADRs conforme necessário)*
+
+---
+
+## 6. Log de Atividades
+
+### [2026-09-15] Agente: Grok · Papel: Arquiteto / Analista
+**Tarefa:** Análise completa do repositório + criação deste protocolo de colaboração
+**Status:** 🟢 concluído
+**Arquivos tocados:** este `AGENTS.md` (novo)
+**O que foi feito:**
+- Exploração da estrutura (tree, package.json, server.js, README, migrations).
+- Mapeamento do fluxo de negócio, stack, telas, status de módulos.
+- Definição de regras, templates e quadro inicial de tarefas.
+**Decisões tomadas:**
+- Este arquivo será o único canal oficial de coordenação entre agentes.
+- Manter português como idioma oficial de comunicação.
+**Próximos passos sugeridos:**
+- Qualquer agente que pegar o projeto deve ler este arquivo e registrar o início do trabalho no Log.
+- Priorizar features planejadas ou corrigir débitos técnicos listados.
+**Dependências / perguntas:**
+- Nenhuma no momento. Aguardando próximos agentes.
+
+---
+
+## 7. Arquivo (histórico antigo)
+
+*(mover logs e tarefas concluídas para cá periodicamente)*
+
+---
+
+## 8. Instruções Finais para Agentes
+
+1. Ao iniciar:
+   ```
+   1. Ler seções 1–5.
+   2. Adicionar entrada no Log de Atividades.
+   3. Escolher tarefa do quadro (ou propor nova).
+   4. Atualizar "Em andamento".
+   ```
+
+2. Durante o trabalho:
+   - Documentar decisões importantes como ADR.
+   - Se encontrar bug ou débito, adicionar na seção correspondente.
+   - Em caso de conflito de código, registre aqui e proponha resolução.
+
+3. Ao finalizar sessão:
+   - Atualizar status da tarefa.
+   - Mover itens concluídos.
+   - Escrever resumo no Log.
+   - Deixar o arquivo limpo e legível.
+
+4. Se o arquivo ficar muito grande:
+   - Arquivar logs antigos na seção 7.
+   - Manter apenas as últimas 10–15 entradas no Log ativo.
+
+---
+
+**Este documento é vivo.**  
+Qualquer agente que o modificar deve deixar o projeto em estado melhor do que encontrou.
+
+Boa colaboração! 🚀
