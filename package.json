@@ -7,7 +7,7 @@
     "build": "npm run typecheck && vite build",
     "preview": "vite preview",
     "server": "node server.js",
-    "start": "node server.js",
+    "start": "node scripts/start-production.js",
     "db:migrate": "node db/migrate.js",
     "db:seed": "node db/seed.js",
     "db:reset-senha": "node scripts/reset-senha.js",
@@ -18,9 +18,9 @@
     "dev:api": "node server.js",
     "dev:ui": "vite",
     "start:api": "node server.js",
-    "start:prod": "npm run build && node server.js",
-    "postbuild": "node -e \"console.log('SPA em dist/ \u2014 npm start serve o design React se dist/ existir')\"",
-    "setup": "node scripts/setup-local.js",
+    "start:prod": "node scripts/start-production.js",
+    "postbuild": "node -e \"console.log('SPA em dist/ — npm start serve o design React se dist/ existir')\"",
+    "setup": "npm run db:migrate && npm run db:seed",
     "typecheck": "tsc --noEmit",
     "test:regression": "node --test tests/regressions.cjs"
   },
@@ -35,7 +35,7 @@
     "react-dom": "19.2.6",
     "sharp": "^0.33.5",
     "tailwind-merge": "3.4.0",
-    "zustand": "^5.0.15"
+    "zustand": "5.0.15"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.1.17",
