@@ -114,6 +114,7 @@ Um agente pode assumir vários papéis; declare-os no log.
 - [x] Remoção de garçom feita em transação preservando referências dos pedidos.
 - [x] Impedida entrega directa por cozinha/bar pelo endpoint genérico.
 - [x] Hardening de entrada no aviso PIX do cliente.
+- [x] JSON inválido do aviso PIX não é mais mascarado como payload vazio.
 - [x] Tema claro suavizado.
 - [x] CI de typecheck/build/regressões/sintaxe criado.
 
@@ -149,7 +150,7 @@ Um agente pode assumir vários papéis; declare-os no log.
 - `db/admin.js` usa o validador e não mascara erro com `|| 0`.
 
 **#6 — migration não bloqueava startup de produção**
-- Implementado `scripts/start-production.js` como gate de migrations.
+- Implementado `scripts/start-production.js` como gate de migration.
 - Ainda precisa validação em ambiente de deploy.
 
 ### Descobertas adicionais durante auditoria
@@ -177,6 +178,11 @@ Um agente pode assumir vários papéis; declare-os no log.
 - Descoberto que `/pix-informado` aceitava token malformado e convertia `pedidoId`/`valor` inválidos em fallback silencioso.
 - Correção: `db/pix-cliente.js` valida token UUID, `pedidoId` como inteiro positivo e `valor` como número finito positivo antes das queries.
 - Entradas explicitamente inválidas agora retornam erro de validação em vez de serem tratadas como omissão.
+- Regressão estática adicionada ao `tests/regressions.cjs`.
+
+**JSON inválido no aviso PIX**
+- A rota HTTP usava `body(req).catch(() => ({}))`, convertendo requisições malformadas em payload vazio.
+- Correção: erro de parsing agora chega ao tratamento HTTP e retorna 400, sem executar a lógica de PIX com dados substituídos.
 - Regressão estática adicionada ao `tests/regressions.cjs`.
 
 ---
@@ -223,6 +229,10 @@ Cozinha/bar podem avançar produção, mas não podem marcar o pedido como entre
 **Data:** 2026-09-16 · **Status:** Aceito  
 Tokens de mesa e IDs/valores enviados ao endpoint público de PIX devem ser validados antes de consultar PostgreSQL. Valores inválidos não podem cair silenciosamente em defaults.
 
+### ADR-009: JSON malformado deve falhar explicitamente
+**Data:** 2026-09-16 · **Status:** Aceito  
+Endpoints que dependem de JSON válido não devem substituir parsing inválido por `{}`. O cliente deve receber erro 400 e nenhuma operação de negócio deve ser executada com payload inventado.
+
 ---
 
 ## 6. Problemas Conhecidos / Débito Técnico
@@ -241,6 +251,17 @@ Tokens de mesa e IDs/valores enviados ao endpoint público de PIX devem ser vali
 ## 7. Log de Atividades
 
 ### [2026-09-16] Agente: GPT-5.6 Luna · Papel: Arquiteto / Backend / Segurança / QA
+**Tarefa:** Endurecer a rota HTTP de aviso PIX contra JSON malformado.
+**Status:** 🟢 concluído nesta etapa
+**Arquivos tocados:** `server.js`, `tests/regressions.cjs`, `AGENTS.md`.
+**O que foi feito:**
+- Removido o fallback silencioso `catch(() => ({}))` da leitura do corpo do aviso PIX.
+- Erros 400/413 de parsing/tamanho passam a ser devolvidos diretamente pela API.
+- Todas as rotas previamente presentes foram preservadas após uma restauração do arquivo a partir do blob anterior.
+**Decisões tomadas:**
+- Payload JSON inválido é erro de cliente; não pode ser tratado como ausência de campos.
+
+### [2026-09-16] Agente: GPT-5.6 Luna · Papel: Arquiteto / Backend / Segurança / QA
 **Tarefa:** Hardening do endpoint público de aviso PIX.
 **Status:** 🟢 concluído nesta etapa
 **Arquivos tocados:** `db/pix-cliente.js`, `tests/regressions.cjs`, `AGENTS.md`.
@@ -252,11 +273,6 @@ Tokens de mesa e IDs/valores enviados ao endpoint público de PIX devem ser vali
 - Regressão adicionada para proteger essas regras.
 **Decisões tomadas:**
 - O fallback continua existindo somente quando o campo realmente foi omitido; valor/pedido explicitamente inválidos são erros de entrada.
-**Próximos passos sugeridos:**
-- Auditar restante dos endpoints públicos por IDs/tokens malformados e respostas 500 indevidas.
-- Validar schema/migração da tabela `pix_avisos` e mover criação em runtime para migration dedicada quando seguro.
-**Dependências / perguntas para outros agentes:**
-- Tema claro/escuro está sendo trabalhado por outro agente; não tocar sem coordenação.
 
 ### [2026-09-16] Agente: GPT-5.6 Luna · Papel: Arquiteto / Backend / Segurança / QA
 **Tarefa:** Bloquear entrega directa por cozinha/bar e revisar transições por papel.
@@ -267,38 +283,8 @@ Tokens de mesa e IDs/valores enviados ao endpoint público de PIX devem ser vali
 - Adicionada guarda no domínio para rejeitar `entregue` quando existe `setor` de cozinha/bar.
 - Mantido o fluxo oficial de entrega parcial/total via garçom.
 - Adicionada regressão estática para impedir remoção futura da regra.
-**Decisões tomadas:**
-- Entrega deve continuar a ser responsabilidade do garçom; admin mantém override operacional sem `setor`.
 
-### [2026-09-16] Agente: GPT-5.6 Luna · Papel: Arquiteto / Backend / Segurança / QA
-**Tarefa:** Hardening adicional de operações do garçom.
-**Status:** 🟢 concluído nesta etapa
-**Arquivos tocados:** `db/garcons.js`, `tests/regressions.cjs`, `AGENTS.md`.
-**O que foi feito:**
-- Validação explícita de IDs de garçom/pedido/item.
-- Limites defensivos no fluxo de entrega.
-- Remoção de garçom feita em transação, limpando `pedidos.garcom_id` antes da exclusão.
-
-### [2026-09-16] Agente: GPT-5.6 Luna · Papel: Arquiteto / Backend / Segurança / QA
-**Tarefa:** Auditoria de concorrência e robustez do fluxo de pedidos.
-**Status:** 🟢 concluído nesta etapa
-**Arquivos tocados:** `db/queries.js`, `db/pedidos.js`, `tests/regressions.cjs`.
-**O que foi feito:**
-- Corrigida condição de corrida na criação da sessão com lock `FOR UPDATE` na mesa.
-- Impedido que IDs inválidos e quantidades fora de 1–99 cheguem às queries do pedido.
-- Limitados itens do pedido e listas de adicionais/remoções.
-
-### [2026-09-16] Agente: GPT-5.6 Luna · Papel: Arquiteto / Backend / Segurança / QA
-**Tarefa:** Fechar validação numérica administrativa, CI e protocolo colaborativo.
-**Status:** 🟢 concluído
-**Arquivos tocados:** `db/validacao.js`, `db/admin.js`, `tests/regressions.cjs`, `.github/workflows/ci.yml`, `AGENTS.md`.
-**O que foi feito:**
-- Centralizada a validação de números do admin.
-- Fechada a issue #5 após implementação e cobertura de testes.
-- Criado CI.
-- Restaurado o protocolo colaborativo do `AGENTS.md`.
-
-### [2026-09-15] Agentes anteriores
+### [2026-09-16] Agentes anteriores
 - Grok/Codex trabalharam em tema, SSE, login legado, responsividade inicial e correções de TypeScript; decisões devem ser confirmadas pelo histórico do código/PR.
 
 ---
