@@ -509,9 +509,10 @@ const server = http.createServer(async (req, res) => {
         throw e;
       }
     }
-    
+
     if (p === '/api/mesas' && req.method === 'GET') {
       try {
+        await exigirAcesso(req, 'admin');
         const rows = await listMesas();
         return json(res, 200, rows.map((m) => ({
           id: m.id,
@@ -521,6 +522,7 @@ const server = http.createServer(async (req, res) => {
           sessaoAberta: m.sessaoAberta,
         })));
       } catch (e) {
+        if (e instanceof ErroAuth) return json(res, e.status, { error: e.message });
         throw e;
       }
     }
@@ -628,7 +630,7 @@ const server = http.createServer(async (req, res) => {
         throw e;
       }
     }
-    
+
     if ((m = p.match(/^\/api\/admin\/categorias\/(\d+)$/)) && req.method === 'DELETE') {
       try {
         const out = await removerCategoria(Number(m[1]));

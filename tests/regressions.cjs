@@ -6,9 +6,11 @@ const ts = require('typescript');
 const { EventEmitter } = require('node:events');
 const { eventAccess } = require('../db/event-access');
 const { subscribe, broadcast, clientCount } = require('../db/events');
+const { validarDestinoRemoto } = require('../db/foto');
+const { verificarOrigemRequisicao } = require('../db/auth');
 
 function theme({ blocked = false, dark = false, saved = null } = {}) {
-  const root = { dataset: {} };
+  const root = { dataset: {}, style: { values: {}, setProperty(k, v) { this.values[k] = v; } } };
   const meta = {};
   const context = {
     exports: {},
@@ -44,6 +46,13 @@ test('tema respeita sistema sem armazenamento e preferência salva', () => {
   assert.equal(t.saved(), 'escuro');
   assert.equal(t.meta.content, '#0b1524');
   assert.equal(theme({ saved: t.saved() }).temaAtual(), 'escuro');
+});
+test('tema claro usa superfície suave e não branco agressivo', () => {
+  const t = theme();
+  t.aplicarTema('claro');
+  assert.equal(t.root.style.values['--qr-page'], '#e9eef3');
+  assert.equal(t.root.style.values['--qr-white'], '#f7f9fb');
+  assert.equal(t.meta.content, '#e9eef3');
 });
 test('inicialização antes do React respeita sistema com armazenamento bloqueado', () => {
   const script = fs.readFileSync('index.html', 'utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
@@ -85,4 +94,23 @@ test('cliente SSE envia token e encerra conexão no cleanup', () => {
   context.exports.connectEvents(() => {}, { garcom: 'abc' })();
   assert.equal(url, '/api/events?garcom=abc');
   context.exports.connectEvents(() => {})(); assert.equal(url, '/api/events');
+});
+
+test('upload de foto rejeita destinos SSRF locais', async () => {
+  await assert.rejects(() => validarDestinoRemoto('http://127.0.0.1/segredo'), /Destino de rede não permitido/);
+  await assert.rejects(() => validarDestinoRemoto('http://10.0.0.1/segredo'), /Destino de rede não permitido/);
+  await assert.rejects(() => validarDestinoRemoto('file:///etc/passwd'), /http:\/\/ ou https:\/\//);
+});
+
+test('requisições autenticadas rejeitam Origin externo', () => {
+  assert.doesNotThrow(() => verificarOrigemRequisicao({
+    method: 'POST',
+    headers: { host: 'app.local', origin: 'http://app.local' },
+    socket: { encrypted: false },
+  }));
+  assert.throws(() => verificarOrigemRequisicao({
+    method: 'POST',
+    headers: { host: 'app.local', origin: 'https://evil.example' },
+    socket: { encrypted: false },
+  }), /Origem da requisição não permitida/);
 });
