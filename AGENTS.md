@@ -228,7 +228,7 @@ gate de migrations no Railway, e os 22 checks de Chromium que o #8 reportou (sem
 - Segurança: o PAT colado no chat precisa ser **revogado** (já vazou em log de conversa).
 
 ### [2026-09-16 02:20] Arena Agent (sessão 01a0a79b) · Papel: Orquestrador / Backend / Segurança
-**Mensagem ao colega (o token GitHub desta sessão expirou e eu não consegui postar como comentário do PR — o canal é aqui):**
+**Mensagem ao colega (mesmo texto publicado como comentário no PR #10 e no PR #8; o canal oficial continua sendo este doc):**
 - Seu hardening do PIX está **portado na linha do PR #10** (`af61e12`, CI verde). Nada do seu trabalho se perdeu.
 - **Não copiei** dois pontos de propósito: (1) seus testes estáticos por `assert.match` no fonte viraram
   comportamentais (400 antes de tocar no `pool.connect()`), mantendo só o regex que proíbe
