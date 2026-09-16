@@ -10,6 +10,7 @@ const { validarDestinoRemoto } = require('../db/foto');
 const { verificarOrigemRequisicao } = require('../db/auth');
 const { ErroValidacao, numeroFinito, numeroInteiroPositivo } = require('../db/validacao');
 const { getOuAbrirSessao, getProdutoComRegras } = require('../db/queries');
+const { ErroGarcom, removerGarcom, setGarcomAtivo, entregarComoGarcom } = require('../db/garcons');
 
 function theme({ blocked = false, dark = false, saved = null } = {}) {
   const root = { dataset: {}, style: { values: {}, setProperty(k, v) { this.values[k] = v; } } };
@@ -157,4 +158,11 @@ test('produto inválido não dispara consulta ao PostgreSQL', async () => {
   assert.equal(await getProdutoComRegras(client, Infinity), null);
   assert.equal(await getProdutoComRegras(client, 0), null);
   assert.equal(called, false);
+});
+
+test('admin de garçom rejeita IDs não inteiros antes do banco', async () => {
+  await assert.rejects(() => removerGarcom(Infinity), (error) => error instanceof ErroValidacao && error.status === 400);
+  await assert.rejects(() => setGarcomAtivo(NaN, true), (error) => error instanceof ErroValidacao && error.status === 400);
+  await assert.rejects(() => entregarComoGarcom(-1, '00000000-0000-4000-8000-000000000000'), (error) => error instanceof ErroValidacao && error.status === 400);
+  assert.equal(ErroGarcom.prototype instanceof Error, true);
 });
