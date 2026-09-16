@@ -25,12 +25,12 @@ async function removerGarcom(id) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await client.query('UPDATE pedidos SET garcom_id = NULL WHERE garcom_id = $1', [gid]);
     const { rows } = await client.query(
       'DELETE FROM garcons WHERE id = $1 RETURNING id, nome',
       [gid]
     );
     if (!rows[0]) throw new ErroGarcom(404, 'Garçom não encontrado');
-    await client.query('UPDATE pedidos SET garcom_id = NULL WHERE garcom_id = $1', [gid]);
     await client.query('COMMIT');
     return rows[0];
   } catch (err) {
