@@ -171,3 +171,12 @@ test('cozinha/bar não podem concluir entrega pelo endpoint genérico', () => {
   const source = fs.readFileSync('db/pedidos.js', 'utf8');
   assert.match(source, /if \(alvo === 'entregue' && setor\)\s*\{[\s\S]*Entrega deve ser registrada pelo garçom/);
 });
+
+test('PIX do cliente valida token UUID, pedido inteiro e valor positivo antes do banco', () => {
+  const source = fs.readFileSync('db/pix-cliente.js', 'utf8');
+  assert.match(source, /const UUID_RE = \^\[0-9a-f\]\{8\}/);
+  assert.match(source, /validarUuid\(token, 'Token da mesa'\)/);
+  assert.match(source, /numeroInteiroPositivo\(body\.pedidoId, 'Pedido'\)/);
+  assert.match(source, /valorPositivo\(body\.valor\)/);
+  assert.match(source, /if \(typeof valor === 'boolean'/);
+});
