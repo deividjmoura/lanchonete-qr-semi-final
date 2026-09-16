@@ -62,7 +62,12 @@ async function run() {
     console.log(`✅ ${pending.length} migration(s) aplicada(s) com sucesso.`);
   } finally {
     client.release();
-    await pool.end();
+    // Só encerra o pool quando rodado via CLI (node db/migrate.js).
+    // Se importado pelo start-production, o server.js reutiliza o mesmo módulo —
+    // pool.end() aqui derrubava todas as conexões e o app ficava morto.
+    if (require.main === module) {
+      await pool.end();
+    }
   }
 }
 
