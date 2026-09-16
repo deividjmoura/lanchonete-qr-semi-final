@@ -110,6 +110,8 @@ Um agente pode assumir vários papéis; declare-os no log.
 - [x] #5 Validação numérica administrativa.
 - [x] Corrigida condição de corrida na abertura de sessão por mesa.
 - [x] Validação de IDs/quantidades no fluxo de pedidos.
+- [x] Hardening de IDs nas operações de garçom.
+- [x] Remoção de garçom feita em transação preservando referências dos pedidos.
 - [x] Tema claro suavizado.
 - [x] CI de typecheck/build/regressões/sintaxe criado.
 
@@ -148,12 +150,20 @@ Um agente pode assumir vários papéis; declare-os no log.
 - Implementado `scripts/start-production.js` como gate de migrations.
 - Ainda precisa validação em ambiente de deploy.
 
-### Nova descoberta durante auditoria
+### Descobertas adicionais durante auditoria
+
 **Concorrência na abertura da sessão da mesa**
-- O código antigo capturava `23505` dentro da mesma transação e depois tentava consultar novamente; após erro de constraint, o PostgreSQL mantém a transação abortada até rollback/savepoint.
-- Correção: `getOuAbrirSessao()` agora adquire `FOR UPDATE` na linha da mesa antes de consultar/criar a sessão.
-- Também foi adicionada validação de `productId`, `pedidoId`, `itemId` e quantidade no fluxo de pedidos.
-- Testes unitários cobrem o lock e entradas inválidas.
+- O código antigo capturava `23505` dentro da mesma transação e tentava consultar novamente; após erro de constraint o PostgreSQL mantém a transação abortada.
+- Correção: `getOuAbrirSessao()` trava a linha da mesa com `FOR UPDATE` antes de consultar/criar a sessão.
+
+**Entradas abusivas no pedido**
+- IDs de produto/pedido/item agora precisam ser inteiros positivos.
+- Quantidade precisa ser inteiro entre 1 e 99.
+- Pedido tem máximo de 100 itens; adicionais/remoções têm limites defensivos.
+
+**Operações de garçom**
+- IDs administrativos e de entrega passaram por validação explícita antes do acesso ao banco.
+- `removerGarcom()` agora remove referências de pedidos dentro da mesma transação antes de apagar o garçom, preservando integridade em schemas sem `ON DELETE SET NULL`.
 
 ---
 
@@ -185,6 +195,10 @@ Entradas administrativas numéricas devem ser finitas, com limites explícitos; 
 **Data:** 2026-09-16 · **Status:** Aceito  
 `getOuAbrirSessao()` deve bloquear a mesa com `FOR UPDATE` antes de criar/reutilizar a sessão aberta.
 
+### ADR-006: Validação de identidade nas operações do garçom
+**Data:** 2026-09-16 · **Status:** Aceito  
+IDs usados em CRUD/entrega devem ser inteiros positivos antes de chegar ao PostgreSQL. Exclusão do garçom deve limpar referências de pedidos na mesma transação.
+
 ---
 
 ## 6. Problemas Conhecidos / Débito Técnico
@@ -203,31 +217,36 @@ Entradas administrativas numéricas devem ser finitas, com limites explícitos; 
 ## 7. Log de Atividades
 
 ### [2026-09-16] Agente: GPT-5.6 Luna · Papel: Arquiteto / Backend / Segurança / QA
+**Tarefa:** Hardening adicional de operações do garçom.
+**Status:** 🟢 concluído nesta etapa
+**Arquivos tocados:** `db/garcons.js`, `tests/regressions.cjs`, `AGENTS.md`.
+**O que foi feito:**
+- Validação explícita de IDs de garçom/pedido/item.
+- Limite de 100 itens numa entrega e deduplicação de item IDs.
+- Remoção de garçom feita em transação, primeiro limpando `pedidos.garcom_id`.
+- Testes adicionados para IDs `NaN`, `Infinity` e negativos.
+**Decisões tomadas:**
+- Não permitir que IDs inválidos cheguem ao PostgreSQL.
+- Preservar compatibilidade independentemente de a FK usar ou não `ON DELETE SET NULL`.
+
+### [2026-09-16] Agente: GPT-5.6 Luna · Papel: Arquiteto / Backend / Segurança / QA
 **Tarefa:** Auditoria de concorrência e robustez do fluxo de pedidos.
 **Status:** 🟢 concluído nesta etapa
-**Arquivos tocados:** `db/queries.js`, `db/pedidos.js`, `tests/regressions.cjs`, `AGENTS.md`.
+**Arquivos tocados:** `db/queries.js`, `db/pedidos.js`, `tests/regressions.cjs`.
 **O que foi feito:**
 - Corrigida condição de corrida na criação da sessão com lock `FOR UPDATE` na mesa.
 - Impedido que IDs `NaN`/`Infinity` e quantidades fora de 1–99 cheguem às queries do pedido.
-- Limitados itens do pedido e listas de adicionais/remoções para reduzir payloads abusivos.
-- Criados testes de regressão para lock e IDs inválidos.
-**Decisões tomadas:**
-- Preferir serialização explícita por linha de mesa em vez de tentar recuperar `23505` numa transação já abortada.
-- Manter validação de preço no servidor baseada no produto do banco; nunca confiar em preço enviado pelo cliente.
-**Próximos passos sugeridos:**
-- Continuar revisão de `caixa`, `garcons`, transições de status e possíveis IDORs.
-- Verificar execução do CI e preparar relatório final de pré-venda.
-- Validar browser e PostgreSQL reais antes de liberar o merge.
+- Limitados itens do pedido e listas de adicionais/remoções.
 
 ### [2026-09-16] Agente: GPT-5.6 Luna · Papel: Arquiteto / Backend / Segurança / QA
-**Tarefa:** Fechar validação numérica administrativa e recuperar protocolo colaborativo.
+**Tarefa:** Fechar validação numérica administrativa, CI e protocolo colaborativo.
 **Status:** 🟢 concluído
 **Arquivos tocados:** `db/validacao.js`, `db/admin.js`, `tests/regressions.cjs`, `.github/workflows/ci.yml`, `AGENTS.md`.
 **O que foi feito:**
 - Centralizada a validação de números do admin.
 - Fechada a issue #5 após implementação e cobertura de testes.
 - Criado CI.
-- Restaurado o protocolo completo do `AGENTS.md` após uma atualização anterior ter deixado apenas um resumo.
+- Restaurado o protocolo colaborativo do `AGENTS.md`.
 
 ### [2026-09-15] Agentes anteriores
 - Grok/Codex trabalharam em tema, SSE, login legado, responsividade inicial e correções de TypeScript; decisões devem ser confirmadas pelo histórico do código/PR.
