@@ -509,9 +509,10 @@ const server = http.createServer(async (req, res) => {
         throw e;
       }
     }
-    
+
     if (p === '/api/mesas' && req.method === 'GET') {
       try {
+        await exigirAcesso(req, 'admin');
         const rows = await listMesas();
         return json(res, 200, rows.map((m) => ({
           id: m.id,
@@ -521,6 +522,7 @@ const server = http.createServer(async (req, res) => {
           sessaoAberta: m.sessaoAberta,
         })));
       } catch (e) {
+        if (e instanceof ErroAuth) return json(res, e.status, { error: e.message });
         throw e;
       }
     }
@@ -628,7 +630,7 @@ const server = http.createServer(async (req, res) => {
         throw e;
       }
     }
-    
+
     if ((m = p.match(/^\/api\/admin\/categorias\/(\d+)$/)) && req.method === 'DELETE') {
       try {
         const out = await removerCategoria(Number(m[1]));
@@ -769,6 +771,24 @@ const server = http.createServer(async (req, res) => {
       if (p === '/garcom' || /^\/garcom\/[0-9a-f-]{36}$/i.test(p)) {
         const token = p.startsWith('/garcom/') ? p.slice('/garcom/'.length) : '';
         res.writeHead(302, { Location: token ? '/#/garcom/' + encodeURIComponent(token) : '/#/' });
+        return res.end();
+      }
+      /* HTMLs legados continuam acessíveis direto por arquivo; com a SPA ativa
+         eles são versões antigas SEM o seletor de tema — redireciona para a
+         rota equivalente do React e evita relato de "tema não funciona". */
+      const legacyParaSpa = {
+        '/admin.html': '/#/admin',
+        '/cozinha.html': '/#/cozinha',
+        '/bar.html': '/#/bar',
+        '/caixa.html': '/#/caixa',
+        '/login.html': '/#/login',
+        '/garcom.html': '/#/',
+        '/mesa.html': '/#/',
+        '/pedido.html': '/#/',
+        '/index.html': '/',
+      };
+      if (legacyParaSpa[p]) {
+        res.writeHead(302, { Location: legacyParaSpa[p] });
         return res.end();
       }
       /* GET / sempre serve o index — o hash (#/admin) NÃO vai ao servidor.
