@@ -6,27 +6,27 @@ export const EVENTO_TEMA = "qradmin-tema";
 
 /** Variáveis críticas aplicadas inline — sobrevivem a CSS antigo/cacheado no deploy. */
 const VARS_CLARO: Record<string, string> = {
-  "--qr-page": "#f8fafc",
+  "--qr-page": "#e9eef3",
   "--qr-text": "#0a2540",
-  "--qr-white": "#ffffff",
-  "--qr-slate-50": "#f8fafc",
-  "--qr-slate-100": "#f1f5f9",
-  "--qr-slate-200": "#e2e8f0",
-  "--qr-slate-300": "#cbd5e1",
-  "--qr-slate-400": "#94a3b8",
-  "--qr-slate-500": "#64748b",
-  "--qr-slate-600": "#475569",
-  "--qr-slate-700": "#334155",
-  "--qr-slate-800": "#1e293b",
+  "--qr-white": "#f7f9fb",
+  "--qr-slate-50": "#eef2f6",
+  "--qr-slate-100": "#e7edf2",
+  "--qr-slate-200": "#d5dee7",
+  "--qr-slate-300": "#c1ced9",
+  "--qr-slate-400": "#8798aa",
+  "--qr-slate-500": "#596b7e",
+  "--qr-slate-600": "#435467",
+  "--qr-slate-700": "#2f4154",
+  "--qr-slate-800": "#203245",
   "--qr-navy-500": "#2e5a87",
   "--qr-navy-700": "#1a3a5c",
   "--qr-navy-800": "#0f2c4a",
   "--qr-navy-900": "#0a2540",
-  "--qr-brand-50": "#effcfa",
+  "--qr-brand-50": "#ecfaf8",
   "--qr-brand-400": "#2dd4bf",
-  "--qr-brand-500": "#00c4b4",
-  "--qr-brand-600": "#00a79a",
-  "--qr-brand-700": "#04877d",
+  "--qr-brand-500": "#00b3a5",
+  "--qr-brand-600": "#00958a",
+  "--qr-brand-700": "#08766e",
   "--qr-teal-400": "#2dd4bf",
   "--qr-teal-500": "#14b8a6",
   "--qr-teal-600": "#0d9488",
@@ -35,7 +35,7 @@ const VARS_CLARO: Record<string, string> = {
   "--qr-stroke": "rgba(10, 37, 64, 0.28)",
   "--qr-card-shadow": "0 1px 2px rgba(10, 37, 64, 0.04), 0 10px 28px -18px rgba(10, 37, 64, 0.18)",
   "--qr-card-shadow-deep": "0 2px 4px rgba(10, 37, 64, 0.05), 0 18px 44px -20px rgba(10, 37, 64, 0.22)",
-  "--qr-scrollbar": "#cbd5e1",
+  "--qr-scrollbar": "#c1ced9",
 };
 
 const VARS_ESCURO: Record<string, string> = {
@@ -106,7 +106,7 @@ export function aplicarTema(t: Tema) {
     /* modo anônimo etc. */
   }
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", t === "escuro" ? "#0b1524" : "#f8fafc");
+  if (meta) meta.setAttribute("content", t === "escuro" ? "#0b1524" : "#e9eef3");
   window.dispatchEvent(new CustomEvent<Tema>(EVENTO_TEMA, { detail: t }));
 }
 
