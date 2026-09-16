@@ -161,8 +161,13 @@ test('produto inválido não dispara consulta ao PostgreSQL', async () => {
 });
 
 test('admin de garçom rejeita IDs não inteiros antes do banco', async () => {
-  await assert.rejects(() => removerGarcom(Infinity), (error) => error instanceof ErroValidacao && error.status === 400);
-  await assert.rejects(() => setGarcomAtivo(NaN, true), (error) => error instanceof ErroValidacao && error.status === 400);
-  await assert.rejects(() => entregarComoGarcom(-1, '00000000-0000-4000-8000-000000000000'), (error) => error instanceof ErroValidacao && error.status === 400);
+  assert.throws(() => removerGarcom(Infinity), (error) => error instanceof ErroValidacao && error.status === 400);
+  assert.throws(() => setGarcomAtivo(NaN, true), (error) => error instanceof ErroValidacao && error.status === 400);
+  assert.throws(() => entregarComoGarcom(-1, '00000000-0000-4000-8000-000000000000'), (error) => error instanceof ErroValidacao && error.status === 400);
   assert.equal(ErroGarcom.prototype instanceof Error, true);
+});
+
+test('cozinha/bar não podem concluir entrega pelo endpoint genérico', () => {
+  const source = fs.readFileSync('db/pedidos.js', 'utf8');
+  assert.match(source, /if \(alvo === 'entregue' && setor\)\s*\{[\s\S]*Entrega deve ser registrada pelo garçom/);
 });
