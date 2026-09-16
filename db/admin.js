@@ -1,5 +1,6 @@
 // CRUD de cardápio e listagem de mesas para o painel admin.
 const pool = require('./pool');
+const { numeroFinito, numeroInteiroPositivo } = require('./validacao');
 
 function normalizeFotoUrl(raw) {
   if (raw === undefined) return undefined;
@@ -123,9 +124,10 @@ async function getCardapioAdmin() {
 async function criarCategoria({ nome, ordem = 0 }) {
   const n = String(nome || '').trim();
   if (!n) throw new ErroAdmin(400, 'Nome da categoria é obrigatório');
+  const ordemNumero = numeroFinito(ordem, 'ordem', { inteiro: true, minimo: 0 });
   const { rows } = await pool.query(
     'INSERT INTO categorias (nome, ordem) VALUES ($1, $2) RETURNING id, nome, ordem',
-    [n, Number(ordem) || 0]
+    [n, ordemNumero]
   );
   return rows[0];
 }
@@ -141,8 +143,9 @@ async function atualizarCategoria(id, { nome, ordem }) {
     vals.push(n);
   }
   if (ordem !== undefined) {
+    const ordemNumero = numeroFinito(ordem, 'ordem', { inteiro: true, minimo: 0 });
     campos.push(`ordem = $${i++}`);
-    vals.push(Number(ordem) || 0);
+    vals.push(ordemNumero);
   }
   if (!campos.length) throw new ErroAdmin(400, 'Nada para atualizar');
   vals.push(id);
@@ -156,11 +159,17 @@ async function atualizarCategoria(id, { nome, ordem }) {
 
 async function criarProduto(body) {
   const nome = String(body.nome || '').trim();
-  const categoriaId = Number(body.categoriaId);
-  const preco = Number(body.preco);
+  const categoriaId = numeroInteiroPositivo(body.categoriaId, 'categoriaId');
+  const preco = numeroFinito(body.preco, 'Preço', { minimo: 0 });
+  const estoque = body.estoque != null && body.estoque !== ''
+    ? numeroFinito(body.estoque, 'Estoque', { inteiro: true, minimo: 0 })
+    : null;
+  const estoqueMinimo = numeroFinito(
+    body.estoqueMinimo ?? body.estoque_minimo ?? 0,
+    'Estoque mínimo',
+    { inteiro: true, minimo: 0 }
+  );
   if (!nome) throw new ErroAdmin(400, 'Nome do produto é obrigatório');
-  if (!categoriaId) throw new ErroAdmin(400, 'categoriaId é obrigatório');
-  if (Number.isNaN(preco) || preco < 0) throw new ErroAdmin(400, 'Preço inválido');
 
   let setor = body.setor != null ? String(body.setor).trim() : null;
   if (setor && !['cozinha', 'bar'].includes(setor)) {
@@ -195,8 +204,8 @@ async function criarProduto(body) {
       body.disponivel !== false,
       Boolean(body.pedePontoCarne),
       Boolean(body.controlaEstoque || body.controla_estoque),
-      body.estoque != null && body.estoque !== '' ? Number(body.estoque) : null,
-      Number(body.estoqueMinimo ?? body.estoque_minimo ?? 0) || 0,
+      estoque,
+      estoqueMinimo,
       setor,
     ]
   );
@@ -219,8 +228,7 @@ async function atualizarProduto(id, body) {
     vals.push(body.descricao ? String(body.descricao).trim() : null);
   }
   if (body.preco !== undefined) {
-    const preco = Number(body.preco);
-    if (Number.isNaN(preco) || preco < 0) throw new ErroAdmin(400, 'Preço inválido');
+    const preco = numeroFinito(body.preco, 'Preço', { minimo: 0 });
     campos.push(`preco = $${i++}`);
     vals.push(preco);
   }
@@ -237,8 +245,9 @@ async function atualizarProduto(id, body) {
     vals.push(Boolean(body.pedePontoCarne));
   }
   if (body.categoriaId !== undefined) {
+    const categoriaId = numeroInteiroPositivo(body.categoriaId, 'categoriaId');
     campos.push(`categoria_id = $${i++}`);
-    vals.push(Number(body.categoriaId));
+    vals.push(categoriaId);
   }
   if (body.controlaEstoque !== undefined || body.controla_estoque !== undefined) {
     campos.push(`controla_estoque = $${i++}`);
@@ -253,12 +262,20 @@ async function atualizarProduto(id, body) {
     vals.push(setor);
   }
   if (body.estoque !== undefined) {
+    const estoque = body.estoque === null || body.estoque === ''
+      ? null
+      : numeroFinito(body.estoque, 'Estoque', { inteiro: true, minimo: 0 });
     campos.push(`estoque = $${i++}`);
-    vals.push(body.estoque === null || body.estoque === '' ? null : Number(body.estoque));
+    vals.push(estoque);
   }
   if (body.estoqueMinimo !== undefined || body.estoque_minimo !== undefined) {
+    const estoqueMinimo = numeroFinito(
+      body.estoqueMinimo ?? body.estoque_minimo,
+      'Estoque mínimo',
+      { inteiro: true, minimo: 0 }
+    );
     campos.push(`estoque_minimo = $${i++}`);
-    vals.push(Number(body.estoqueMinimo ?? body.estoque_minimo ?? 0) || 0);
+    vals.push(estoqueMinimo);
   }
   if (!campos.length) throw new ErroAdmin(400, 'Nada para atualizar');
 
@@ -274,9 +291,8 @@ async function atualizarProduto(id, body) {
 
 async function criarAdicional(produtoId, { nome, preco }) {
   const n = String(nome || '').trim();
-  const p = Number(preco);
+  const p = numeroFinito(preco, 'Preço', { minimo: 0 });
   if (!n) throw new ErroAdmin(400, 'Nome do adicional é obrigatório');
-  if (Number.isNaN(p) || p < 0) throw new ErroAdmin(400, 'Preço inválido');
 
   const { rows: prod } = await pool.query('SELECT id FROM produtos WHERE id = $1', [produtoId]);
   if (!prod[0]) throw new ErroAdmin(404, 'Produto não encontrado');
@@ -322,7 +338,6 @@ async function setRemoviveis(produtoId, ingredientes) {
   }
 }
 
-
 async function removerProduto(id) {
   const { rows: used } = await pool.query(
     'SELECT 1 FROM itens_pedido WHERE produto_id = $1 LIMIT 1',
@@ -363,8 +378,6 @@ async function removerProduto(id) {
   }
 }
 
-
-
 /** Reordena categorias: ids na ordem desejada → ordem 0..n-1 */
 async function reordenarCategorias(ids) {
   if (!Array.isArray(ids) || !ids.length) throw new ErroAdmin(400, 'ids é obrigatório');
@@ -394,8 +407,7 @@ async function reordenarCategorias(ids) {
 
 /** Reordena produtos de uma categoria: ids na ordem desejada → ordem 0..n-1 */
 async function reordenarProdutos(categoriaId, ids) {
-  const catId = Number(categoriaId);
-  if (!catId) throw new ErroAdmin(400, 'categoriaId é obrigatório');
+  const catId = numeroInteiroPositivo(categoriaId, 'categoriaId');
   if (!Array.isArray(ids) || !ids.length) throw new ErroAdmin(400, 'ids é obrigatório');
   const lista = ids.map((x) => Number(x)).filter((n) => Number.isFinite(n) && n > 0);
   if (lista.length !== ids.length) throw new ErroAdmin(400, 'ids inválidos');
@@ -428,7 +440,6 @@ async function reordenarProdutos(categoriaId, ids) {
   }
 }
 
-
 /** Exclui categoria e todos os produtos dela (cascata).
  *  Bloqueia se algum produto já aparece em pedidos (histórico). */
 async function removerCategoria(id) {
@@ -447,7 +458,6 @@ async function removerCategoria(id) {
     [catId]
   );
 
-  // Produtos usados em pedidos não podem sumir (FK / histórico)
   const locked = [];
   for (const p of prods) {
     const { rows: used } = await pool.query(
@@ -472,7 +482,7 @@ async function removerCategoria(id) {
     const mais = locked.length > 5 ? ` e mais ${locked.length - 5}` : '';
     throw new ErroAdmin(
       409,
-      `Não dá para excluir a categoria "${cat.nome}": ${locked.length} produto(s) já aparecem em pedidos antigos (${amostra}${mais}). Pause esses itens ou mova-os para outra categoria.`
+      `Não dá para excluir a categoria \"${cat.nome}\": ${locked.length} produto(s) já aparecem em pedidos antigos (${amostra}${mais}). Pause esses itens ou mova-os para outra categoria.`
     );
   }
 
