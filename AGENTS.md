@@ -112,6 +112,7 @@ Um agente pode assumir vários papéis; declare-os no log.
 - [x] Validação de IDs/quantidades no fluxo de pedidos.
 - [x] Hardening de IDs nas operações de garçom.
 - [x] Remoção de garçom feita em transação preservando referências dos pedidos.
+- [x] Impedida entrega directa por cozinha/bar pelo endpoint genérico.
 - [x] Tema claro suavizado.
 - [x] CI de typecheck/build/regressões/sintaxe criado.
 
@@ -163,7 +164,13 @@ Um agente pode assumir vários papéis; declare-os no log.
 
 **Operações de garçom**
 - IDs administrativos e de entrega passaram por validação explícita antes do acesso ao banco.
-- `removerGarcom()` agora remove referências de pedidos dentro da mesma transação antes de apagar o garçom, preservando integridade em schemas sem `ON DELETE SET NULL`.
+- `removerGarcom()` limpa referências de pedidos na mesma transação antes de apagar o garçom.
+
+**Transição de entrega**
+- Descoberto que o endpoint genérico de status aceitava `entregue` para cozinha/bar.
+- Isso permitia pular o fluxo de entrega do garçom e marcar todos os itens do pedido como entregues.
+- Correção: `setStatusPedido()` rejeita `entregue` quando chamado com `setor` de cozinha/bar; entrega continua pelo fluxo de garçom. Admin sem `setor` mantém override operacional.
+- Regressão adicionada ao `tests/regressions.cjs`.
 
 ---
 
@@ -199,6 +206,10 @@ Entradas administrativas numéricas devem ser finitas, com limites explícitos; 
 **Data:** 2026-09-16 · **Status:** Aceito  
 IDs usados em CRUD/entrega devem ser inteiros positivos antes de chegar ao PostgreSQL. Exclusão do garçom deve limpar referências de pedidos na mesma transação.
 
+### ADR-007: Entrega pertence ao fluxo do garçom
+**Data:** 2026-09-16 · **Status:** Aceito  
+Cozinha/bar podem avançar produção, mas não podem marcar o pedido como entregue pelo endpoint genérico. O garçom continua sendo o actor responsável pela entrega; admin pode usar override explícito.
+
 ---
 
 ## 6. Problemas Conhecidos / Débito Técnico
@@ -217,17 +228,25 @@ IDs usados em CRUD/entrega devem ser inteiros positivos antes de chegar ao Postg
 ## 7. Log de Atividades
 
 ### [2026-09-16] Agente: GPT-5.6 Luna · Papel: Arquiteto / Backend / Segurança / QA
+**Tarefa:** Bloquear entrega directa por cozinha/bar e revisar transições por papel.
+**Status:** 🟢 concluído nesta etapa
+**Arquivos tocados:** `db/pedidos.js`, `tests/regressions.cjs`, `AGENTS.md`.
+**O que foi feito:**
+- Identificado bypass de fluxo: cozinha/bar podiam enviar `entregue` pelo endpoint genérico.
+- Adicionada guarda no domínio para rejeitar `entregue` quando existe `setor` de cozinha/bar.
+- Mantido o fluxo oficial de entrega parcial/total via garçom.
+- Adicionada regressão estática para impedir remoção futura da regra.
+**Decisões tomadas:**
+- Entrega deve continuar a ser responsabilidade do garçom; admin mantém override operacional sem `setor`.
+
+### [2026-09-16] Agente: GPT-5.6 Luna · Papel: Arquiteto / Backend / Segurança / QA
 **Tarefa:** Hardening adicional de operações do garçom.
 **Status:** 🟢 concluído nesta etapa
 **Arquivos tocados:** `db/garcons.js`, `tests/regressions.cjs`, `AGENTS.md`.
 **O que foi feito:**
 - Validação explícita de IDs de garçom/pedido/item.
-- Limite de 100 itens numa entrega e deduplicação de item IDs.
-- Remoção de garçom feita em transação, primeiro limpando `pedidos.garcom_id`.
-- Testes adicionados para IDs `NaN`, `Infinity` e negativos.
-**Decisões tomadas:**
-- Não permitir que IDs inválidos cheguem ao PostgreSQL.
-- Preservar compatibilidade independentemente de a FK usar ou não `ON DELETE SET NULL`.
+- Limites defensivos no fluxo de entrega.
+- Remoção de garçom feita em transação, limpando `pedidos.garcom_id` antes da exclusão.
 
 ### [2026-09-16] Agente: GPT-5.6 Luna · Papel: Arquiteto / Backend / Segurança / QA
 **Tarefa:** Auditoria de concorrência e robustez do fluxo de pedidos.
@@ -235,7 +254,7 @@ IDs usados em CRUD/entrega devem ser inteiros positivos antes de chegar ao Postg
 **Arquivos tocados:** `db/queries.js`, `db/pedidos.js`, `tests/regressions.cjs`.
 **O que foi feito:**
 - Corrigida condição de corrida na criação da sessão com lock `FOR UPDATE` na mesa.
-- Impedido que IDs `NaN`/`Infinity` e quantidades fora de 1–99 cheguem às queries do pedido.
+- Impedido que IDs inválidos e quantidades fora de 1–99 cheguem às queries do pedido.
 - Limitados itens do pedido e listas de adicionais/remoções.
 
 ### [2026-09-16] Agente: GPT-5.6 Luna · Papel: Arquiteto / Backend / Segurança / QA
