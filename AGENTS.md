@@ -1,45 +1,65 @@
-# 🤖 Protocolo de Colaboração entre Agentes de IA
-## Lanchonete QR · QRAdmin
+# Protocolo de Colaboração — Lanchonete QR / QRAdmin
 
 **Repo:** https://github.com/deividjmoura/lanchonete-qr-semi-final  
 **Deploy:** https://qradmin.up.railway.app/
 
 ---
 
-## Estado atual (2026-09-15 21:16 -03)
+## Estado atual
 
-### 🔴 Causa do tema no Railway (confirmada)
+### Tema (escuro/claro)
+- Causa: JS `escuro` vs CSS `dark` + build travado por `typecheck` no script `build`.
+- Fix no main: token dual, vars inline, `build` = só `vite build`.
+- **Ação do dono:** atualizar Railway e validar tema.
 
-1. **Mismatch de token:** JS setava `data-theme="escuro"`, CSS do build em produção só tinha `[data-theme=dark]`.
-2. **Deploy não atualizava:** `package.json` tinha `"build": "npm run typecheck && vite build"`. Se o `tsc` falhasse, o Railway **mantinha a build antiga** no ar (por isso redeploy “não mudava nada”).
+### SUPER TESTE · Dia inteiro
+**Arquivo:** `scripts/dia-inteiro.js`  
+**Comando:** `BASE_URL=https://qradmin.up.railway.app npm run test:dia`
 
-### ✅ Fixes no main (Grok)
-- `src/lib/tema.ts` — grava `dark` no DOM + vars inline
-- `src/index.css` — aceita `escuro` e `dark`
-- `index.html` — script pré-paint alinhado
-- **`package.json`** — `build` voltou a ser só `vite build` (typecheck em `build:check`)
-- `dist/index.html` — bridge de tema (observer + vars) como rede de segurança
+Cobre (acordo entre agentes — Grok propôs, alinhado ao smoke.js / smoke-full.js existentes):
 
-### Para o próximo agente / redeploy
-1. Railway com auto-deploy no `main` deve pegar este commit sozinho.
-2. Conferir nos **Build Logs** se `vite build` terminou OK e se o HTML no ar trocou o hash do JS (`index-Sb2Fpkk3.js` deve sumir).
-3. Validar tema em https://qradmin.up.railway.app/
-4. **Não** recolocar `typecheck &&` no script `build` de produção sem garantir `tsc` verde no CI.
+| # | Área | O que exercita |
+|---|------|----------------|
+| 0 | Saúde | `/`, PIX config |
+| 1 | Cardápio | categorias, setores cozinha/bar, destaques |
+| 2 | Auth | admin, cozinha, bar, caixa, `/api/me` |
+| 3 | Ops base | mesas, garçom token, `/garcom/:token/me` |
+| 4 | Rush multi-mesa | N mesas em **paralelo** (check-in + pedido) |
+| 5 | Multi-pessoa | burst de pedidos na mesma sessão |
+| 6 | Filas | cozinha, bar, garçom |
+| 7 | Produção | status em_producao → concluido (paralelo) |
+| 8 | Entrega | garçom entregar em massa |
+| 9 | Ciclo de vida | editar pedido + cancelar |
+| 10 | PIX | multi-aviso + confirmar no caixa |
+| 11 | Caixa | pagamento parcial, desconto, taxa, fechar |
+| 12 | Admin | dashboard, relatório, cardápio admin, mesas |
+| 13 | Sessão | logout |
+
+Avisos (⚠) não derrubam o teste; só falha fatal (✗) dá exit 1.
+
+**Variáveis opcionais:** `TEST_MESAS=4` `TEST_BURST=3` `STAFF_SEED_PASSWORD=...`
+
+### Para outros agentes
+1. Após o dono atualizar o Railway, rodar `npm run test:dia` com `BASE_URL` de produção.
+2. Se algum passo soft falhar de forma sistemática, abrir nota no log e corrigir API ou o teste.
+3. Não misturar purge/histórico destrutivo neste teste (fica para script separado).
 
 ### Quadro
-- 🟡 Aguardando Railway puxar o commit do `build` sem typecheck
-- ✅ Diagnóstico e código no GitHub prontos
+- 🟡 Aguardando dono: redeploy Railway (tema + código) e autorização para rodar o super teste no ar
+- ✅ `test:dia` no repo
 
 ---
 
 ## Log
 
-### [2026-09-15 21:16] Grok · Frontend/DevOps
-**Achado:** build bloqueado por typecheck → deploy antigo no ar.  
-**Ação:** `build` = `vite build` apenas; bridge no dist; documentação.
+### [2026-09-15 21:36] Grok · QA / Frontend
+**Tarefa:** Super teste dia inteiro + handoff no AGENTS  
+**Status:** 🟢 script pronto no main  
+**Arquivos:** `scripts/dia-inteiro.js`, `package.json` (`test:dia`), `AGENTS.md`  
+**Pedido ao dono:** atualizar Railway e avisar para autorizar a execução do teste em produção.
 
-### [2026-09-15 21:03] Grok · Frontend
-Mismatch escuro vs dark no deploy ao vivo.
+### [2026-09-15 21:16] Grok
+Build sem typecheck bloqueante; mismatch tema documentado.
 
 ### [2026-09-15] Codex
-Correções parciais de tema/SSE; introduziu typecheck no build (efeito colateral no deploy).
+Correções tema/SSE/TS; typecheck no build (efeito colateral no deploy).
