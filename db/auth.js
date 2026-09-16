@@ -212,6 +212,35 @@ function papelPodeAcessar(papel, recurso) {
   return Boolean(set && set.has(recurso));
 }
 
+function verificarOrigemRequisicao(req) {
+  const metodo = String(req.method || 'GET').toUpperCase();
+  if (['GET', 'HEAD', 'OPTIONS'].includes(metodo)) return;
+
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+  const hostsPermitidos = new Set(
+    String(process.env.CSRF_ALLOWED_ORIGINS || '')
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean)
+  );
+
+  const proto = String(req.headers['x-forwarded-proto'] || (req.socket.encrypted ? 'https' : 'http')).split(',')[0].trim();
+  const host = req.headers.host;
+  const origemLocal = host ? `${proto}://${host}` : null;
+  if (origemLocal) hostsPermitidos.add(origemLocal);
+
+  const candidato = origin || (referer ? (() => {
+    try { return new URL(referer).origin; } catch { return null; }
+  })() : null);
+
+  // Navegadores modernos enviam Origin em métodos inseguros. Quando ambos
+  // estão ausentes, mantemos compatibilidade com clientes não-browser.
+  if (candidato && !hostsPermitidos.has(candidato)) {
+    throw new ErroAuth(403, 'Origem da requisição não permitida');
+  }
+}
+
 /** recurso: 'admin' | 'cozinha' | 'bar' | 'caixa' */
 async function exigirAcesso(req, recurso) {
   const staff = await getStaffDaRequisicao(req);
@@ -219,6 +248,7 @@ async function exigirAcesso(req, recurso) {
     const err = new ErroAuth(401, 'Não autenticado');
     throw err;
   }
+  verificarOrigemRequisicao(req);
   if (!papelPodeAcessar(staff.papel, recurso)) {
     throw new ErroAuth(403, 'Sem permissão para esta área');
   }
@@ -255,4 +285,5 @@ module.exports = {
   homeDoPapel,
   garantirStaffSeed,
   contarStaff,
+  verificarOrigemRequisicao,
 };
