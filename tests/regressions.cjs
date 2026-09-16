@@ -8,6 +8,7 @@ const { eventAccess } = require('../db/event-access');
 const { subscribe, broadcast, clientCount } = require('../db/events');
 const { validarDestinoRemoto } = require('../db/foto');
 const { verificarOrigemRequisicao } = require('../db/auth');
+const { ErroValidacao, numeroFinito, numeroInteiroPositivo } = require('../db/validacao');
 
 function theme({ blocked = false, dark = false, saved = null } = {}) {
   const root = { dataset: {}, style: { values: {}, setProperty(k, v) { this.values[k] = v; } } };
@@ -113,4 +114,20 @@ test('requisições autenticadas rejeitam Origin externo', () => {
     headers: { host: 'app.local', origin: 'https://evil.example' },
     socket: { encrypted: false },
   }), /Origem da requisição não permitida/);
+});
+
+test('validação numérica do admin rejeita NaN, Infinity, vazios e tipos inválidos', () => {
+  for (const value of [NaN, Infinity, -Infinity, '', '   ', true, false, {}, [], 'abc']) {
+    assert.throws(
+      () => numeroFinito(value, 'Preço', { minimo: 0 }),
+      (error) => error instanceof ErroValidacao && error.status === 400
+    );
+  }
+  assert.equal(numeroFinito('12.50', 'Preço', { minimo: 0 }), 12.5);
+  assert.equal(numeroFinito(0, 'Estoque', { inteiro: true, minimo: 0 }), 0);
+  assert.equal(numeroFinito(null, 'Estoque', { allowNull: true }), null);
+  assert.equal(numeroInteiroPositivo('7', 'categoriaId'), 7);
+  assert.throws(() => numeroFinito(1.5, 'Estoque', { inteiro: true, minimo: 0 }), /deve ser inteiro/);
+  assert.throws(() => numeroFinito(-1, 'Estoque', { minimo: 0 }), /inválido/);
+  assert.throws(() => numeroInteiroPositivo('0', 'categoriaId'), /inválido/);
 });
