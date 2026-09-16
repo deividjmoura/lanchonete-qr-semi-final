@@ -9,6 +9,8 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const dns = require('dns').promises;
+const net = require('net');
 const sharp = require('sharp');
 
 const UPLOAD_DIR = path.join(__dirname, '..', 'public', 'uploads');
@@ -19,7 +21,7 @@ const MAX_INPUT_BYTES = Number(process.env.FOTO_MAX_INPUT_BYTES || 6 * 1024 * 10
 const MAX_OUTPUT_BYTES = Number(process.env.FOTO_MAX_OUTPUT_BYTES || 320 * 1024);
 const FETCH_TIMEOUT_MS = 12_000;
 /** true = também grava cópia em public/uploads (só útil em dev local). */
-const ALSO_WRITE_DISK = process.env.FOTO_ALSO_DISK === '1';
+const ALSO_WRITE_DISK = process.env.FOTO_ALSO_WRITE_DISK === '1';
 
 class ErroFoto extends Error {
   constructor(status, message) {
@@ -52,18 +54,82 @@ function bufferFromBase64(raw) {
   return buf;
 }
 
-async function fetchUrlBuffer(url) {
-  const u = String(url || '').trim();
-  if (!/^https?:\/\//i.test(u)) {
+function ipv4PrivadoOuReservado(ip) {
+  const oct = ip.split('.').map(Number);
+  if (oct.length !== 4 || oct.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return true;
+  const [a, b] = oct;
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    a === 169 && b === 254 ||
+    a === 172 && b >= 16 && b <= 31 ||
+    a === 192 && b === 0 ||
+    a === 192 && b === 168 ||
+    a === 198 && (b === 18 || b === 19) ||
+    a >= 224 ||
+    a === 100 && b >= 64 && b <= 127
+  );
+}
+
+function ipv6PrivadoOuReservado(ip) {
+  const normalized = ip.toLowerCase().split('%')[0];
+  if (normalized === '::' || normalized === '::1') return true;
+  if (normalized.startsWith('fc') || normalized.startsWith('fd') || normalized.startsWith('fe8') || normalized.startsWith('fe9') || normalized.startsWith('fea') || normalized.startsWith('feb')) return true;
+  if (normalized.startsWith('ff')) return true;
+  const mapped = normalized.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  return Boolean(mapped && ipv4PrivadoOuReservado(mapped[1]));
+}
+
+function ipPrivadoOuReservado(ip) {
+  const family = net.isIP(ip);
+  if (family === 4) return ipv4PrivadoOuReservado(ip);
+  if (family === 6) return ipv6PrivadoOuReservado(ip);
+  return true;
+}
+
+async function validarDestinoRemoto(url) {
+  let u;
+  try {
+    u = new URL(String(url || '').trim());
+  } catch {
+    throw new ErroFoto(400, 'URL de imagem inválida');
+  }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') {
     throw new ErroFoto(400, 'URL deve começar com http:// ou https://');
   }
+  if (!u.hostname || u.username || u.password) {
+    throw new ErroFoto(400, 'URL de imagem inválida');
+  }
+
+  const literal = net.isIP(u.hostname);
+  if (literal) {
+    if (ipPrivadoOuReservado(u.hostname)) throw new ErroFoto(400, 'Destino de rede não permitido');
+    return u;
+  }
+
+  let enderecos;
+  try {
+    enderecos = await dns.lookup(u.hostname, { all: true, verbatim: true });
+  } catch {
+    throw new ErroFoto(400, 'Não foi possível resolver o host da imagem');
+  }
+  if (!enderecos.length || enderecos.some((entry) => ipPrivadoOuReservado(entry.address))) {
+    throw new ErroFoto(400, 'Destino de rede não permitido');
+  }
+  return u;
+}
+
+async function fetchUrlBuffer(url) {
+  const u = await validarDestinoRemoto(url);
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
   try {
     const res = await fetch(u, {
       signal: ctrl.signal,
       headers: { 'User-Agent': 'LanchoneteQR-Foto/1.0', Accept: 'image/*' },
-      redirect: 'follow',
+      // Redirecionamento automático quebraria a validação do destino inicial.
+      redirect: 'error',
     });
     if (!res.ok) {
       throw new ErroFoto(400, 'Não foi possível baixar a imagem (HTTP ' + res.status + ')');
@@ -87,6 +153,9 @@ async function fetchUrlBuffer(url) {
     if (e instanceof ErroFoto) throw e;
     if (e && e.name === 'AbortError') {
       throw new ErroFoto(408, 'Tempo esgotado ao baixar a imagem');
+    }
+    if (e && e.name === 'TypeError' && /redirect/i.test(String(e.message || ''))) {
+      throw new ErroFoto(400, 'Redirecionamento de imagem não permitido');
     }
     throw new ErroFoto(400, 'Falha ao baixar a imagem: ' + (e.message || 'erro de rede'));
   } finally {
