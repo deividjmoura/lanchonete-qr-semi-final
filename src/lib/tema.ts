@@ -1,4 +1,10 @@
-/* Cores em index.css; fallback inline garante troca mesmo com CSS em cache. */
+/* Tema claro/escuro — valores canônicos em PT: "claro" | "escuro".
+   Compat: aceita (e normaliza) os legados "light"/"dark" de builds anteriores
+   que ainda possam estar em cache no navegador do usuário.
+   Três camadas de defesa para a troca funcionar sempre:
+   1. atributo data-theme (canônico) + classe .dark (CSS legado);
+   2. fallback inline das variáveis críticas (CSS antigo em cache);
+   3. CSS aceita "escuro" E "dark" (src/index.css). */
 export type Tema = "claro" | "escuro";
 
 const KEY = "qradmin-tema";
@@ -6,27 +12,27 @@ export const EVENTO_TEMA = "qradmin-tema";
 
 /** Variáveis críticas aplicadas inline — sobrevivem a CSS antigo/cacheado no deploy. */
 const VARS_CLARO: Record<string, string> = {
-  "--qr-page": "#f8fafc",
+  "--qr-page": "#e9eef3",
   "--qr-text": "#0a2540",
-  "--qr-white": "#ffffff",
-  "--qr-slate-50": "#f8fafc",
-  "--qr-slate-100": "#f1f5f9",
-  "--qr-slate-200": "#e2e8f0",
-  "--qr-slate-300": "#cbd5e1",
-  "--qr-slate-400": "#94a3b8",
-  "--qr-slate-500": "#64748b",
-  "--qr-slate-600": "#475569",
-  "--qr-slate-700": "#334155",
-  "--qr-slate-800": "#1e293b",
+  "--qr-white": "#f7f9fb",
+  "--qr-slate-50": "#eef2f6",
+  "--qr-slate-100": "#e7edf2",
+  "--qr-slate-200": "#d5dee7",
+  "--qr-slate-300": "#c1ced9",
+  "--qr-slate-400": "#8798aa",
+  "--qr-slate-500": "#596b7e",
+  "--qr-slate-600": "#435467",
+  "--qr-slate-700": "#2f4154",
+  "--qr-slate-800": "#203245",
   "--qr-navy-500": "#2e5a87",
   "--qr-navy-700": "#1a3a5c",
   "--qr-navy-800": "#0f2c4a",
   "--qr-navy-900": "#0a2540",
-  "--qr-brand-50": "#effcfa",
+  "--qr-brand-50": "#ecfaf8",
   "--qr-brand-400": "#2dd4bf",
-  "--qr-brand-500": "#00c4b4",
-  "--qr-brand-600": "#00a79a",
-  "--qr-brand-700": "#04877d",
+  "--qr-brand-500": "#00b3a5",
+  "--qr-brand-600": "#00958a",
+  "--qr-brand-700": "#08766e",
   "--qr-teal-400": "#2dd4bf",
   "--qr-teal-500": "#14b8a6",
   "--qr-teal-600": "#0d9488",
@@ -35,7 +41,7 @@ const VARS_CLARO: Record<string, string> = {
   "--qr-stroke": "rgba(10, 37, 64, 0.28)",
   "--qr-card-shadow": "0 1px 2px rgba(10, 37, 64, 0.04), 0 10px 28px -18px rgba(10, 37, 64, 0.18)",
   "--qr-card-shadow-deep": "0 2px 4px rgba(10, 37, 64, 0.05), 0 18px 44px -20px rgba(10, 37, 64, 0.22)",
-  "--qr-scrollbar": "#cbd5e1",
+  "--qr-scrollbar": "#c1ced9",
 };
 
 const VARS_ESCURO: Record<string, string> = {
@@ -79,39 +85,35 @@ function aplicarVarsInline(t: Tema) {
   }
 }
 
+/** Normaliza qualquer valor já visto em produção para o par canônico PT. */
+function normalizar(valor: string | null | undefined): Tema | null {
+  if (valor === "escuro" || valor === "dark") return "escuro";
+  if (valor === "claro" || valor === "light") return "claro";
+  return null;
+}
+
 export function temaAtual(): Tema {
   if (typeof window === "undefined") return "claro";
-  const aplicado = document.documentElement.getAttribute("data-theme");
-  // Aceita "escuro" (PT) e "dark" (legado / build Railway)
-  if (aplicado === "escuro" || aplicado === "dark") return "escuro";
-  if (aplicado === "claro" || aplicado === "light") return "claro";
+  const doAtributo = normalizar(document.documentElement.getAttribute("data-theme"));
+  if (doAtributo) return doAtributo;
   try {
-    const t = localStorage.getItem(KEY);
-    if (t === "escuro" || t === "dark") return "escuro";
-    if (t === "claro" || t === "light") return "claro";
+    const salvo = normalizar(localStorage.getItem(KEY));
+    if (salvo) return salvo;
   } catch {
-    /* Armazenamento pode estar bloqueado */
+    /* Armazenamento pode estar bloqueado; o tema continua funcionando. */
   }
   return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "escuro" : "claro";
 }
 
 export function aplicarTema(t: Tema) {
   const root = document.documentElement;
-  // Valor canônico em PT; também seta "dark" via class para CSS legado
+  // 1) Atributo canônico — o CSS novo casa com [data-theme="escuro"/"claro"].
   root.setAttribute("data-theme", t);
-  // Compat com CSS do deploy que usa [data-theme=dark]
-  if (t === "escuro") {
-    root.setAttribute("data-theme", "dark");
-    // Mantém também atributo legível; o seletor CSS cobre ambos
-    root.dataset.theme = "dark";
-  } else {
-    root.setAttribute("data-theme", "claro");
-    root.dataset.theme = "claro";
-  }
+  // 2) Classe .dark — compatível com CSS legado que case por classe.
   root.classList.toggle("dark", t === "escuro");
   root.classList.toggle("tema-escuro", t === "escuro");
   root.classList.toggle("tema-claro", t === "claro");
-  // Fallback inline: garante troca visual mesmo se o CSS do deploy estiver desalinhado
+  // 3) Fallback inline — garante troca visual mesmo se o CSS do deploy estiver em cache antigo.
   aplicarVarsInline(t);
   try {
     localStorage.setItem(KEY, t);
@@ -119,7 +121,7 @@ export function aplicarTema(t: Tema) {
     /* modo anônimo etc. */
   }
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", t === "escuro" ? "#0b1524" : "#f8fafc");
+  if (meta) meta.setAttribute("content", t === "escuro" ? "#0b1524" : "#e9eef3");
   window.dispatchEvent(new CustomEvent<Tema>(EVENTO_TEMA, { detail: t }));
 }
 

@@ -98,3 +98,37 @@ Criação do AGENTS.md e análise inicial do repo.
 
 ## 8. Instruções finais
 Ler seções 1 e 5; registrar log; atualizar quadro; deixar o projeto melhor do que encontrou.
+
+### [2026-09-16 00:20 UTC] Agente: Arena (Sessão devidjmoura) · Papel: Full-stack / QA
+**Tarefa:** Diagnóstico definitivo do tema + correção + bateria de testes reais em browser
+**Status:** 🟢 concluído (branch arena/*, PR aberto para main)
+**Achado principal (causa raiz):**
+- A branch `redesign-qradmin` contém o mismatch exato relatado: `tema.ts` seta
+  `data-theme="escuro"` (PT) enquanto `index.css` só casa com `[data-theme="dark"]` (EN)
+  → ícone muda, cores não. A branch não tem `dist/` commitado → deploy builda do fonte
+  com hashes próprios (`index-Sb2Fpkk3.js`/`index-4AQrrlOU.css` no ar, conforme log do Grok).
+- Se o serviço do Railway deploya de `redesign-qradmin` (provável, dado o comportamento),
+  TODAS as correções feitas no main nunca chegaram ao app no ar. Conferir no Railway:
+  Settings → Git → Branch (deve ser `main`).
+**O que foi feito (na branch arena, PR para main):**
+- Merge do origin/main + merge do hardening/pre-sale-audit (segurança: SSRF no upload,
+  seed sem senha padrão em produção, validação de Origin em POSTs, proteção da listagem
+  de mesas, cookie Secure; tema: paleta clara suave + anti-flash).
+- `src/lib/tema.ts` reescrito limpo: canônico `escuro|claro`, normaliza legados
+  `dark|light`, classe `.dark` de compat, fallback inline completo.
+- `index.html` (pré-paint): seta canônico + classe + vars inline nos DOIS temas (sem flash).
+- `src/index.css`: `:root` claro alinhado à paleta suave do fallback inline (antes divergiam);
+  bloco escuro aceita `escuro`, `dark` e `html.dark`.
+- `server.js`: HTMLs legados (`/admin.html` etc.) redirecionam para a rota SPA quando
+  `dist/` existe (antes ficavam acessíveis, sem seletor de tema → mais um "tema não funciona").
+- `tests/regressions.cjs`: mock de DOM com getAttribute/setAttribute/classList de verdade
+  (os 2 testes que falhavam voltaram a passar) + 3 testes novos (flash claro, aliases
+  legados, redirect). 11/11 passando — antes 4/6.
+- `vite.config.ts`: manualChunks react/motion/icons — bundle principal 569→413 kB (sem warning).
+- `dist/` REBUILDADO e commitado em sincronia com o src (estava defasado no main).
+**Verificação real (Chromium headless contra o build final, PostgreSQL real):**
+- 22/22 checks: toggle claro↔escuro em Landing/Mesa/Login/Admin/Cozinha/Bar/Caixa,
+  persistência após reload, OS dark na 1ª visita, redirects legados.
+- `npm run build` (typecheck incluso), smoke e smoke-full: OK.
+**Para o dono:** após merge do PR, conferir a branch do deploy no Railway (usar `main`)
+e fazer redeploy + hard refresh (Ctrl+Shift+R).
