@@ -20,7 +20,7 @@
     "start:api": "node server.js",
     "start:prod": "node scripts/start-production.js",
     "postbuild": "node -e \"console.log('SPA em dist/ — npm start serve o design React se dist/ existir')\"",
-    "setup": "npm run db:migrate && npm run db:seed",
+    "setup": "node scripts/setup-local.js",
     "typecheck": "tsc --noEmit",
     "test:regression": "node --test tests/regressions.cjs"
   },
