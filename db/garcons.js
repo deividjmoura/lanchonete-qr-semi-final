@@ -1,4 +1,5 @@
 const pool = require('./pool');
+const { numeroInteiroPositivo } = require('./validacao');
 
 class ErroGarcom extends Error {
   constructor(status, message) {
@@ -20,14 +21,24 @@ async function listGarcons() {
 }
 
 async function removerGarcom(id) {
-  const gid = Number(id);
-  await pool.query('UPDATE pedidos SET garcom_id = NULL WHERE garcom_id = $1', [gid]);
-  const { rows } = await pool.query(
-    'DELETE FROM garcons WHERE id = $1 RETURNING id, nome',
-    [gid]
-  );
-  if (!rows[0]) throw new ErroGarcom(404, 'Garçom não encontrado');
-  return rows[0];
+  const gid = numeroInteiroPositivo(id, 'id do garçom');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      'DELETE FROM garcons WHERE id = $1 RETURNING id, nome',
+      [gid]
+    );
+    if (!rows[0]) throw new ErroGarcom(404, 'Garçom não encontrado');
+    await client.query('UPDATE pedidos SET garcom_id = NULL WHERE garcom_id = $1', [gid]);
+    await client.query('COMMIT');
+    return rows[0];
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 async function criarGarcom(body) {
@@ -42,10 +53,11 @@ async function criarGarcom(body) {
 }
 
 async function setGarcomAtivo(id, ativo) {
+  const gid = numeroInteiroPositivo(id, 'id do garçom');
   const { rows } = await pool.query(
     `UPDATE garcons SET ativo = $2 WHERE id = $1
      RETURNING id, nome, token, ativo, criado_em`,
-    [Number(id), !!ativo]
+    [gid, !!ativo]
   );
   if (!rows[0]) throw new ErroGarcom(404, 'Garçom não encontrado');
   return rows[0];
@@ -72,6 +84,7 @@ async function getGarcomPorToken(token) {
  * Soma só o valor dos itens recém-entregues em mesa_sessoes.valor_total.
  */
 async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null) {
+  const pid = numeroInteiroPositivo(pedidoId, 'id do pedido');
   const garcom = await getGarcomPorToken(garcomToken);
   if (!garcom || !garcom.ativo) {
     throw new ErroGarcom(401, 'Link de garçom inválido ou desativado');
@@ -85,7 +98,7 @@ async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null) {
 
     const { rows } = await client.query(
       `SELECT id, status, sessao_id, garcom_id FROM pedidos WHERE id = $1 FOR UPDATE`,
-      [Number(pedidoId)]
+      [pid]
     );
     const pedido = rows[0];
     if (!pedido) throw new ErroGarcom(404, 'Pedido não encontrado');
@@ -95,11 +108,14 @@ async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null) {
 
     let idsFiltro = null;
     if (Array.isArray(itemIds) && itemIds.length) {
-      idsFiltro = itemIds.map((x) => Number(x)).filter((n) => Number.isFinite(n) && n > 0);
-      if (!idsFiltro.length) throw new ErroGarcom(400, 'itemIds inválidos');
+      if (itemIds.length > 100) throw new ErroGarcom(400, 'Muitos itens para entrega');
+      idsFiltro = itemIds.map((x) => Number(x));
+      if (!idsFiltro.every((n) => Number.isInteger(n) && n > 0)) {
+        throw new ErroGarcom(400, 'itemIds inválidos');
+      }
+      idsFiltro = [...new Set(idsFiltro)];
     }
 
-    // Itens prontos (concluido) deste pedido
     let itensProntos;
     if (idsFiltro) {
       const { rows: ir } = await client.query(
@@ -135,7 +151,6 @@ async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null) {
       [idsEntregar]
     );
 
-    // Valor só dos itens recém-entregues
     const { rows: totalRows } = await client.query(
       `SELECT COALESCE(SUM(
          ip.quantidade * (ip.preco_unitario + COALESCE(ad.total_adicionais, 0))
@@ -156,7 +171,6 @@ async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null) {
       );
     }
 
-    // Marca garçom no pedido (primeiro que entregar algo; não bloqueia entrega parcial de outros)
     await client.query(
       `UPDATE pedidos
        SET garcom_id = COALESCE(garcom_id, $2),
@@ -184,14 +198,9 @@ async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null) {
   }
 }
 
-/**
- * Painel admin: pedidos com filtros.
- * - ativos=true → só recebido / em_producao / concluido (não polui com histórico)
- * - from / to (YYYY-MM-DD) → histórico por período
- * 3 queries em lote (sem N+1).
- */
 async function listPedidosRecentes({ limit = 50, ativos = false, from = null, to = null } = {}) {
-  const lim = Math.min(200, Math.max(1, Number(limit) || 50));
+  const rawLimit = Number(limit);
+  const lim = Number.isFinite(rawLimit) ? Math.min(200, Math.max(1, Math.trunc(rawLimit))) : 50;
   const where = [];
   const params = [];
   let idx = 1;
