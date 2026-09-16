@@ -19,7 +19,7 @@
 |----|--------|--------|------|
 | #8 | `arena/01a0a77d-...` → main | conteúdo de tema portado para a main via #10 | fechar quando o #10 entrar (não trazia o hardening) |
 | #7 | `hardening/pre-sale-audit` → main | replayado na main em commits pequenos (0c6a161) + resto no #10 | fechar quando o #10 entrar |
-| #10 | `arena/01a0a79b-...` → main | 🟢 CI verde, 19 regressões, tema + #5 + ADR-007 + DDL do `pix_avisos` | **mergar** (é o lote que falta na main) |
+| #10 | `arena/01a0a79b-...` → main | 🟢 CI verde, 23 regressões: tema, #5, ADR-007, migration `0016`, upload/SSRF do `a197030` | **mergar** (é o lote que falta na main) |
 
 **Grok já publicou na main:** tema (escuro/dark), `build` sem typecheck bloqueante, `test:dia`, este protocolo.
 > **Sessão `01a0a79b` (orquestração), 2026-09-16 01:05 UTC:** este doc foi consolidado sobre a versão da `main`
@@ -204,7 +204,7 @@ Fila restante (qualquer agente pode pegar, em commit pequeno na `main`):
 - DDL de `pix_avisos` movido para migration `0016` e removido dos handlers (`ensurePixAvisosTable` vira
   utilitário deprecated para scripts), resolvendo o terceiro achado da Luna.
 - `dist/` reconstruído a partir do `src/` final e CI com `dist/ matches src/` + `node --check` em `db/*.js`/`scripts/*.js`.
-**Verificações:** `npm ci` · typecheck · `vite build` · **16/19 regressões** · `node --check` geral ·
+**Verificações:** `npm ci` · typecheck · `vite build` · **23/23 regressões** · `node --check` geral ·
 rebuild de `dist/` byte-idêntico ao commitado · **Actions: 🟢 primeiro run verde do repo** ·
 smoke HTTP no build integrado: `/` 200 com pré-paint do tema, `/admin.html`→`/#/admin`, assets 200,
 `GET /api/mesas` sem cookie → **401**.
