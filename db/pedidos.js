@@ -33,31 +33,50 @@ async function restaurarEstoqueDoPedido(client, pedidoId) {
 async function gravarItensPedido(client, pedidoId, itensInput) {
   const itensGravados = [];
   let total = 0;
+  if (!Array.isArray(itensInput) || itensInput.length > 100) {
+    throw new ErroPedido(400, 'Quantidade de itens do pedido inválida');
+  }
 
   for (const item of itensInput) {
-    const produtoId = Number(item.productId ?? item.id);
+    if (!item || typeof item !== 'object') continue;
+    const rawProdutoId = item.productId ?? item.id;
+    const produtoId = Number(rawProdutoId);
+    if (!Number.isInteger(produtoId) || produtoId < 1) continue;
+
     const produto = await getProdutoComRegras(client, produtoId);
     if (!produto || !produto.disponivel) continue;
 
-    const quantidade = Math.max(1, Math.min(99, Number(item.qty) || 1));
+    const rawQuantidade = item.qty;
+    const quantidade = rawQuantidade === undefined || rawQuantidade === null || rawQuantidade === ''
+      ? 1
+      : Number(rawQuantidade);
+    if (!Number.isInteger(quantidade) || quantidade < 1 || quantidade > 99) {
+      throw new ErroPedido(400, `Quantidade inválida para "${produto.nome}"`);
+    }
 
     if (produto.controla_estoque) {
       const disp = produto.estoque == null ? 0 : Number(produto.estoque);
-      if (disp < quantidade) {
-        throw new ErroPedido(400, `Estoque insuficiente para "${produto.nome}" (disponível: ${disp})`);
+      if (!Number.isFinite(disp) || disp < quantidade) {
+        throw new ErroPedido(400, `Estoque insuficiente para "${produto.nome}"`);
       }
     }
 
-    const adicionaisSelecionados = Array.isArray(item.additions) ? item.additions : [];
+    const adicionaisSelecionados = Array.isArray(item.additions) ? item.additions.slice(0, 50) : [];
     const adicionaisValidos = [];
     for (const a of adicionaisSelecionados) {
-      const permitido = produto.adicionaisPermitidos.find((x) => x.id === Number(a.id));
+      if (!a || typeof a !== 'object') continue;
+      const adicionalId = Number(a.id);
+      if (!Number.isInteger(adicionalId) || adicionalId < 1) continue;
+      const permitido = produto.adicionaisPermitidos.find((x) => x.id === adicionalId);
       if (permitido) adicionaisValidos.push(permitido);
     }
 
-    const remocoesSolicitadas = Array.isArray(item.removals) ? item.removals : [];
+    const remocoesSolicitadas = Array.isArray(item.removals) ? item.removals.slice(0, 50) : [];
     const remocoesValidas = [
-      ...new Set(remocoesSolicitadas.filter((r) => produto.removiveisPermitidos.includes(r))),
+      ...new Set(remocoesSolicitadas
+        .filter((r) => typeof r === 'string')
+        .map((r) => r.trim())
+        .filter((r) => produto.removiveisPermitidos.includes(r))),
     ];
 
     const pontoCarne =
@@ -136,6 +155,7 @@ async function criarPedido(token, body) {
     if (!mesa) throw new ErroPedido(404, 'Mesa não encontrada');
 
     const sessaoId = await getOuAbrirSessao(client, mesa.id);
+    if (!sessaoId) throw new ErroPedido(404, 'Mesa não encontrada');
 
     const clienteNome = String(body.clienteNome || body.cliente_nome || '')
       .trim()
@@ -191,6 +211,8 @@ async function criarPedido(token, body) {
 
 /** Cliente cancela pedido só enquanto status = recebido (ainda não em preparo). */
 async function cancelarPedidoCliente(token, pedidoId) {
+  const id = Number(pedidoId);
+  if (!Number.isInteger(id) || id < 1) throw new ErroPedido(400, 'Pedido inválido');
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -203,7 +225,7 @@ async function cancelarPedidoCliente(token, pedidoId) {
        JOIN mesa_sessoes s ON s.id = p.sessao_id
        WHERE p.id = $1 AND s.mesa_id = $2 AND s.status = 'aberta'
        FOR UPDATE OF p`,
-      [Number(pedidoId), mesa.id]
+      [id, mesa.id]
     );
     const pedido = rows[0];
     if (!pedido) throw new ErroPedido(404, 'Pedido não encontrado nesta mesa');
@@ -246,6 +268,9 @@ async function editarPedidoCliente(token, pedidoId, body) {
   const itensInput = Array.isArray(body.items) ? body.items : [];
   if (!itensInput.length) throw new ErroPedido(400, 'O pedido editado está vazio — cancele se quiser remover');
 
+  const id = Number(pedidoId);
+  if (!Number.isInteger(id) || id < 1) throw new ErroPedido(400, 'Pedido inválido');
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -258,7 +283,7 @@ async function editarPedidoCliente(token, pedidoId, body) {
        JOIN mesa_sessoes s ON s.id = p.sessao_id
        WHERE p.id = $1 AND s.mesa_id = $2 AND s.status = 'aberta'
        FOR UPDATE OF p`,
-      [Number(pedidoId), mesa.id]
+      [id, mesa.id]
     );
     const pedido = rows[0];
     if (!pedido) throw new ErroPedido(404, 'Pedido não encontrado nesta mesa');
@@ -324,14 +349,16 @@ async function editarPedidoCliente(token, pedidoId, body) {
 }
 /** Avança o pedido para o próximo status do fluxo (TRANSICOES). Usado pela cozinha/bar. */
 async function avancarStatusItem(pedidoId, setor = null) {
-  const { rows } = await pool.query(`SELECT status FROM pedidos WHERE id = $1`, [Number(pedidoId)]);
+  const id = Number(pedidoId);
+  if (!Number.isInteger(id) || id < 1) throw new ErroPedido(400, 'Pedido inválido');
+  const { rows } = await pool.query(`SELECT status FROM pedidos WHERE id = $1`, [id]);
   const pedido = rows[0];
   if (!pedido) throw new ErroPedido(404, 'Pedido não encontrado');
   const proximo = TRANSICOES[pedido.status];
   if (!proximo) {
     throw new ErroPedido(409, `Pedido em status "${pedido.status}" não pode avançar`);
   }
-  return setStatusPedido(pedidoId, proximo, setor);
+  return setStatusPedido(id, proximo, setor);
 }
 
 async function getSessao(token) {
@@ -448,7 +475,6 @@ async function getSessao(token) {
     const pedidosComItens = pedidos.map((p) => {
       const itens = itensByPedido.get(p.id) || [];
       const totalPedido = itens.reduce((sum, i) => sum + i.totalLinha, 0);
-      // Conta na conta o que já foi ENTREGUE (parcial ou total)
       for (const i of itens) {
         if (i.status === 'entregue') totalDevido += i.totalLinha;
       }
@@ -547,9 +573,6 @@ async function anexarExtrasAosItens(itens) {
 async function listarPedidosPorStatus(statuses, setor = null) {
   let pedidos;
   if (setor) {
-    // Só pedidos com trabalho pendente neste setor (recebido/em_producao).
-    // Itens já "concluido" saem da fila da cozinha/bar e vão para o garçom.
-    // Isso evita o card "zumbi" e o flicker de sumir/voltar quando o último item do setor fica pronto.
     const { rows } = await pool.query(
       `SELECT DISTINCT p.id, p.status, p.criado_em, p.observacao_geral, p.cliente_nome, p.garcom_nome,
               p.editado_em, m.numero AS mesa
@@ -618,7 +641,6 @@ async function listarPedidosPorStatus(statuses, setor = null) {
     byPedido.get(item.pedido_id).push(item);
   }
 
-  // Status agregado do setor: o card da cozinha/bar segue o "pior" status dos itens do setor
   return pedidos
     .map((p) => {
       const itens = byPedido.get(p.id) || [];
@@ -645,7 +667,6 @@ async function getFilaCozinha() {
 }
 
 async function getFilaGarcom() {
-  /* Pedidos com pelo menos um item PRONTO (concluido) aguardando entrega parcial ou total */
   const { rows: pedidos } = await pool.query(
     `SELECT DISTINCT p.id, p.status, p.criado_em, p.observacao_geral, p.cliente_nome, p.garcom_nome,
             p.editado_em, m.numero AS mesa
@@ -683,7 +704,6 @@ async function getFilaGarcom() {
     const prontos = itens.filter((i) => i.status === 'concluido');
     return {
       ...p,
-      /* status UI "concluido" enquanto houver algo pra levar */
       status: 'concluido',
       editadoEm: p.editado_em || null,
       itens,
@@ -704,7 +724,6 @@ const ITEM_TRANSICOES = Object.freeze({
   em_producao: 'concluido',
 });
 
-/** Sincroniza status do pedido-pai a partir dos itens. */
 async function sincronizarStatusPedido(client, pedidoId) {
   const { rows } = await client.query(
     `SELECT COALESCE(status, 'recebido') AS status FROM itens_pedido WHERE pedido_id = $1`,
@@ -730,15 +749,13 @@ async function sincronizarStatusPedido(client, pedidoId) {
   return updated[0] || null;
 }
 
-/**
- * Avança status de UM item (usado por /api/cozinha|bar/itens/:id/status).
- * setorAuth: 'cozinha' | 'bar' | null (admin) — valida o setor do produto.
- */
 async function setStatusItem(itemId, statusAlvo, setorAuth = null) {
   const alvo = String(statusAlvo || '').trim();
   if (!['recebido', 'em_producao', 'concluido'].includes(alvo)) {
     throw new ErroPedido(400, 'Status de item inválido');
   }
+  const id = Number(itemId);
+  if (!Number.isInteger(id) || id < 1) throw new ErroPedido(400, 'Item inválido');
 
   const client = await pool.connect();
   try {
@@ -751,7 +768,7 @@ async function setStatusItem(itemId, statusAlvo, setorAuth = null) {
        JOIN pedidos p ON p.id = ip.pedido_id
        WHERE ip.id = $1
        FOR UPDATE OF ip`,
-      [Number(itemId)]
+      [id]
     );
     const item = rows[0];
     if (!item) throw new ErroPedido(404, 'Item não encontrado');
@@ -762,10 +779,8 @@ async function setStatusItem(itemId, statusAlvo, setorAuth = null) {
       throw new ErroPedido(403, `Item pertence ao setor ${item.setor}`);
     }
 
-    // Idempotente + só permite avanço linear (ou manter o mesmo status)
     const esperado = ITEM_TRANSICOES[item.status];
     if (alvo !== item.status && alvo !== esperado) {
-      // Ainda permite atalho recebido → concluido (cozinha rápida), mas nada de regressão
       if (!(item.status === 'recebido' && alvo === 'concluido')) {
         throw new ErroPedido(
           409,
@@ -773,7 +788,6 @@ async function setStatusItem(itemId, statusAlvo, setorAuth = null) {
         );
       }
     }
-    // Impede regressão (ex.: concluido → recebido)
     const ordem = { recebido: 0, em_producao: 1, concluido: 2, entregue: 3 };
     if ((ordem[alvo] ?? -1) < (ordem[item.status] ?? 0) && alvo !== item.status) {
       throw new ErroPedido(409, `Não é permitido regredir status de item de "${item.status}" para "${alvo}"`);
@@ -798,22 +812,20 @@ async function setStatusItem(itemId, statusAlvo, setorAuth = null) {
   }
 }
 
-/**
- * Define status do pedido (React Cozinha/Bar: PATCH /api/pedidos/:id/status).
- * Se setor for informado, só avança itens daquele setor; o pedido-pai é recalculado.
- */
 async function setStatusPedido(pedidoId, statusAlvo, setor = null) {
   const alvo = String(statusAlvo || '').trim();
   if (!['recebido', 'em_producao', 'concluido', 'entregue'].includes(alvo)) {
     throw new ErroPedido(400, 'Status inválido');
   }
+  const id = Number(pedidoId);
+  if (!Number.isInteger(id) || id < 1) throw new ErroPedido(400, 'Pedido inválido');
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const { rows } = await client.query(
       `SELECT id, status, sessao_id FROM pedidos WHERE id = $1 FOR UPDATE`,
-      [Number(pedidoId)]
+      [id]
     );
     const pedido = rows[0];
     if (!pedido) throw new ErroPedido(404, 'Pedido não encontrado');
@@ -822,7 +834,6 @@ async function setStatusPedido(pedidoId, statusAlvo, setor = null) {
     }
 
     if (alvo === 'entregue') {
-      // entrega fecha todos os itens
       await client.query(
         `UPDATE itens_pedido SET status = 'entregue' WHERE pedido_id = $1`,
         [pedido.id]
@@ -836,7 +847,6 @@ async function setStatusPedido(pedidoId, statusAlvo, setor = null) {
       return { ...updated[0], statusAnterior: pedido.status };
     }
 
-    // Conta quantos itens pertencem ao setor pedido (se houver filtro)
     let setorEfetivo = setor;
     if (setor) {
       const { rows: cnt } = await client.query(
@@ -847,12 +857,7 @@ async function setStatusPedido(pedidoId, statusAlvo, setor = null) {
            AND COALESCE(pr.setor, 'cozinha') = $2`,
         [pedido.id, setor]
       );
-      // Se o pedido não tem NENHUM item deste setor (ex.: só bebida e quem
-      // chamou foi a cozinha), avança TODOS os itens — evita 200 "mentiroso"
-      // e o 409 posterior no garçom.
-      if (!cnt[0] || cnt[0].n === 0) {
-        setorEfetivo = null;
-      }
+      if (!cnt[0] || cnt[0].n === 0) setorEfetivo = null;
     }
 
     let rowCount = 0;
@@ -894,7 +899,6 @@ async function setStatusPedido(pedidoId, statusAlvo, setor = null) {
         rowCount = r.rowCount || 0;
       }
     } else {
-      // Sem filtro de setor (ou fallback): avança todos os itens do pedido
       const r = await client.query(
         `UPDATE itens_pedido SET status = $2 WHERE pedido_id = $1`,
         [pedido.id, alvo]
@@ -930,6 +934,7 @@ async function checkinCliente(token, body) {
     const mesa = await getMesaPorToken(client, token);
     if (!mesa) throw new ErroPedido(404, 'Mesa não encontrada');
     const sessaoId = await getOuAbrirSessao(client, mesa.id);
+    if (!sessaoId) throw new ErroPedido(404, 'Mesa não encontrada');
     await client.query(`UPDATE mesa_sessoes SET cliente_nome = $2 WHERE id = $1`, [sessaoId, nome]);
     await client.query('COMMIT');
     return { ok: true, mesa: mesa.numero, sessaoId, clienteNome: nome };
