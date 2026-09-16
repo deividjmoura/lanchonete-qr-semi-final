@@ -21,7 +21,7 @@ const MAX_INPUT_BYTES = Number(process.env.FOTO_MAX_INPUT_BYTES || 6 * 1024 * 10
 const MAX_OUTPUT_BYTES = Number(process.env.FOTO_MAX_OUTPUT_BYTES || 320 * 1024);
 const FETCH_TIMEOUT_MS = 12_000;
 /** true = também grava cópia em public/uploads (só útil em dev local). */
-const ALSO_WRITE_DISK = process.env.FOTO_ALSO_WRITE_DISK === '1';
+const ALSO_WRITE_DISK = process.env.FOTO_ALSO_DISK === '1';
 
 class ErroFoto extends Error {
   constructor(status, message) {
@@ -128,7 +128,6 @@ async function fetchUrlBuffer(url) {
     const res = await fetch(u, {
       signal: ctrl.signal,
       headers: { 'User-Agent': 'LanchoneteQR-Foto/1.0', Accept: 'image/*' },
-      // Redirecionamento automático quebraria a validação do destino inicial.
       redirect: 'error',
     });
     if (!res.ok) {
@@ -210,9 +209,6 @@ async function salvarFotoOtimizada(buf) {
   };
 }
 
-/**
- * body: { url?: string, data?: string (base64 ou data-URL) }
- */
 async function processarUploadFoto(body) {
   body = body || {};
   let buf = null;
@@ -226,7 +222,6 @@ async function processarUploadFoto(body) {
   return salvarFotoOtimizada(buf);
 }
 
-/** Remove arquivo local antigo se for /uploads/... (legado). */
 async function tentarRemoverUploadLocal(fotoUrl) {
   if (!fotoUrl || typeof fotoUrl !== 'string') return;
   if (!fotoUrl.startsWith('/uploads/')) return;
@@ -243,5 +238,6 @@ module.exports = {
   processarUploadFoto,
   salvarFotoOtimizada,
   tentarRemoverUploadLocal,
+  validarDestinoRemoto,
   UPLOAD_DIR,
 };
