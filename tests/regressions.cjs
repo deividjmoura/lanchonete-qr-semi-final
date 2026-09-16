@@ -9,6 +9,7 @@ const { subscribe, broadcast, clientCount } = require('../db/events');
 const { validarDestinoRemoto } = require('../db/foto');
 const { verificarOrigemRequisicao } = require('../db/auth');
 const { ErroValidacao, numeroFinito, numeroInteiroPositivo } = require('../db/validacao');
+const { getOuAbrirSessao, getProdutoComRegras } = require('../db/queries');
 
 function theme({ blocked = false, dark = false, saved = null } = {}) {
   const root = { dataset: {}, style: { values: {}, setProperty(k, v) { this.values[k] = v; } } };
@@ -130,4 +131,30 @@ test('validação numérica do admin rejeita NaN, Infinity, vazios e tipos invá
   assert.throws(() => numeroFinito(1.5, 'Estoque', { inteiro: true, minimo: 0 }), /deve ser inteiro/);
   assert.throws(() => numeroFinito(-1, 'Estoque', { minimo: 0 }), /inválido/);
   assert.throws(() => numeroInteiroPositivo('0', 'categoriaId'), /inválido/);
+});
+
+test('abertura de sessão trava a mesa antes de criar sessão', async () => {
+  const calls = [];
+  const client = {
+    async query(sql, params) {
+      calls.push({ sql, params });
+      if (sql.includes('SELECT id FROM mesas')) return { rows: [{ id: 7 }] };
+      if (sql.includes("SELECT id FROM mesa_sessoes")) return { rows: [] };
+      if (sql.includes('INSERT INTO mesa_sessoes')) return { rows: [{ id: 42 }] };
+      return { rows: [] };
+    },
+  };
+  assert.equal(await getOuAbrirSessao(client, 7), 42);
+  assert.match(calls[0].sql, /FOR UPDATE/);
+  assert.match(calls[1].sql, /status = 'aberta'/);
+  assert.match(calls[2].sql, /INSERT INTO mesa_sessoes/);
+});
+
+test('produto inválido não dispara consulta ao PostgreSQL', async () => {
+  let called = false;
+  const client = { query: async () => { called = true; return { rows: [] }; } };
+  assert.equal(await getProdutoComRegras(client, NaN), null);
+  assert.equal(await getProdutoComRegras(client, Infinity), null);
+  assert.equal(await getProdutoComRegras(client, 0), null);
+  assert.equal(called, false);
 });
