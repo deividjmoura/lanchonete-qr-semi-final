@@ -285,3 +285,39 @@ test('relação ausente vira 503 acionável em vez de erro cru do PostgreSQL', (
   const outro = new Error('outra coisa');
   assert.equal(erroDeSchema(outro), outro);
 });
+
+/* ---------- PIX do cliente (hardening do colega, porta do ab9fa34) ----------
+   Os testes dele eram regex no fonte; aqui viram comportamentais — mesma proteção,
+   sem quebrar na próxima formatação. */
+
+const { informarPixPago, ErroPixCliente, validarUuid } = require('../db/pix-cliente');
+
+test('PIX rejeita token fora do formato UUID antes de tocar no PostgreSQL', async () => {
+  for (const token of ['', '  ', 'nao-existe', '../etc/passwd', '00000000-0000-0000-0000-000000000000', null, 42]) {
+    await assert.rejects(() => informarPixPago(token, {}), (e) => e instanceof ErroPixCliente && e.status === 400, String(token));
+  }
+  assert.equal(validarUuid('00000000-0000-4000-8000-000000000000'), '00000000-0000-4000-8000-000000000000');
+});
+
+test('PIX rejeita payload não-objeto e campos explícitos inválidos', async () => {
+  const uuid = '00000000-0000-4000-8000-000000000000';
+  // undefined é omissão legítima (vira {}); null/string/número/array são payload quebrado.
+  for (const corpo of [null, 'x', 42, []]) {
+    await assert.rejects(() => informarPixPago(uuid, corpo), /Dados do PIX inválidos/, String(corpo));
+  }
+  for (const pedidoId of ['abc', 1.5, 0, -3, true, {}]) {
+    await assert.rejects(() => informarPixPago(uuid, { pedidoId }), /Pedido (inválido|deve ser inteiro)/);
+  }
+  for (const valor of ['abc', 0, -1, true, NaN, Infinity, {}]) {
+    await assert.rejects(() => informarPixPago(uuid, { valor }), /Valor inválido/);
+  }
+});
+
+test('rotas de PIX e entrega não mascaram JSON inválido em payload vazio', () => {
+  const source = fs.readFileSync('server.js', 'utf8');
+  // body() já resolve {} para corpo ausente; engolir erro de parse virava
+  // "PIX com payload inventado" e "entregar todos os itens".
+  assert.doesNotMatch(source, /await body\(req\)\.catch\(\(\) => \(\{\}\)\)/);
+  assert.match(source, /const payload = await body\(req\);\s*const out = await informarPixPago/);
+  assert.equal((source.match(/await body\(req\);/g) || []).length >= 2, true);
+});

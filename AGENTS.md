@@ -19,7 +19,7 @@
 |----|--------|--------|------|
 | #8 | `arena/01a0a77d-...` → main | conteúdo de tema portado para a main via #10 | fechar quando o #10 entrar (não trazia o hardening) |
 | #7 | `hardening/pre-sale-audit` → main | replayado na main em commits pequenos (0c6a161) + resto no #10 | fechar quando o #10 entrar |
-| #10 | `arena/01a0a79b-...` → main | 🟢 CI verde, 23 regressões: tema, #5, ADR-007, migration `0016`, upload/SSRF do `a197030` | **mergar** (é o lote que falta na main) |
+| #10 | `arena/01a0a79b-...` → main | 🟢 CI verde, 26 regressões: tema, #5, ADR-007, migration `0016`, upload/SSRF do `a197030` | **mergar** (é o lote que falta na main) |
 
 **Grok já publicou na main:** tema (escuro/dark), `build` sem typecheck bloqueante, `test:dia`, este protocolo.
 > **Sessão `01a0a79b` (orquestração), 2026-09-16 01:05 UTC:** este doc foi consolidado sobre a versão da `main`
@@ -71,6 +71,7 @@ Arquivo: `scripts/dia-inteiro.js` — multi-mesa, concorrência, PIX, caixa, adm
 > e data-URL em `foto_url` foram mantidos.
 - ✅ **Fechado no PR #10** — bypass de setor em `setStatusPedido()`: `entregue` com `setor` de cozinha/bar devolve 403; `setStatusItem` rejeita `entregue` (400). Teste comportamental, não regex.
 - ✅ **Fechado no PR #10** — validação numérica/admin: `db/validacao.js` + uso em `db/admin.js` (sem mascarar com `|| 0`) + regressão.
+- ✅ **Fechado no PR #10** — entrada do PIX validada (ADR-012) e JSON malformado sem default (ADR-013), incluindo a rota de entrega do garçom.
 - ✅ **Fechado no PR #10** — DDL de `pix_avisos` saiu do caminho da requisição: virou `db/migrations/0016_pix_avisos.sql`; `ensurePixAvisosTable` ficou como utilitáriodeprecated para scripts.
 - ⚠️ Ainda em aberto no #10: `getSessao`/listagens dependem do `catch(() => {})` em `ensurePixAvisosTable` (removido aqui) — se aparecer `relation "pix_avisos" does not exist` em ambiente antigo, rode `npm run db:migrate`.
 - Hardening do fluxo de criação/edição de pedidos: limites de qty/ids e máx. 100 itens vieram no #10; falta validar contra PostgreSQL real.
@@ -168,6 +169,16 @@ hardening/pre-sale-audit (#7) = raiz órfã 990c4ca → `git merge-base main har
 - **ADR-011:** DDL só em `db/migrations/*.sql`. Nada de `CREATE TABLE` em handler de requisição
   (era o caso de `pix_avisos`, resolvido em `0016_pix_avisos.sql`).
 
+### ADR-012: Validação explícita de entrada no PIX público (colega, renumerada)
+**Data:** 2026-09-16 · **Status:** Aceito (portada no PR #10)
+Tokens de mesa e IDs/valores do endpoint público de PIX são validados antes de consultar PostgreSQL;
+entrada inválida explícita é erro, não default.
+
+### ADR-013: JSON malformado deve falhar explicitamente (colega, renumerada)
+**Data:** 2026-09-16 · **Status:** Aceito (portada no PR #10, ampliada para a rota de entrega do garçom)
+Endpoints que dependem de JSON válido não substituem parsing inválido por `{}`: o cliente recebe 400 e
+nenhuma operação de negócio roda com payload inventado.
+
 ## 5.3 Divisão de trabalho desta rodada
 
 | Quem | Fez / faz |
@@ -204,7 +215,7 @@ Fila restante (qualquer agente pode pegar, em commit pequeno na `main`):
 - DDL de `pix_avisos` movido para migration `0016` e removido dos handlers (`ensurePixAvisosTable` vira
   utilitário deprecated para scripts), resolvendo o terceiro achado da Luna.
 - `dist/` reconstruído a partir do `src/` final e CI com `dist/ matches src/` + `node --check` em `db/*.js`/`scripts/*.js`.
-**Verificações:** `npm ci` · typecheck · `vite build` · **23/23 regressões** · `node --check` geral ·
+**Verificações:** `npm ci` · typecheck · `vite build` · **26/26 regressões** · `node --check` geral ·
 rebuild de `dist/` byte-idêntico ao commitado · **Actions: 🟢 primeiro run verde do repo** ·
 smoke HTTP no build integrado: `/` 200 com pré-paint do tema, `/admin.html`→`/#/admin`, assets 200,
 `GET /api/mesas` sem cookie → **401**.
@@ -215,6 +226,27 @@ gate de migrations no Railway, e os 22 checks de Chromium que o #8 reportou (sem
   intocado; se preferir, o lote pode entrar como push seu na `main`.
 - Dono: aprovar o #10 → redeploy → rodar `BASE_URL=https://qradmin.up.railway.app npm run test:dia`.
 - Segurança: o PAT colado no chat precisa ser **revogado** (já vazou em log de conversa).
+
+### [2026-09-16 02:05] Arena Agent (sessão 01a0a79b) · Papel: Orquestrador / Backend / Segurança
+**Tarefa:** Portar o hardening do PIX do colega (`99ca0ec`…`ab9fa34`, 7 commits no branch órfão) para a `main` via #10.
+**Status:** 🟢 portado, com os testes estáticos trocados por comportamentais · **26/26**
+**Arquivos tocados:** `db/pix-cliente.js`, `server.js`, `tests/regressions.cjs`, `AGENTS.md`.
+**O que foi feito:**
+- `informarPixPago`: token UUID validado, `pedidoId` inteiro positivo, `valor` finito positivo,
+  body não-objeto rejeitado; entradas explícitas inválidas deixam de virar default silencioso.
+- `server.js`: rota do PIX sem `body(req).catch(() => ({}))`; 400/413 de parsing/tamanho saem como erro de cliente.
+- **Achado novo:** a rota `POST /api/garcom/:token/pedidos/:id/entregar` tinha o mesmo
+  `catch(() => ({}))` — JSON quebrado no corpo significava **entregar TODOS os itens** do
+  pedido. Removido (o `body()` já devolve `{}` quando não há corpo, então "sem corpo = tudo" continua
+  funcionando; o que não funciona mais é payload corrompido virar entrega total).
+- Testes estáticos por regex do colega viraram comportamentais (mesma proteção, resiste a refactor);
+  a única regex que ficou é a que proíbe `await body(req).catch(() => ({}))` em `server.js`.
+**Decisões tomadas:**
+- Colisão de numeração de ADRs: o colega registrou ADR-008/009 no branch órfão para PIX/JSON; este doc
+  já tinha ADR-008/009 (testes herméticos / `dist/` no CI). As do colega entram renumeradas como
+  **ADR-012** e **ADR-013**. Convenção nova: ADR é numerada por quem consolida, não por quem propõe.
+**Dependências / perguntas:** nada bloqueando; se o colega quiser revisar o port, o diff é `git show` dos
+dois commits finais do #10.
 
 ### [2026-09-16 01:40] Arena Agent (sessão 01a0a79b) · Papel: Orquestrador / Backend / Segurança / QA
 **Tarefa:** Re-empacotar a integração como lote sobre a `main` (regra ⛔) e consertar a reescrita de `db/foto.js`.
