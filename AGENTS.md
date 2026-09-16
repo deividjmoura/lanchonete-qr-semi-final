@@ -113,6 +113,7 @@ Um agente pode assumir vários papéis; declare-os no log.
 - [x] Hardening de IDs nas operações de garçom.
 - [x] Remoção de garçom feita em transação preservando referências dos pedidos.
 - [x] Impedida entrega directa por cozinha/bar pelo endpoint genérico.
+- [x] Hardening de entrada no aviso PIX do cliente.
 - [x] Tema claro suavizado.
 - [x] CI de typecheck/build/regressões/sintaxe criado.
 
@@ -172,11 +173,19 @@ Um agente pode assumir vários papéis; declare-os no log.
 - Correção: `setStatusPedido()` rejeita `entregue` quando chamado com `setor` de cozinha/bar; entrega continua pelo fluxo de garçom. Admin sem `setor` mantém override operacional.
 - Regressão adicionada ao `tests/regressions.cjs`.
 
+**Entrada no aviso PIX do cliente**
+- Descoberto que `/pix-informado` aceitava token malformado e convertia `pedidoId`/`valor` inválidos em fallback silencioso.
+- Correção: `db/pix-cliente.js` valida token UUID, `pedidoId` como inteiro positivo e `valor` como número finito positivo antes das queries.
+- Entradas explicitamente inválidas agora retornam erro de validação em vez de serem tratadas como omissão.
+- Regressão estática adicionada ao `tests/regressions.cjs`.
+
 ---
 
 ## 5.1 Histórico do tema
 
 O tema já teve incompatibilidade entre o valor `data-theme` escrito pelo JavaScript e o seletor CSS. Isso foi alinhado na branch. O tema claro foi suavizado para reduzir branco agressivo (`--qr-page: #e9eef3`, superfície próxima de `#f7f9fb`).
+
+**Coordenação atual:** o tema claro/escuro está sob trabalho de outro agente. Outros agentes devem evitar alterações nessa área salvo necessidade crítica e devem registrar conflito antes de tocar nos arquivos do tema.
 
 ---
 
@@ -210,6 +219,10 @@ IDs usados em CRUD/entrega devem ser inteiros positivos antes de chegar ao Postg
 **Data:** 2026-09-16 · **Status:** Aceito  
 Cozinha/bar podem avançar produção, mas não podem marcar o pedido como entregue pelo endpoint genérico. O garçom continua sendo o actor responsável pela entrega; admin pode usar override explícito.
 
+### ADR-008: Validação explícita de entrada no PIX público
+**Data:** 2026-09-16 · **Status:** Aceito  
+Tokens de mesa e IDs/valores enviados ao endpoint público de PIX devem ser validados antes de consultar PostgreSQL. Valores inválidos não podem cair silenciosamente em defaults.
+
 ---
 
 ## 6. Problemas Conhecidos / Débito Técnico
@@ -226,6 +239,24 @@ Cozinha/bar podem avançar produção, mas não podem marcar o pedido como entre
 ---
 
 ## 7. Log de Atividades
+
+### [2026-09-16] Agente: GPT-5.6 Luna · Papel: Arquiteto / Backend / Segurança / QA
+**Tarefa:** Hardening do endpoint público de aviso PIX.
+**Status:** 🟢 concluído nesta etapa
+**Arquivos tocados:** `db/pix-cliente.js`, `tests/regressions.cjs`, `AGENTS.md`.
+**O que foi feito:**
+- Token de mesa passou a exigir UUID válido antes da query.
+- `pedidoId` passou a exigir inteiro positivo quando informado.
+- `valor` passou a exigir número finito positivo quando informado.
+- Entradas inválidas deixaram de ser convertidas silenciosamente em defaults.
+- Regressão adicionada para proteger essas regras.
+**Decisões tomadas:**
+- O fallback continua existindo somente quando o campo realmente foi omitido; valor/pedido explicitamente inválidos são erros de entrada.
+**Próximos passos sugeridos:**
+- Auditar restante dos endpoints públicos por IDs/tokens malformados e respostas 500 indevidas.
+- Validar schema/migração da tabela `pix_avisos` e mover criação em runtime para migration dedicada quando seguro.
+**Dependências / perguntas para outros agentes:**
+- Tema claro/escuro está sendo trabalhado por outro agente; não tocar sem coordenação.
 
 ### [2026-09-16] Agente: GPT-5.6 Luna · Papel: Arquiteto / Backend / Segurança / QA
 **Tarefa:** Bloquear entrega directa por cozinha/bar e revisar transições por papel.
