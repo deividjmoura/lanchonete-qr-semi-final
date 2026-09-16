@@ -62,6 +62,13 @@ Arquivo: `scripts/dia-inteiro.js` — multi-mesa, concorrência, PIX, caixa, adm
 - CI foi criado para `main` com `npm ci`, typecheck, build, regressões e `node --check server.js`.
 
 ### 🔴 Pendências/achados que continuam abertos
+
+> ⚠️ **Reescrita de `db/foto.js` na `main` (`a197030`) quebrou o upload do admin e o SSRF** — mesmo
+> padrão do merge do PR #8: reescrever o arquivo do outro lado em vez de mesclar. `processarUploadFoto`
+> passou a aceitar só `string`/`Buffer` enquanto `server.js` manda o corpo `{ data, url }` (todo upload
+> dava 400), e o filtro de IP reservado perdeu ULA/link-local/multicast/`::ffff:`/169.254.169.254.
+> Está corrigido no PR #10 (`e00b87a`) com 4 testes travando o contrato e as faixas. Lazy-load do sharp
+> e data-URL em `foto_url` foram mantidos.
 - ✅ **Fechado no PR #10** — bypass de setor em `setStatusPedido()`: `entregue` com `setor` de cozinha/bar devolve 403; `setStatusItem` rejeita `entregue` (400). Teste comportamental, não regex.
 - ✅ **Fechado no PR #10** — validação numérica/admin: `db/validacao.js` + uso em `db/admin.js` (sem mascarar com `|| 0`) + regressão.
 - ✅ **Fechado no PR #10** — DDL de `pix_avisos` saiu do caminho da requisição: virou `db/migrations/0016_pix_avisos.sql`; `ensurePixAvisosTable` ficou como utilitáriodeprecated para scripts.
@@ -208,3 +215,26 @@ gate de migrations no Railway, e os 22 checks de Chromium que o #8 reportou (sem
   intocado; se preferir, o lote pode entrar como push seu na `main`.
 - Dono: aprovar o #10 → redeploy → rodar `BASE_URL=https://qradmin.up.railway.app npm run test:dia`.
 - Segurança: o PAT colado no chat precisa ser **revogado** (já vazou em log de conversa).
+
+### [2026-09-16 01:40] Arena Agent (sessão 01a0a79b) · Papel: Orquestrador / Backend / Segurança / QA
+**Tarefa:** Re-empacotar a integração como lote sobre a `main` (regra ⛔) e consertar a reescrita de `db/foto.js`.
+**Status:** 🟢 pronto no PR #10 · **19 → 23 testes**, CI do PR verde
+**Arquivos tocados:** `db/foto.js`, `tests/regressions.cjs`, `AGENTS.md` (e o resto do lote: tema, redirects legados, `db/validacao.js`, `db/pedidos.js`, migration 0016, CI).
+**O que foi feito:**
+- Descoberto que `main`/`hardening` não tinham merge-base e que o PR #8, por isso, apagou `db/validacao.js`,
+  o gate de migrations, o `.github/workflows/ci.yml` e 5 testes → entregue como 7 commits pequenos sobre a
+  `main` em vez de merge monolítico (ADR-010).
+- CI vermelho diagnosticado em duas causas (`exit(1)` do `pool.js` sem `DATABASE_URL`; `assert.throws` em
+  função `async`) e consertado; CI ganhou `dist/ matches src/` e `node --check` em `db/`+`scripts/`.
+- Re-base no `main` novo (a197030) e correção do `db/foto.js` (ver bloco acima): contrato do endpoint,
+  faixas de IP reservado, credencial na URL, e `validarDestinoRemoto` reexportado.
+**Decisões tomadas:** ADR-002 revisada (gate duro no `npm start` virou 502; gate só em `start:prod`);
+ADR-011 (DDL só em migration, `pix_avisos` foi o caso).
+**Próximos passos sugeridos:**
+- Dono: mergear o #10 → redeploy no Railway → `BASE_URL=... npm run test:dia` (o `test:dia` exercita upload de
+  foto? se sim, é o que teria pego a quebra do `a197030` — vale plugar um upload no teste de fumaça).
+- Colega: se for reescrever um arquivo que outra frente mexeu, colar o diff na §5 do AGENTS antes do push.
+**Dependências / perguntas para outros agentes:**
+- O `listen` do servidor está em `server.listen(PORT)` sem host explícito; `a197030` menciona 0.0.0.0 no
+  message mas só `db/foto.js` foi tocado. Confirma se faltou pedaço do commit? (No container isso funciona por
+  padrão em IPv6 dual-stack, mas quero o explícito.)
