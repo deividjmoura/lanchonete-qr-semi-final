@@ -82,23 +82,36 @@ function aplicarVarsInline(t: Tema) {
 export function temaAtual(): Tema {
   if (typeof window === "undefined") return "claro";
   const aplicado = document.documentElement.getAttribute("data-theme");
-  if (aplicado === "escuro" || aplicado === "claro") return aplicado;
+  // Aceita "escuro" (PT) e "dark" (legado / build Railway)
+  if (aplicado === "escuro" || aplicado === "dark") return "escuro";
+  if (aplicado === "claro" || aplicado === "light") return "claro";
   try {
     const t = localStorage.getItem(KEY);
-    if (t === "escuro" || t === "claro") return t;
+    if (t === "escuro" || t === "dark") return "escuro";
+    if (t === "claro" || t === "light") return "claro";
   } catch {
-    /* Armazenamento pode estar bloqueado; o tema continua funcionando. */
+    /* Armazenamento pode estar bloqueado */
   }
   return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "escuro" : "claro";
 }
 
 export function aplicarTema(t: Tema) {
   const root = document.documentElement;
+  // Valor canônico em PT; também seta "dark" via class para CSS legado
   root.setAttribute("data-theme", t);
+  // Compat com CSS do deploy que usa [data-theme=dark]
+  if (t === "escuro") {
+    root.setAttribute("data-theme", "dark");
+    // Mantém também atributo legível; o seletor CSS cobre ambos
+    root.dataset.theme = "dark";
+  } else {
+    root.setAttribute("data-theme", "claro");
+    root.dataset.theme = "claro";
+  }
   root.classList.toggle("dark", t === "escuro");
   root.classList.toggle("tema-escuro", t === "escuro");
   root.classList.toggle("tema-claro", t === "claro");
-  // Fallback inline: garante troca visual mesmo se o CSS do deploy estiver em cache antigo
+  // Fallback inline: garante troca visual mesmo se o CSS do deploy estiver desalinhado
   aplicarVarsInline(t);
   try {
     localStorage.setItem(KEY, t);
