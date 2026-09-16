@@ -128,8 +128,11 @@
   --qr-scrollbar: #cbd5e1;
 }
 
-/* ================= TEMA ESCURO ================= */
+/* ================= TEMA ESCURO =================
+   :root[data-theme] sobe a especificidade e evita empate com :root. */
+:root[data-theme="escuro"],
 [data-theme="escuro"] {
+  color-scheme: dark;
   --qr-white: #12233a;
   --qr-slate-50: #0b1524;
   --qr-slate-100: #1a2c44;
@@ -171,8 +174,6 @@
   --qr-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 30px -18px rgba(0, 0, 0, 0.6);
   --qr-card-shadow-deep: 0 2px 4px rgba(0, 0, 0, 0.45), 0 20px 48px -20px rgba(0, 0, 0, 0.65);
   --qr-scrollbar: #3c5876;
-
-  color-scheme: dark;
 }
 
 html {
@@ -277,13 +278,16 @@ body {
 }
 
 /* ---------- tema escuro: correções pontuais ---------- */
-/* texto/borda brancos sobre teal permanecem brancos no dark */
+:root[data-theme="escuro"] .text-white,
 [data-theme="escuro"] .text-white { color: #ffffff; }
+:root[data-theme="escuro"] .border-white,
 [data-theme="escuro"] .border-white { border-color: #ffffff; }
 
 /* troca da logo conforme o tema (claro/escuro) */
 .qr-logo-dark { display: none; }
+:root[data-theme="escuro"] .qr-logo-light,
 [data-theme="escuro"] .qr-logo-light { display: none; }
+:root[data-theme="escuro"] .qr-logo-dark,
 [data-theme="escuro"] .qr-logo-dark { display: inline-block; }
 
 /* papel do QR Code sempre branco (legibilidade do QR) */
