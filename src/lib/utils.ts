@@ -43,38 +43,14 @@ const asciiLimpo = (s: string) =>
 
 /**
  * Normaliza a chave PIX sem destruir e-mail nem chave aleatória (EVP).
- * - e-mail → lowercase
- * - telefone → +55… (só dígitos com +)
- * - CPF (11) / CNPJ (14) → só dígitos
- * - EVP / outros → trim, mantém letras e hífens
+ *
+ * Implementação única em `db/pix-normaliza.js`, compartilhada com o server.js.
+ * Manter duas cópias foi a causa de um bug real: a cópia do servidor não
+ * checava letras e reescrevia chave aleatória como CPF/telefone.
  */
-export function normalizarChavePix(raw: string): string {
-  const s = String(raw || "").trim();
-  if (!s) return "";
+import { normalizarChavePix } from "../../db/pix-normaliza.js";
 
-  if (s.includes("@")) return s.toLowerCase();
-
-  // Já está em formato E.164 (+55…)
-  if (s.startsWith("+")) return s.replace(/\s/g, "");
-
-  const digits = s.replace(/\D/g, "");
-
-  // CPF
-  if (digits.length === 11 && !/[a-zA-Z]/.test(s)) return digits;
-  // CNPJ
-  if (digits.length === 14 && !/[a-zA-Z]/.test(s)) return digits;
-  // Celular BR 10/11 dígitos → +55
-  if (digits.length === 10 || digits.length === 11) {
-    if (/^[1-9]/.test(digits)) return `+55${digits}`;
-  }
-  // Já veio com 55…
-  if (digits.length >= 12 && digits.length <= 13 && digits.startsWith("55")) {
-    return `+${digits}`;
-  }
-
-  // EVP (UUID) ou chave desconhecida: não stripa letras
-  return s.replace(/\s/g, "");
-}
+export { normalizarChavePix };
 
 export function montarPixEMV(opts: {
   chave: string;

@@ -134,4 +134,8 @@ export interface PixConfig {
   chave: string;
   nome: string;
   cidade: string;
+  /** Diagnóstico do servidor: false = PIX_CHAVE ausente/placeholder/desconhecida */
+  chaveValida?: boolean;
+  tipoChave?: string;
+  aviso?: string | null;
 }

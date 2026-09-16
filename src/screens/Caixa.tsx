@@ -193,12 +193,17 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
   }, [sessao.id]);
 
   const [pixCfg, setPixCfg] = useState<PixConfig | null>(null);
+  const [pixAviso, setPixAviso] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
     api
       .configPix()
       .then((c) => {
-        if (alive && c?.chave) setPixCfg({ chave: c.chave, nome: c.nome, cidade: c.cidade });
+        if (!alive) return;
+        if (c?.chave) setPixCfg({ chave: c.chave, nome: c.nome, cidade: c.cidade });
+        /* chave presente mas inválida: mostra o motivo em vez de um QR que o
+           banco recusa silenciosamente no meio do atendimento. */
+        if (c && c.chaveValida === false) setPixAviso(c.aviso || "Confira PIX_CHAVE no servidor");
       })
       .catch(() => {
         /* sem PIX configurado no servidor */
@@ -413,7 +418,13 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-bold text-navy-900">PIX do restante · {BRL(restante)}</p>
-                <p className="text-[11px] text-slate-500 leading-snug mt-0.5">Mostre pro cliente ou copie o código.</p>
+                {pixAviso ? (
+                  <p className="text-[11px] font-semibold text-amber-700 leading-snug mt-0.5">
+                    {pixAviso}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-slate-500 leading-snug mt-0.5">Mostre pro cliente ou copie o código.</p>
+                )}
                 <button onClick={copiarPix} className="btn-press mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold text-brand-600 hover:text-brand-700 cursor-pointer">
                   {copiado ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
                   {copiado ? "copiado!" : "copiar código PIX"}

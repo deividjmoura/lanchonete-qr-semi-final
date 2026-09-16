@@ -438,7 +438,11 @@ async function main() {
     });
     if (stD === 200) log('dashboard ok');
     else note(`dashboard → HTTP ${stD}`);
-    const { status: stR } = await req('GET', '/api/admin/relatorio', {
+    /* /api/admin/relatorio exige from e to (YYYY-MM-DD) — o front sempre manda.
+       Chamado sem parâmetros devolve 400 por contrato, o que aparecia aqui como
+       falso aviso de falha. */
+    const hoje = new Date().toISOString().slice(0, 10);
+    const { status: stR } = await req('GET', `/api/admin/relatorio?from=${hoje}&to=${hoje}`, {
       cookie: admin.cookie,
       soft: true,
     });

@@ -15,6 +15,8 @@
     "test:smoke": "node scripts/smoke.js",
     "test:full": "node scripts/smoke-full.js",
     "test:dia": "node scripts/dia-inteiro.js",
+    "test:carga": "node scripts/teste-carga.js",
+    "test:seguranca": "node scripts/teste-seguranca.js",
     "fotos:fix": "node scripts/fix-fotos-cardapio.js",
     "fotos:dry": "node scripts/fix-fotos-cardapio.js --dry-run",
     "dev:api": "node server.js",

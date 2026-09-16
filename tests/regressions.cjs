@@ -321,3 +321,132 @@ test('rotas de PIX e entrega não mascaram JSON inválido em payload vazio', () 
   assert.match(source, /const payload = await body\(req\);\s*const out = await informarPixPago/);
   assert.equal((source.match(/await body\(req\);/g) || []).length >= 2, true);
 });
+
+/* ------------------------------------------------------------------ *
+ * PIX: normalização de chave (fonte única) e payload EMV/BR Code
+ * ------------------------------------------------------------------ */
+const { normalizarChavePix, inspecionarChavePix, cpfValido, cnpjValido } = require('../db/pix-normaliza');
+
+test('chave aleatória (EVP) sobrevive à normalização — bug que destruía 1,18% das chaves', () => {
+  // O server.js antigo não checava letras: um UUID com 11/14 dígitos virava
+  // "CPF"/"telefone" e o QR passava a apontar para uma chave inexistente,
+  // mesmo com PIX_CHAVE correta no provedor.
+  const destruidasAntes = [
+    '7a064d54-edbe-49fd-b675-eaff2b5ce6bb', // 14 dígitos
+    'df0c7f27-c606-40cd-9dba-ffeadda63f01', // 14 dígitos
+    'a4984f0b-15f0-4efb-bcba-413bfe3fdbb4', // 14 dígitos
+    'b139cfb3-cae4-4e9d-9ade-7b1eb021b3de', // 14 dígitos
+  ];
+  for (const k of destruidasAntes) {
+    assert.equal(normalizarChavePix(k), k.toLowerCase(), k);
+  }
+  // varredura: nenhum UUID v4 aleatório pode ser reescrito
+  for (let i = 0; i < 3000; i++) {
+    const b = require('node:crypto').randomBytes(16);
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    const h = b.toString('hex');
+    const uuid = `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+    assert.equal(normalizarChavePix(uuid), uuid, `UUID reescrito: ${uuid} → ${normalizarChavePix(uuid)}`);
+  }
+});
+
+test('normalização resolve CPF x celular pelos dígitos verificadores', () => {
+  // 11 dígitos são ambíguos (CPF ou DDD+número). Só o dígito verificador decide.
+  assert.equal(cpfValido('52998224725'), true);
+  assert.equal(cpfValido('11111111111'), false, 'sequência repetida não é CPF');
+  assert.equal(cpfValido('52998224726'), false, 'dígito verificador errado');
+  assert.equal(normalizarChavePix('529.982.247-25'), '52998224725', 'CPF válido vira só dígitos');
+  assert.equal(normalizarChavePix('21987654321'), '+5521987654321', '11 dígitos que não são CPF viram celular E.164');
+  assert.equal(normalizarChavePix('(21) 98765-4321'), '+5521987654321');
+  assert.equal(cnpjValido('11222333000181'), true);
+  assert.equal(cnpjValido('00000000000000'), false, 'CNPJ de zeros não é válido');
+  assert.equal(normalizarChavePix('11.222.333/0001-81'), '11222333000181');
+});
+
+test('normalização preserva e-mail, E.164 e remove aspas de .env', () => {
+  assert.equal(normalizarChavePix('Pagamentos@MajorPub.com.br'), 'pagamentos@majorpub.com.br');
+  assert.equal(normalizarChavePix('+55 21 98765-4321'), '+5521987654321');
+  assert.equal(normalizarChavePix('"21987654321"'), '+5521987654321', 'aspas de .env/painel não podem virar parte da chave');
+  assert.equal(normalizarChavePix('"Pag@MajorPub.com.br"'), 'pag@majorpub.com.br');
+  assert.equal(normalizarChavePix('   '), '');
+  assert.equal(normalizarChavePix(undefined), '');
+});
+
+test('inspeção de chave sinaliza chave ausente/placeholder em vez de QR inválido', () => {
+  assert.deepEqual(inspecionarChavePix(''), { ok: false, tipo: 'vazia', motivo: 'PIX_CHAVE não está definida no servidor' });
+  assert.equal(inspecionarChavePix('00000000000').tipo, 'placeholder');
+  assert.equal(inspecionarChavePix('00000000000000').ok, false);
+  assert.equal(inspecionarChavePix('21987654321').tipo, 'telefone');
+  assert.equal(inspecionarChavePix('pag@x.com').tipo, 'email');
+  assert.equal(inspecionarChavePix('f47ac10b-58cc-4372-a567-0e02b2c3d479').tipo, 'aleatoria');
+});
+
+test('server.js usa a fonte única de normalização (sem segunda cópia)', () => {
+  const source = fs.readFileSync('server.js', 'utf8');
+  assert.match(source, /require\('\.\/db\/pix-normaliza'\)/);
+  // a lógica duplicada que causava o bug não pode voltar
+  assert.doesNotMatch(source, /digits\.length === 11 \|\| digits\.length === 14/);
+  const front = fs.readFileSync('src/lib/utils.ts', 'utf8');
+  assert.match(front, /from "\.\.\/\.\.\/db\/pix-normaliza\.js"/, 'front deve importar a mesma implementação');
+});
+
+test('payload PIX (BR Code) é TLV válido com CRC16 correto', () => {
+  const code = ts.transpileModule(fs.readFileSync('src/lib/utils.ts', 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS },
+  }).outputText;
+  // utils.ts importa ../../db/pix-normaliza.js — o require do contexto precisa
+  // resolver a partir de src/lib/, não a partir de tests/.
+  const requireDeSrc = require('node:module').createRequire(
+    require('node:path').join(process.cwd(), 'src', 'lib', 'utils.ts')
+  );
+  const ctx = { exports: {}, console: { warn() {} }, require: requireDeSrc };
+  vm.runInNewContext(code, ctx);
+  const { montarPixEMV } = ctx.exports;
+
+  const crc16 = (s) => {
+    let crc = 0xffff;
+    for (const ch of s) {
+      crc ^= ch.charCodeAt(0) << 8;
+      for (let i = 0; i < 8; i++) crc = crc & 0x8000 ? ((crc << 1) ^ 0x1021) & 0xffff : (crc << 1) & 0xffff;
+    }
+    return crc.toString(16).toUpperCase().padStart(4, '0');
+  };
+  const parseTLV = (s) => {
+    const out = [];
+    let i = 0;
+    while (i < s.length) {
+      const id = s.substr(i, 2);
+      const len = Number(s.substr(i + 2, 2));
+      assert.match(id, /^\d{2}$/, `id de campo inválido em ${i}`);
+      out.push({ id, len, val: s.substr(i + 4, len) });
+      i += 4 + len;
+    }
+    assert.equal(i, s.length, 'payload tem bytes fora de TLV');
+    return out;
+  };
+
+  const casos = [
+    { chave: '21987654321', nome: 'MAJOR PUB', cidade: 'SAO PAULO', valor: 147.9, txid: 'SESSAO12' },
+    { chave: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', nome: 'MAJOR PUB', cidade: 'SP', valor: 50, txid: 'SESSAO1' },
+    { chave: 'pag@majorpub.com.br', nome: 'MAJOR PUB', cidade: 'SP', valor: 0.01, txid: 'SESSAO1' },
+    { chave: '21987654321', nome: 'AÇAITERIA SÃO JOSÉ', cidade: 'RIO DE JANEIRO', txid: 'SESSAO-9/26!' },
+  ];
+  for (const opts of casos) {
+    const payload = montarPixEMV(opts);
+    assert.match(payload, /^[\x20-\x7E]+$/, 'payload com caractere não-ASCII');
+    assert.equal(payload.slice(-4), crc16(payload.slice(0, -4)), `CRC inválido para ${opts.chave}`);
+    const tlvs = parseTLV(payload);
+    const ids = tlvs.map((t) => t.id);
+    for (const obrigatorio of ['00', '26', '52', '53', '58', '59', '60', '63']) {
+      assert.ok(ids.includes(obrigatorio), `campo obrigatório ${obrigatorio} ausente`);
+    }
+    const nums = tlvs.map((t) => Number(t.id));
+    for (let i = 1; i < nums.length; i++) assert.ok(nums[i] > nums[i - 1], 'campos fora de ordem crescente');
+    assert.ok(tlvs.find((t) => t.id === '59').val.length <= 25, 'nome acima de 25 chars');
+    assert.ok(tlvs.find((t) => t.id === '60').val.length <= 15, 'cidade acima de 15 chars');
+    const mai = parseTLV(tlvs.find((t) => t.id === '26').val);
+    assert.equal(mai[0].val, 'BR.GOV.BCB.PIX');
+    assert.ok(mai[1].val.length > 0, 'campo 26 sem chave');
+  }
+});
