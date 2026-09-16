@@ -149,6 +149,42 @@ test('upload de foto rejeita destinos SSRF locais', async () => {
   await assert.rejects(() => validarDestinoRemoto('file:///etc/passwd'), /http:\/\/ ou https:\/\//);
 });
 
+/* A reescrita de db/foto.js (sharp lazy) quase levou embora estas defesas. Elas
+   voltaram e ficam travadas aqui, porque o padrão de "aparece corrigido, some no
+   próximo refactor" já aconteceu três vezes neste repo. */
+test('SSRF: IPv6 reservado e IPv4 mapeado não passam', async () => {
+  for (const alvo of [
+    'http://[::1]/x', 'http://[fc00::1]/x', 'http://[fd12:3456::1]/x',
+    'http://[fe80::1]/x', 'http://[ff02::1]/x', 'http://[::ffff:127.0.0.1]/x',
+    'http://[::]/x',
+  ]) {
+    await assert.rejects(() => validarDestinoRemoto(alvo), /rede não permitido|URL de imagem inválida/, alvo);
+  }
+});
+
+test('SSRF: alcance IPv4 reservados além do básico', async () => {
+  for (const alvo of [
+    'http://169.254.169.254/latest/meta-data/', 'http://192.0.2.1/x', 'http://198.18.0.1/x',
+    'http://100.64.0.1/x', 'http://0.0.0.0/x', 'http://224.0.0.1/x',
+  ]) {
+    await assert.rejects(() => validarDestinoRemoto(alvo), /rede não permitido/, alvo);
+  }
+});
+
+test('SSRF: credencial embutida na URL é rejeitada', async () => {
+  await assert.rejects(() => validarDestinoRemoto('http://admin:segredo@10.0.0.9/foto.png'), /URL de imagem inválida/);
+  await assert.rejects(() => validarDestinoRemoto('http://user@127.0.0.1/foto.png'), /URL de imagem inválida|rede não permitido/);
+});
+
+test('upload aceita o corpo { data } / { url } que o server.js envia', async () => {
+  // Regressão da reescrita: processarUploadFoto passou a aceitar só string/Buffer
+  // e o endpoint manda o objeto do body → todo upload do admin daria 400.
+  const { processarUploadFoto } = require('../db/foto');
+  await assert.rejects(() => processarUploadFoto({ url: 'http://127.0.0.1/interno.png' }), /Destino de rede não permitido/);
+  await assert.rejects(() => processarUploadFoto({}), /Envie data-URL base64, Buffer ou URL https/);
+  await assert.rejects(() => processarUploadFoto({ data: 'data:image/png;base64,@@@' }), /base64 inválido|[Ii]magem vazia|corrompido/);
+});
+
 test('requisições autenticadas rejeitam Origin externo', () => {
   assert.doesNotThrow(() => verificarOrigemRequisicao({
     method: 'POST',
