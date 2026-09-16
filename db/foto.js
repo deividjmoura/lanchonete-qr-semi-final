@@ -11,7 +11,20 @@ const path = require('path');
 const crypto = require('crypto');
 const dns = require('dns').promises;
 const net = require('net');
-const sharp = require('sharp');
+
+let _sharp;
+function getSharp() {
+  if (!_sharp) {
+    try {
+      _sharp = require('sharp');
+    } catch (e) {
+      const err = new Error('Módulo sharp indisponível neste ambiente: ' + (e && e.message ? e.message : e));
+      err.status = 503;
+      throw err;
+    }
+  }
+  return _sharp;
+}
 
 const UPLOAD_DIR = path.join(__dirname, '..', 'public', 'uploads');
 const MAX_EDGE = Number(process.env.FOTO_MAX_EDGE || 960);
@@ -30,119 +43,80 @@ class ErroFoto extends Error {
   }
 }
 
-async function ensureUploadDir() {
-  await fs.promises.mkdir(UPLOAD_DIR, { recursive: true });
+function garantirDirUpload() {
+  if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
-function bufferFromBase64(raw) {
-  if (!raw || typeof raw !== 'string') {
-    throw new ErroFoto(400, 'Imagem em base64 inválida');
+function ipPrivadoOuReservado(hostname) {
+  if (!hostname) return true;
+  const h = String(hostname).toLowerCase();
+  if (h === 'localhost' || h.endsWith('.localhost')) return true;
+  if (h === '::1') return true;
+  // IPv4 literal
+  if (net.isIP(h) === 4) {
+    const p = h.split('.').map(Number);
+    if (p[0] === 10) return true;
+    if (p[0] === 127) return true;
+    if (p[0] === 0) return true;
+    if (p[0] === 169 && p[1] === 254) return true;
+    if (p[0] === 172 && p[1] >= 16 && p[1] <= 31) return true;
+    if (p[0] === 192 && p[1] === 168) return true;
   }
-  let b64 = raw.trim();
-  const m = b64.match(/^data:image\/[a-zA-Z0-9.+-]+;base64,(.+)$/);
-  if (m) b64 = m[1];
-  let buf;
-  try {
-    buf = Buffer.from(b64, 'base64');
-  } catch {
-    throw new ErroFoto(400, 'Base64 inválido');
-  }
-  if (!buf.length) throw new ErroFoto(400, 'Imagem vazia');
-  if (buf.length > MAX_INPUT_BYTES) {
-    throw new ErroFoto(413, 'Imagem muito grande (máx ~6 MB)');
-  }
-  return buf;
+  return false;
 }
 
-function ipv4PrivadoOuReservado(ip) {
-  const oct = ip.split('.').map(Number);
-  if (oct.length !== 4 || oct.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return true;
-  const [a, b] = oct;
-  return (
-    a === 0 ||
-    a === 10 ||
-    a === 127 ||
-    a === 169 && b === 254 ||
-    a === 172 && b >= 16 && b <= 31 ||
-    a === 192 && b === 0 ||
-    a === 192 && b === 168 ||
-    a === 198 && (b === 18 || b === 19) ||
-    a >= 224 ||
-    a === 100 && b >= 64 && b <= 127
-  );
-}
-
-function ipv6PrivadoOuReservado(ip) {
-  const normalized = ip.toLowerCase().split('%')[0];
-  if (normalized === '::' || normalized === '::1') return true;
-  if (normalized.startsWith('fc') || normalized.startsWith('fd') || normalized.startsWith('fe8') || normalized.startsWith('fe9') || normalized.startsWith('fea') || normalized.startsWith('feb')) return true;
-  if (normalized.startsWith('ff')) return true;
-  const mapped = normalized.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-  return Boolean(mapped && ipv4PrivadoOuReservado(mapped[1]));
-}
-
-function ipPrivadoOuReservado(ip) {
-  const family = net.isIP(ip);
-  if (family === 4) return ipv4PrivadoOuReservado(ip);
-  if (family === 6) return ipv6PrivadoOuReservado(ip);
-  return true;
-}
-
-async function validarDestinoRemoto(url) {
+async function assertUrlSegura(rawUrl) {
   let u;
   try {
-    u = new URL(String(url || '').trim());
+    u = new URL(String(rawUrl).trim());
   } catch {
     throw new ErroFoto(400, 'URL de imagem inválida');
   }
   if (u.protocol !== 'http:' && u.protocol !== 'https:') {
     throw new ErroFoto(400, 'URL deve começar com http:// ou https://');
   }
-  if (!u.hostname || u.username || u.password) {
+  if (!u.hostname) {
     throw new ErroFoto(400, 'URL de imagem inválida');
   }
-
-  const literal = net.isIP(u.hostname);
-  if (literal) {
-    if (ipPrivadoOuReservado(u.hostname)) throw new ErroFoto(400, 'Destino de rede não permitido');
-    return u;
+  if (ipPrivadoOuReservado(u.hostname)) {
+    throw new ErroFoto(400, 'Destino de rede não permitido');
   }
-
-  let enderecos;
+  let addrs;
   try {
-    enderecos = await dns.lookup(u.hostname, { all: true, verbatim: true });
+    addrs = await dns.lookup(u.hostname, { all: true });
   } catch {
     throw new ErroFoto(400, 'Não foi possível resolver o host da imagem');
   }
-  if (!enderecos.length || enderecos.some((entry) => ipPrivadoOuReservado(entry.address))) {
-    throw new ErroFoto(400, 'Destino de rede não permitido');
+  for (const a of addrs || []) {
+    if (ipPrivadoOuReservado(a.address)) {
+      throw new ErroFoto(400, 'Destino de rede não permitido');
+    }
   }
   return u;
 }
 
-async function fetchUrlBuffer(url) {
-  const u = await validarDestinoRemoto(url);
+async function baixarImagem(url) {
+  const u = await assertUrlSegura(url);
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(u, {
+    const res = await fetch(u.toString(), {
       signal: ctrl.signal,
-      headers: { 'User-Agent': 'LanchoneteQR-Foto/1.0', Accept: 'image/*' },
       redirect: 'error',
+      headers: { 'User-Agent': 'QRAdmin-Foto/1.0' },
     });
     if (!res.ok) {
       throw new ErroFoto(400, 'Não foi possível baixar a imagem (HTTP ' + res.status + ')');
     }
-    const ctype = (res.headers.get('content-type') || '').toLowerCase();
-    if (ctype && !ctype.startsWith('image/') && !ctype.includes('octet-stream')) {
+    const ct = (res.headers.get('content-type') || '').toLowerCase();
+    if (ct && !ct.startsWith('image/') && !ct.includes('octet-stream')) {
       throw new ErroFoto(400, 'A URL não aponta para uma imagem');
     }
     const len = Number(res.headers.get('content-length') || 0);
     if (len > MAX_INPUT_BYTES) {
       throw new ErroFoto(413, 'Imagem remota muito grande');
     }
-    const ab = await res.arrayBuffer();
-    const buf = Buffer.from(ab);
+    const buf = Buffer.from(await res.arrayBuffer());
     if (buf.length > MAX_INPUT_BYTES) {
       throw new ErroFoto(413, 'Imagem remota muito grande');
     }
@@ -153,7 +127,7 @@ async function fetchUrlBuffer(url) {
     if (e && e.name === 'AbortError') {
       throw new ErroFoto(408, 'Tempo esgotado ao baixar a imagem');
     }
-    if (e && e.name === 'TypeError' && /redirect/i.test(String(e.message || ''))) {
+    if (e && /redirect/i.test(String(e.message || e))) {
       throw new ErroFoto(400, 'Redirecionamento de imagem não permitido');
     }
     throw new ErroFoto(400, 'Falha ao baixar a imagem: ' + (e.message || 'erro de rede'));
@@ -162,82 +136,65 @@ async function fetchUrlBuffer(url) {
   }
 }
 
-async function otimizarBuffer(buf) {
+function parseDataUrl(dataUrl) {
+  const m = String(dataUrl || '').match(/^data:([^;]+);base64,(.+)$/i);
+  if (!m) throw new ErroFoto(400, 'Imagem em base64 inválida');
+  let buf;
   try {
-    return await sharp(buf, { failOn: 'none' })
+    buf = Buffer.from(m[2], 'base64');
+  } catch {
+    throw new ErroFoto(400, 'Base64 inválido');
+  }
+  if (!buf.length) throw new ErroFoto(400, 'Imagem vazia');
+  if (buf.length > MAX_INPUT_BYTES) {
+    throw new ErroFoto(413, 'Imagem muito grande (máx ~6 MB)');
+  }
+  return buf;
+}
+
+async function otimizarParaWebp(buf) {
+  try {
+    return await getSharp()(buf, { failOn: 'none' })
       .rotate()
-      .resize({
-        width: MAX_EDGE,
-        height: MAX_EDGE,
-        fit: 'inside',
-        withoutEnlargement: true,
-      })
+      .resize({ width: MAX_EDGE, height: MAX_EDGE, fit: 'inside', withoutEnlargement: true })
       .webp({ quality: WEBP_QUALITY, effort: 4 })
       .toBuffer();
   } catch (e) {
+    if (e && e.status === 503) throw e;
     throw new ErroFoto(400, 'Arquivo de imagem inválido ou corrompido');
   }
 }
 
-/**
- * Otimiza e devolve data-URL WebP para gravar em produtos.foto_url (persistente no Neon).
- */
-async function salvarFotoOtimizada(buf) {
-  const out = await otimizarBuffer(buf);
-  if (out.length > MAX_OUTPUT_BYTES) {
-    throw new ErroFoto(
-      413,
-      'Imagem otimizada ainda grande demais. Use uma foto mais simples ou menor.'
-    );
+async function processarUploadFoto(input) {
+  let buf;
+  if (typeof input === 'string' && input.startsWith('data:')) {
+    buf = parseDataUrl(input);
+  } else if (typeof input === 'string' && /^https?:\/\//i.test(input.trim())) {
+    buf = await baixarImagem(input.trim());
+  } else if (Buffer.isBuffer(input)) {
+    buf = input;
+  } else {
+    throw new ErroFoto(400, 'Envie data-URL base64, Buffer ou URL https');
   }
-  const fotoUrl = 'data:image/webp;base64,' + out.toString('base64');
+
+  const webp = await otimizarParaWebp(buf);
+  if (webp.length > MAX_OUTPUT_BYTES) {
+    throw new ErroFoto(413, 'Imagem otimizada ainda muito grande');
+  }
+
+  const dataUrl = 'data:image/webp;base64,' + webp.toString('base64');
 
   if (ALSO_WRITE_DISK) {
-    try {
-      await ensureUploadDir();
-      const name = crypto.randomBytes(12).toString('hex') + '.webp';
-      await fs.promises.writeFile(path.join(UPLOAD_DIR, name), out);
-    } catch (_) {}
+    garantirDirUpload();
+    const nome = crypto.randomBytes(16).toString('hex') + '.webp';
+    fs.writeFileSync(path.join(UPLOAD_DIR, nome), webp);
   }
 
-  return {
-    fotoUrl,
-    bytes: out.length,
-    widthMax: MAX_EDGE,
-    format: 'webp',
-    storage: 'db',
-  };
-}
-
-async function processarUploadFoto(body) {
-  body = body || {};
-  let buf = null;
-  if (body.data) {
-    buf = bufferFromBase64(body.data);
-  } else if (body.url) {
-    buf = await fetchUrlBuffer(body.url);
-  } else {
-    throw new ErroFoto(400, 'Envie um arquivo (data) ou uma URL de imagem');
-  }
-  return salvarFotoOtimizada(buf);
-}
-
-async function tentarRemoverUploadLocal(fotoUrl) {
-  if (!fotoUrl || typeof fotoUrl !== 'string') return;
-  if (!fotoUrl.startsWith('/uploads/')) return;
-  const base = path.basename(fotoUrl);
-  if (!/^[a-f0-9]+\.webp$/i.test(base)) return;
-  const fp = path.join(UPLOAD_DIR, base);
-  try {
-    await fs.promises.unlink(fp);
-  } catch (_) {}
+  return { fotoUrl: dataUrl, bytes: webp.length };
 }
 
 module.exports = {
-  ErroFoto,
   processarUploadFoto,
-  salvarFotoOtimizada,
-  tentarRemoverUploadLocal,
-  validarDestinoRemoto,
+  ErroFoto,
   UPLOAD_DIR,
 };
