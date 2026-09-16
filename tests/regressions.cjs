@@ -174,9 +174,15 @@ test('cozinha/bar não podem concluir entrega pelo endpoint genérico', () => {
 
 test('PIX do cliente valida token UUID, pedido inteiro e valor positivo antes do banco', () => {
   const source = fs.readFileSync('db/pix-cliente.js', 'utf8');
-  assert.match(source, /const UUID_RE = \^\[0-9a-f\]\{8\}/);
+  assert.match(source, /const UUID_RE = \/\^\[0-9a-f\]\{8\}/);
   assert.match(source, /validarUuid\(token, 'Token da mesa'\)/);
   assert.match(source, /numeroInteiroPositivo\(body\.pedidoId, 'Pedido'\)/);
   assert.match(source, /valorPositivo\(body\.valor\)/);
   assert.match(source, /if \(typeof valor === 'boolean'/);
+});
+
+test('rota de PIX não deve mascarar JSON inválido', () => {
+  const source = fs.readFileSync('server.js', 'utf8');
+  assert.match(source, /const payload = await body\(req\);\s*const out = await informarPixPago/);
+  assert.doesNotMatch(source, /const payload = await body\(req\)\.catch\(\(\) => \(\{\}\)\)/);
 });
