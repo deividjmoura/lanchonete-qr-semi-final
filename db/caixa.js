@@ -1,6 +1,6 @@
 // Caixa: sessões abertas, pagamentos parciais (divisão) e fechamento.
 const pool = require('./pool');
-const { ensurePixAvisosTable } = require('./pix-cliente');
+const { erroDeSchema } = require('./pix-cliente');
 
 const FORMAS = new Set(['dinheiro', 'pix', 'cartao_debito', 'cartao_credito']);
 
@@ -78,7 +78,6 @@ async function listSessoesAbertas() {
     });
   }
 
-  await ensurePixAvisosTable(pool).catch(() => {});
   let avisoRows = [];
   try {
     const av = await pool.query(
@@ -393,7 +392,6 @@ async function confirmarPixAviso(sessaoId, avisoId) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    await ensurePixAvisosTable(client);
 
     const { rows: sessRows } = await client.query(
       `SELECT s.id, s.status, s.valor_total, m.numero AS mesa
@@ -481,7 +479,7 @@ async function confirmarPixAviso(sessaoId, avisoId) {
     try {
       await client.query('ROLLBACK');
     } catch (_) {}
-    throw err;
+    throw erroDeSchema(err);
   } finally {
     client.release();
   }

@@ -9,6 +9,11 @@ class ErroPixCliente extends Error {
   }
 }
 
+/**
+ * @deprecated Mantido só para scripts CLI (`npm run test:dia`, smoke) em bancos
+ * antigos. Em runtime o schema vem de `db/migrations/0016_pix_avisos.sql` —
+ * nenhum handler de requisição deve chamar isto (era DDL no caminho do pedido).
+ */
 async function ensurePixAvisosTable(db) {
   const q = db && typeof db.query === 'function' ? db : pool;
   await q.query(`
@@ -38,7 +43,6 @@ async function informarPixPago(token, body = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    await ensurePixAvisosTable(client);
 
     const { rows: mesas } = await client.query(
       'SELECT id, numero FROM mesas WHERE token = $1',
@@ -184,10 +188,18 @@ async function informarPixPago(token, body = {}) {
     try {
       await client.query('ROLLBACK');
     } catch (_) {}
-    throw err;
+    throw erroDeSchema(err);
   } finally {
     client.release();
   }
 }
 
-module.exports = { informarPixPago, ErroPixCliente, ensurePixAvisosTable };
+/** Relation não encontrada (pg 42P01) = banco sem migrations; devolve 503 claro. */
+function erroDeSchema(err) {
+  if (err && (err.code === '42P01' || /pix_avisos/.test(String(err && err.message)) && /does not exist/i.test(String(err && err.message)))) {
+    return new ErroPixCliente(503, 'Schema desatualizado no servidor — rode `npm run db:migrate`.');
+  }
+  return err;
+}
+
+module.exports = { informarPixPago, ErroPixCliente, ensurePixAvisosTable, erroDeSchema };
