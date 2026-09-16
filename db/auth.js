@@ -58,7 +58,8 @@ function cookieDeSessao(token) {
 }
 
 function cookieDeLogout() {
-  return `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`;
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  return `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${secure}`;
 }
 
 async function hashSenha(senha) {
@@ -103,9 +104,21 @@ async function garantirStaffSeed() {
   const n = await contarStaff();
   if (n > 0) return { created: false, count: n };
 
-  const senhaPadrao = process.env.STAFF_SEED_PASSWORD || process.env.ADMIN_PASSWORD || 'troque-esta-senha';
+  const senhaConfigurada = process.env.STAFF_SEED_PASSWORD || process.env.ADMIN_PASSWORD;
+  if (!senhaConfigurada) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new ErroAuth(503, 'Bootstrap de staff não configurado. Defina STAFF_SEED_PASSWORD antes do primeiro acesso.');
+    }
+    return { created: false, count: 0, skipped: true, reason: 'senha de bootstrap ausente' };
+  }
+
+  const senhaPadrao = String(senhaConfigurada);
+  if (senhaPadrao.length < 12) {
+    throw new ErroAuth(503, 'A senha de bootstrap deve ter pelo menos 12 caracteres.');
+  }
+
   const hash = await hashSenha(senhaPadrao);
-    const users = [
+  const users = [
     { nome: 'Administrador', login: 'admin', papel: 'admin' },
     { nome: 'Cozinha', login: 'cozinha', papel: 'cozinha' },
     { nome: 'Bar', login: 'bar', papel: 'bar' },
@@ -199,13 +212,43 @@ function papelPodeAcessar(papel, recurso) {
   return Boolean(set && set.has(recurso));
 }
 
-/** recurso: 'admin' | 'cozinha' | 'caixa' */
+function verificarOrigemRequisicao(req) {
+  const metodo = String(req.method || 'GET').toUpperCase();
+  if (['GET', 'HEAD', 'OPTIONS'].includes(metodo)) return;
+
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+  const hostsPermitidos = new Set(
+    String(process.env.CSRF_ALLOWED_ORIGINS || '')
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean)
+  );
+
+  const proto = String(req.headers['x-forwarded-proto'] || (req.socket.encrypted ? 'https' : 'http')).split(',')[0].trim();
+  const host = req.headers.host;
+  const origemLocal = host ? `${proto}://${host}` : null;
+  if (origemLocal) hostsPermitidos.add(origemLocal);
+
+  const candidato = origin || (referer ? (() => {
+    try { return new URL(referer).origin; } catch { return null; }
+  })() : null);
+
+  // Navegadores modernos enviam Origin em métodos inseguros. Quando ambos
+  // estão ausentes, mantemos compatibilidade com clientes não-browser.
+  if (candidato && !hostsPermitidos.has(candidato)) {
+    throw new ErroAuth(403, 'Origem da requisição não permitida');
+  }
+}
+
+/** recurso: 'admin' | 'cozinha' | 'bar' | 'caixa' */
 async function exigirAcesso(req, recurso) {
   const staff = await getStaffDaRequisicao(req);
   if (!staff) {
     const err = new ErroAuth(401, 'Não autenticado');
     throw err;
   }
+  verificarOrigemRequisicao(req);
   if (!papelPodeAcessar(staff.papel, recurso)) {
     throw new ErroAuth(403, 'Sem permissão para esta área');
   }
@@ -242,4 +285,5 @@ module.exports = {
   homeDoPapel,
   garantirStaffSeed,
   contarStaff,
+  verificarOrigemRequisicao,
 };
