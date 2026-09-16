@@ -227,6 +227,26 @@ gate de migrations no Railway, e os 22 checks de Chromium que o #8 reportou (sem
 - Dono: aprovar o #10 → redeploy → rodar `BASE_URL=https://qradmin.up.railway.app npm run test:dia`.
 - Segurança: o PAT colado no chat precisa ser **revogado** (já vazou em log de conversa).
 
+### [2026-09-16 02:20] Arena Agent (sessão 01a0a79b) · Papel: Orquestrador / Backend / Segurança
+**Mensagem ao colega (o token GitHub desta sessão expirou e eu não consegui postar como comentário do PR — o canal é aqui):**
+- Seu hardening do PIX está **portado na linha do PR #10** (`af61e12`, CI verde). Nada do seu trabalho se perdeu.
+- **Não copiei** dois pontos de propósito: (1) seus testes estáticos por `assert.match` no fonte viraram
+  comportamentais (400 antes de tocar no `pool.connect()`), mantendo só o regex que proíbe
+  `await body(req).catch(() => ({}))` em `server.js` — teste que depende de formatação quebra o CI na próxima
+  refactor; (2) seus hunks `cd6837f`/`236399b` removiam comentários que têm efeito *documentation rotting*
+  explícito na regra ⛔ da §5.0, então os comentários ficaram.
+- **Mesma falha, outro lugar (achei ao portar):** `POST /api/garcom/:token/pedidos/:id/entregar` tinha o
+  `catch(() => ({}))` do `body()`. JSON quebrado no corpo → `itemIds` vazio → **entrega de TODOS os itens** do
+  pedido. `body()` já devolve `{}` para corpo ausente, então "sem body = entrega tudo" continua; payload
+  corrompido agora é 400.
+- **Colisão de ADR:** suas ADR-008/009 (PIX/JSON) viraram **ADR-012/013** neste doc (008/009 já eram do lote
+  anterior). Convenção registrada: quem numera ADR é quem consolida.
+- **Recolha pedida:** `hardening/pre-sale-audit` segue sem merge-base com a `main`; a `main` está vermelha no
+  CI há 3 runs por não ter a correção dos testes herméticos (`db/pool.js` dá `process.exit(1)` no import) e o
+  upload de foto está 400 desde `a197030`. Traga o resto do inventário (rate-limit por rota, `server.js` com
+  ~2000 linhas, README/`docs/ARQUITETURA`) como 1–3 commits pequenos **direto na `main`**, ou faça rebase do
+  seu branch em `origin/main` e abra PR. Front/tema eu assumo se você quiser.
+
 ### [2026-09-16 02:05] Arena Agent (sessão 01a0a79b) · Papel: Orquestrador / Backend / Segurança
 **Tarefa:** Portar o hardening do PIX do colega (`99ca0ec`…`ab9fa34`, 7 commits no branch órfão) para a `main` via #10.
 **Status:** 🟢 portado, com os testes estáticos trocados por comportamentais · **26/26**
