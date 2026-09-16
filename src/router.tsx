@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 /* Router hash minimalista — rotas: #/ · #/login · #/mesa/:token · #/cozinha · #/bar ·
    #/garcom/:token · #/caixa · #/admin */
@@ -44,7 +44,3 @@ export function useAgora(intervalo = 1000): number {
   }, [intervalo]);
   return n;
 }
-
-export const useDebounced = (fn: () => void, ms: number) =>
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useCallback(fn, [ms]);

@@ -147,6 +147,12 @@ export function mapSessaoFromMesaApi(_token: string, mesaMeta: Mesa | undefined,
   }
   const mesaId = mesaMeta?.id || 0;
   const mesaNome = mesaMeta?.nome || `Mesa ${data.mesa ?? "?"}`;
+  /* GET /api/mesas/:token/sessao devolve totalDevido/valorPago/valorRestante.
+     Estes campos eram descartados, então consumoSessao() caía no fallback de
+     recalcular a partir dos pedidos — que ignora desconto, taxa e pagamentos
+     parciais já lançados pelo caixa. */
+  const totalDevido = Number(data.totalDevido ?? data.valorTotal ?? 0);
+  const valorPago = Number(data.valorPago ?? 0);
   const sessao: Sessao = {
     id: Number(data.sessaoId),
     mesaId,
@@ -158,6 +164,10 @@ export function mapSessaoFromMesaApi(_token: string, mesaMeta: Mesa | undefined,
     pixAvisos: Array.isArray(data.pixAvisos) ? data.pixAvisos.length : 0,
     desconto: 0,
     taxa: 0,
+    valorTotal: totalDevido,
+    valorPago,
+    valorRestante: Number(data.valorRestante ?? Math.max(0, totalDevido - valorPago)),
+    clienteNome: data.clienteNome ?? null,
   };
 
   const pedidos: Pedido[] = (data.pedidos || []).map((p: any) => {

@@ -15,6 +15,12 @@ export default defineConfig({
     },
   },
   build: {
+    /* db/pix-normaliza.js é CommonJS compartilhado com o server.js. O plugin
+       commonjs do Rollup só olha node_modules por padrão; sem incluí-lo aqui o
+       import nomeado no front quebra no build. */
+    commonjsOptions: {
+      include: [/node_modules/, /db[\\/]pix-normaliza\.js$/],
+    },
     /* separa vendors grandes — evita bundle único > 500 kB */
     rollupOptions: {
       output: {

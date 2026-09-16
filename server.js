@@ -57,6 +57,7 @@ const {
   garantirStaffSeed,
 } = require('./db/auth');
 const { golpePermitido } = require('./db/rateLimit');
+const { normalizarChavePix, inspecionarChavePix } = require('./db/pix-normaliza');
 const { subscribe, broadcast } = require('./db/events');
 const pool = require('./db/pool');
 const { getMesaPorToken } = require('./db/queries');
@@ -141,18 +142,30 @@ function body(req, opts) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
+    let estourou = false;
+    let resolvida = false;
+
     req.on('data', (c) => {
+      if (estourou) return; // já rejeitado: só drena o resto sem guardar
       size += c.length;
       if (size > limit) {
+        /* Antes isto chamava req.destroy(): o socket morria ANTES do handler
+           escrever a resposta e o cliente via "conexão resetada" em vez de
+           413 — e a escrita seguinte caía num socket morto. Agora liberamos o
+           corpo sem reter memória e deixamos o handler responder direito. */
+        estourou = true;
+        chunks.length = 0;
+        resolvida = true;
         const err = new Error('Payload too large');
         err.status = 413;
         reject(err);
-        req.destroy();
         return;
       }
       chunks.push(c);
     });
     req.on('end', () => {
+      if (resolvida) return;
+      resolvida = true;
       try {
         const s = Buffer.concat(chunks).toString('utf8');
         resolve(JSON.parse(s || '{}'));
@@ -162,7 +175,11 @@ function body(req, opts) {
         reject(err);
       }
     });
-    req.on('error', reject);
+    req.on('error', (e) => {
+      if (resolvida) return;
+      resolvida = true;
+      reject(e);
+    });
   });
 }
 
@@ -373,16 +390,14 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p === '/api/config/pix' && req.method === 'GET') {
-      let chave = String(process.env.PIX_CHAVE || '').trim();
-      if (chave.includes('@')) {
-        chave = chave.toLowerCase();
-      } else if (chave.startsWith('+')) {
-        chave = chave.replace(/\s/g, '');
-      } else if (chave) {
-        const digits = chave.replace(/\D/g, '');
-        if (digits.length === 11 || digits.length === 14) chave = digits;
-        else if (digits.startsWith('55') && digits.length >= 12 && digits.length <= 13) chave = '+' + digits;
-        else if (digits.length === 10) chave = '+55' + digits;
+      /* Normalização é a MESMA do front (db/pix-normaliza.js é fonte única).
+         Havia uma cópia divergente aqui que reescrevia chave aleatória (EVP)
+         como CPF/telefone — 1,18% das chaves saíam destruídas e o QR apontava
+         para uma chave inexistente mesmo com PIX_CHAVE correta no provedor. */
+      const chave = normalizarChavePix(process.env.PIX_CHAVE);
+      const inspecao = inspecionarChavePix(process.env.PIX_CHAVE);
+      if (!inspecao.ok) {
+        console.warn(`[PIX] ${inspecao.motivo} (tipo detectado: ${inspecao.tipo})`);
       }
       let nome = String(process.env.PIX_NOME || 'LANCHONETE').trim().toUpperCase();
       nome = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -390,7 +405,17 @@ const server = http.createServer(async (req, res) => {
       let cidade = String(process.env.PIX_CIDADE || 'BRASIL').trim().toUpperCase();
       cidade = cidade.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       cidade = cidade.replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 15) || 'BRASIL';
-      return json(res, 200, { chave, nome, cidade });
+      /* `chaveValida`/`tipoChave`/`aviso` são diagnósticos para o operador:
+         permitem mostrar "PIX não configurado" na tela em vez de um QR que o
+         banco recusa. Campos novos — clientes antigos continuam funcionando. */
+      return json(res, 200, {
+        chave,
+        nome,
+        cidade,
+        chaveValida: inspecao.ok,
+        tipoChave: inspecao.tipo,
+        aviso: inspecao.ok ? null : inspecao.motivo,
+      });
     }
 
     try {
@@ -877,6 +902,15 @@ const server = http.createServer(async (req, res) => {
       return send(res, 404, 'text/plain', '404');
     }
   } catch (e) {
+    /* 4xx é erro do cliente (JSON malformado, corpo grande demais, validação):
+       não merece stack trace no log — em produção isso polui o log do provedor
+       e dispara alerta de erro para algo que é comportamento esperado.
+       ATENÇÃO: `p` (u.pathname) é declarado DENTRO do try; aqui só existe
+       req.url, e usá-lo sem esse cuidado derruba o processo. */
+    if (e && e.status && e.status >= 400 && e.status < 500) {
+      console.warn(`[http ${e.status}] ${req.method} ${req.url} — ${e.message || 'rejeitado'}`);
+      return json(res, e.status, { error: e.message || 'Erro' });
+    }
     console.error(e);
     if (e && e.status) {
       return json(res, e.status, { error: e.message || 'Erro' });

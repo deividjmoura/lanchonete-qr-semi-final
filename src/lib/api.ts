@@ -56,7 +56,14 @@ export const api = {
   editarPedido: (token: string, pedidoId: number, body: unknown) =>
     apiSend(`/api/mesas/${token}/pedidos/${pedidoId}`, "PUT", body),
   configPix: () =>
-    apiGet<{ chave: string; nome: string; cidade: string }>("/api/config/pix"),
+    apiGet<{
+      chave: string;
+      nome: string;
+      cidade: string;
+      chaveValida?: boolean;
+      tipoChave?: string;
+      aviso?: string | null;
+    }>("/api/config/pix"),
   pixInformado: (token: string, body?: unknown) =>
     apiSend(`/api/mesas/${token}/pix-informado`, "POST", body || {}),
 
