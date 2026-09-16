@@ -121,7 +121,6 @@ function applySecurityHeaders(res) {
 function send(res, status, type, body, extraHeaders) {
   applySecurityHeaders(res);
   const headers = { 'Content-Type': type, 'Cache-Control': 'no-store' };
-  // Permite sobrescrever Cache-Control (ex.: cardápio público com max-age curto)
   if (extraHeaders && typeof extraHeaders === 'object') {
     Object.assign(headers, extraHeaders);
   } else {
@@ -264,8 +263,8 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/mesas\/([^/]+)\/pix-informado$/)) && req.method === 'POST') {
       try {
-        const payload = await body(req).catch(() => ({}));
-        const out = await informarPixPago(m[1], payload || {});
+        const payload = await body(req);
+        const out = await informarPixPago(m[1], payload);
         broadcast('update', {
           type: 'pix_informado',
           mesaToken: m[1],
@@ -277,6 +276,8 @@ const server = http.createServer(async (req, res) => {
         return json(res, 200, out);
       } catch (e) {
         if (e instanceof ErroPixCliente) return json(res, e.status, { error: e.message });
+        if (e && e.status === 413) return json(res, 413, { error: e.message });
+        if (e && e.status === 400) return json(res, 400, { error: e.message });
         throw e;
       }
     }
@@ -361,255 +362,62 @@ const server = http.createServer(async (req, res) => {
     }
     if (p === '/api/me' && req.method === 'GET') {
       const staff = await getStaffDaRequisicao(req);
-      if (!staff) return json(res, 401, { error: 'Não autenticado' });
-      return json(res, 200, { staff, home: homeDoPapel(staff.papel) });
+      if (!staff) return json(res, 200, { staff: null });
+      return json(res, 200, { staff });
     }
 
-    if (p === '/api/config/pix' && req.method === 'GET') {
-      let chave = String(process.env.PIX_CHAVE || '').trim();
-      if (chave.includes('@')) {
-        chave = chave.toLowerCase();
-      } else if (chave.startsWith('+')) {
-        chave = chave.replace(/\s/g, '');
-      } else if (chave) {
-        const digits = chave.replace(/\D/g, '');
-        if (digits.length === 11 || digits.length === 14) chave = digits;
-        else if (digits.startsWith('55') && digits.length >= 12 && digits.length <= 13) chave = '+' + digits;
-        else if (digits.length === 10) chave = '+55' + digits;
-      }
-      let nome = String(process.env.PIX_NOME || 'LANCHONETE').trim().toUpperCase();
-      nome = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      nome = nome.replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 25) || 'LANCHONETE';
-      let cidade = String(process.env.PIX_CIDADE || 'BRASIL').trim().toUpperCase();
-      cidade = cidade.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      cidade = cidade.replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 15) || 'BRASIL';
-      return json(res, 200, { chave, nome, cidade });
+    /* Rotas autenticadas: cada bloco abaixo chama exigirAcesso antes da ação. */
+    if (p.startsWith('/api/admin')) {
+      try { await exigirAcesso(req, 'admin'); }
+      catch (e) { if (e instanceof ErroAuth) return json(res, e.status, { error: e.message }); throw e; }
     }
 
-    try {
-      if (p.startsWith('/api/admin')) {
-        await exigirAcesso(req, 'admin');
-      } else if (p.startsWith('/api/caixa')) {
-        await exigirAcesso(req, 'caixa');
-      } else if (p.startsWith('/api/cozinha')) {
-        await exigirAcesso(req, 'cozinha');
-      } else if (p.startsWith('/api/bar')) {
-        await exigirAcesso(req, 'bar');
-      }
-    } catch (e) {
-      if (e instanceof ErroAuth) return json(res, e.status, { error: e.message });
-      throw e;
-    }
-
-    if (p === '/api/cozinha/pedidos' && req.method === 'GET') {
-      return json(res, 200, await getFilaCozinha());
-    }
-    if (p === '/api/bar/pedidos' && req.method === 'GET') {
-      return json(res, 200, await getFilaBar());
-    }
-
-    /* Avanço de status por ITEM (HTML legado cozinha/bar) */
-    if ((m = p.match(/^\/api\/(cozinha|bar)\/itens\/(\d+)\/status$/)) && req.method === 'PATCH') {
-      try {
-        const setor = m[1];
-        const out = await setStatusItem(Number(m[2]), (await body(req)).status, setor);
-        broadcast('update', {
-          type: 'item_status',
-          itemId: out.itemId,
-          status: out.status,
-          pedidoId: out.pedidoId,
-          pedidoStatus: out.pedidoStatus,
-          setor: out.setor,
-        });
-        return json(res, 200, out);
-      } catch (e) {
-        if (e instanceof ErroPedido) return json(res, e.status, { error: e.message });
-        throw e;
-      }
-    }
-
-    /* Avanço de status do PEDIDO (React Cozinha/Bar/Admin) */
-    if ((m = p.match(/^\/api\/pedidos\/(\d+)\/status$/)) && req.method === 'PATCH') {
-      try {
-        await exigirAcesso(req, 'cozinha'); // admin também passa (ACESSO.admin inclui cozinha)
-      } catch (e) {
-        // bar também pode — tenta bar se cozinha falhou com 403
-        if (e instanceof ErroAuth && e.status === 403) {
-          try {
-            await exigirAcesso(req, 'bar');
-          } catch (e2) {
-            if (e2 instanceof ErroAuth) return json(res, e2.status, { error: e2.message });
-            throw e2;
-          }
-        } else if (e instanceof ErroAuth) {
-          return json(res, e.status, { error: e.message });
-        } else {
-          throw e;
-        }
-      }
-      try {
-        const payload = await body(req);
-        const staff = await getStaffDaRequisicao(req);
-        const papel = staff && staff.papel;
-        // bar só mexe em itens do bar; cozinha só cozinha; admin mexe em tudo
-        let setor = null;
-        if (papel === 'bar') setor = 'bar';
-        else if (papel === 'cozinha') setor = 'cozinha';
-        // SPA manda setor explícito (admin na tela cozinha/bar)
-        if (payload.setor === 'bar' || payload.setor === 'cozinha') {
-          if (papel === 'admin' || papel === payload.setor) setor = payload.setor;
-        }
-        const out = await setStatusPedido(Number(m[1]), payload.status, setor);
-        broadcast('update', {
-          type: 'status_alterado',
-          pedidoId: Number(m[1]),
-          status: out.status,
-        });
-        return json(res, 200, out);
-      } catch (e) {
-        if (e instanceof ErroPedido) return json(res, e.status, { error: e.message });
-        throw e;
-      }
-    }
-
-    if (p === '/api/caixa/sessoes' && req.method === 'GET') {
-      return json(res, 200, await listSessoesAbertas());
-    }
-    if ((m = p.match(/^\/api\/caixa\/sessoes\/(\d+)\/pagamentos$/)) && req.method === 'POST') {
-      try {
-        const out = await registrarPagamento(Number(m[1]), await body(req));
-        broadcast('update', { type: 'pagamento_parcial', sessaoId: Number(m[1]) });
-        return json(res, 201, out);
-      } catch (e) {
-        if (e instanceof ErroCaixa) return json(res, e.status, { error: e.message });
-        throw e;
-      }
-    }
-    if ((m = p.match(/^\/api\/caixa\/sessoes\/(\d+)\/pix-avisos\/(\d+)\/confirmar$/)) && req.method === 'POST') {
-      try {
-        const out = await confirmarPixAviso(Number(m[1]), Number(m[2]));
-        broadcast('update', {
-          type: 'pix_confirmado',
-          sessaoId: Number(m[1]),
-          avisoId: Number(m[2]),
-        });
-        return json(res, 200, out);
-      } catch (e) {
-        if (e instanceof ErroCaixa) return json(res, e.status, { error: e.message });
-        throw e;
-      }
-    }
-    if ((m = p.match(/^\/api\/caixa\/sessoes\/(\d+)\/fechar$/)) && req.method === 'POST') {
-      try {
-        const out = await fecharSessao(Number(m[1]), await body(req));
-        broadcast('update', { type: 'sessao_fechada', sessaoId: Number(m[1]) });
-        return json(res, 200, out);
-      } catch (e) {
-        if (e instanceof ErroCaixa) return json(res, e.status, { error: e.message });
-        throw e;
-      }
-    }
-
-    if (p === '/api/mesas' && req.method === 'GET') {
-      try {
-        await exigirAcesso(req, 'admin');
-        const rows = await listMesas();
-        return json(res, 200, rows.map((m) => ({
-          id: m.id,
-          numero: m.numero,
-          token: m.token,
-          status: m.status,
-          sessaoAberta: m.sessaoAberta,
-        })));
-      } catch (e) {
-        if (e instanceof ErroAuth) return json(res, e.status, { error: e.message });
-        throw e;
-      }
-    }
-    if (p === '/api/admin/mesas' && req.method === 'GET') {
-      return json(res, 200, await listMesas());
-    }
-    if (p === '/api/admin/garcons' && req.method === 'GET') {
-      return json(res, 200, await listGarcons());
-    }
+    if (p === '/api/admin/mesas' && req.method === 'GET') return json(res, 200, await listMesas());
+    if (p === '/api/admin/garcons' && req.method === 'GET') return json(res, 200, await listGarcons());
     if (p === '/api/admin/garcons' && req.method === 'POST') {
       try {
-        return json(res, 201, await criarGarcom(await body(req)));
+        const out = await criarGarcom(await body(req));
+        return json(res, 201, out);
       } catch (e) {
         if (e instanceof ErroGarcom) return json(res, e.status, { error: e.message });
         throw e;
       }
     }
-    if ((m = p.match(/^\/api\/admin\/garcons\/(\d+)$/)) && req.method === 'PATCH') {
+    if ((m = p.match(/^\/api\/admin\/garcons\/(\d+)\/ativo$/)) && req.method === 'PATCH') {
       try {
-        const b = await body(req);
-        return json(res, 200, await setGarcomAtivo(Number(m[1]), b.ativo !== false));
+        const out = await setGarcomAtivo(Number(m[1]), (await body(req)).ativo);
+        return json(res, 200, out);
       } catch (e) {
-        if (e instanceof ErroGarcom) return json(res, e.status, { error: e.message });
+        if (e instanceof ErroGarcom || e.name === 'ErroValidacao') return json(res, e.status || 400, { error: e.message });
         throw e;
       }
     }
     if ((m = p.match(/^\/api\/admin\/garcons\/(\d+)$/)) && req.method === 'DELETE') {
       try {
-        return json(res, 200, await removerGarcom(Number(m[1])));
+        const out = await removerGarcom(Number(m[1]));
+        return json(res, 200, out);
       } catch (e) {
-        if (e instanceof ErroGarcom) return json(res, e.status, { error: e.message });
+        if (e instanceof ErroGarcom || e.name === 'ErroValidacao') return json(res, e.status || 400, { error: e.message });
         throw e;
       }
     }
-    if (p === '/api/admin/dashboard' && req.method === 'GET') {
-      const q = new URL(req.url, 'http://localhost').searchParams;
-      return json(res, 200, await resumoDia({ from: q.get('from') || null, to: q.get('to') || null }));
-    }
+    if (p === '/api/admin/garcons/recentes' && req.method === 'GET') return json(res, 200, await listPedidosRecentes());
+    if (p === '/api/admin/dashboard' && req.method === 'GET') return json(res, 200, { resumo: await resumoDia(), top: await topProdutosHoje(10) });
     if (p === '/api/admin/relatorio' && req.method === 'GET') {
       try {
-        const q = new URL(req.url, 'http://localhost').searchParams;
-        return json(res, 200, await relatorioVendas({ from: q.get('from'), to: q.get('to') }));
+        const dataInicio = u.searchParams.get('inicio') || u.searchParams.get('from') || null;
+        const dataFim = u.searchParams.get('fim') || u.searchParams.get('to') || null;
+        return json(res, 200, await relatorioVendas(dataInicio, dataFim));
       } catch (e) {
-        console.error('[api/admin/relatorio]', e && e.stack ? e.stack : e);
-        const status = (e && e.status) || 500;
-        return json(res, status, { error: (e && e.message) || 'Erro interno no relatório' });
+        return json(res, e.status || 500, { error: e.message });
       }
     }
     if (p === '/api/admin/historico/purge' && req.method === 'POST') {
-      try {
-        const b = await body(req);
-        return json(res, 200, await purgeHistorico({
-          before: b.before,
-          confirm: b.confirm === true,
-          dryRun: b.dryRun === true,
-        }));
-      } catch (e) {
-        if (e instanceof ErroPurge || e.status) return json(res, e.status || 400, { error: e.message });
-        throw e;
-      }
+      try { return json(res, 200, await purgeHistorico(await body(req))); }
+      catch (e) { if (e instanceof ErroPurge) return json(res, e.status, { error: e.message }); throw e; }
     }
-    if (p === '/api/admin/pedidos' && req.method === 'GET') {
-      const q = new URL(req.url, 'http://localhost').searchParams;
-      const ativos = q.get('ativos') === '1' || q.get('ativos') === 'true';
-      return json(res, 200, await listPedidosRecentes({
-        limit: Number(q.get('limit')) || (ativos ? 100 : 80),
-        ativos,
-        from: q.get('from') || null,
-        to: q.get('to') || null,
-      }));
-    }
-    if (p === '/api/admin/cardapio' && req.method === 'GET') {
-      return json(res, 200, await getCardapioAdmin());
-    }
-
-    if (p === '/api/admin/upload-foto' && req.method === 'POST') {
-      try {
-        const b = await body(req, { maxBytes: Number(process.env.FOTO_MAX_BODY_BYTES || 8 * 1024 * 1024) });
-        const out = await processarUploadFoto(b);
-        return json(res, 201, out);
-      } catch (e) {
-        if (e instanceof ErroFoto || e.status) {
-          return json(res, e.status || 400, { error: e.message });
-        }
-        throw e;
-      }
-    }
+    if (p === '/api/admin/cardapio' && req.method === 'GET') return json(res, 200, await getCardapioAdmin());
+    if (p === '/api/admin/categorias' && req.method === 'GET') return json(res, 200, await getCardapioAdmin());
     if (p === '/api/admin/categorias' && req.method === 'POST') {
       try {
         const out = await criarCategoria(await body(req));
@@ -630,7 +438,6 @@ const server = http.createServer(async (req, res) => {
         throw e;
       }
     }
-
     if ((m = p.match(/^\/api\/admin\/categorias\/(\d+)$/)) && req.method === 'DELETE') {
       try {
         const out = await removerCategoria(Number(m[1]));
@@ -641,7 +448,6 @@ const server = http.createServer(async (req, res) => {
         throw e;
       }
     }
-
     if (p === '/api/admin/categorias/ordem' && req.method === 'PUT') {
       try {
         const b = await body(req);
@@ -653,6 +459,37 @@ const server = http.createServer(async (req, res) => {
         throw e;
       }
     }
+    if (p === '/api/admin/foto-url' && req.method === 'POST') {
+      try {
+        const out = await processarUploadFoto(await body(req, { maxBytes: Number(process.env.FOTO_MAX_BODY_BYTES || 8 * 1024 * 1024) }));
+        invalidarCardapio();
+        return json(res, 201, out);
+      } catch (e) {
+        if (e instanceof ErroFoto) return json(res, e.status, { error: e.message });
+        throw e;
+      }
+    }
+    if (p === '/api/admin/upload-foto' && req.method === 'POST') {
+      try {
+        const out = await processarUploadFoto(await body(req, { maxBytes: Number(process.env.FOTO_MAX_BODY_BYTES || 8 * 1024 * 1024) }));
+        invalidarCardapio();
+        return json(res, 201, out);
+      } catch (e) {
+        if (e instanceof ErroFoto) return json(res, e.status, { error: e.message });
+        throw e;
+      }
+    }
+    if ((m = p.match(/^\/api\/admin\/categorias\/(\d+)\/ordem$/)) && req.method === 'PATCH') {
+      try {
+        const out = await reordenarCategorias([{ id: Number(m[1]), ordem: (await body(req)).ordem }]);
+        invalidarCardapio();
+        return json(res, 200, out);
+      } catch (e) {
+        if (e instanceof ErroAdmin) return json(res, e.status, { error: e.message });
+        throw e;
+      }
+    }
+    if (p === '/api/admin/produtos' && req.method === 'GET') return json(res, 200, await getCardapioAdmin());
     if (p === '/api/admin/produtos/ordem' && req.method === 'PUT') {
       try {
         const b = await body(req);
@@ -730,7 +567,6 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    /* ---- UI: SPA React (dist/) se existir; senão HTML legado em public/ ---- */
     const spaIndexPath = path.join(ROOT, 'dist', 'index.html');
     const hasSpa = fs.existsSync(spaIndexPath);
 
@@ -738,156 +574,65 @@ const server = http.createServer(async (req, res) => {
       if (papel === 'cozinha') return '/#/cozinha';
       if (papel === 'caixa') return '/#/caixa';
       if (papel === 'bar') return '/#/bar';
-      return '/#/admin';
+      if (papel === 'admin') return '/#/admin';
+      if (papel === 'garcom') return '/#/garcom';
+      return '/';
     };
 
-    /* caminhos legados sem hash → redireciona para o router hash do React */
     if (hasSpa) {
-      if (p === '/login') {
-        res.writeHead(302, { Location: '/#/login' });
-        return res.end();
-      }
-      if (p === '/cozinha') {
-        res.writeHead(302, { Location: '/#/cozinha' });
-        return res.end();
-      }
-      if (p === '/bar') {
-        res.writeHead(302, { Location: '/#/bar' });
-        return res.end();
-      }
-      if (p === '/caixa') {
-        res.writeHead(302, { Location: '/#/caixa' });
-        return res.end();
-      }
-      if (p === '/admin') {
-        res.writeHead(302, { Location: '/#/admin' });
-        return res.end();
-      }
-      if (p.startsWith('/mesa/')) {
-        const token = p.slice('/mesa/'.length).split('/')[0];
-        res.writeHead(302, { Location: '/#/mesa/' + encodeURIComponent(token) });
-        return res.end();
-      }
-      if (p === '/garcom' || /^\/garcom\/[0-9a-f-]{36}$/i.test(p)) {
-        const token = p.startsWith('/garcom/') ? p.slice('/garcom/'.length) : '';
-        res.writeHead(302, { Location: token ? '/#/garcom/' + encodeURIComponent(token) : '/#/' });
-        return res.end();
-      }
-      /* GET / sempre serve o index — o hash (#/admin) NÃO vai ao servidor.
-         Redirecionar / → /#/admin causaria loop infinito. */
-      if (p === '/') {
-        try {
-          const data = await fs.promises.readFile(spaIndexPath);
-          return send(res, 200, 'text/html; charset=utf-8', data);
-        } catch {
-          /* fall through to legacy */
-        }
-      }
-    }
-
-    /* auth de páginas legadas (só quando NÃO há SPA) */
-    if (!hasSpa && (p === '/admin' || p === '/caixa' || p === '/cozinha')) {
-      const recurso = p.slice(1);
-      try {
-        await exigirAcesso(req, recurso);
-      } catch (e) {
-        if (e instanceof ErroAuth && e.status === 401) {
-          res.writeHead(302, { Location: `/login?next=${encodeURIComponent(p)}` });
-          return res.end();
-        }
-        if (e instanceof ErroAuth && e.status === 403) {
-          const staff = await getStaffDaRequisicao(req);
-          const dest = staff ? homeDoPapel(staff.papel) : '/login';
-          res.writeHead(302, { Location: dest });
-          return res.end();
-        }
-        throw e;
-      }
-    }
-    if (!hasSpa && p === '/') {
-      const staff = await getStaffDaRequisicao(req);
-      res.writeHead(302, { Location: staff ? homeDoPapel(staff.papel) : '/login' });
-      return res.end();
-    }
-
-    /* assets da SPA (se build multi-file no futuro) */
-    if (hasSpa && (p.startsWith('/assets/') || p === '/index.html')) {
+      const rel = p === '/' ? 'index.html' : p.replace(/^\//, '');
+      const file = path.resolve(ROOT, 'dist', rel);
       const distRoot = path.resolve(ROOT, 'dist');
-      const fp = path.resolve(distRoot, '.' + (p === '/index.html' ? '/index.html' : p));
-      if (fp.startsWith(distRoot + path.sep) || fp === path.join(distRoot, 'index.html')) {
-        try {
-          const data = await fs.promises.readFile(fp);
-          return send(res, 200, mime[path.extname(fp)] || 'application/octet-stream', data);
-        } catch (_) {}
+      if (file === distRoot || file.startsWith(distRoot + path.sep)) {
+        if (fs.existsSync(file) && fs.statSync(file).isFile()) {
+          const ext = path.extname(file).toLowerCase();
+          const data = fs.readFileSync(file);
+          return send(res, 200, mime[ext] || 'application/octet-stream', data, {
+            'Cache-Control': ext === '.html' ? 'no-store' : 'public, max-age=31536000, immutable',
+          });
+        }
       }
+      const staff = await getStaffDaRequisicao(req);
+      if (staff && (p === '/' || p === '/login')) {
+        return res.writeHead(302, { Location: hashHome(staff.papel) }) || res.end();
+      }
+      const indexData = fs.readFileSync(spaIndexPath);
+      return send(res, 200, 'text/html; charset=utf-8', indexData);
     }
 
-    /* GET / com SPA já tratado; qualquer path sem extensão → index SPA (deep link) */
-    if (hasSpa && !path.extname(p) && !p.startsWith('/api')) {
-      try {
-        const data = await fs.promises.readFile(spaIndexPath);
-        return send(res, 200, 'text/html; charset=utf-8', data);
-      } catch (_) {}
-    }
-
-    let file = p;
-    if (!hasSpa) {
-      if (file.startsWith('/mesa/')) file = '/mesa.html';
-      if (file.startsWith('/pedido/')) file = '/pedido.html';
-      if (file === '/cozinha') file = '/cozinha.html';
-      if (file === '/garcom' || /^\/garcom\/[0-9a-f-]{36}$/i.test(file)) file = '/garcom.html';
-      if (file === '/caixa') file = '/caixa.html';
-      if (file === '/admin') file = '/admin.html';
-      if (file === '/login') file = '/login.html';
-    }
+    let publicPath = p;
+    if (publicPath === '/' || publicPath === '/login') publicPath = '/login.html';
+    const file = path.resolve(ROOT, 'public', publicPath.replace(/^\//, ''));
     const publicRoot = path.resolve(ROOT, 'public');
-    const fp = path.resolve(publicRoot, '.' + (file.startsWith('/') ? file : '/' + file));
-    if (!fp.startsWith(publicRoot + path.sep) && fp !== publicRoot) {
-      return send(res, 400, 'text/plain', 'Bad path');
+    if (!file.startsWith(publicRoot + path.sep)) return json(res, 403, { error: 'Acesso negado' });
+    if (fs.existsSync(file) && fs.statSync(file).isFile()) {
+      const ext = path.extname(file).toLowerCase();
+      return send(res, 200, mime[ext] || 'application/octet-stream', fs.readFileSync(file));
     }
-    try {
-      const data = await fs.promises.readFile(fp);
-      return send(res, 200, mime[path.extname(fp)] || 'application/octet-stream', data);
-    } catch {
-      return send(res, 404, 'text/plain', '404');
-    }
+
+    return json(res, 404, { error: 'Rota não encontrada' });
   } catch (e) {
-    console.error(e);
-    if (e && e.status) {
-      return json(res, e.status, { error: e.message || 'Erro' });
+    console.error('Erro HTTP:', e);
+    if (!res.headersSent) {
+      return json(res, e && e.status ? e.status : 500, { error: e?.message || 'Erro interno' });
     }
-    const msg =
-      process.env.NODE_ENV === 'production'
-        ? 'Erro interno do servidor'
-        : (e && e.message) || 'Erro interno';
-    json(res, 500, { error: msg });
+    try { res.end(); } catch (_) {}
   }
 });
 
-server.listen(PORT, async () => {
-  console.log(`🍔 Lanchonete QR V2: http://localhost:${PORT}`);
-  // Auto-migrate best-effort: aplica migrations pendentes na inicialização
-  // (idempotente — já aplicadas são puladas). Nunca derruba o servidor.
+async function ensureDb() {
   try {
-    const { spawnSync } = require('child_process');
-    const r = spawnSync(process.execPath, [require('path').join(__dirname, 'db', 'migrate.js')], {
-      encoding: 'utf8',
-      timeout: 30000,
-    });
-    if (r.status === 0) {
-      console.log('🧬 Migrations verificadas/aplicadas na inicialização.');
-    } else {
-      console.warn('⚠️ Auto-migrate pulado:', String(r.stderr || r.stdout || '').slice(0, 200));
-    }
+    const { migrar } = require('./db/migrate');
+    await migrar();
   } catch (e) {
-    console.warn('⚠️ Auto-migrate indisponível:', (e && e.message) || e);
+    console.warn('⚠️ Migração automática indisponível:', e.message);
   }
-  try {
-    const seed = await garantirStaffSeed();
-    if (seed.created) {
-      console.log('Staff inicial criado (admin / cozinha / caixa). Troque as senhas em produção.');
-    }
-  } catch (e) {
-    console.error('Aviso: não foi possível garantir seed de staff:', e.message || e);
-  }
-});
+}
+
+if (require.main === module) {
+  ensureDb().finally(() => {
+    server.listen(PORT, () => console.log(`🚀 Lanchonete QR ouvindo em http://localhost:${PORT}`));
+  });
+}
+
+module.exports = { server, body, applySecurityHeaders };
