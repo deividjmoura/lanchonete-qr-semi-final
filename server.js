@@ -773,6 +773,24 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(302, { Location: token ? '/#/garcom/' + encodeURIComponent(token) : '/#/' });
         return res.end();
       }
+      /* HTMLs legados continuam acessíveis direto por arquivo; com a SPA ativa
+         eles são versões antigas SEM o seletor de tema — redireciona para a
+         rota equivalente do React e evita relato de "tema não funciona". */
+      const legacyParaSpa = {
+        '/admin.html': '/#/admin',
+        '/cozinha.html': '/#/cozinha',
+        '/bar.html': '/#/bar',
+        '/caixa.html': '/#/caixa',
+        '/login.html': '/#/login',
+        '/garcom.html': '/#/',
+        '/mesa.html': '/#/',
+        '/pedido.html': '/#/',
+        '/index.html': '/',
+      };
+      if (legacyParaSpa[p]) {
+        res.writeHead(302, { Location: legacyParaSpa[p] });
+        return res.end();
+      }
       /* GET / sempre serve o index — o hash (#/admin) NÃO vai ao servidor.
          Redirecionar / → /#/admin causaria loop infinito. */
       if (p === '/') {

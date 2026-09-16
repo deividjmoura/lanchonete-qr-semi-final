@@ -1,3 +1,7 @@
+require('dotenv').config();
+/* Nenhum teste conecta ao banco de verdade; o valor só evita o exit(1)
+   do pool.js na importação dos módulos db/*. */
+if (!process.env.DATABASE_URL) process.env.DATABASE_URL = 'postgres://regress:regress@127.0.0.1:5432/regress';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -9,8 +13,26 @@ const { subscribe, broadcast, clientCount } = require('../db/events');
 const { validarDestinoRemoto } = require('../db/foto');
 const { verificarOrigemRequisicao } = require('../db/auth');
 
+/* Mock mínimo de <html> que espelha o DOM real:
+   dataset ↔ data-theme ficam sincronizados com getAttribute/setAttribute. */
+function criarRoot() {
+  const classes = new Set();
+  return {
+    _attrs: {},
+    style: { values: {}, setProperty(k, v) { this.values[k] = v; } },
+    get dataset() { return { theme: this._attrs['data-theme'] }; },
+    set dataset(v) { this._attrs['data-theme'] = v.theme; },
+    getAttribute(k) { return k in this._attrs ? this._attrs[k] : null; },
+    setAttribute(k, v) { this._attrs[k] = String(v); },
+    classList: {
+      toggle(name, on) { if (on) classes.add(name); else classes.delete(name); },
+      contains: (name) => classes.has(name),
+    },
+  };
+}
+
 function theme({ blocked = false, dark = false, saved = null } = {}) {
-  const root = { dataset: {}, style: { values: {}, setProperty(k, v) { this.values[k] = v; } } };
+  const root = criarRoot();
   const meta = {};
   const context = {
     exports: {},
@@ -56,9 +78,30 @@ test('tema claro usa superfície suave e não branco agressivo', () => {
 });
 test('inicialização antes do React respeita sistema com armazenamento bloqueado', () => {
   const script = fs.readFileSync('index.html', 'utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
-  const context = { document: { documentElement: { dataset: {} } }, localStorage: { getItem() { throw Error(); } }, window: { matchMedia: () => ({ matches: true }) } };
+  const context = { document: { documentElement: criarRoot() }, localStorage: { getItem() { throw Error(); } }, window: { matchMedia: () => ({ matches: true }) } };
   vm.runInNewContext(script, context);
   assert.equal(context.document.documentElement.dataset.theme, 'escuro');
+  assert.equal(context.document.documentElement.classList.contains('dark'), true);
+  assert.equal(context.document.documentElement.style.values['--qr-page'], '#0b1524');
+});
+test('inicialização antes do React aplica o tema claro sem flash branco agressivo', () => {
+  const script = fs.readFileSync('index.html', 'utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
+  const context = { document: { documentElement: criarRoot() }, localStorage: { getItem() { return 'claro'; } }, window: { matchMedia: () => ({ matches: false }) } };
+  vm.runInNewContext(script, context);
+  assert.equal(context.document.documentElement.dataset.theme, 'claro');
+  assert.equal(context.document.documentElement.style.values['--qr-page'], '#e9eef3');
+  assert.equal(context.document.documentElement.style.values['--qr-white'], '#f7f9fb');
+});
+test('tema normaliza valores legados light/dark de builds anteriores', () => {
+  assert.equal(theme({ saved: 'dark', dark: false }).temaAtual(), 'escuro');
+  assert.equal(theme({ saved: 'light', dark: true }).temaAtual(), 'claro');
+  const t = theme();
+  t.aplicarTema('escuro');
+  assert.equal(t.root.dataset.theme, 'escuro');
+  assert.equal(t.root.classList.contains('dark'), true);
+  t.aplicarTema('claro');
+  assert.equal(t.root.dataset.theme, 'claro');
+  assert.equal(t.root.classList.contains('dark'), false);
 });
 test('SSE exige token existente ou staff e rejeita garçom inativo', async () => {
   const token = '12345678-1234-4234-8234-123456789abc';

@@ -23,7 +23,7 @@
         if (t === "dark") t = "escuro";
         if (t === "light") t = "claro";
         if (t !== "claro" && t !== "escuro")
-          t = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "escuro" : "claro";
+          t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "escuro" : "claro";
         var root = document.documentElement;
         root.setAttribute("data-theme", t);
         root.classList.toggle("dark", t === "escuro");
