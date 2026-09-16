@@ -58,7 +58,8 @@ function cookieDeSessao(token) {
 }
 
 function cookieDeLogout() {
-  return `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`;
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  return `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${secure}`;
 }
 
 async function hashSenha(senha) {
@@ -103,9 +104,21 @@ async function garantirStaffSeed() {
   const n = await contarStaff();
   if (n > 0) return { created: false, count: n };
 
-  const senhaPadrao = process.env.STAFF_SEED_PASSWORD || process.env.ADMIN_PASSWORD || 'troque-esta-senha';
+  const senhaConfigurada = process.env.STAFF_SEED_PASSWORD || process.env.ADMIN_PASSWORD;
+  if (!senhaConfigurada) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new ErroAuth(503, 'Bootstrap de staff não configurado. Defina STAFF_SEED_PASSWORD antes do primeiro acesso.');
+    }
+    return { created: false, count: 0, skipped: true, reason: 'senha de bootstrap ausente' };
+  }
+
+  const senhaPadrao = String(senhaConfigurada);
+  if (senhaPadrao.length < 12) {
+    throw new ErroAuth(503, 'A senha de bootstrap deve ter pelo menos 12 caracteres.');
+  }
+
   const hash = await hashSenha(senhaPadrao);
-    const users = [
+  const users = [
     { nome: 'Administrador', login: 'admin', papel: 'admin' },
     { nome: 'Cozinha', login: 'cozinha', papel: 'cozinha' },
     { nome: 'Bar', login: 'bar', papel: 'bar' },
@@ -199,7 +212,7 @@ function papelPodeAcessar(papel, recurso) {
   return Boolean(set && set.has(recurso));
 }
 
-/** recurso: 'admin' | 'cozinha' | 'caixa' */
+/** recurso: 'admin' | 'cozinha' | 'bar' | 'caixa' */
 async function exigirAcesso(req, recurso) {
   const staff = await getStaffDaRequisicao(req);
   if (!staff) {
