@@ -23,40 +23,36 @@ async function getMesaPorToken(client, token) {
   return rows[0] || null;
 }
 
-// Retorna o id da sessão aberta da mesa, criando uma se não existir.
-// uq_mesa_sessao_aberta (migration 0001) garante no banco que só existe uma
-// sessão aberta por mesa; se duas requisições chegarem juntas, a segunda
-// esbarra na constraint (23505) e reaproveita a sessão que a primeira abriu
-// — não precisa de lock manual.
+// Abre/reaproveita a sessão aberta da mesa de forma serializada.
+// O lock na linha da mesa impede que duas transações simultâneas observem
+// "nenhuma sessão aberta" ao mesmo tempo. Assim não dependemos de capturar
+// uma violação 23505 dentro da mesma transação, que deixaria o PostgreSQL em
+// estado abortado até ROLLBACK/SAVEPOINT.
 async function getOuAbrirSessao(client, mesaId) {
+  const { rows: mesas } = await client.query(
+    'SELECT id FROM mesas WHERE id = $1 FOR UPDATE',
+    [mesaId]
+  );
+  if (!mesas[0]) return null;
+
   const { rows: abertas } = await client.query(
     "SELECT id FROM mesa_sessoes WHERE mesa_id = $1 AND status = 'aberta'",
     [mesaId]
   );
   if (abertas[0]) return abertas[0].id;
 
-  try {
-    const { rows: novas } = await client.query(
-      'INSERT INTO mesa_sessoes (mesa_id) VALUES ($1) RETURNING id',
-      [mesaId]
-    );
-    await client.query("UPDATE mesas SET status = 'ocupada' WHERE id = $1", [mesaId]);
-    return novas[0].id;
-  } catch (err) {
-    if (err.code === '23505') {
-      const { rows: existentes } = await client.query(
-        "SELECT id FROM mesa_sessoes WHERE mesa_id = $1 AND status = 'aberta'",
-        [mesaId]
-      );
-      if (existentes[0]) return existentes[0].id;
-    }
-    throw err;
-  }
+  const { rows: novas } = await client.query(
+    'INSERT INTO mesa_sessoes (mesa_id) VALUES ($1) RETURNING id',
+    [mesaId]
+  );
+  await client.query("UPDATE mesas SET status = 'ocupada' WHERE id = $1", [mesaId]);
+  return novas[0].id;
 }
 
 // Lê o produto junto com as regras que o servidor precisa pra validar o item
 // do pedido (nunca confiar em preço/adicional/remoção vindos do cliente).
 async function getProdutoComRegras(client, produtoId) {
+  if (!Number.isInteger(produtoId) || produtoId < 1) return null;
   const { rows } = await client.query(
     'SELECT id, nome, preco, disponivel, pede_ponto_carne, controla_estoque, estoque FROM produtos WHERE id = $1',
     [produtoId]
