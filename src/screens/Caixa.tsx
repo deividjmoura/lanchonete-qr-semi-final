@@ -60,13 +60,13 @@ export default function Caixa() {
   return (
     <OpsShell ativo="caixa" kicker="operação · caixa" titulo={<>
       {lastError && (
-        <p className="mb-4 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{lastError}</p>
+        <p className="mb-4 rounded-2xl border border-rose-400/40 bg-rose-600/10 px-4 py-3 text-sm text-rose-700">{lastError}</p>
       )}Fecha <span className="text-gradient">a conta</span></>} extra={extras}>
       <div className="grid gap-5 lg:grid-cols-12">
         {/* -------- lista de comandas -------- */}
         <section className="lg:col-span-5 xl:col-span-4">
-          <h2 className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.26em] text-stone-400">
-            <Receipt className="size-4 text-amber-400" /> comandas no salão <LivePill />
+          <h2 className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.26em] text-slate-500">
+            <Receipt className="size-4 text-brand-600" /> comandas no salão <LivePill />
           </h2>
           <div className="space-y-2.5">
             <AnimatePresence mode="popLayout">
@@ -75,10 +75,10 @@ export default function Caixa() {
                   key="vazio"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="rounded-3xl border border-dashed border-white/12 py-16 text-center"
+                  className="rounded-3xl border border-dashed border-slate-200 py-16 text-center"
                 >
-                  <Wallet className="size-10 text-stone-600 mx-auto" />
-                  <p className="mt-3 text-sm text-stone-400">Salão zerado — nenhuma conta aberta.</p>
+                  <Wallet className="size-10 text-slate-400 mx-auto" />
+                  <p className="mt-3 text-sm text-slate-500">Salão zerado — nenhuma conta aberta.</p>
                 </motion.div>
               )}
               {abertas.map((s) => {
@@ -97,11 +97,11 @@ export default function Caixa() {
                     onClick={() => setSelId(s.id)}
                     className={cn(
                       "btn-press w-full text-left rounded-3xl p-4 cursor-pointer transition-all border",
-                      ativo ? "glass-deep ring-brand border-amber-400/25" : "glass hover:border-white/25"
+                      ativo ? "glass-deep ring-brand border-brand-500/30" : "glass hover:border-slate-300"
                     )}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <p className="font-display text-3xl text-white leading-none">{s.mesaNome}</p>
+                      <p className="font-display text-3xl text-navy-900 leading-none">{s.mesaNome}</p>
                       <div className="flex items-center gap-1.5">
                         {s.pixAvisos > 0 && <Badge tone="lime" pulse>pix {s.pixAvisos}×</Badge>}
                         <Badge tone="zinc">
@@ -111,24 +111,24 @@ export default function Caixa() {
                     </div>
                     <div className="mt-3 flex items-end justify-between">
                       <div>
-                        <p className="text-[10px] uppercase tracking-widest font-bold text-stone-500">consumo</p>
-                        <p className="font-mono text-lg font-bold text-white">{BRL(consumo)}</p>
+                        <p className="text-[10px] uppercase tracking-widest font-bold text-slate-500">consumo</p>
+                        <p className="font-mono text-lg font-bold text-navy-900">{BRL(consumo)}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-[10px] uppercase tracking-widest font-bold text-stone-500">falta</p>
-                        <p className={cn("font-mono text-lg font-bold", consumo - pago <= 0.005 ? "text-lime-300" : "text-amber-300")}>
+                        <p className="text-[10px] uppercase tracking-widest font-bold text-slate-500">falta</p>
+                        <p className={cn("font-mono text-lg font-bold", consumo - pago <= 0.005 ? "text-teal-600" : "text-amber-700")}>
                           {BRL(Math.max(0, consumo - pago))}
                         </p>
                       </div>
                     </div>
-                    <div className="mt-2.5 h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
+                    <div className="mt-2.5 h-1.5 rounded-full bg-slate-100/80 overflow-hidden">
                       <motion.div
-                        className="h-full rounded-full bg-gradient-to-r from-lime-400 to-lime-500"
+                        className="h-full rounded-full bg-gradient-to-r from-teal-500 to-teal-600"
                         animate={{ width: `${pct}%` }}
                         transition={{ type: "spring", stiffness: 120, damping: 20 }}
                       />
                     </div>
-                    <p className="mt-1.5 text-[10px] font-mono text-stone-500 tabular">
+                    <p className="mt-1.5 text-[10px] font-mono text-slate-500 tabular">
                       pago {BRL(pago)} · {pct.toFixed(0)}%
                     </p>
                   </motion.button>
@@ -152,11 +152,11 @@ export default function Caixa() {
                 <DetalheCaixa sessao={selecionada} />
               </motion.div>
             ) : (
-              <motion.div key="nada" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid place-items-center rounded-3xl border border-dashed border-white/12 py-24 text-center">
+              <motion.div key="nada" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid place-items-center rounded-3xl border border-dashed border-slate-200 py-24 text-center">
                 <div>
-                  <CircleDollarSign className="size-12 text-stone-600 mx-auto" />
-                  <h3 className="font-display text-4xl text-white mt-4">Caixa livre</h3>
-                  <p className="text-sm text-stone-400 mt-1">Quando uma mesa pedir, a comanda aparece aqui em tempo real.</p>
+                  <CircleDollarSign className="size-12 text-slate-400 mx-auto" />
+                  <h3 className="font-display text-4xl text-navy-900 mt-4">Caixa livre</h3>
+                  <p className="text-sm text-slate-500 mt-1">Quando uma mesa pedir, a comanda aparece aqui em tempo real.</p>
                 </div>
               </motion.div>
             )}
@@ -241,59 +241,59 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
   return (
     <div className="glass-deep noise rounded-3xl overflow-hidden">
       {/* topo */}
-      <div className="relative px-5 sm:px-7 py-5 border-b border-white/[0.07] bg-gradient-to-r from-amber-400/[0.08] to-transparent">
+      <div className="relative px-5 sm:px-7 py-5 border-b border-slate-200 bg-gradient-to-r from-brand-500/10 to-transparent">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.28em] font-bold text-amber-300">comanda #{sessao.id}</p>
-            <h2 className="font-display text-5xl text-white leading-none mt-1">{sessao.mesaNome}</h2>
+            <p className="text-[10px] uppercase tracking-[0.28em] font-bold text-brand-600">comanda #{sessao.id}</p>
+            <h2 className="font-display text-5xl text-navy-900 leading-none mt-1">{sessao.mesaNome}</h2>
             {sessao.clienteNome && (
-              <p className="text-xs text-amber-200/90 mt-1 font-semibold">{sessao.clienteNome}</p>
+              <p className="text-xs text-brand-700 mt-1 font-semibold">{sessao.clienteNome}</p>
             )}
           </div>
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-widest font-bold text-stone-500">em aberto</p>
-            <p className="font-mono text-sm text-stone-300 tabular">{elapsed(sessao.abertaEm)}</p>
+            <p className="text-[10px] uppercase tracking-widest font-bold text-slate-500">em aberto</p>
+            <p className="font-mono text-sm text-slate-600 tabular">{elapsed(sessao.abertaEm)}</p>
           </div>
         </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-0">
         {/* ---- itens + ajustes ---- */}
-        <div className="p-5 sm:p-7 border-b lg:border-b-0 lg:border-r border-white/[0.07]">
-          <h3 className="text-[11px] font-bold uppercase tracking-[0.26em] text-stone-400 mb-3.5">consumo da sessão</h3>
+        <div className="p-5 sm:p-7 border-b lg:border-b-0 lg:border-r border-slate-200">
+          <h3 className="text-[11px] font-bold uppercase tracking-[0.26em] text-slate-500 mb-3.5">consumo da sessão</h3>
           <div className="space-y-3 max-h-72 overflow-y-auto pr-1 no-scrollbar">
             {pedidos.map((p) => (
-              <div key={p.id} className="rounded-2xl bg-white/[0.035] border border-white/[0.07] p-3.5">
-                <p className="text-[11px] font-bold text-stone-400 mb-1.5">
+              <div key={p.id} className="rounded-2xl bg-slate-100/50 border border-slate-200 p-3.5">
+                <p className="text-[11px] font-bold text-slate-500 mb-1.5">
                   #{p.id} · {p.clienteNome}
                 </p>
                 {p.itens.map((i) => (
-                  <div key={i.id} className="flex justify-between gap-3 text-[13px] text-stone-300 py-0.5">
+                  <div key={i.id} className="flex justify-between gap-3 text-[13px] text-slate-600 py-0.5">
                     <span className="leading-snug">
-                      <b className="font-mono text-white">{i.qtd}×</b> {i.nome}
-                      {i.escolha && <span className="text-sky-300 text-[11px]"> · {i.escolha.nome}</span>}
+                      <b className="font-mono text-navy-900">{i.qtd}×</b> {i.nome}
+                      {i.escolha && <span className="text-navy-700 text-[11px]"> · {i.escolha.nome}</span>}
                     </span>
-                    <span className="font-mono text-stone-400">{BRL(i.totalUnit * i.qtd)}</span>
+                    <span className="font-mono text-slate-500">{BRL(i.totalUnit * i.qtd)}</span>
                   </div>
                 ))}
               </div>
             ))}
-            {pedidos.length === 0 && <p className="text-xs text-stone-500">sem pedidos registrados</p>}
+            {pedidos.length === 0 && <p className="text-xs text-slate-500">sem pedidos registrados</p>}
           </div>
 
           {/* ajustes */}
           <div className="mt-5 grid grid-cols-2 gap-3">
-            <Ajuste label="desconto" valor={sessao.desconto} onChange={(v) => setDesconto(sessao.id, v)} tom="text-lime-300" />
-            <Ajuste label="taxa / couvert" valor={sessao.taxa} onChange={(v) => setTaxa(sessao.id, v)} tom="text-amber-300" />
+            <Ajuste label="desconto" valor={sessao.desconto} onChange={(v) => setDesconto(sessao.id, v)} tom="text-teal-600" />
+            <Ajuste label="taxa / couvert" valor={sessao.taxa} onChange={(v) => setTaxa(sessao.id, v)} tom="text-amber-700" />
           </div>
 
           {/* resumo */}
-          <div className="mt-5 space-y-1.5 rounded-2xl bg-black/35 border border-white/[0.07] p-4 font-mono text-sm">
+          <div className="mt-5 space-y-1.5 rounded-2xl bg-slate-100 border border-slate-200 p-4 font-mono text-sm">
             <Linha label="Consumo" valor={BRL(consumo)} />
-            <Linha label="Desconto" valor={`− ${BRL(sessao.desconto)}`} tom="text-lime-300" />
-            <Linha label="Taxa" valor={`+ ${BRL(sessao.taxa)}`} tom="text-amber-300" />
-            <div className="border-t border-white/[0.09] pt-2 mt-2 flex justify-between items-baseline">
-              <span className="text-stone-400 text-xs uppercase tracking-widest font-sans font-bold">total</span>
+            <Linha label="Desconto" valor={`− ${BRL(sessao.desconto)}`} tom="text-teal-600" />
+            <Linha label="Taxa" valor={`+ ${BRL(sessao.taxa)}`} tom="text-amber-700" />
+            <div className="border-t border-slate-200 pt-2 mt-2 flex justify-between items-baseline">
+              <span className="text-slate-500 text-xs uppercase tracking-widest font-sans font-bold">total</span>
               <span className="font-display text-4xl text-gradient">{BRL(total)}</span>
             </div>
           </div>
@@ -301,48 +301,48 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
 
         {/* ---- pagamento ---- */}
         <div className="p-5 sm:p-7">
-          <h3 className="text-[11px] font-bold uppercase tracking-[0.26em] text-stone-400 mb-3.5 flex items-center gap-1.5">
-            <HandCoins className="size-4 text-lime-400" /> recebimento
+          <h3 className="text-[11px] font-bold uppercase tracking-[0.26em] text-slate-500 mb-3.5 flex items-center gap-1.5">
+            <HandCoins className="size-4 text-teal-600" /> recebimento
           </h3>
 
           {/* divisão */}
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-100/50 p-4">
             <div className="flex items-center justify-between gap-3">
-              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-stone-300">
-                <Users className="size-4 text-sky-300" /> dividir a conta
+              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-600">
+                <Users className="size-4 text-navy-700" /> dividir a conta
               </p>
               <div className="flex items-center gap-2">
-                <button onClick={() => setPessoas((p) => Math.max(1, p - 1))} className="btn-press grid place-items-center size-8 rounded-full bg-white/[0.06] border border-white/10 text-stone-300 hover:text-white cursor-pointer">
+                <button onClick={() => setPessoas((p) => Math.max(1, p - 1))} className="btn-press grid place-items-center size-8 rounded-full bg-slate-100/70 border border-slate-200 text-slate-600 hover:text-navy-800 cursor-pointer">
                   <Minus className="size-3.5" />
                 </button>
-                <span className="w-12 text-center font-display text-3xl text-white">{pessoas}</span>
-                <button onClick={() => setPessoas((p) => Math.min(20, p + 1))} className="btn-press grid place-items-center size-8 rounded-full bg-white/[0.06] border border-white/10 text-stone-300 hover:text-white cursor-pointer">
+                <span className="w-12 text-center font-display text-3xl text-navy-900">{pessoas}</span>
+                <button onClick={() => setPessoas((p) => Math.min(20, p + 1))} className="btn-press grid place-items-center size-8 rounded-full bg-slate-100/70 border border-slate-200 text-slate-600 hover:text-navy-800 cursor-pointer">
                   <Plus className="size-3.5" />
                 </button>
               </div>
             </div>
             <button
               onClick={usarPorPessoa}
-              className="btn-press mt-3 w-full h-11 rounded-xl border border-sky-400/35 bg-sky-400/[0.08] text-sky-300 text-xs font-bold uppercase tracking-wider inline-flex items-center justify-center gap-2 cursor-pointer hover:bg-sky-400/15 transition-colors"
+              className="btn-press mt-3 w-full h-11 rounded-xl border border-navy-700/40 bg-navy-700/10 text-navy-700 text-xs font-bold uppercase tracking-wider inline-flex items-center justify-center gap-2 cursor-pointer hover:bg-navy-700/15 transition-colors"
             >
               <Split className="size-4" /> usar valor/pessoa · {pessoas > 0 ? BRL(restante / pessoas) : "—"}
             </button>
 
             <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-stone-500">R$</span>
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-500">R$</span>
                 <input
                   type="number"
                   inputMode="decimal"
                   value={valor}
                   onChange={(e) => setValor(e.target.value)}
                   placeholder="0,00"
-                  className="w-full h-12 rounded-xl bg-black/40 border border-white/12 pl-10 pr-3 font-mono text-base text-white focus:outline-none focus:border-amber-400/60 transition"
+                  className="w-full h-12 rounded-xl bg-slate-100 border border-slate-200 pl-10 pr-3 font-mono text-base text-navy-900 focus:outline-none focus:border-brand-500/60 transition"
                 />
               </div>
               <button
                 onClick={() => setValor(restante.toFixed(2))}
-                className="btn-press h-12 px-3.5 rounded-xl bg-white/[0.06] border border-white/10 text-[10px] font-bold uppercase tracking-wider text-stone-300 hover:text-white cursor-pointer"
+                className="btn-press h-12 px-3.5 rounded-xl bg-slate-100/70 border border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:text-navy-800 cursor-pointer"
               >
                 tudo
               </button>
@@ -357,8 +357,8 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                   className={cn(
                     "btn-press h-10 rounded-xl text-[10px] font-bold uppercase tracking-wide cursor-pointer border transition-all inline-flex items-center justify-center gap-1",
                     forma === f.id
-                      ? "bg-gradient-to-br from-amber-400 to-orange-500 text-zinc-950 border-transparent"
-                      : "bg-white/[0.04] border-white/10 text-stone-400 hover:text-white"
+                      ? "bg-gradient-to-br from-brand-500 to-teal-600 text-white border-transparent"
+                      : "bg-slate-100/60 border-slate-200 text-slate-500 hover:text-navy-800"
                   )}
                 >
                   {f.id === "pix" ? <QrCode className="size-3" /> : f.id === "dinheiro" ? <Banknote className="size-3" /> : <CreditCard className="size-3" />}
@@ -374,25 +374,25 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
 
           {/* pagamentos parciais */}
           <div className="mt-4">
-            <p className="flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.22em] text-stone-500 mb-2">
-              pagamentos <span className="font-mono normal-case tracking-normal text-stone-400">resta {BRL(restante)}</span>
+            <p className="flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.22em] text-slate-500 mb-2">
+              pagamentos <span className="font-mono normal-case tracking-normal text-slate-500">resta {BRL(restante)}</span>
             </p>
             <div className="space-y-1.5 max-h-28 overflow-y-auto pr-1 no-scrollbar">
               <AnimatePresence initial={false}>
                 {sessao.pagamentos.length === 0 && (
-                  <p className="rounded-xl border border-dashed border-white/10 p-3 text-center text-[11px] text-stone-500">nada recebido ainda</p>
+                  <p className="rounded-xl border border-dashed border-slate-200 p-3 text-center text-[11px] text-slate-500">nada recebido ainda</p>
                 )}
                 {sessao.pagamentos.map((pg) => (
                   <motion.div
                     key={pg.id}
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
-                    className="flex items-center justify-between rounded-xl bg-lime-400/[0.07] border border-lime-400/20 px-3.5 py-2"
+                    className="flex items-center justify-between rounded-xl bg-teal-500/10 border border-teal-500/25 px-3.5 py-2"
                   >
-                    <span className="flex items-center gap-1.5 text-xs font-semibold text-lime-200 uppercase tracking-wide">
-                      <Check className="size-3.5 text-lime-400" /> {FORMAS.find((f) => f.id === pg.forma)?.label}
+                    <span className="flex items-center gap-1.5 text-xs font-semibold text-teal-700 uppercase tracking-wide">
+                      <Check className="size-3.5 text-teal-600" /> {FORMAS.find((f) => f.id === pg.forma)?.label}
                     </span>
-                    <span className="font-mono text-sm text-lime-200">{BRL(pg.valor)}</span>
+                    <span className="font-mono text-sm text-teal-700">{BRL(pg.valor)}</span>
                   </motion.div>
                 ))}
               </AnimatePresence>
@@ -400,21 +400,21 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
           </div>
 
           {/* PIX + fechar */}
-          <div className="mt-4 rounded-2xl border border-amber-400/25 bg-gradient-to-br from-amber-400/10 to-transparent p-4">
+          <div className="mt-4 rounded-2xl border border-brand-500/30 bg-gradient-to-br from-brand-500/10 to-transparent p-4">
             <div className="flex items-center gap-4">
-              <div className="rounded-xl bg-white p-2.5 shadow-lg shrink-0">
+              <div className="rounded-xl qr-paper p-2.5 shadow-lg shrink-0">
                 {pixCodigo ? (
-                  <QRCodeSVG value={pixCodigo} size={86} fgColor="#131009" level="M" />
+                  <QRCodeSVG value={pixCodigo} size={86} fgColor="#0a2540" level="M" />
                 ) : (
-                  <div className="size-[86px] rounded-lg bg-black/40 border border-white/10 flex items-center justify-center text-[9px] text-stone-500 text-center px-1">
+                  <div className="size-[86px] rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-[9px] text-slate-500 text-center px-1">
                     Configure PIX_CHAVE no servidor
                   </div>
                 )}
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-bold text-white">PIX do restante · {BRL(restante)}</p>
-                <p className="text-[11px] text-stone-400 leading-snug mt-0.5">Mostre pro cliente ou copie o código.</p>
-                <button onClick={copiarPix} className="btn-press mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold text-amber-300 hover:text-amber-200 cursor-pointer">
+                <p className="text-sm font-bold text-navy-900">PIX do restante · {BRL(restante)}</p>
+                <p className="text-[11px] text-slate-500 leading-snug mt-0.5">Mostre pro cliente ou copie o código.</p>
+                <button onClick={copiarPix} className="btn-press mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold text-brand-600 hover:text-brand-700 cursor-pointer">
                   {copiado ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
                   {copiado ? "copiado!" : "copiar código PIX"}
                 </button>
@@ -424,7 +424,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
 
           <div className="mt-4">
             {(sessao.pedidosPendentes != null && sessao.pedidosPendentes > 0) && (
-            <p className="mb-2 text-center text-[11px] text-amber-300/90">
+            <p className="mb-2 text-center text-[11px] text-brand-600">
               {sessao.pedidosPendentes} pedido(s) ainda na cozinha/garçom — só fecha quando tudo estiver entregue.
             </p>
           )}
@@ -439,9 +439,9 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                 Fechar conta {restante > 0.004 ? `· quita ${BRL(restante)}` : "· já quitada"}
               </Btn>
             ) : (
-              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-lime-400/35 bg-lime-400/[0.08] p-4">
-                <p className="text-sm font-bold text-white">Fechar a {sessao.mesaNome}?</p>
-                <p className="text-[11px] text-stone-400 mt-0.5">
+              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-teal-500/40 bg-teal-500/10 p-4">
+                <p className="text-sm font-bold text-navy-900">Fechar a {sessao.mesaNome}?</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
                   {restante > 0.004
                     ? `O restante (${BRL(restante)}) será registrado em ${FORMAS.find((f) => f.id === forma)?.label} e a mesa fica livre.`
                     : "Conta já quitada — a mesa fica livre na hora."}
@@ -471,10 +471,10 @@ function Ajuste({ label, valor, onChange, tom }: { label: string; valor: number;
     onChange(novo);
   };
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3">
+    <div className="rounded-2xl border border-slate-200 bg-slate-100/50 p-3">
       <p className={cn("text-[10px] font-bold uppercase tracking-[0.22em] mb-2", tom)}>{label}</p>
       <div className="flex items-center gap-1.5">
-        <button onClick={() => aplicar(-1)} className="btn-press grid place-items-center size-8 rounded-lg bg-black/40 border border-white/10 text-stone-400 hover:text-white cursor-pointer">
+        <button onClick={() => aplicar(-1)} className="btn-press grid place-items-center size-8 rounded-lg bg-slate-100 border border-slate-200 text-slate-500 hover:text-navy-800 cursor-pointer">
           <Minus className="size-3.5" />
         </button>
         <input
@@ -485,9 +485,9 @@ function Ajuste({ label, valor, onChange, tom }: { label: string; valor: number;
             const n = Number(e.target.value);
             if (!Number.isNaN(n) && n >= 0) onChange(n);
           }}
-          className="btn-press w-full h-8 rounded-lg bg-black/40 border border-white/10 text-center font-mono text-sm text-white focus:outline-none focus:border-amber-400/50"
+          className="btn-press w-full h-8 rounded-lg bg-slate-100 border border-slate-200 text-center font-mono text-sm text-navy-900 focus:outline-none focus:border-brand-500/50"
         />
-        <button onClick={() => aplicar(1)} className="btn-press grid place-items-center size-8 rounded-lg bg-black/40 border border-white/10 text-stone-400 hover:text-white cursor-pointer">
+        <button onClick={() => aplicar(1)} className="btn-press grid place-items-center size-8 rounded-lg bg-slate-100 border border-slate-200 text-slate-500 hover:text-navy-800 cursor-pointer">
           <Plus className="size-3.5" />
         </button>
       </div>
@@ -497,7 +497,7 @@ function Ajuste({ label, valor, onChange, tom }: { label: string; valor: number;
 
 function Linha({ label, valor, tom }: { label: string; valor: string; tom?: string }) {
   return (
-    <div className="flex justify-between text-stone-400">
+    <div className="flex justify-between text-slate-500">
       <span className="text-xs font-sans uppercase tracking-wider font-semibold">{label}</span>
       <span className={tom}>{valor}</span>
     </div>

@@ -18,7 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Badge, Btn, Input, Logo, Modal, Qtd } from "../components/ui";
+import { Badge, Btn, Input, Logo, Modal, Qtd, ThemeToggle } from "../components/ui";
 import type { Opcao, Pedido, Produto } from "../lib/types";
 import { usePub, sessaoDaMesa, totalSessao } from "../store/usePub";
 import { FOTO_PLACEHOLDER, fotoSrc } from "../lib/mappers";
@@ -74,7 +74,7 @@ export default function Mesa({ token }: { token: string }) {
     const t = setInterval(() => void hydrateMesaToken(token), 8000);
     const off = connectEvents(() => {
       void hydrateMesaToken(token);
-    });
+    }, { mesa: token });
     return () => {
       alive = false;
       clearInterval(t);
@@ -172,9 +172,9 @@ export default function Mesa({ token }: { token: string }) {
     return (
       <div className="min-h-dvh grid place-items-center p-6 text-center">
         <div>
-          <div className="mx-auto size-16 rounded-full border border-white/10 grid place-items-center text-2xl animate-pulse">🍺</div>
-          <h1 className="font-display text-4xl text-white mt-6">Carregando mesa…</h1>
-          <p className="text-stone-400 mt-2 text-sm">Conferindo o QR no servidor.</p>
+          <div className="mx-auto size-16 rounded-full border border-slate-200 grid place-items-center text-2xl animate-pulse">🍺</div>
+          <h1 className="font-display text-4xl text-navy-900 mt-6">Carregando mesa…</h1>
+          <p className="text-slate-500 mt-2 text-sm">Conferindo o QR no servidor.</p>
         </div>
       </div>
     );
@@ -184,18 +184,18 @@ export default function Mesa({ token }: { token: string }) {
     return (
       <div className="min-h-dvh grid place-items-center p-6 text-center">
         <div>
-          <div className="mx-auto size-16 rounded-full border border-white/10 grid place-items-center text-2xl">🍺</div>
-          <h1 className="font-display text-5xl text-white mt-6">QR inválido</h1>
-          <p className="text-stone-400 mt-2 text-sm">
+          <div className="mx-auto size-16 rounded-full border border-slate-200 grid place-items-center text-2xl">🍺</div>
+          <h1 className="font-display text-5xl text-navy-900 mt-6">QR inválido</h1>
+          <p className="text-slate-500 mt-2 text-sm">
             {lastError || "Este QR Code não pertence a nenhuma mesa do pub."}
           </p>
-          <p className="text-stone-600 mt-3 text-xs font-mono break-all max-w-sm mx-auto">
+          <p className="text-slate-400 mt-3 text-xs font-mono break-all max-w-sm mx-auto">
             token: {token || "(vazio)"}
           </p>
-          <p className="text-stone-500 mt-3 text-xs max-w-sm mx-auto">
+          <p className="text-slate-500 mt-3 text-xs max-w-sm mx-auto">
             Use o QR Code da mesa (link com o token cadastrado no sistema).
           </p>
-          <p className="mt-8 text-xs text-stone-500">Peça o QR Code impresso na mesa ao estabelecimento.</p>
+          <p className="mt-8 text-xs text-slate-500">Peça o QR Code impresso na mesa ao estabelecimento.</p>
         </div>
       </div>
     );
@@ -234,14 +234,14 @@ export default function Mesa({ token }: { token: string }) {
 
   const painelCarrinho = (
     <div className="flex h-full flex-col">
-      <h3 className="font-display text-3xl text-white flex items-center gap-2">
-        <ShoppingBag className="size-6 text-amber-400" /> Seu pedido
+      <h3 className="font-display text-3xl text-navy-900 flex items-center gap-2">
+        <ShoppingBag className="size-6 text-brand-600" /> Seu pedido
       </h3>
       {cart.length === 0 ? (
         <div className="flex-1 grid place-items-center py-14 text-center">
           <div>
-            <UtensilsCrossed className="size-10 text-stone-600 mx-auto" />
-            <p className="mt-3 text-sm text-stone-400">Carrinho vazio por aqui…<br />Bateu aquela fome?</p>
+            <UtensilsCrossed className="size-10 text-slate-400 mx-auto" />
+            <p className="mt-3 text-sm text-slate-500">Carrinho vazio por aqui…<br />Bateu aquela fome?</p>
           </div>
         </div>
       ) : (
@@ -255,24 +255,24 @@ export default function Mesa({ token }: { token: string }) {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20, height: 0, marginBottom: 0 }}
-                  className="flex gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3"
+                  className="flex gap-3 rounded-2xl bg-slate-100/60 border border-slate-200 p-3"
                 >
                   <img src={fotoSrc(c.produto.foto) || FOTO_PLACEHOLDER} alt="" className="size-14 rounded-xl object-cover" onError={(e) => { (e.target as HTMLImageElement).src = FOTO_PLACEHOLDER; }} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-semibold text-white leading-tight">{c.produto.nome}</p>
-                      <button onClick={() => setCart((x) => x.filter((y) => y.uid !== c.uid))} className="text-stone-500 hover:text-rose-400 cursor-pointer shrink-0">
+                      <p className="text-sm font-semibold text-navy-900 leading-tight">{c.produto.nome}</p>
+                      <button onClick={() => setCart((x) => x.filter((y) => y.uid !== c.uid))} className="text-slate-500 hover:text-rose-700 cursor-pointer shrink-0">
                         <Trash2 className="size-3.5" />
                       </button>
                     </div>
-                    <p className="mt-0.5 text-[11px] text-stone-500 leading-snug">
-                      {c.escolha && <span className="text-sky-300">{c.escolha.nome} · </span>}
+                    <p className="mt-0.5 text-[11px] text-slate-500 leading-snug">
+                      {c.escolha && <span className="text-navy-700">{c.escolha.nome} · </span>}
                       {c.adicionais.map((a) => `+${a.nome}`).join(", ")}
-                      {c.removidos.length > 0 && <span className="text-rose-300/80"> · sem {c.removidos.join(", ")}</span>}
+                      {c.removidos.length > 0 && <span className="text-rose-600"> · sem {c.removidos.join(", ")}</span>}
                     </p>
                     <div className="mt-1.5 flex items-center justify-between">
                       <Qtd size="sm" valor={c.qtd} onChange={(v) => setCart((x) => x.map((y) => (y.uid === c.uid ? { ...y, qtd: v } : y)))} />
-                      <span className="font-mono text-sm font-semibold text-amber-300">{BRL(totalItem(c))}</span>
+                      <span className="font-mono text-sm font-semibold text-brand-600">{BRL(totalItem(c))}</span>
                     </div>
                   </div>
                 </motion.div>
@@ -280,10 +280,10 @@ export default function Mesa({ token }: { token: string }) {
             </AnimatePresence>
           </div>
 
-          <div className="pt-4 mt-4 border-t border-white/[0.08] space-y-3">
+          <div className="pt-4 mt-4 border-t border-slate-200 space-y-3">
             <Input value={nome} onChange={setNome} placeholder="Seu nome (p/ a cozinha chamar)" />
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase tracking-widest text-stone-400 font-bold">total do pedido</span>
+              <span className="text-xs uppercase tracking-widest text-slate-500 font-bold">total do pedido</span>
               <span className="font-display text-4xl text-gradient">{BRL(totalCart)}</span>
             </div>
             <Btn full size="lg" onClick={enviar} disabled={!cart.length}>
@@ -297,15 +297,15 @@ export default function Mesa({ token }: { token: string }) {
 
   const painelConta = (
     <div className="flex h-full flex-col">
-      <h3 className="font-display text-3xl text-white flex items-center gap-2">
-        <Receipt className="size-6 text-amber-400" /> Sua conta
+      <h3 className="font-display text-3xl text-navy-900 flex items-center gap-2">
+        <Receipt className="size-6 text-brand-600" /> Sua conta
       </h3>
 
       {pedidosMesa.length === 0 ? (
         <div className="flex-1 grid place-items-center py-14 text-center">
           <div>
-            <Timer className="size-10 text-stone-600 mx-auto" />
-            <p className="mt-3 text-sm text-stone-400">Nenhum pedido ainda nesta visita.<br />Faça o primeiro!</p>
+            <Timer className="size-10 text-slate-400 mx-auto" />
+            <p className="mt-3 text-sm text-slate-500">Nenhum pedido ainda nesta visita.<br />Faça o primeiro!</p>
           </div>
         </div>
       ) : (
@@ -313,10 +313,10 @@ export default function Mesa({ token }: { token: string }) {
           {pedidosMesa.map((p) => {
             const stepIdx = STATUS_ORDEM.findIndex((s) => s.id === p.status);
             return (
-              <div key={p.id} className="rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3.5">
+              <div key={p.id} className="rounded-2xl bg-slate-100/60 border border-slate-200 p-3.5">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-bold text-stone-400">
-                    Pedido <span className="font-mono text-white">#{p.id}</span> · {p.clienteNome}
+                  <p className="text-xs font-bold text-slate-500">
+                    Pedido <span className="font-mono text-navy-900">#{p.id}</span> · {p.clienteNome}
                   </p>
                   <Badge tone={p.status === "entregue" ? "lime" : p.status === "pronto" ? "sky" : p.status === "em_producao" ? "amber" : "zinc"} pulse={p.status !== "entregue"}>
                     {STATUS_ORDEM[stepIdx].label}
@@ -327,26 +327,26 @@ export default function Mesa({ token }: { token: string }) {
                 <div className="mt-3 flex items-center gap-1">
                   {STATUS_ORDEM.map((s, i) => (
                     <div key={s.id} className="flex-1">
-                      <div className={cn("h-1.5 rounded-full transition-colors duration-500", i <= stepIdx ? "bg-gradient-to-r from-amber-400 to-orange-500" : "bg-white/[0.08]")} />
+                      <div className={cn("h-1.5 rounded-full transition-colors duration-500", i <= stepIdx ? "bg-gradient-to-r from-brand-500 to-teal-600" : "bg-slate-100")} />
                     </div>
                   ))}
                 </div>
 
                 <ul className="mt-3 space-y-1">
                   {p.itens.map((i) => (
-                    <li key={i.id} className="flex justify-between gap-3 text-[13px] text-stone-300">
+                    <li key={i.id} className="flex justify-between gap-3 text-[13px] text-slate-600">
                       <span className="leading-snug">
-                        <b className="text-white font-mono">{i.qtd}×</b> {i.nome}
+                        <b className="text-navy-900 font-mono">{i.qtd}×</b> {i.nome}
                         {i.status && (
                           <span className={
                             "ml-1.5 text-[9px] font-bold uppercase tracking-wider " +
                             (i.status === "entregue"
-                              ? "text-lime-400"
+                              ? "text-teal-600"
                               : i.status === "concluido"
-                                ? "text-sky-300"
+                                ? "text-teal-700"
                                 : i.status === "em_producao"
-                                  ? "text-amber-300"
-                                  : "text-stone-500")
+                                  ? "text-navy-700"
+                                  : "text-amber-700")
                           }>
                             {i.status === "recebido"
                               ? "na fila"
@@ -359,11 +359,11 @@ export default function Mesa({ token }: { token: string }) {
                                     : i.status}
                           </span>
                         )}
-                        <span className="block text-[11px] text-stone-500">
+                        <span className="block text-[11px] text-slate-500">
                           {[i.escolha?.nome, ...i.adicionais.map((a) => `+${a.nome}`), i.removidos.length ? `sem ${i.removidos.join(", ")}` : null].filter(Boolean).join(" · ")}
                         </span>
                       </span>
-                      <span className="font-mono text-stone-400">{BRL(i.totalUnit * i.qtd)}</span>
+                      <span className="font-mono text-slate-500">{BRL(i.totalUnit * i.qtd)}</span>
                     </li>
                   ))}
                 </ul>
@@ -429,12 +429,12 @@ export default function Mesa({ token }: { token: string }) {
       )}
 
       {/* total da visita — pagamento só no caixa / garçom (igual main) */}
-      <div className="pt-4 mt-4 border-t border-white/[0.08]">
+      <div className="pt-4 mt-4 border-t border-slate-200">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-xs uppercase tracking-widest text-stone-400 font-bold">total da visita</span>
+          <span className="text-xs uppercase tracking-widest text-slate-500 font-bold">total da visita</span>
           <span className="font-display text-4xl text-gradient">{BRL(totalConta)}</span>
         </div>
-        <p className="text-xs text-stone-500 text-center">Pagamento no caixa ou com o garçom.</p>
+        <p className="text-xs text-slate-500 text-center">Pagamento no caixa ou com o garçom.</p>
       </div>
     </div>
   );
@@ -444,28 +444,29 @@ export default function Mesa({ token }: { token: string }) {
     <div className="relative min-h-dvh pb-[calc(8rem+env(safe-area-inset-bottom,0px))] lg:pb-12 overflow-x-clip">
       {/* fundo */}
       <div className="fixed inset-0 -z-10">
-        <div className="glow-orb absolute -top-40 right-[10%] size-[28rem] bg-amber-500/12" />
-        <div className="glow-orb absolute bottom-[-8rem] left-[-6rem] size-[26rem] bg-orange-700/10" />
+        <div className="glow-orb absolute -top-40 right-[10%] size-[28rem] bg-brand-500/10" />
+        <div className="glow-orb absolute bottom-[-8rem] left-[-6rem] size-[26rem] bg-brand-500/10" />
         <div className="noise absolute inset-0" />
       </div>
 
       {/* header */}
-      <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-coal-950/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-3 sm:px-6 h-14 sm:h-16 flex items-center gap-2 sm:gap-3 min-w-0">
           <Logo size="sm" />
           <Badge tone="amber" className="ml-1">{mesa.nome}</Badge>
           {sessao && sessao.pixAvisos > 0 && <Badge tone="lime">pix {sessao.pixAvisos}×</Badge>}
           <div className="flex-1" />
+          <ThemeToggle />
           <button
             onClick={() => setSheet("conta")}
-            className="btn-press lg:hidden flex items-center gap-2 rounded-full bg-white/[0.06] border border-white/10 h-10 pl-3.5 pr-4 text-xs font-bold text-stone-200 cursor-pointer"
+            className="btn-press lg:hidden flex items-center gap-2 rounded-full bg-slate-100/70 border border-slate-200 h-10 pl-3.5 pr-4 text-xs font-bold text-slate-700 cursor-pointer"
           >
-            <Receipt className="size-4 text-amber-300" />
+            <Receipt className="size-4 text-brand-600" />
             <span className="tabular">{BRL(totalConta)}</span>
           </button>
           <button
             onClick={() => setSheet("cart")}
-            className="btn-press relative grid place-items-center size-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-zinc-950 cursor-pointer"
+            className="btn-press relative grid place-items-center size-10 rounded-full bg-gradient-to-br from-brand-500 to-teal-600 text-white cursor-pointer"
           >
             <ShoppingBag className="size-4.5" />
             <AnimatePresence>
@@ -474,7 +475,7 @@ export default function Mesa({ token }: { token: string }) {
                   key={qtdCart}
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute -top-1.5 -right-1.5 grid place-items-center min-w-5 h-5 px-1 rounded-full bg-lime-400 text-zinc-950 text-[10px] font-bold border-2 border-coal-950"
+                  className="absolute -top-1.5 -right-1.5 grid place-items-center min-w-5 h-5 px-1 rounded-full bg-teal-500 text-white text-[10px] font-bold border-2 border-white"
                 >
                   {qtdCart}
                 </motion.span>
@@ -490,10 +491,10 @@ export default function Mesa({ token }: { token: string }) {
           <section className="lg:col-span-8 xl:col-span-8">
             {/* hero da mesa */}
             <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }} className="pt-8 sm:pt-10 pb-6">
-              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.3em] text-amber-400/90">
+              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.3em] text-brand-600">
                 <HandPlatter className="size-4" /> bem-vindo(a) à {mesa.nome}
               </p>
-              <h1 className="font-display text-[clamp(2.5rem,11vw,5.5rem)] sm:text-7xl lg:text-8xl leading-[0.9] text-white mt-2">
+              <h1 className="font-display text-[clamp(2.5rem,11vw,5.5rem)] sm:text-7xl lg:text-8xl leading-[0.9] text-navy-900 mt-2">
                 Bateu a fome?<br /><span className="text-gradient">Pede sem esperar.</span>
               </h1>
               <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -523,14 +524,14 @@ export default function Mesa({ token }: { token: string }) {
                     className={cn(
                       "btn-press relative shrink-0 h-10 px-4.5 rounded-full text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors border",
                       categoria === c && !busca
-                        ? "text-zinc-950 border-transparent"
-                        : "text-stone-400 border-white/10 hover:text-white bg-white/[0.03]"
+                        ? "text-white border-transparent"
+                        : "text-slate-500 border-slate-200 hover:text-navy-800 bg-slate-100/50"
                     )}
                   >
                     {categoria === c && !busca && (
                       <motion.span
                         layoutId="cat-pill"
-                        className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-400 to-orange-500"
+                        className="absolute inset-0 rounded-full bg-gradient-to-br from-brand-500 to-teal-600"
                         transition={{ type: "spring", stiffness: 420, damping: 32 }}
                       />
                     )}
@@ -543,18 +544,18 @@ export default function Mesa({ token }: { token: string }) {
             {/* search sticky — limpo, sem fundo pesado */}
             <div className="sticky top-14 sm:top-16 z-40 py-2">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-stone-500 pointer-events-none" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-slate-500 pointer-events-none" />
                 <input
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder="Buscar no cardápio…"
-                  className="w-full h-11 rounded-full bg-transparent border border-white/15 pl-11 pr-10 text-sm text-white placeholder:text-stone-500 focus:outline-none focus:border-amber-400/55 transition"
+                  className="w-full h-11 rounded-full bg-transparent border border-slate-300 pl-11 pr-10 text-sm text-navy-900 placeholder:text-slate-400 focus:outline-none focus:border-brand-500/60 transition"
                 />
                 {busca && (
                   <button
                     type="button"
                     onClick={() => setBusca("")}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-500 hover:text-white cursor-pointer"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-navy-800 cursor-pointer"
                   >
                     <X className="size-4" />
                   </button>
@@ -567,15 +568,15 @@ export default function Mesa({ token }: { token: string }) {
 
             {/* título da seção */}
             <div className="mt-3 mb-3 flex items-center gap-2 min-w-0">
-              <Flame className="size-4 text-amber-400 shrink-0" />
-              <h2 className="font-display text-2xl sm:text-3xl text-white truncate">
+              <Flame className="size-4 text-brand-600 shrink-0" />
+              <h2 className="font-display text-2xl sm:text-3xl text-navy-900 truncate">
                 {busca
                   ? `Resultados p/ “${busca}”`
                   : categoria === "Tudo"
                     ? "Cardápio"
                     : categoria}
               </h2>
-              <span className="text-xs font-mono text-stone-500 shrink-0">{lista.length} itens</span>
+              <span className="text-xs font-mono text-slate-500 shrink-0">{lista.length} itens</span>
             </div>
 
             {gruposCardapio ? (
@@ -583,9 +584,9 @@ export default function Mesa({ token }: { token: string }) {
                 {gruposCardapio.map((g) => (
                   <section key={g.nome}>
                     <div className="mb-3 flex items-center gap-2">
-                      <span className="h-px flex-1 bg-gradient-to-r from-amber-400/40 to-transparent" />
-                      <h3 className="font-display text-xl sm:text-2xl text-amber-200/95 tracking-wide">{g.nome}</h3>
-                      <span className="h-px flex-1 bg-gradient-to-l from-amber-400/40 to-transparent" />
+                      <span className="h-px flex-1 bg-gradient-to-r from-brand-500/30 to-transparent" />
+                      <h3 className="font-display text-xl sm:text-2xl text-brand-700 tracking-wide">{g.nome}</h3>
+                      <span className="h-px flex-1 bg-gradient-to-l from-brand-500/30 to-transparent" />
                     </div>
                     <motion.div layout className="grid-cardapio grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3.5 w-full min-w-0">
                       <AnimatePresence mode="popLayout">
@@ -644,20 +645,20 @@ export default function Mesa({ token }: { token: string }) {
             animate={{ y: 0 }}
             exit={{ y: 90 }}
             transition={{ type: "spring", stiffness: 300, damping: 28 }}
-            className="lg:hidden fixed bottom-0 inset-x-0 z-50 p-3 sm:p-4 pt-8 pb-[max(1rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-coal-950 via-coal-950/95 to-transparent"
+            className="lg:hidden fixed bottom-0 inset-x-0 z-50 p-3 sm:p-4 pt-8 pb-[max(1rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-slate-50 via-white/90 to-transparent"
           >
             <div className="flex gap-2.5 max-w-md mx-auto">
               <button
                 onClick={() => setSheet("conta")}
                 className="btn-press flex-1 h-13 rounded-2xl glass-deep flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Receipt className="size-4.5 text-amber-300" />
-                <span className="text-sm font-bold text-white tabular">{BRL(totalConta)}</span>
-                <span className="text-[10px] uppercase tracking-wider font-bold text-stone-500">conta</span>
+                <Receipt className="size-4.5 text-brand-600" />
+                <span className="text-sm font-bold text-navy-900 tabular">{BRL(totalConta)}</span>
+                <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500">conta</span>
               </button>
               <button
                 onClick={() => setSheet("cart")}
-                className="btn-press flex-[1.3] h-13 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-zinc-950 font-bold text-sm flex items-center justify-center gap-2 shadow-[0_14px_38px_-8px_rgba(255,150,20,0.6)] cursor-pointer"
+                className="btn-press flex-[1.3] h-13 rounded-2xl bg-gradient-to-br from-brand-500 to-teal-600 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-[0_14px_38px_-8px_rgba(0,196,180,0.55)] cursor-pointer"
               >
                 <ShoppingBag className="size-4.5" />
                 {qtdCart === 0 ? "Pedir" : `Pedir · ${BRL(totalCart)}`}
@@ -691,7 +692,7 @@ export default function Mesa({ token }: { token: string }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-95 grid place-items-center bg-coal-950/85 backdrop-blur-md p-6"
+            className="fixed inset-0 z-95 grid place-items-center bg-white/85 backdrop-blur-md p-6"
           >
             <motion.div
               initial={{ scale: 0.7, y: 40 }}
@@ -702,13 +703,13 @@ export default function Mesa({ token }: { token: string }) {
               <motion.div
                 animate={{ rotate: [0, -8, 8, 0] }}
                 transition={{ repeat: Infinity, duration: 1.4 }}
-                className="mx-auto grid place-items-center size-24 rounded-3xl bg-gradient-to-br from-lime-300 to-lime-500 text-zinc-950 shadow-[0_20px_60px_-10px_rgba(163,230,53,0.5)]"
+                className="mx-auto grid place-items-center size-24 rounded-3xl bg-gradient-to-br from-teal-400 to-teal-600 text-white shadow-[0_20px_60px_-10px_rgba(20,184,166,0.5)]"
               >
                 <PartyPopper className="size-11" />
               </motion.div>
-              <h2 className="font-display text-6xl text-white mt-6">PEDIDO ENVIADO!</h2>
-              <p className="mt-2 text-stone-300 flex items-center justify-center gap-2 text-sm">
-                <Check className="size-4 text-lime-400" /> Já está na fila da cozinha — acompanhe na sua conta
+              <h2 className="font-display text-6xl text-navy-900 mt-6">PEDIDO ENVIADO!</h2>
+              <p className="mt-2 text-slate-600 flex items-center justify-center gap-2 text-sm">
+                <Check className="size-4 text-teal-600" /> Já está na fila da cozinha — acompanhe na sua conta
               </p>
             </motion.div>
           </motion.div>
@@ -759,7 +760,7 @@ function ItemCard({
       <button
         type="button"
         onClick={() => onOpen(p)}
-        className="relative block w-full shrink-0 aspect-[4/3] overflow-hidden cursor-pointer text-left bg-black/40"
+        className="relative block w-full shrink-0 aspect-[4/3] overflow-hidden cursor-pointer text-left bg-slate-100"
         aria-label={`Ver ${p.nome}`}
       >
         <img
@@ -772,7 +773,7 @@ function ItemCard({
             (e.target as HTMLImageElement).src = FOTO_PLACEHOLDER;
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-coal-950/95 via-coal-950/20 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-50/95 via-slate-50/20 to-transparent pointer-events-none" />
         <div className="absolute top-2 left-2 right-2 flex flex-wrap gap-1 pointer-events-none z-[1]">
           {p.estoque !== null && p.estoque > 0 && p.estoque <= 8 && (
             <Badge tone="rose" pulse>
@@ -781,7 +782,7 @@ function ItemCard({
           )}
           {esgotado && <Badge tone="zinc">esgotado</Badge>}
         </div>
-        <span className="absolute bottom-2 left-2 z-[1] rounded-lg bg-black/55 backdrop-blur-sm px-2 py-0.5 font-mono text-xs sm:text-sm font-bold text-white tabular-nums pointer-events-none">
+        <span className="absolute bottom-2 left-2 z-[1] rounded-lg bg-white/85 backdrop-blur-sm px-2 py-0.5 font-mono text-xs sm:text-sm font-bold text-navy-900 tabular-nums pointer-events-none">
           {BRL(p.preco)}
         </span>
       </button>
@@ -793,16 +794,16 @@ function ItemCard({
           onClick={() => onOpen(p)}
           className="text-left cursor-pointer min-w-0"
         >
-          <h3 className="font-semibold text-white leading-snug text-[13px] sm:text-sm line-clamp-2 min-h-[2.5em] break-words">
+          <h3 className="font-semibold text-navy-900 leading-snug text-[13px] sm:text-sm line-clamp-2 min-h-[2.5em] break-words">
             {p.nome}
           </h3>
-          <p className="mt-0.5 text-[10px] sm:text-[11px] text-stone-400 leading-snug line-clamp-2 min-h-[2.4em] break-words">
+          <p className="mt-0.5 text-[10px] sm:text-[11px] text-slate-500 leading-snug line-clamp-2 min-h-[2.4em] break-words">
             {descricaoExibida(p.descricao, p.nome, p.categoria) || "\u00a0"}
           </p>
         </button>
 
         <div className="mt-auto pt-1 flex flex-col gap-1.5 min-w-0">
-          <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.14em] font-bold text-stone-500 truncate">
+          <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.14em] font-bold text-slate-500 truncate">
             {meta}
           </span>
           {p.tipo === "simples" ? (
@@ -849,7 +850,7 @@ function PainelComAbas({
   const [aba, setAba] = useState<"cart" | "conta">("cart");
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="grid grid-cols-2 gap-1 rounded-2xl bg-black/40 border border-white/[0.08] p-1 mb-5">
+      <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 border border-slate-200 p-1 mb-5">
         {([
           { id: "cart", label: "Seu pedido", icon: ShoppingBag },
           { id: "conta", label: `Conta · ${BRL(totalConta)}`, icon: ClipboardList },
@@ -859,15 +860,15 @@ function PainelComAbas({
             onClick={() => setAba(t.id)}
             className={cn(
               "relative h-10 rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors",
-              aba === t.id ? "text-zinc-950" : "text-stone-400 hover:text-white"
+              aba === t.id ? "text-white" : "text-slate-500 hover:text-navy-800"
             )}
           >
             {aba === t.id && (
-              <motion.span layoutId="painel-aba" className="absolute inset-0 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
+              <motion.span layoutId="painel-aba" className="absolute inset-0 rounded-xl bg-gradient-to-br from-brand-500 to-teal-600" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
             )}
             <span className="relative z-10 inline-flex items-center gap-1.5">
               <t.icon className="size-3.5" /> {t.label}
-              {t.id === "cart" && cart.length > 0 && <span className="grid place-items-center min-w-4.5 h-4.5 px-1 rounded-full bg-zinc-950/20 text-[10px] font-bold">{cart.length}</span>}
+              {t.id === "cart" && cart.length > 0 && <span className="grid place-items-center min-w-4.5 h-4.5 px-1 rounded-full bg-slate-200/60 text-[10px] font-bold">{cart.length}</span>}
             </span>
           </button>
         ))}
@@ -934,7 +935,7 @@ function ProdutoModal({
     <Modal open onClose={onClose} wide closeOnBackdrop={false}>
       <div className="overflow-hidden">
         {/* imagem + título colados — sem gap */}
-        <div className="relative w-full aspect-[16/11] sm:aspect-[16/10] bg-coal-900">
+        <div className="relative w-full aspect-[16/11] sm:aspect-[16/10] bg-white">
           <img
             src={fotoSrc(produto.foto) || FOTO_PLACEHOLDER}
             alt={produto.nome}
@@ -943,23 +944,23 @@ function ProdutoModal({
               (e.target as HTMLImageElement).src = FOTO_PLACEHOLDER;
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-coal-950 via-coal-950/20 to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-50 via-slate-50/20 to-transparent pointer-events-none" />
           <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5 pointer-events-none">
             <Badge tone="amber">{produto.categoria}</Badge>
-            <h3 className="font-display text-3xl sm:text-4xl text-white leading-none mt-2 drop-shadow-lg break-words">
+            <h3 className="font-display text-3xl sm:text-4xl text-navy-900 leading-none mt-2 drop-shadow-lg break-words">
               {produto.nome}
             </h3>
-            <p className="mt-1.5 font-mono text-lg font-bold text-amber-300 drop-shadow">{BRL(produto.preco)}</p>
+            <p className="mt-1.5 font-mono text-lg font-bold text-brand-600 drop-shadow">{BRL(produto.preco)}</p>
           </div>
         </div>
 
         <div className="p-4 sm:p-5 space-y-4">
-          <p className="text-sm text-stone-400 leading-relaxed">{desc}</p>
+          <p className="text-sm text-slate-500 leading-relaxed">{desc}</p>
 
           {/* doses: com / sem gelo */}
           {dose && (
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-sky-300 mb-2.5">gelo</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-navy-700 mb-2.5">gelo</p>
               <div className="flex flex-wrap gap-2">
                 {(
                   [
@@ -974,8 +975,8 @@ function ProdutoModal({
                     className={cn(
                       "btn-press inline-flex items-center gap-1.5 rounded-full border px-3.5 h-10 text-xs font-semibold cursor-pointer transition-all",
                       gelo === g.id
-                        ? "border-sky-400/60 bg-sky-400/15 text-sky-200"
-                        : "border-white/12 bg-white/[0.03] text-stone-300 hover:border-white/30"
+                        ? "border-navy-700/50 bg-navy-700/10 text-navy-700"
+                        : "border-slate-200 bg-slate-100/50 text-slate-600 hover:border-slate-300"
                     )}
                   >
                     {gelo === g.id ? <Check className="size-3.5" /> : <Plus className="size-3.5" />}
@@ -989,7 +990,7 @@ function ProdutoModal({
 
           {precisaEscolha && (
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-sky-300 mb-2.5">escolha uma opção</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-navy-700 mb-2.5">escolha uma opção</p>
               <div className="space-y-2">
                 {produto.adicionais.map((a) => (
                   <button
@@ -999,20 +1000,20 @@ function ProdutoModal({
                     className={cn(
                       "btn-press w-full flex items-center gap-3 rounded-2xl border p-3.5 text-left cursor-pointer transition-all",
                       escolha?.id === a.id
-                        ? "border-amber-400/60 bg-amber-400/15"
-                        : "border-white/12 bg-white/[0.03] hover:border-white/30"
+                        ? "border-brand-500/60 bg-brand-500/10"
+                        : "border-slate-200 bg-slate-100/50 hover:border-slate-300"
                     )}
                   >
                     <span
                       className={cn(
                         "grid place-items-center size-5 rounded-full border-2 shrink-0",
-                        escolha?.id === a.id ? "border-amber-300" : "border-stone-600"
+                        escolha?.id === a.id ? "border-brand-400" : "border-slate-300"
                       )}
                     >
-                      {escolha?.id === a.id && <span className="size-2.5 rounded-full bg-amber-300" />}
+                      {escolha?.id === a.id && <span className="size-2.5 rounded-full bg-brand-400" />}
                     </span>
-                    <span className="flex-1 text-sm font-semibold text-white">{a.nome}</span>
-                    <span className="font-mono text-xs text-stone-400">
+                    <span className="flex-1 text-sm font-semibold text-navy-900">{a.nome}</span>
+                    <span className="font-mono text-xs text-slate-500">
                       {a.preco > 0 ? `+ ${BRL(a.preco)}` : "incluso"}
                     </span>
                   </button>
@@ -1023,7 +1024,7 @@ function ProdutoModal({
 
           {!precisaEscolha && produto.adicionais.length > 0 && (
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-amber-300 mb-2.5">adições</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-600 mb-2.5">adições</p>
               <div className="flex flex-wrap gap-2">
                 {produto.adicionais.map((a) => {
                   const on = ads.some((x) => x.id === a.id);
@@ -1035,8 +1036,8 @@ function ProdutoModal({
                       className={cn(
                         "btn-press inline-flex items-center gap-1.5 rounded-full border px-3.5 h-10 text-xs font-semibold cursor-pointer transition-all",
                         on
-                          ? "border-amber-400/60 bg-amber-400/15 text-amber-200"
-                          : "border-white/12 bg-white/[0.03] text-stone-300 hover:border-white/30"
+                          ? "border-brand-500/60 bg-brand-500/10 text-brand-700"
+                          : "border-slate-200 bg-slate-100/50 text-slate-600 hover:border-slate-300"
                       )}
                     >
                       {on ? <Check className="size-3.5" /> : <Plus className="size-3.5" />}
@@ -1051,7 +1052,7 @@ function ProdutoModal({
 
           {produto.removiveis.length > 0 && (
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-rose-300 mb-2.5">tirar do jeito que vem</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-rose-600 mb-2.5">tirar do jeito que vem</p>
               <div className="flex flex-wrap gap-2">
                 {produto.removiveis.map((r) => {
                   const on = rems.includes(r.nome);
@@ -1063,8 +1064,8 @@ function ProdutoModal({
                       className={cn(
                         "btn-press inline-flex items-center gap-1.5 rounded-full border px-3.5 h-9 text-xs font-semibold cursor-pointer transition-all",
                         on
-                          ? "border-rose-400/60 bg-rose-400/15 text-rose-200"
-                          : "border-white/12 bg-white/[0.03] text-stone-400 hover:border-white/30"
+                          ? "border-rose-500/60 bg-rose-600/10 text-rose-700"
+                          : "border-slate-200 bg-slate-100/50 text-slate-500 hover:border-slate-300"
                       )}
                     >
                       <Minus className="size-3" /> sem {r.nome.toLowerCase()}
@@ -1080,7 +1081,7 @@ function ProdutoModal({
           <div className="flex items-center justify-between gap-4 pt-1">
             <Qtd valor={qtd} onChange={setQtd} />
             <div className="text-right">
-              <p className="text-[10px] uppercase tracking-widest font-bold text-stone-500">subtotal</p>
+              <p className="text-[10px] uppercase tracking-widest font-bold text-slate-500">subtotal</p>
               <p className="font-display text-4xl text-gradient leading-none">{BRL(unit * qtd)}</p>
             </div>
           </div>

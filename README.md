@@ -1,14 +1,42 @@
 <div align="center">
 
-# 🍔 Lanchonete QR · Major Pub
+# 🍔 Lanchonete QR · QRAdmin
 
 **Pedidos por QR Code** — do celular do cliente até a cozinha, o bar, o garçom e o caixa.
+Identidade visual **QRAdmin** (navy + teal) com **tema claro/escuro** em todas as telas.
 
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Neon](https://img.shields.io/badge/Neon-00E599?style=for-the-badge&logo=neon&logoColor=black)](https://neon.tech/)
 
 </div>
+
+---
+
+## 🚀 Como rodar (quick start)
+
+> ⚠️ **Não abra o HTML direto no navegador** (`file://`) — o app é full-stack e só
+> funciona servido pelo servidor Node abaixo.
+
+1. **Node.js LTS** instalado (nodejs.org) e um **Postgres** acessível (local, Neon, Supabase…).
+2. Na pasta do projeto, um único comando cria o `.env`, roda migrations e seed:
+   ```bash
+   npm install
+   npm run setup
+   ```
+   Se o seu Postgres não for `postgres://usuario:senha@localhost:5432/lanchonete_qr`,
+   ajuste o `DATABASE_URL` no `.env` gerado e rode `npm run setup` de novo.
+3. Suba o servidor:
+   ```bash
+   npm start
+   ```
+4. Abra **http://localhost:3000** no navegador.
+   - Login de teste: `admin` / `admin123` (também `cozinha`, `bar`, `caixa`).
+   - **Tema claro/escuro**: botão de lua/sol no topo de qualquer tela — a escolha fica salva no dispositivo.
+
+O repositório já inclui o `dist/` (build do front), então `npm start` serve tudo
+sem precisar rodar `npm run build`. Se alterar o front em `src/`, rode
+`npm run build` antes.
 
 ---
 

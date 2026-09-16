@@ -1,0 +1,27 @@
+body.board-page{background:#1c1c1c;min-height:100vh}
+body.board-page .board{max-width:none;width:100%;margin:0;padding:8px 12px 130px;box-sizing:border-box}
+.board-header{text-align:center;margin-bottom:18px}
+.board-header .menu-title{font-family:"Special Elite",Kalam,cursive;font-size:clamp(2.4rem,10vw,3.4rem);color:#f0ebe0;letter-spacing:.12em;text-shadow:0 2px 0 rgba(0,0,0,.4);margin:0;line-height:1}
+.board-header .mesa-line{font-family:Kalam,cursive;color:#c8bfa8;font-size:1.05rem;margin-top:4px}
+.board-frame{border:none;border-radius:0;padding:0;background:transparent;box-shadow:none}
+.chalk-cat{border-bottom:1px dashed rgba(240,235,224,.18)}
+.chalk-cat:last-child{border-bottom:0}
+.chalk-cat__head{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 12px;border:0;background:transparent;cursor:pointer;text-align:left;font-family:Kalam,cursive;color:#f0ebe0;font-size:1.3rem;font-weight:700;letter-spacing:.04em}
+.chalk-cat__head:hover{color:#fff}
+.chalk-cat__head .cat-count{font-family:var(--font-mono,ui-monospace,monospace);font-size:.75rem;font-weight:600;opacity:.55;margin-left:6px;letter-spacing:0}
+.chalk-cat__head .chev{font-size:.9rem;opacity:.6;transition:transform .25s ease;flex-shrink:0}
+.chalk-cat.open .chalk-cat__head .chev{transform:rotate(180deg)}
+.chalk-cat.open .chalk-cat__head{color:#fff}
+.chalk-cat__body{display:none;padding:0 10px 16px}
+.chalk-cat.open .chalk-cat__body{display:block}
+.chalk-item{border:1px solid rgba(240,235,224,.12);border-radius:10px;padding:12px;margin-bottom:10px;background:rgba(255,255,255,.03)}
+.chalk-item h3{margin:0 0 4px;font-family:Kalam,cursive;color:#f5f0e6;font-size:1.15rem;font-weight:700}
+.chalk-item .desc{margin:0 0 10px;color:#a89f8c;font-size:.88rem;line-height:1.35}
+.chalk-item .row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.chalk-item .price{font-family:var(--font-mono);color:#f0d78c;font-weight:700;font-size:1rem}
+.chalk-item .btn{min-height:36px;padding:0 12px;font-size:.82rem;border-radius:999px}
+.chalk-item .btn.ghost{background:transparent;border:1px solid rgba(240,235,224,.35);color:#f0ebe0}
+.chalk-item .btn.primary{background:#c45c26;border-color:#c45c26;color:#fff}
+.chalk-item.has-photo{display:grid;grid-template-columns:88px 1fr;gap:12px;align-items:start}
+.chalk-item__photo{width:88px;height:88px;object-fit:cover;border-radius:10px;border:1px solid rgba(240,235,224,.15);background:rgba(0,0,0,.25)}
+.chalk-item.has-photo .chalk-body{min-width:0}

@@ -332,7 +332,7 @@ export function imprimirComanda(
   const body = `
   <div class="center">
     <p class="title">${esc(titulo)}</p>
-    <p class="sub">Major Pub</p>
+    <p class="sub">QRAdmin</p>
   </div>
   <hr class="line-solid"/>
   <div class="center">
@@ -542,7 +542,7 @@ export function imprimirRelatorioPdf(opts: {
   <p class="muted">
     Período: <b>${esc(from)}</b> → <b>${esc(to)}</b>
     · Gerado em ${esc(fmtHora(Date.now()))}
-    · Major Pub
+    · QRAdmin
   </p>
 
   <div class="kpis">
@@ -602,7 +602,7 @@ export function imprimirRelatorioPdf(opts: {
       : `<p class="muted">Nenhuma conta fechada neste intervalo.</p>`
   }
 
-  <p class="foot">Major Pub · Relatório operacional · ${esc(from)} a ${esc(to)}</p>
+  <p class="foot">QRAdmin · Relatório operacional · ${esc(from)} a ${esc(to)}</p>
   <script>
     /* não auto-print: usuário confirma layout antes de salvar PDF */
   </script>

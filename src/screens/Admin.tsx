@@ -15,7 +15,7 @@ import { imprimirComandaHistorico, imprimirRelatorioPdf } from "../lib/print";
 import type { ItemPedido, Pedido } from "../lib/types";
 import { CATEGORIAS } from "../lib/data";
 import type { Produto, TipoProduto } from "../lib/types";
-import { faturamentoSemana, pagoSessao, totalSessao, usePub } from "../store/usePub";
+import { faturamentoSemana, totalSessao, usePub } from "../store/usePub";
 import { BRL } from "../lib/utils";
 import { cn } from "../utils/cn";
 
@@ -60,18 +60,18 @@ export default function Admin() {
   const [aba, setAba] = useState<AbaId>("painel");
 
   const extras = (
-    <nav className="flex flex-wrap items-center gap-1 rounded-2xl bg-black/35 border border-white/[0.08] p-1">
+    <nav className="flex flex-wrap items-center gap-1 rounded-2xl bg-slate-100 border border-slate-200 p-1">
       {ABAS.map((a) => (
         <button
           key={a.id}
           onClick={() => setAba(a.id)}
           className={cn(
             "btn-press relative flex items-center gap-1.5 rounded-xl px-3 h-9 text-xs font-bold cursor-pointer transition-colors",
-            aba === a.id ? "text-zinc-950" : "text-stone-400 hover:text-white"
+            aba === a.id ? "text-white" : "text-slate-500 hover:text-navy-800"
           )}
         >
           {aba === a.id && (
-            <motion.span layoutId="adm-aba" className="absolute inset-0 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500" transition={{ type: "spring", stiffness: 420, damping: 32 }} />
+            <motion.span layoutId="adm-aba" className="absolute inset-0 rounded-xl bg-gradient-to-br from-brand-500 to-teal-600" transition={{ type: "spring", stiffness: 420, damping: 32 }} />
           )}
           <a.icon className="relative z-10 size-3.5" />
           <span className="relative z-10 hidden sm:inline">{a.label}</span>
@@ -159,7 +159,7 @@ function Painel() {
             id: prod?.id ?? i,
             nome: t.nome,
             vendidos: Number(t.quantidade || 0),
-            foto: prod?.foto || prod?.fotoUrl || "/assets/demo/placeholder.webp",
+            foto: prod?.foto || "/assets/demo/placeholder.webp",
             setor: prod?.setor,
           };
         })
@@ -186,28 +186,28 @@ function Painel() {
       label: "faturamento hoje",
       valor: loadingDash ? "…" : BRL(fatHoje),
       sub: "sessões fechadas no caixa",
-      tom: "from-amber-400/25 text-amber-300",
+      tom: "from-brand-500/20 text-brand-600",
     },
     {
       icon: Users,
       label: "consumo em aberto",
       valor: loadingDash ? "…" : BRL(emAberto),
       sub: "comandas no salão",
-      tom: "from-sky-400/25 text-sky-300",
+      tom: "from-navy-700/15 text-navy-700",
     },
     {
       icon: Receipt,
       label: "pedidos no dia",
       valor: loadingDash ? "…" : String(qtdPedidos),
       sub: "criados hoje",
-      tom: "from-violet-400/25 text-violet-300",
+      tom: "from-violet-500/20 text-violet-700",
     },
     {
       icon: TrendingUp,
       label: "ticket médio",
       valor: loadingDash ? "…" : BRL(ticket),
       sub: "por conta fechada",
-      tom: "from-lime-400/25 text-lime-300",
+      tom: "from-teal-500/20 text-teal-600",
     },
   ];
 
@@ -225,9 +225,9 @@ function Painel() {
           >
             <div className={cn("glow-orb absolute -top-10 -right-10 size-24 bg-gradient-to-br to-transparent opacity-30", c.tom.split(" ")[0])} />
             <c.icon className={cn("size-5", c.tom.split(" ")[1])} />
-            <p className="mt-3 font-display text-4xl sm:text-5xl text-white leading-none">{c.valor}</p>
-            <p className="mt-1.5 text-[10px] uppercase tracking-[0.22em] font-bold text-stone-400">{c.label}</p>
-            <p className="text-[10px] text-stone-600">{c.sub}</p>
+            <p className="mt-3 font-display text-4xl sm:text-5xl text-navy-900 leading-none">{c.valor}</p>
+            <p className="mt-1.5 text-[10px] uppercase tracking-[0.22em] font-bold text-slate-500">{c.label}</p>
+            <p className="text-[10px] text-slate-400">{c.sub}</p>
           </motion.div>
         ))}
       </div>
@@ -236,22 +236,22 @@ function Painel() {
         {/* gráfico semana */}
         <div className="glass-deep noise rounded-3xl p-5 sm:p-6">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="font-display text-3xl text-white">Semana do pub</h3>
+            <h3 className="font-display text-3xl text-navy-900">Semana do pub</h3>
             <Badge tone="zinc">faturamento / dia</Badge>
           </div>
           <div className="flex items-end gap-2.5 sm:gap-4 h-44">
-            {semana.map((d, i) => (
+            {semana.map((d) => (
               <div key={d.dia} className="flex-1 flex flex-col items-center gap-2">
                 <div
                   className={cn(
                     "w-full rounded-t-lg transition-all",
                     d.dia === "Hoje"
-                      ? "bg-gradient-to-t from-amber-500 to-amber-300 shadow-[0_0_28px_-4px_rgba(255,150,20,0.5)]"
-                      : "bg-white/[0.09]"
+                      ? "bg-gradient-to-t from-brand-600 to-brand-400 shadow-[0_0_28px_-4px_rgba(0,196,180,0.45)]"
+                      : "bg-slate-100"
                   )}
                   style={{ height: `${Math.max(4, (d.valor / maxSemana) * 100)}%` }}
                 />
-                <span className={cn("text-[10px] font-bold uppercase tracking-wider", d.dia === "Hoje" ? "text-amber-300" : "text-stone-500")}>{d.dia}</span>
+                <span className={cn("text-[10px] font-bold uppercase tracking-wider", d.dia === "Hoje" ? "text-brand-600" : "text-slate-500")}>{d.dia}</span>
               </div>
             ))}
           </div>
@@ -261,37 +261,37 @@ function Painel() {
         {/* top produtos */}
         <div className="glass-deep noise rounded-3xl p-5 sm:p-6">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="font-display text-3xl text-white flex items-center gap-2">
-              <Trophy className="size-5 text-amber-400" /> Campeões de venda
+            <h3 className="font-display text-3xl text-navy-900 flex items-center gap-2">
+              <Trophy className="size-5 text-brand-600" /> Campeões de venda
             </h3>
             <Badge tone="amber">top 5</Badge>
           </div>
           <div className="space-y-3">
             {top.length === 0 && (
-              <p className="text-sm text-stone-500">Nenhuma venda registrada hoje.</p>
+              <p className="text-sm text-slate-500">Nenhuma venda registrada hoje.</p>
             )}
             {top.map((p, i) => (
               <div key={p.id ?? p.nome} className="flex items-center gap-3">
                 <img src={p.foto || "/assets/demo/placeholder.webp"} alt="" className="size-11 rounded-xl object-cover" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-white truncate">
-                      <span className="font-mono text-[11px] text-stone-500 mr-1.5">#{i + 1}</span>
+                    <p className="text-sm font-semibold text-navy-900 truncate">
+                      <span className="font-mono text-[11px] text-slate-500 mr-1.5">#{i + 1}</span>
                       {p.nome}
                       {p.setor === "bar" && (
-                        <span className="ml-1.5 rounded-md bg-violet-400/15 border border-violet-400/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-300">
+                        <span className="ml-1.5 rounded-md bg-violet-500/10 border border-violet-500/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-700">
                           bar
                         </span>
                       )}
                     </p>
-                    <span className="font-mono text-xs text-stone-400 shrink-0">{p.vendidos} un.</span>
+                    <span className="font-mono text-xs text-slate-500 shrink-0">{p.vendidos} un.</span>
                   </div>
-                  <div className="mt-1.5 h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
+                  <div className="mt-1.5 h-1.5 rounded-full bg-slate-100/80 overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${((p.vendidos || 0) / maxTop) * 100}%` }}
                       transition={{ delay: 0.2 + i * 0.07, type: "spring", stiffness: 120, damping: 18 }}
-                      className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500"
+                      className="h-full rounded-full bg-gradient-to-r from-brand-600 to-teal-600"
                     />
                   </div>
                 </div>
@@ -339,7 +339,7 @@ function Cardapio() {
       key={p.id}
       layout
       className={cn(
-        "rounded-2xl bg-black/35 border border-white/[0.07] overflow-hidden transition-opacity",
+        "rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden transition-opacity",
         !p.ativo && "opacity-55"
       )}
     >
@@ -347,8 +347,8 @@ function Cardapio() {
         <img src={p.foto} alt="" className="size-16 sm:size-20 rounded-2xl object-cover shrink-0" />
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <p className="font-semibold text-white text-sm leading-tight truncate">{p.nome}</p>
-            <span className="font-mono text-xs font-bold text-amber-300 shrink-0">{BRL(p.preco)}</span>
+            <p className="font-semibold text-navy-900 text-sm leading-tight truncate">{p.nome}</p>
+            <span className="font-mono text-xs font-bold text-brand-600 shrink-0">{BRL(p.preco)}</span>
           </div>
           <div className="mt-1 flex flex-wrap gap-1">
             <Badge tone={p.tipo === "escolher" ? "sky" : p.tipo === "personalizavel" ? "violet" : "zinc"}>
@@ -366,8 +366,8 @@ function Cardapio() {
               className={cn(
                 "btn-press grid place-items-center size-8 rounded-lg border cursor-pointer transition-colors",
                 p.ativo
-                  ? "bg-lime-400/10 border-lime-400/30 text-lime-300"
-                  : "bg-white/[0.05] border-white/10 text-stone-500"
+                  ? "bg-teal-500/10 border-teal-500/30 text-teal-600"
+                  : "bg-slate-100/70 border-slate-200 text-slate-500"
               )}
             >
               {p.ativo ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
@@ -376,7 +376,7 @@ function Cardapio() {
               type="button"
               onClick={() => setEditando(p)}
               title="Editar"
-              className="btn-press grid place-items-center size-8 rounded-lg bg-white/[0.05] border border-white/10 text-stone-300 hover:text-amber-300 cursor-pointer"
+              className="btn-press grid place-items-center size-8 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-600 hover:text-brand-600 cursor-pointer"
             >
               <Pencil className="size-3.5" />
             </button>
@@ -384,7 +384,7 @@ function Cardapio() {
               type="button"
               onClick={() => remover(p.id)}
               title="Excluir"
-              className="btn-press grid place-items-center size-8 rounded-lg bg-white/[0.05] border border-white/10 text-stone-400 hover:text-rose-300 cursor-pointer"
+              className="btn-press grid place-items-center size-8 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-500 hover:text-rose-600 cursor-pointer"
             >
               <Trash2 className="size-3.5" />
             </button>
@@ -398,8 +398,8 @@ function Cardapio() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="font-display text-2xl text-white leading-none">Cardápio</h3>
-          <p className="mt-1 text-[11px] text-stone-500">
+          <h3 className="font-display text-2xl text-navy-900 leading-none">Cardápio</h3>
+          <p className="mt-1 text-[11px] text-slate-500">
             Toque na categoria para expandir · ↑↓ reordena · {produtos.length} produtos ·{" "}
             {produtos.filter((p) => p.ativo).length} ativos
           </p>
@@ -438,20 +438,20 @@ function Cardapio() {
           const lista = produtos.filter((p) => p.categoria === c.nome);
           const open = abertas.has(c.id);
           return (
-            <li key={c.id} className="rounded-2xl border border-white/[0.08] bg-black/30 overflow-hidden">
+            <li key={c.id} className="rounded-2xl border border-slate-200 bg-slate-100 overflow-hidden">
               {/* cabeçalho da categoria — ordem + expandir */}
               <div className="flex flex-wrap items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2.5">
                 <button
                   type="button"
                   onClick={() => toggleCat(c.id)}
-                  className="btn-press flex items-center gap-2 flex-1 min-w-[10rem] text-left cursor-pointer rounded-xl hover:bg-white/[0.04] px-1.5 py-1 -ml-1"
+                  className="btn-press flex items-center gap-2 flex-1 min-w-[10rem] text-left cursor-pointer rounded-xl hover:bg-slate-100 px-1.5 py-1 -ml-1"
                   aria-expanded={open}
                 >
-                  <span className="grid place-items-center size-7 rounded-lg bg-white/[0.05] border border-white/10 text-stone-400 shrink-0">
+                  <span className="grid place-items-center size-7 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-500 shrink-0">
                     {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
                   </span>
-                  <span className="font-mono text-[10px] text-stone-600 w-4 tabular shrink-0">{i + 1}</span>
-                  <span className="font-semibold text-sm sm:text-base text-white truncate">{c.nome}</span>
+                  <span className="font-mono text-[10px] text-slate-400 w-4 tabular shrink-0">{i + 1}</span>
+                  <span className="font-semibold text-sm sm:text-base text-navy-900 truncate">{c.nome}</span>
                   <Badge tone="zinc">{lista.length}</Badge>
                 </button>
 
@@ -460,7 +460,7 @@ function Cardapio() {
                   title="Subir"
                   disabled={i === 0}
                   onClick={() => moverCategoria(c.id, -1)}
-                  className="btn-press grid place-items-center size-8 rounded-lg bg-white/[0.05] border border-white/10 text-stone-300 hover:text-amber-300 disabled:opacity-30 cursor-pointer shrink-0"
+                  className="btn-press grid place-items-center size-8 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-600 hover:text-brand-600 disabled:opacity-30 cursor-pointer shrink-0"
                 >
                   <ArrowUp className="size-3.5" />
                 </button>
@@ -469,7 +469,7 @@ function Cardapio() {
                   title="Descer"
                   disabled={i === catsOrdenadas.length - 1}
                   onClick={() => moverCategoria(c.id, 1)}
-                  className="btn-press grid place-items-center size-8 rounded-lg bg-white/[0.05] border border-white/10 text-stone-300 hover:text-amber-300 disabled:opacity-30 cursor-pointer shrink-0"
+                  className="btn-press grid place-items-center size-8 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-600 hover:text-brand-600 disabled:opacity-30 cursor-pointer shrink-0"
                 >
                   <ArrowDown className="size-3.5" />
                 </button>
@@ -480,7 +480,7 @@ function Cardapio() {
                     const n = prompt("Nome da categoria:", c.nome);
                     if (n && n.trim()) renameCategoria(c.id, n);
                   }}
-                  className="btn-press grid place-items-center size-8 rounded-lg bg-white/[0.05] border border-white/10 text-stone-300 hover:text-amber-300 cursor-pointer shrink-0"
+                  className="btn-press grid place-items-center size-8 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-600 hover:text-brand-600 cursor-pointer shrink-0"
                 >
                   <Pencil className="size-3.5" />
                 </button>
@@ -488,7 +488,7 @@ function Cardapio() {
                   type="button"
                   title={lista.length > 0 ? `Excluir categoria e ${lista.length} produto(s)` : "Excluir categoria"}
                   onClick={() => removeCategoria(c.id)}
-                  className="btn-press grid place-items-center size-8 rounded-lg bg-white/[0.05] border border-white/10 text-stone-400 hover:text-rose-300 cursor-pointer shrink-0"
+                  className="btn-press grid place-items-center size-8 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-500 hover:text-rose-600 cursor-pointer shrink-0"
                 >
                   <Trash2 className="size-3.5" />
                 </button>
@@ -504,14 +504,14 @@ function Cardapio() {
                     transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
                     className="overflow-hidden"
                   >
-                    <div className="px-3 pb-3 pt-0.5 border-t border-white/[0.06]">
+                    <div className="px-3 pb-3 pt-0.5 border-t border-slate-200">
                       <div className="flex justify-end mb-2.5 pt-2">
                         <Btn size="sm" variant="ghost" onClick={() => setNovoAberto(true)}>
                           <Plus className="size-3.5" /> Produto nesta categoria
                         </Btn>
                       </div>
                       {lista.length === 0 ? (
-                        <p className="text-xs text-stone-500 py-5 text-center border border-dashed border-white/10 rounded-2xl">
+                        <p className="text-xs text-slate-500 py-5 text-center border border-dashed border-slate-200 rounded-2xl">
                           Nenhum produto — adicione o primeiro
                         </p>
                       ) : (
@@ -528,16 +528,16 @@ function Cardapio() {
         })}
 
         {orfaos.length > 0 && (
-          <li className="rounded-2xl border border-rose-400/25 bg-rose-500/[0.06] overflow-hidden">
+          <li className="rounded-2xl border border-rose-400/40 bg-rose-600/10 overflow-hidden">
             <button
               type="button"
               onClick={() => setOrfaosAberto((v) => !v)}
               className="btn-press flex w-full items-center gap-2 px-3 py-2.5 text-left cursor-pointer"
             >
-              <span className="grid place-items-center size-7 rounded-lg bg-white/[0.05] border border-white/10 text-rose-300">
+              <span className="grid place-items-center size-7 rounded-lg bg-slate-100/70 border border-slate-200 text-rose-600">
                 {orfaosAberto ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
               </span>
-              <span className="font-semibold text-sm text-rose-200">Sem categoria</span>
+              <span className="font-semibold text-sm text-rose-700">Sem categoria</span>
               <Badge tone="rose">{orfaos.length}</Badge>
             </button>
             <AnimatePresence initial={false}>
@@ -714,35 +714,35 @@ function ProdutoForm({ produto, novo, onClose }: { produto?: Produto | null; nov
   return (
     <Modal open={open} onClose={onClose} wide closeOnBackdrop={false}>
       <div className="p-5 sm:p-7">
-        <h3 className="font-display text-4xl text-white mb-5">{editando ? "Editar produto" : "Novo produto"}</h3>
+        <h3 className="font-display text-4xl text-navy-900 mb-5">{editando ? "Editar produto" : "Novo produto"}</h3>
 
         <div className="grid sm:grid-cols-[220px_1fr] gap-5">
           {/* foto */}
           <div>
-            <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-black/40 border border-dashed border-white/15">
+            <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-slate-100 border border-dashed border-slate-300">
               {foto ? (
                 <img src={foto} alt="" className="h-full w-full object-cover" />
               ) : (
                 <div className="absolute inset-0 grid place-items-center text-center p-4">
                   <div>
-                    <Camera className="size-7 text-stone-600 mx-auto" />
-                    <p className="text-[11px] text-stone-500 mt-2">Sem foto</p>
+                    <Camera className="size-7 text-slate-400 mx-auto" />
+                    <p className="text-[11px] text-slate-500 mt-2">Sem foto</p>
                   </div>
                 </div>
               )}
               <button
                 onClick={() => fileRef.current?.click()}
-                className="btn-press absolute inset-x-2.5 bottom-2.5 h-9 rounded-xl bg-black/55 backdrop-blur border border-white/12 text-[11px] font-bold text-white inline-flex items-center justify-center gap-1.5 cursor-pointer hover:bg-black/75"
+                className="btn-press absolute inset-x-2.5 bottom-2.5 h-9 rounded-xl bg-white/80 backdrop-blur border border-slate-200 text-[11px] font-bold text-navy-900 inline-flex items-center justify-center gap-1.5 cursor-pointer hover:bg-white"
               >
                 <Camera className="size-3.5" /> Enviar foto (WebP ~960px)
               </button>
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && arquivo(e.target.files[0])} />
             </div>
             <div className="relative mt-2">
-              <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-stone-500" />
-              <input value={foto.startsWith("data:") ? "" : foto} onChange={(e) => setFoto(e.target.value)} placeholder="…ou cole um link https://" className="w-full h-10 rounded-xl bg-black/40 border border-white/12 pl-8.5 pr-3 text-[11px] text-white placeholder:text-stone-600 focus:outline-none focus:border-amber-400/50" />
+              <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-slate-500" />
+              <input value={foto.startsWith("data:") ? "" : foto} onChange={(e) => setFoto(e.target.value)} placeholder="…ou cole um link https://" className="w-full h-10 rounded-xl bg-slate-100 border border-slate-200 pl-8.5 pr-3 text-[11px] text-navy-900 placeholder:text-slate-400 focus:outline-none focus:border-brand-500/50" />
             </div>
-            {foto.startsWith("data:") && <p className="mt-1.5 text-[10px] text-lime-300 font-mono">webp HQ · ~960px · salvo no banco</p>}
+            {foto.startsWith("data:") && <p className="mt-1.5 text-[10px] text-teal-600 font-mono">webp HQ · ~960px · salvo no banco</p>}
           </div>
 
           {/* campos */}
@@ -752,31 +752,31 @@ function ProdutoForm({ produto, novo, onClose }: { produto?: Produto | null; nov
             <div className="grid grid-cols-2 gap-3">
               <Input value={preco} onChange={setPreco} placeholder="0,00" prefix="R$" type="number" />
               <div className="relative">
-                <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className="w-full h-12 rounded-2xl bg-black/40 border border-white/12 px-4 text-sm text-white focus:outline-none focus:border-amber-400/60 appearance-none cursor-pointer">
-                  {(nomesCat.length ? nomesCat : CATEGORIAS).map((c) => <option key={c} value={c} className="bg-coal-900">{c}</option>)}
+                <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className="w-full h-12 rounded-2xl bg-slate-100 border border-slate-200 px-4 text-sm text-navy-900 focus:outline-none focus:border-brand-500/60 appearance-none cursor-pointer">
+                  {(nomesCat.length ? nomesCat : CATEGORIAS).map((c) => <option key={c} value={c} className="bg-white">{c}</option>)}
                 </select>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 space-y-3">
+            <div className="rounded-2xl border border-slate-200 bg-slate-100/50 p-3.5 space-y-3">
               <label className="flex items-center gap-3 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={controlaEstoque}
                   onChange={(e) => setControlaEstoque(e.target.checked)}
-                  className="size-4 rounded border-white/20 accent-amber-400"
+                  className="size-4 rounded border-slate-300 accent-brand-500"
                 />
-                <span className="text-sm text-white font-semibold">Controlar estoque</span>
-                <span className="text-[11px] text-stone-500 hidden sm:inline">baixa automática a cada pedido</span>
+                <span className="text-sm text-navy-900 font-semibold">Controlar estoque</span>
+                <span className="text-[11px] text-slate-500 hidden sm:inline">baixa automática a cada pedido</span>
               </label>
               {controlaEstoque && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-[10px] uppercase tracking-wider text-stone-500 mb-1 font-bold">Quantidade</p>
+                    <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1 font-bold">Quantidade</p>
                     <Input value={estoqueQtd} onChange={setEstoqueQtd} placeholder="0" type="number" />
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wider text-stone-500 mb-1 font-bold">Alerta mínimo</p>
+                    <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1 font-bold">Alerta mínimo</p>
                     <Input value={estoqueMin} onChange={setEstoqueMin} placeholder="5" type="number" />
                   </div>
                 </div>
@@ -784,7 +784,7 @@ function ProdutoForm({ produto, novo, onClose }: { produto?: Produto | null; nov
             </div>
 
             <div className="space-y-1.5">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-stone-500">Setor de produção</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Setor de produção</p>
               <div className="grid grid-cols-2 gap-2">
                 {([
                   { id: "cozinha" as const, label: "Cozinha", dica: "comida / chapa" },
@@ -797,8 +797,8 @@ function ProdutoForm({ produto, novo, onClose }: { produto?: Produto | null; nov
                     className={cn(
                       "btn-press rounded-xl border px-3 py-2.5 text-left transition-all",
                       setor === s.id
-                        ? "bg-amber-400/15 border-amber-400/40 text-amber-200"
-                        : "bg-black/30 border-white/10 text-stone-400 hover:text-white"
+                        ? "bg-brand-500/10 border-brand-500/40 text-brand-700"
+                        : "bg-slate-100 border-slate-200 text-slate-500 hover:text-navy-800"
                     )}
                   >
                     <p className="text-sm font-bold">{s.label}</p>
@@ -815,15 +815,15 @@ function ProdutoForm({ produto, novo, onClose }: { produto?: Produto | null; nov
                   onClick={() => setTipo(t.id)}
                   className={cn(
                     "btn-press w-full flex items-center gap-3 rounded-2xl border p-3 text-left cursor-pointer transition-all",
-                    tipo === t.id ? "border-amber-400/55 bg-amber-400/[0.08]" : "border-white/10 bg-white/[0.02] hover:border-white/25"
+                    tipo === t.id ? "border-brand-500/50 bg-brand-500/10" : "border-slate-200 bg-slate-100/40 hover:border-slate-300"
                   )}
                 >
-                  <span className={cn("grid place-items-center size-4.5 rounded-full border-2", tipo === t.id ? "border-amber-300" : "border-stone-600")}>
-                    {tipo === t.id && <span className="size-2 rounded-full bg-amber-300" />}
+                  <span className={cn("grid place-items-center size-4.5 rounded-full border-2", tipo === t.id ? "border-brand-400" : "border-slate-300")}>
+                    {tipo === t.id && <span className="size-2 rounded-full bg-brand-400" />}
                   </span>
                   <span>
-                    <span className="block text-sm font-bold text-white">{t.label}</span>
-                    <span className="block text-[11px] text-stone-500">{t.dica}</span>
+                    <span className="block text-sm font-bold text-navy-900">{t.label}</span>
+                    <span className="block text-[11px] text-slate-500">{t.dica}</span>
                   </span>
                 </button>
               ))}
@@ -952,8 +952,8 @@ function Garcons() {
       <section className="glass rounded-3xl p-4 sm:p-5">
         <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
           <div>
-            <h3 className="font-display text-2xl text-white leading-none">Garçons</h3>
-            <p className="mt-1 text-[11px] text-stone-500">
+            <h3 className="font-display text-2xl text-navy-900 leading-none">Garçons</h3>
+            <p className="mt-1 text-[11px] text-slate-500">
               Cada um recebe um link único (UUID). Abre a fila de pedidos prontos no celular.
             </p>
           </div>
@@ -972,17 +972,17 @@ function Garcons() {
         </div>
 
         {erro && (
-          <p className="mb-3 rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+          <p className="mb-3 rounded-xl border border-rose-400/40 bg-rose-600/10 px-3 py-2 text-xs text-rose-700">
             {erro}
           </p>
         )}
 
         {loading ? (
-          <p className="text-sm text-stone-500 py-8 text-center">Carregando…</p>
+          <p className="text-sm text-slate-500 py-8 text-center">Carregando…</p>
         ) : lista.length === 0 ? (
           <div className="py-8 text-center space-y-2">
-            <p className="text-sm text-stone-400">Nenhum garçom cadastrado.</p>
-            <p className="text-xs text-stone-500 max-w-sm mx-auto">
+            <p className="text-sm text-slate-500">Nenhum garçom cadastrado.</p>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
               Cadastre um garçom e abra o link dele no celular. Só quem entrega pelo link move o pedido para o caixa (status entregue + valor na sessão).
             </p>
           </div>
@@ -992,16 +992,16 @@ function Garcons() {
               <li
                 key={g.id}
                 className={cn(
-                  "flex flex-wrap items-center gap-2 rounded-2xl border px-3 py-3 bg-black/30",
-                  g.ativo ? "border-white/[0.08]" : "border-white/[0.05] opacity-70"
+                  "flex flex-wrap items-center gap-2 rounded-2xl border px-3 py-3 bg-slate-100",
+                  g.ativo ? "border-slate-200" : "border-slate-200 opacity-70"
                 )}
               >
                 <div className="flex-1 min-w-[10rem]">
-                  <p className="font-semibold text-white text-sm">{g.nome}</p>
-                  <p className="font-mono text-[10px] text-stone-500 truncate max-w-[16rem] sm:max-w-md">
+                  <p className="font-semibold text-navy-900 text-sm">{g.nome}</p>
+                  <p className="font-mono text-[10px] text-slate-500 truncate max-w-[16rem] sm:max-w-md">
                     {g.token}
                   </p>
-                  <p className="text-[10px] text-stone-600 mt-0.5">
+                  <p className="text-[10px] text-slate-400 mt-0.5">
                     {g.entregas ?? 0} entrega{(g.entregas ?? 0) === 1 ? "" : "s"}
                     {!g.ativo && " · desativado"}
                   </p>
@@ -1011,15 +1011,15 @@ function Garcons() {
                   type="button"
                   title="Copiar link"
                   onClick={() => void copiar(g)}
-                  className="btn-press grid place-items-center size-9 rounded-lg bg-white/[0.05] border border-white/10 text-stone-300 hover:text-amber-300 cursor-pointer"
+                  className="btn-press grid place-items-center size-9 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-600 hover:text-brand-600 cursor-pointer"
                 >
-                  {copiado === g.id ? <span className="text-[10px] font-bold text-lime-300">OK</span> : <Copy className="size-3.5" />}
+                  {copiado === g.id ? <span className="text-[10px] font-bold text-teal-600">OK</span> : <Copy className="size-3.5" />}
                 </button>
                 <button
                   type="button"
                   title="Abrir fila"
                   onClick={() => ir(`/garcom/${g.token}`)}
-                  className="btn-press grid place-items-center size-9 rounded-lg bg-white/[0.05] border border-white/10 text-stone-300 hover:text-amber-300 cursor-pointer"
+                  className="btn-press grid place-items-center size-9 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-600 hover:text-brand-600 cursor-pointer"
                 >
                   <Link2 className="size-3.5" />
                 </button>
@@ -1031,8 +1031,8 @@ function Garcons() {
                   className={cn(
                     "btn-press grid place-items-center size-9 rounded-lg border cursor-pointer",
                     g.ativo
-                      ? "bg-lime-400/10 border-lime-400/30 text-lime-300"
-                      : "bg-white/[0.05] border-white/10 text-stone-500"
+                      ? "bg-teal-500/10 border-teal-500/30 text-teal-600"
+                      : "bg-slate-100/70 border-slate-200 text-slate-500"
                   )}
                 >
                   {g.ativo ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
@@ -1042,7 +1042,7 @@ function Garcons() {
                   title="Remover"
                   disabled={busy}
                   onClick={() => void remover(g)}
-                  className="btn-press grid place-items-center size-9 rounded-lg bg-white/[0.05] border border-white/10 text-stone-400 hover:text-rose-300 cursor-pointer"
+                  className="btn-press grid place-items-center size-9 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-500 hover:text-rose-600 cursor-pointer"
                 >
                   <Trash2 className="size-3.5" />
                 </button>
@@ -1052,7 +1052,7 @@ function Garcons() {
         )}
       </section>
 
-      <p className="text-[11px] text-stone-500 text-center">
+      <p className="text-[11px] text-slate-500 text-center">
         O link do garçom é público no token — quem tiver a URL acessa a fila de prontos. Desative ou apague se o celular for perdido.
       </p>
     </div>
@@ -1086,7 +1086,7 @@ function Mesas() {
 
   return (
     <div>
-      <p className="text-sm text-stone-400 mb-4 max-w-xl">
+      <p className="text-sm text-slate-500 mb-4 max-w-xl">
         Cada mesa tem um link/QR fixo. Imprima o QR e cole na mesa — o cliente escaneia e já entra no cardápio com o número certo. Sem menu de equipe no celular do cliente.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -1106,16 +1106,16 @@ function Mesas() {
                 <Badge tone={s ? "amber" : "zinc"} pulse={!!s}>
                   {s ? "ocupada" : "livre"}
                 </Badge>
-                <span className="font-mono text-[10px] text-stone-600">#{String(m.numero).padStart(2, "0")}</span>
+                <span className="font-mono text-[10px] text-slate-400">#{String(m.numero).padStart(2, "0")}</span>
               </div>
-              <p className="font-display text-4xl sm:text-5xl text-white mt-3 leading-none">{m.numero}</p>
-              <p className="text-[10px] uppercase tracking-[0.24em] text-stone-500 mt-1">{m.nome}</p>
+              <p className="font-display text-4xl sm:text-5xl text-navy-900 mt-3 leading-none">{m.numero}</p>
+              <p className="text-[10px] uppercase tracking-[0.24em] text-slate-500 mt-1">{m.nome}</p>
 
-              <div className="mt-4 mx-auto w-fit rounded-2xl bg-white p-2.5">
-                <QRCodeSVG value={url} size={108} fgColor="#131009" level="M" includeMargin={false} />
+              <div className="mt-4 mx-auto w-fit rounded-2xl qr-paper p-2.5">
+                <QRCodeSVG value={url} size={108} fgColor="#0a2540" level="M" includeMargin={false} />
               </div>
 
-              <p className="mt-3 font-mono text-[10px] text-stone-500 break-all leading-snug px-1">{url}</p>
+              <p className="mt-3 font-mono text-[10px] text-slate-500 break-all leading-snug px-1">{url}</p>
 
               <div className="mt-3 flex flex-col gap-1.5">
                 <Btn size="sm" full onClick={() => void copiarLink(m.token, m.id)}>
@@ -1123,7 +1123,7 @@ function Mesas() {
                 </Btn>
                 {s ? (
                   <>
-                    <p className="font-mono text-sm text-amber-300 py-1">{BRL(consumo)} consumo</p>
+                    <p className="font-mono text-sm text-brand-600 py-1">{BRL(consumo)} consumo</p>
                     <Btn size="sm" variant="danger" full onClick={() => fecharSessao(s.id, "dinheiro")}>
                       Liberar mesa
                     </Btn>
@@ -1209,13 +1209,13 @@ function Estoque() {
     const controla = p.estoque !== null;
     const q = p.estoque ?? 0;
     return (
-      <div key={p.id} className="flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-black/25 px-3 py-2.5">
+      <div key={p.id} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-100 px-3 py-2.5">
         <img src={p.foto} alt="" className="size-12 rounded-xl object-cover shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white truncate">{p.nome}</p>
-          <p className="text-[10px] text-stone-500">
+          <p className="text-sm font-semibold text-navy-900 truncate">{p.nome}</p>
+          <p className="text-[10px] text-slate-500">
             {controla ? (
-              <span className={q <= 8 ? "text-rose-300 font-bold" : "text-lime-300/90 font-mono"}>{q} un. em estoque</span>
+              <span className={q <= 8 ? "text-rose-600 font-bold" : "text-teal-600 font-mono"}>{q} un. em estoque</span>
             ) : (
               "sem controle"
             )}
@@ -1229,7 +1229,7 @@ function Estoque() {
                 const n = pedirQtd(`Quantas unidades ENTRARAM?\n(atual: ${q})`, 10);
                 if (n != null) setEstoque(p.id, q + n);
               }}
-              className="btn-press h-8 px-2.5 rounded-lg bg-lime-400/10 border border-lime-400/25 text-lime-300 text-[11px] font-bold cursor-pointer"
+              className="btn-press h-8 px-2.5 rounded-lg bg-teal-500/10 border border-teal-500/30 text-teal-600 text-[11px] font-bold cursor-pointer"
             >
               + entrada
             </button>
@@ -1239,14 +1239,14 @@ function Estoque() {
                 const n = pedirQtd("Definir estoque absoluto:", q);
                 if (n != null) setEstoque(p.id, n);
               }}
-              className="btn-press h-8 px-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-stone-300 text-[11px] font-bold cursor-pointer"
+              className="btn-press h-8 px-2.5 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-600 text-[11px] font-bold cursor-pointer"
             >
               definir
             </button>
             <button
               type="button"
               onClick={() => setEstoque(p.id, Math.max(0, q - 1))}
-              className="btn-press h-8 px-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-stone-400 text-[11px] font-bold cursor-pointer"
+              className="btn-press h-8 px-2.5 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-500 text-[11px] font-bold cursor-pointer"
             >
               −1
             </button>
@@ -1258,7 +1258,7 @@ function Estoque() {
               const n = pedirQtd("Ativar estoque. Quantas unidades tem agora?", 20);
               if (n != null) ativar(p.id, n);
             }}
-            className="btn-press h-9 px-3 rounded-xl border border-amber-400/35 bg-amber-400/10 text-amber-200 text-[11px] font-bold cursor-pointer"
+            className="btn-press h-9 px-3 rounded-xl border border-brand-500/40 bg-brand-500/10 text-brand-700 text-[11px] font-bold cursor-pointer"
           >
             Ativar + qtd
           </button>
@@ -1270,9 +1270,9 @@ function Estoque() {
   return (
     <div className="space-y-5">
       {baixos.length > 0 && (
-        <div className="flex items-center gap-3 rounded-2xl border border-rose-400/30 bg-rose-400/[0.07] p-4">
-          <CircleAlert className="size-5 text-rose-300 shrink-0" />
-          <p className="text-sm text-rose-200">
+        <div className="flex items-center gap-3 rounded-2xl border border-rose-400/40 bg-rose-600/10 p-4">
+          <CircleAlert className="size-5 text-rose-600 shrink-0" />
+          <p className="text-sm text-rose-700">
             <b>
               {baixos.length} {baixos.length === 1 ? "item" : "itens"} acabando:
             </b>{" "}
@@ -1289,10 +1289,10 @@ function Estoque() {
             <button
               type="button"
               onClick={() => toggle(g.id)}
-              className="btn-press w-full flex items-center gap-3 px-4 py-3.5 text-left cursor-pointer hover:bg-white/[0.03]"
+              className="btn-press w-full flex items-center gap-3 px-4 py-3.5 text-left cursor-pointer hover:bg-slate-100/70"
             >
-              {open ? <ChevronDown className="size-4 text-amber-300" /> : <ChevronRight className="size-4 text-stone-500" />}
-              <span className="font-display text-2xl text-white flex-1">{g.nome}</span>
+              {open ? <ChevronDown className="size-4 text-brand-600" /> : <ChevronRight className="size-4 text-slate-500" />}
+              <span className="font-display text-2xl text-navy-900 flex-1">{g.nome}</span>
               <Badge tone="zinc">
                 {g.itens.length} · {nCtrl} c/ estoque
               </Badge>
@@ -1302,7 +1302,7 @@ function Estoque() {
         );
       })}
 
-      <p className="text-[11px] text-stone-500 text-center">
+      <p className="text-[11px] text-slate-500 text-center">
         Pedidos na mesa dão baixa automática. Ative o controle e informe a quantidade colocada.
       </p>
     </div>
@@ -1373,22 +1373,22 @@ function Relatorio() {
   return (
     <div className="space-y-5">
       <div className="glass rounded-3xl p-4 sm:p-5 flex flex-wrap items-end gap-3">
-        <label className="text-xs text-stone-400">
+        <label className="text-xs text-slate-500">
           De
           <input
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            className="mt-1 block h-11 rounded-xl bg-black/40 border border-white/12 px-3 text-sm text-white"
+            className="mt-1 block h-11 rounded-xl bg-slate-100 border border-slate-200 px-3 text-sm text-navy-900"
           />
         </label>
-        <label className="text-xs text-stone-400">
+        <label className="text-xs text-slate-500">
           Até
           <input
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            className="mt-1 block h-11 rounded-xl bg-black/40 border border-white/12 px-3 text-sm text-white"
+            className="mt-1 block h-11 rounded-xl bg-slate-100 border border-slate-200 px-3 text-sm text-navy-900"
           />
         </label>
         <Btn size="sm" onClick={() => void buscar()} disabled={loading}>
@@ -1417,36 +1417,36 @@ function Relatorio() {
       </div>
 
       {erro && (
-        <p className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">{erro}</p>
+        <p className="rounded-xl border border-rose-400/40 bg-rose-600/10 px-3 py-2 text-xs text-rose-700">{erro}</p>
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="glass rounded-2xl p-4">
-          <p className="text-[10px] uppercase tracking-widest text-stone-500 font-bold">faturamento</p>
-          <p className="font-mono text-xl text-lime-300 font-bold mt-1">{BRL(faturamento)}</p>
+          <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">faturamento</p>
+          <p className="font-mono text-xl text-teal-600 font-bold mt-1">{BRL(faturamento)}</p>
         </div>
         <div className="glass rounded-2xl p-4">
-          <p className="text-[10px] uppercase tracking-widest text-stone-500 font-bold">contas</p>
-          <p className="font-mono text-xl text-white font-bold mt-1">{qtdContas}</p>
+          <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">contas</p>
+          <p className="font-mono text-xl text-navy-900 font-bold mt-1">{qtdContas}</p>
         </div>
         <div className="glass rounded-2xl p-4">
-          <p className="text-[10px] uppercase tracking-widest text-stone-500 font-bold">ticket médio</p>
-          <p className="font-mono text-xl text-amber-200 font-bold mt-1">{BRL(ticket)}</p>
+          <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">ticket médio</p>
+          <p className="font-mono text-xl text-brand-700 font-bold mt-1">{BRL(ticket)}</p>
         </div>
         <div className="glass rounded-2xl p-4">
-          <p className="text-[10px] uppercase tracking-widest text-stone-500 font-bold">pedidos</p>
-          <p className="font-mono text-xl text-white font-bold mt-1">{Number(resumo.pedidosTotal ?? 0)}</p>
+          <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">pedidos</p>
+          <p className="font-mono text-xl text-navy-900 font-bold mt-1">{Number(resumo.pedidosTotal ?? 0)}</p>
         </div>
       </div>
 
       {Object.keys(porForma).length > 0 && (
         <div className="glass rounded-3xl p-4 sm:p-5">
-          <h3 className="font-display text-2xl text-white mb-3">Por forma de pagamento</h3>
+          <h3 className="font-display text-2xl text-navy-900 mb-3">Por forma de pagamento</h3>
           <div className="grid sm:grid-cols-2 gap-2">
             {Object.entries(porForma).map(([k, v]) => (
-              <div key={k} className="flex justify-between rounded-xl bg-black/25 px-3 py-2 text-sm">
-                <span className="text-stone-400">{k}</span>
-                <span className="font-mono text-white">{BRL(Number(v || 0))}</span>
+              <div key={k} className="flex justify-between rounded-xl bg-slate-100 px-3 py-2 text-sm">
+                <span className="text-slate-500">{k}</span>
+                <span className="font-mono text-navy-900">{BRL(Number(v || 0))}</span>
               </div>
             ))}
           </div>
@@ -1455,9 +1455,9 @@ function Relatorio() {
 
       {porDia.length > 0 && (
         <div className="glass rounded-3xl p-4 sm:p-5 overflow-x-auto">
-          <h3 className="font-display text-2xl text-white mb-3">Por dia</h3>
+          <h3 className="font-display text-2xl text-navy-900 mb-3">Por dia</h3>
           <table className="w-full text-left text-sm">
-            <thead className="text-[10px] uppercase tracking-wider text-stone-500 border-b border-white/10">
+            <thead className="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
               <tr>
                 <th className="py-2 pr-3">Dia</th>
                 <th className="py-2 pr-3">Contas</th>
@@ -1466,10 +1466,10 @@ function Relatorio() {
             </thead>
             <tbody>
               {porDia.map((d: any) => (
-                <tr key={d.dia} className="border-b border-white/[0.05] text-stone-300">
+                <tr key={d.dia} className="border-b border-slate-200 text-slate-600">
                   <td className="py-2 pr-3 font-mono text-xs">{d.dia}</td>
                   <td className="py-2 pr-3">{d.contas}</td>
-                  <td className="py-2 font-mono text-lime-300">{BRL(Number(d.faturamento || 0))}</td>
+                  <td className="py-2 font-mono text-teal-600">{BRL(Number(d.faturamento || 0))}</td>
                 </tr>
               ))}
             </tbody>
@@ -1479,14 +1479,14 @@ function Relatorio() {
 
       {top.length > 0 && (
         <div className="glass rounded-3xl p-4 sm:p-5">
-          <h3 className="font-display text-2xl text-white mb-3">Top produtos</h3>
+          <h3 className="font-display text-2xl text-navy-900 mb-3">Top produtos</h3>
           <ul className="space-y-2">
             {top.slice(0, 10).map((p: any, i: number) => (
-              <li key={p.id || i} className="flex justify-between text-sm border-b border-white/[0.05] py-1.5">
-                <span className="text-stone-300 truncate pr-2">
+              <li key={p.id || i} className="flex justify-between text-sm border-b border-slate-200 py-1.5">
+                <span className="text-slate-600 truncate pr-2">
                   {i + 1}. {p.nome || p.produto}
                 </span>
-                <span className="font-mono text-amber-200 shrink-0">
+                <span className="font-mono text-brand-700 shrink-0">
                   {p.qtd ?? p.quantidade ?? p.vendidos ?? "—"} un
                 </span>
               </li>
@@ -1496,14 +1496,14 @@ function Relatorio() {
       )}
 
       <div className="glass-deep rounded-3xl p-4 sm:p-5 overflow-x-auto">
-        <h3 className="font-display text-2xl text-white mb-3">Contas fechadas</h3>
+        <h3 className="font-display text-2xl text-navy-900 mb-3">Contas fechadas</h3>
         {!contas.length ? (
-          <p className="text-sm text-stone-500 py-8 text-center">
+          <p className="text-sm text-slate-500 py-8 text-center">
             {loading ? "Carregando…" : "Sem contas fechadas neste intervalo (só entram sessões já fechadas no caixa)."}
           </p>
         ) : (
           <table className="w-full text-left text-xs sm:text-sm">
-            <thead className="text-[10px] uppercase tracking-wider text-stone-500 border-b border-white/10">
+            <thead className="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
               <tr>
                 <th className="py-2 pr-2">#</th>
                 <th className="py-2 pr-2">Mesa</th>
@@ -1515,13 +1515,13 @@ function Relatorio() {
             </thead>
             <tbody>
               {contas.slice(0, 200).map((c: any) => (
-                <tr key={c.id} className="border-b border-white/[0.05] text-stone-300">
+                <tr key={c.id} className="border-b border-slate-200 text-slate-600">
                   <td className="py-2 pr-2 font-mono text-[11px]">{c.id}</td>
                   <td className="py-2 pr-2">{c.mesa}</td>
                   <td className="py-2 pr-2 truncate max-w-[8rem]">{c.cliente || "—"}</td>
-                  <td className="py-2 pr-2 font-mono text-lime-300">{BRL(Number(c.valorCobrado ?? c.valor ?? 0))}</td>
+                  <td className="py-2 pr-2 font-mono text-teal-600">{BRL(Number(c.valorCobrado ?? c.valor ?? 0))}</td>
                   <td className="py-2 pr-2 text-[11px]">{c.forma || "—"}</td>
-                  <td className="py-2 font-mono text-[10px] text-stone-500">
+                  <td className="py-2 font-mono text-[10px] text-slate-500">
                     {c.fechadaEm ? String(c.fechadaEm).slice(0, 16).replace("T", " ") : "—"}
                   </td>
                 </tr>
@@ -1632,37 +1632,37 @@ function HistoricoPedidos({
 
   return (
     <section className="glass rounded-3xl p-5">
-      <h3 className="font-display text-2xl text-white mb-1">Histórico de pedidos</h3>
-      <p className="text-[11px] text-stone-500 mb-4">
+      <h3 className="font-display text-2xl text-navy-900 mb-1">Histórico de pedidos</h3>
+      <p className="text-[11px] text-slate-500 mb-4">
         Clique em um pedido para ver itens, adicionais, total e imprimir o cupom.
       </p>
       <div className="flex flex-wrap gap-3 items-end">
-        <label className="text-xs text-stone-400">
+        <label className="text-xs text-slate-500">
           De
           <input
             type="date"
             value={histFrom}
             onChange={(e) => setHistFrom(e.target.value)}
-            className="mt-1 block h-11 rounded-xl bg-black/40 border border-white/12 px-3 text-sm text-white"
+            className="mt-1 block h-11 rounded-xl bg-slate-100 border border-slate-200 px-3 text-sm text-navy-900"
           />
         </label>
-        <label className="text-xs text-stone-400">
+        <label className="text-xs text-slate-500">
           Até
           <input
             type="date"
             value={histTo}
             onChange={(e) => setHistTo(e.target.value)}
-            className="mt-1 block h-11 rounded-xl bg-black/40 border border-white/12 px-3 text-sm text-white"
+            className="mt-1 block h-11 rounded-xl bg-slate-100 border border-slate-200 px-3 text-sm text-navy-900"
           />
         </label>
         <Btn size="sm" disabled={busy} onClick={onBuscar}>
           Buscar
         </Btn>
       </div>
-      {histMsg && <p className="mt-3 text-xs text-stone-400">{histMsg}</p>}
+      {histMsg && <p className="mt-3 text-xs text-slate-500">{histMsg}</p>}
       <div className="mt-4 max-h-[28rem] overflow-y-auto space-y-2">
         {hist.length === 0 && !busy && (
-          <p className="text-sm text-stone-500 py-6 text-center">Nenhum pedido neste período.</p>
+          <p className="text-sm text-slate-500 py-6 text-center">Nenhum pedido neste período.</p>
         )}
         {hist.slice(0, 100).map((p: any) => {
           const id = Number(p.id);
@@ -1673,40 +1673,40 @@ function HistoricoPedidos({
           return (
             <div
               key={id || JSON.stringify(p)}
-              className="rounded-2xl border border-white/[0.08] bg-black/30 overflow-hidden"
+              className="rounded-2xl border border-slate-200 bg-slate-100 overflow-hidden"
             >
               <button
                 type="button"
                 onClick={() => toggle(id)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-white/[0.04] transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-slate-100 transition-colors cursor-pointer"
               >
-                <span className="font-mono text-[11px] text-stone-500 shrink-0">#{id}</span>
+                <span className="font-mono text-[11px] text-slate-500 shrink-0">#{id}</span>
                 <span
                   className={cn(
                     "rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider shrink-0",
                     p.status === "entregue"
-                      ? "bg-lime-400/15 text-lime-300 border border-lime-400/25"
+                      ? "bg-teal-500/10 text-teal-600 border border-teal-500/30"
                       : p.status === "concluido"
-                        ? "bg-amber-400/15 text-amber-300 border border-amber-400/25"
-                        : "bg-white/10 text-stone-400 border border-white/10"
+                        ? "bg-brand-500/10 text-brand-600 border border-brand-500/30"
+                        : "bg-slate-100 text-slate-500 border border-slate-200"
                   )}
                 >
                   {p.status}
                 </span>
-                <span className="text-xs text-white font-semibold truncate">
+                <span className="text-xs text-navy-900 font-semibold truncate">
                   Mesa {p.mesa ?? p.mesa_numero ?? "—"}
                   {(p.cliente_nome || p.clienteNome) && (
-                    <span className="text-stone-400 font-normal"> · {p.cliente_nome || p.clienteNome}</span>
+                    <span className="text-slate-500 font-normal"> · {p.cliente_nome || p.clienteNome}</span>
                   )}
                 </span>
-                <span className="ml-auto font-mono text-xs text-lime-300 shrink-0">
+                <span className="ml-auto font-mono text-xs text-teal-600 shrink-0">
                   {total > 0 ? BRL(total) : "—"}
                 </span>
-                <span className="text-stone-600 text-[10px] shrink-0">{isOpen ? "▲" : "▼"}</span>
+                <span className="text-slate-400 text-[10px] shrink-0">{isOpen ? "▲" : "▼"}</span>
               </button>
               {isOpen && (
-                <div className="border-t border-white/[0.06] px-3 py-3 space-y-2 bg-black/20">
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-stone-500">
+                <div className="border-t border-slate-200 px-3 py-3 space-y-2 bg-slate-200/60">
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-500">
                     {criado && (
                       <span>
                         Criado: {String(criado).slice(0, 19).replace("T", " ")}
@@ -1720,43 +1720,43 @@ function HistoricoPedidos({
                     )}
                   </div>
                   {itens.length === 0 ? (
-                    <p className="text-xs text-stone-500">Sem itens neste registro.</p>
+                    <p className="text-xs text-slate-500">Sem itens neste registro.</p>
                   ) : (
                     <ul className="space-y-1.5">
                       {itens.map((it: any, idx: number) => (
                         <li
                           key={it.id ?? idx}
-                          className="flex items-start justify-between gap-2 text-xs text-stone-300"
+                          className="flex items-start justify-between gap-2 text-xs text-slate-600"
                         >
                           <div className="min-w-0">
-                            <span className="font-semibold text-white">
+                            <span className="font-semibold text-navy-900">
                               {it.quantidade || 1}× {it.nome}
                             </span>
                             {Array.isArray(it.adicionais) && it.adicionais.length > 0 && (
-                              <p className="text-[10px] text-amber-200/80">
+                              <p className="text-[10px] text-brand-700">
                                 + {it.adicionais.map((a: any) => a.nome || a).join(", ")}
                               </p>
                             )}
                             {Array.isArray(it.remocoes) && it.remocoes.length > 0 && (
-                              <p className="text-[10px] text-rose-300/80">
+                              <p className="text-[10px] text-rose-600">
                                 sem {it.remocoes.join(", ")}
                               </p>
                             )}
                             {it.ponto_carne && (
-                              <p className="text-[10px] text-stone-500">ponto: {it.ponto_carne}</p>
+                              <p className="text-[10px] text-slate-500">ponto: {it.ponto_carne}</p>
                             )}
                             {it.observacao && (
-                              <p className="text-[10px] text-stone-500">obs: {it.observacao}</p>
+                              <p className="text-[10px] text-slate-500">obs: {it.observacao}</p>
                             )}
                           </div>
-                          <span className="font-mono text-[11px] text-stone-400 shrink-0">
+                          <span className="font-mono text-[11px] text-slate-500 shrink-0">
                             {BRL(Number(it.totalLinha ?? (Number(it.preco_unitario || 0) * (it.quantidade || 1))))}
                           </span>
                         </li>
                       ))}
                     </ul>
                   )}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/[0.05]">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200">
                     <Btn
                       size="sm"
                       variant="outline"
@@ -1774,7 +1774,7 @@ function HistoricoPedidos({
                     >
                       <Printer className="size-3.5" /> Imprimir cupom
                     </Btn>
-                    <span className="text-xs font-bold text-lime-300">
+                    <span className="text-xs font-bold text-teal-600">
                       Total {BRL(total)}
                     </span>
                   </div>
@@ -1862,7 +1862,7 @@ function Funcoes() {
 
   return (
     <div className="space-y-5">
-      <nav className="flex flex-wrap gap-1 rounded-2xl bg-black/35 border border-white/[0.08] p-1">
+      <nav className="flex flex-wrap gap-1 rounded-2xl bg-slate-100 border border-slate-200 p-1">
         {subs.map((s) => (
           <button
             key={s.id}
@@ -1870,13 +1870,13 @@ function Funcoes() {
             onClick={() => setSub(s.id)}
             className={cn(
               "btn-press relative flex items-center gap-1.5 rounded-xl px-3 h-9 text-xs font-bold cursor-pointer transition-colors",
-              sub === s.id ? "text-zinc-950" : "text-stone-400 hover:text-white"
+              sub === s.id ? "text-white" : "text-slate-500 hover:text-navy-800"
             )}
           >
             {sub === s.id && (
               <motion.span
                 layoutId="fn-sub"
-                className="absolute inset-0 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500"
+                className="absolute inset-0 rounded-xl bg-gradient-to-br from-brand-500 to-teal-600"
                 transition={{ type: "spring", stiffness: 420, damping: 32 }}
               />
             )}
@@ -1903,20 +1903,20 @@ function Funcoes() {
       )}
 
       {sub === "purge" && (
-        <section className="glass rounded-3xl p-5 border border-rose-400/20">
-          <h3 className="font-display text-2xl text-white mb-1">Limpar histórico</h3>
-          <p className="text-[11px] text-stone-500 mb-4">
-            Apaga permanentemente contas <b className="text-stone-300">fechadas</b> com fechamento{" "}
-            <b className="text-stone-300">antes</b> da data. Não mexe em mesas abertas.
+        <section className="glass rounded-3xl p-5 border border-rose-400/40">
+          <h3 className="font-display text-2xl text-navy-900 mb-1">Limpar histórico</h3>
+          <p className="text-[11px] text-slate-500 mb-4">
+            Apaga permanentemente contas <b className="text-slate-600">fechadas</b> com fechamento{" "}
+            <b className="text-slate-600">antes</b> da data. Não mexe em mesas abertas.
           </p>
           <div className="flex flex-wrap gap-3 items-end">
-            <label className="text-xs text-stone-400">
+            <label className="text-xs text-slate-500">
               Antes de
               <input
                 type="date"
                 value={purgeBefore}
                 onChange={(e) => setPurgeBefore(e.target.value)}
-                className="mt-1 block h-11 rounded-xl bg-black/40 border border-white/12 px-3 text-sm text-white"
+                className="mt-1 block h-11 rounded-xl bg-slate-100 border border-slate-200 px-3 text-sm text-navy-900"
               />
             </label>
             <Btn size="sm" variant="outline" disabled={busy} onClick={() => void previewPurge()}>
@@ -1926,7 +1926,7 @@ function Funcoes() {
               Apagar
             </Btn>
           </div>
-          {purgeMsg && <p className="mt-3 text-xs text-amber-200/90">{purgeMsg}</p>}
+          {purgeMsg && <p className="mt-3 text-xs text-brand-700">{purgeMsg}</p>}
         </section>
       )}
     </div>

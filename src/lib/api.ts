@@ -135,7 +135,7 @@ export const api = {
 };
 
 /** SSE — invalida/recarrega quando o servidor emite update. */
-export function connectEvents(onUpdate: () => void): () => void {
+export function connectEvents(onUpdate: () => void, acesso?: { mesa?: string; garcom?: string }): () => void {
   let es: EventSource | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
   const bounce = () => {
@@ -143,7 +143,10 @@ export function connectEvents(onUpdate: () => void): () => void {
     timer = setTimeout(() => onUpdate(), 350);
   };
   try {
-    es = new EventSource("/api/events");
+    const query = new URLSearchParams();
+    if (acesso?.mesa) query.set("mesa", acesso.mesa);
+    if (acesso?.garcom) query.set("garcom", acesso.garcom);
+    es = new EventSource(`/api/events${query.size ? `?${query}` : ""}`);
     es.addEventListener("update", bounce);
     es.onerror = () => {
       /* browser reconecta sozinho */

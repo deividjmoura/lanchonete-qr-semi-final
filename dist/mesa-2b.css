@@ -1,0 +1,24 @@
+.modal-root{position:fixed;inset:0;z-index:100;display:flex;align-items:flex-end;justify-content:center}
+.modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(2px)}
+.modal-sheet{position:relative;z-index:1;width:100%;max-width:520px;max-height:min(92vh,720px);overflow:auto;background:#1e1c1a;border-radius:20px 20px 0 0;padding:22px 18px calc(24px + env(safe-area-inset-bottom,0px));border:1px solid rgba(240,235,224,.12);box-shadow:0 -12px 40px rgba(0,0,0,.45);color:#f0ebe0}
+.modal-sheet .close{position:absolute;right:12px;top:10px;width:40px;height:40px;border:0;border-radius:50%;background:rgba(255,255,255,.08);color:#f0ebe0;font-size:1.4rem;cursor:pointer;line-height:1}
+.modal-sheet h2{margin:0 40px 8px 0;font-family:Kalam,cursive;font-size:1.45rem;color:#f5f0e6}
+.cart-total-row{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid rgba(240,235,224,.15);font-weight:800;font-size:1.05rem;font-family:var(--font-mono);color:#f0d78c}
+.pedido-block{border:1px solid rgba(240,235,224,.12);border-radius:12px;padding:12px;margin-top:12px;background:rgba(255,255,255,.03)}
+.pedido-item{display:flex;justify-content:space-between;gap:10px;padding:6px 0;font-size:.92rem}
+.status-pill{font-size:.72rem;padding:3px 8px;border-radius:999px;background:#333;color:#c8bfa8}
+.status-pill.recebido{background:#3b2f1a;color:#f0d78c}
+.status-pill.em_producao{background:#1a2f3b;color:#7dd3fc}
+.status-pill.concluido{background:#1a3b2a;color:#86efac}
+.status-pill.entregue{background:#2a2a2a;color:#a89f8c}
+.name-gate{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:20px}
+.name-gate[hidden]{display:none!important}
+.name-gate__card{background:#1e1e1e;border:1px solid rgba(240,235,224,.15);border-radius:16px;padding:24px;max-width:360px;width:100%;color:#f0ebe0}
+.name-gate__card h2{margin:0 0 8px;font-family:Kalam,cursive}
+.name-gate__card p{margin:0 0 14px;color:#a89f8c;font-size:.9rem}
+.name-gate__card input{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(240,235,224,.2);background:#2a2a2a;color:#f0ebe0;margin-bottom:12px;box-sizing:border-box}
+.toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%) translateY(20px);background:#222;color:#f0ebe0;padding:10px 16px;border-radius:12px;opacity:0;pointer-events:none;transition:.25s;z-index:80;max-width:90vw;text-align:center;border:1px solid rgba(240,235,224,.15)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.burger-btn.pop .sand{animation:burger-pop .55s ease}
+@keyframes burger-pop{0%{transform:scale(1)}40%{transform:scale(1.18) rotate(-4deg)}70%{transform:scale(.95)}100%{transform:scale(1)}}
+body.modal-open{overflow:hidden!important;touch-action:none}
