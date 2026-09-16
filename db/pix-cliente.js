@@ -1,12 +1,38 @@
 // Cliente informa PIX (por pedido ou total). Só avisa o caixa; baixa do valor
 // acontece quando o caixa confirma o aviso (pagamento parcial).
 const pool = require('./pool');
+const { numeroInteiroPositivo } = require('./validacao');
 
 class ErroPixCliente extends Error {
   constructor(status, message) {
     super(message);
     this.status = status;
   }
+}
+
+/**
+ * @deprecated Mantido só para scripts CLI (`npm run test:dia`, smoke) em bancos
+ * antigos. Em runtime o schema vem de `db/migrations/0016_pix_avisos.sql` —
+ * nenhum handler de requisição deve chamar isto (era DDL no caminho do pedido).
+ */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Token de mesa é UUID v1–v5; qualquer outra coisa é entrada malformada, não "mesa inexistente". */
+function validarUuid(valor, nome = 'Token') {
+  if (typeof valor !== 'string' || !UUID_RE.test(valor.trim())) {
+    throw new ErroPixCliente(400, `${nome} inválido`);
+  }
+  return valor.trim();
+}
+
+/** Aceita '12,50' do mobile; rejeita boolean/objeto/NaN em vez de virar default. */
+function valorPositivo(valor, nome = 'Valor') {
+  if (typeof valor === 'boolean' || (typeof valor !== 'number' && typeof valor !== 'string')) {
+    throw new ErroPixCliente(400, `${nome} inválido`);
+  }
+  const n = typeof valor === 'string' && valor.trim() !== '' ? Number(valor.trim().replace(',', '.')) : valor;
+  if (!Number.isFinite(n) || n <= 0) throw new ErroPixCliente(400, `${nome} inválido`);
+  return Number(n.toFixed(2));
 }
 
 async function ensurePixAvisosTable(db) {
@@ -35,14 +61,28 @@ async function ensurePixAvisosTable(db) {
  * - Sem pedidoId: aviso do restante da conta
  */
 async function informarPixPago(token, body = {}) {
+  const tokenValidado = validarUuid(token, 'Token da mesa');
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw new ErroPixCliente(400, 'Dados do PIX inválidos');
+  }
+
+  // Campos explícitos são validados; só o campo omitido cai no default do pedido.
+  let pedidoId = null;
+  if (body.pedidoId !== undefined && body.pedidoId !== null && body.pedidoId !== '') {
+    pedidoId = numeroInteiroPositivo(body.pedidoId, 'Pedido');
+  }
+  let valorAviso = null;
+  if (body.valor !== undefined && body.valor !== null && body.valor !== '') {
+    valorAviso = valorPositivo(body.valor);
+  }
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    await ensurePixAvisosTable(client);
 
     const { rows: mesas } = await client.query(
       'SELECT id, numero FROM mesas WHERE token = $1',
-      [token]
+      [tokenValidado]
     );
     if (!mesas.length) throw new ErroPixCliente(404, 'Mesa não encontrada');
     const mesa = mesas[0];
@@ -77,10 +117,6 @@ async function informarPixPago(token, body = {}) {
       );
     }
 
-    let pedidoId = body.pedidoId != null ? Number(body.pedidoId) : null;
-    if (pedidoId != null && !Number.isFinite(pedidoId)) pedidoId = null;
-
-    let valorAviso = body.valor != null ? Number(body.valor) : null;
     let clienteNome = String(body.clienteNome || body.cliente_nome || '').trim().slice(0, 80) || null;
 
     if (pedidoId) {
@@ -110,16 +146,16 @@ async function informarPixPago(token, body = {}) {
         (s, it) => s + Number(it.quantidade) * (Number(it.preco_unitario) + Number(it.ad || 0)),
         0
       );
-      if (valorAviso == null || !Number.isFinite(valorAviso) || valorAviso <= 0) {
+      if (valorAviso == null) {
         valorAviso = Number(totalPedido.toFixed(2));
       }
-    } else {
-      if (valorAviso == null || !Number.isFinite(valorAviso) || valorAviso <= 0) {
-        valorAviso = valorRestante;
-      }
+    } else if (valorAviso == null) {
+      valorAviso = valorRestante;
     }
 
-    valorAviso = Number(Number(valorAviso).toFixed(2));
+    if (valorAviso <= 0) {
+      throw new ErroPixCliente(400, 'Valor inválido: não há valor positivo para informar');
+    }
     if (valorAviso > valorRestante + 0.009) {
       throw new ErroPixCliente(
         400,
@@ -184,10 +220,25 @@ async function informarPixPago(token, body = {}) {
     try {
       await client.query('ROLLBACK');
     } catch (_) {}
-    throw err;
+    throw erroDeSchema(err);
   } finally {
     client.release();
   }
 }
 
-module.exports = { informarPixPago, ErroPixCliente, ensurePixAvisosTable };
+/** Relation não encontrada (pg 42P01) = banco sem migrations; devolve 503 claro. */
+function erroDeSchema(err) {
+  if (err && (err.code === '42P01' || /pix_avisos/.test(String(err && err.message)) && /does not exist/i.test(String(err && err.message)))) {
+    return new ErroPixCliente(503, 'Schema desatualizado no servidor — rode `npm run db:migrate`.');
+  }
+  return err;
+}
+
+module.exports = {
+  informarPixPago,
+  ErroPixCliente,
+  ensurePixAvisosTable,
+  erroDeSchema,
+  validarUuid,
+  valorPositivo,
+};

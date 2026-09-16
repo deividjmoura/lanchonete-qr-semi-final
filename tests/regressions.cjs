@@ -1,3 +1,7 @@
+require('dotenv').config();
+/* Nenhum teste conecta ao banco de verdade; o valor só evita o exit(1)
+   do pool.js na importação dos módulos db/*. */
+if (!process.env.DATABASE_URL) process.env.DATABASE_URL = 'postgres://regress:regress@127.0.0.1:5432/regress';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -6,9 +10,33 @@ const ts = require('typescript');
 const { EventEmitter } = require('node:events');
 const { eventAccess } = require('../db/event-access');
 const { subscribe, broadcast, clientCount } = require('../db/events');
+const { validarDestinoRemoto } = require('../db/foto');
+const { verificarOrigemRequisicao } = require('../db/auth');
+const { ErroValidacao, numeroFinito, numeroInteiroPositivo } = require('../db/validacao');
+const { getOuAbrirSessao, getProdutoComRegras } = require('../db/queries');
+const { ErroGarcom, removerGarcom, setGarcomAtivo, entregarComoGarcom } = require('../db/garcons');
+const { ErroPedido, setStatusPedido, setStatusItem } = require('../db/pedidos');
+
+/* Mock mínimo de <html> que espelha o DOM real:
+   dataset ↔ data-theme ficam sincronizados com getAttribute/setAttribute. */
+function criarRoot() {
+  const classes = new Set();
+  return {
+    _attrs: {},
+    style: { values: {}, setProperty(k, v) { this.values[k] = v; } },
+    get dataset() { return { theme: this._attrs['data-theme'] }; },
+    set dataset(v) { this._attrs['data-theme'] = v.theme; },
+    getAttribute(k) { return k in this._attrs ? this._attrs[k] : null; },
+    setAttribute(k, v) { this._attrs[k] = String(v); },
+    classList: {
+      toggle(name, on) { if (on) classes.add(name); else classes.delete(name); },
+      contains: (name) => classes.has(name),
+    },
+  };
+}
 
 function theme({ blocked = false, dark = false, saved = null } = {}) {
-  const root = { dataset: {} };
+  const root = criarRoot();
   const meta = {};
   const context = {
     exports: {},
@@ -45,11 +73,39 @@ test('tema respeita sistema sem armazenamento e preferência salva', () => {
   assert.equal(t.meta.content, '#0b1524');
   assert.equal(theme({ saved: t.saved() }).temaAtual(), 'escuro');
 });
+test('tema claro usa superfície suave e não branco agressivo', () => {
+  const t = theme();
+  t.aplicarTema('claro');
+  assert.equal(t.root.style.values['--qr-page'], '#e9eef3');
+  assert.equal(t.root.style.values['--qr-white'], '#f7f9fb');
+  assert.equal(t.meta.content, '#e9eef3');
+});
 test('inicialização antes do React respeita sistema com armazenamento bloqueado', () => {
   const script = fs.readFileSync('index.html', 'utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
-  const context = { document: { documentElement: { dataset: {} } }, localStorage: { getItem() { throw Error(); } }, window: { matchMedia: () => ({ matches: true }) } };
+  const context = { document: { documentElement: criarRoot() }, localStorage: { getItem() { throw Error(); } }, window: { matchMedia: () => ({ matches: true }) } };
   vm.runInNewContext(script, context);
   assert.equal(context.document.documentElement.dataset.theme, 'escuro');
+  assert.equal(context.document.documentElement.classList.contains('dark'), true);
+  assert.equal(context.document.documentElement.style.values['--qr-page'], '#0b1524');
+});
+test('inicialização antes do React aplica o tema claro sem flash branco agressivo', () => {
+  const script = fs.readFileSync('index.html', 'utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
+  const context = { document: { documentElement: criarRoot() }, localStorage: { getItem() { return 'claro'; } }, window: { matchMedia: () => ({ matches: false }) } };
+  vm.runInNewContext(script, context);
+  assert.equal(context.document.documentElement.dataset.theme, 'claro');
+  assert.equal(context.document.documentElement.style.values['--qr-page'], '#e9eef3');
+  assert.equal(context.document.documentElement.style.values['--qr-white'], '#f7f9fb');
+});
+test('tema normaliza valores legados light/dark de builds anteriores', () => {
+  assert.equal(theme({ saved: 'dark', dark: false }).temaAtual(), 'escuro');
+  assert.equal(theme({ saved: 'light', dark: true }).temaAtual(), 'claro');
+  const t = theme();
+  t.aplicarTema('escuro');
+  assert.equal(t.root.dataset.theme, 'escuro');
+  assert.equal(t.root.classList.contains('dark'), true);
+  t.aplicarTema('claro');
+  assert.equal(t.root.dataset.theme, 'claro');
+  assert.equal(t.root.classList.contains('dark'), false);
 });
 test('SSE exige token existente ou staff e rejeita garçom inativo', async () => {
   const token = '12345678-1234-4234-8234-123456789abc';
@@ -85,4 +141,183 @@ test('cliente SSE envia token e encerra conexão no cleanup', () => {
   context.exports.connectEvents(() => {}, { garcom: 'abc' })();
   assert.equal(url, '/api/events?garcom=abc');
   context.exports.connectEvents(() => {})(); assert.equal(url, '/api/events');
+});
+
+test('upload de foto rejeita destinos SSRF locais', async () => {
+  await assert.rejects(() => validarDestinoRemoto('http://127.0.0.1/segredo'), /Destino de rede não permitido/);
+  await assert.rejects(() => validarDestinoRemoto('http://10.0.0.1/segredo'), /Destino de rede não permitido/);
+  await assert.rejects(() => validarDestinoRemoto('file:///etc/passwd'), /http:\/\/ ou https:\/\//);
+});
+
+/* A reescrita de db/foto.js (sharp lazy) quase levou embora estas defesas. Elas
+   voltaram e ficam travadas aqui, porque o padrão de "aparece corrigido, some no
+   próximo refactor" já aconteceu três vezes neste repo. */
+test('SSRF: IPv6 reservado e IPv4 mapeado não passam', async () => {
+  for (const alvo of [
+    'http://[::1]/x', 'http://[fc00::1]/x', 'http://[fd12:3456::1]/x',
+    'http://[fe80::1]/x', 'http://[ff02::1]/x', 'http://[::ffff:127.0.0.1]/x',
+    'http://[::]/x',
+  ]) {
+    await assert.rejects(() => validarDestinoRemoto(alvo), /rede não permitido|URL de imagem inválida/, alvo);
+  }
+});
+
+test('SSRF: alcance IPv4 reservados além do básico', async () => {
+  for (const alvo of [
+    'http://169.254.169.254/latest/meta-data/', 'http://192.0.2.1/x', 'http://198.18.0.1/x',
+    'http://100.64.0.1/x', 'http://0.0.0.0/x', 'http://224.0.0.1/x',
+  ]) {
+    await assert.rejects(() => validarDestinoRemoto(alvo), /rede não permitido/, alvo);
+  }
+});
+
+test('SSRF: credencial embutida na URL é rejeitada', async () => {
+  await assert.rejects(() => validarDestinoRemoto('http://admin:segredo@10.0.0.9/foto.png'), /URL de imagem inválida/);
+  await assert.rejects(() => validarDestinoRemoto('http://user@127.0.0.1/foto.png'), /URL de imagem inválida|rede não permitido/);
+});
+
+test('upload aceita o corpo { data } / { url } que o server.js envia', async () => {
+  // Regressão da reescrita: processarUploadFoto passou a aceitar só string/Buffer
+  // e o endpoint manda o objeto do body → todo upload do admin daria 400.
+  const { processarUploadFoto } = require('../db/foto');
+  await assert.rejects(() => processarUploadFoto({ url: 'http://127.0.0.1/interno.png' }), /Destino de rede não permitido/);
+  await assert.rejects(() => processarUploadFoto({}), /Envie data-URL base64, Buffer ou URL https/);
+  await assert.rejects(() => processarUploadFoto({ data: 'data:image/png;base64,@@@' }), /base64 inválido|[Ii]magem vazia|corrompido/);
+});
+
+test('requisições autenticadas rejeitam Origin externo', () => {
+  assert.doesNotThrow(() => verificarOrigemRequisicao({
+    method: 'POST',
+    headers: { host: 'app.local', origin: 'http://app.local' },
+    socket: { encrypted: false },
+  }));
+  assert.throws(() => verificarOrigemRequisicao({
+    method: 'POST',
+    headers: { host: 'app.local', origin: 'https://evil.example' },
+    socket: { encrypted: false },
+  }), /Origem da requisição não permitida/);
+});
+
+/* ---------- Regressões vindas de hardening/pre-sale-audit (PR #7) ----------
+   Esses casos existiam lá e se perderam na resolução de conflito do PR #8. */
+
+test('validação numérica do admin rejeita NaN, Infinity, vazios e tipos inválidos', () => {
+  for (const value of [NaN, Infinity, -Infinity, '', '   ', true, false, {}, [], 'abc']) {
+    assert.throws(
+      () => numeroFinito(value, 'Preço', { minimo: 0 }),
+      (error) => error instanceof ErroValidacao && error.status === 400
+    );
+  }
+  assert.equal(numeroFinito('12.50', 'Preço', { minimo: 0 }), 12.5);
+  assert.equal(numeroFinito(0, 'Estoque', { inteiro: true, minimo: 0 }), 0);
+  assert.equal(numeroFinito(null, 'Estoque', { allowNull: true }), null);
+  assert.equal(numeroInteiroPositivo('7', 'categoriaId'), 7);
+  assert.throws(() => numeroFinito(1.5, 'Estoque', { inteiro: true, minimo: 0 }), /deve ser inteiro/);
+  assert.throws(() => numeroFinito(-1, 'Estoque', { minimo: 0 }), /inválido/);
+  assert.throws(() => numeroInteiroPositivo('0', 'categoriaId'), /inválido/);
+});
+
+test('abertura de sessão trava a mesa antes de criar sessão (ADR-005)', async () => {
+  const calls = [];
+  const client = {
+    async query(sql, params) {
+      calls.push({ sql, params });
+      if (sql.includes('SELECT id FROM mesas')) return { rows: [{ id: 7 }] };
+      if (sql.includes("SELECT id FROM mesa_sessoes")) return { rows: [] };
+      if (sql.includes('INSERT INTO mesa_sessoes')) return { rows: [{ id: 42 }] };
+      return { rows: [] };
+    },
+  };
+  assert.equal(await getOuAbrirSessao(client, 7), 42);
+  assert.match(calls[0].sql, /FOR UPDATE/);
+  assert.match(calls[1].sql, /status = 'aberta'/);
+  assert.match(calls[2].sql, /INSERT INTO mesa_sessoes/);
+});
+
+test('produto com id inválido não dispara consulta ao PostgreSQL', async () => {
+  let called = false;
+  const client = { query: async () => { called = true; return { rows: [] }; } };
+  assert.equal(await getProdutoComRegras(client, NaN), null);
+  assert.equal(await getProdutoComRegras(client, Infinity), null);
+  assert.equal(await getProdutoComRegras(client, 0), null);
+  assert.equal(called, false);
+});
+
+test('admin de garçom rejeita IDs não inteiros antes do banco', async () => {
+  // Funções são async: o erro vira rejeição, não exception síncrona.
+  await assert.rejects(() => removerGarcom(Infinity), (e) => e instanceof ErroValidacao && e.status === 400);
+  await assert.rejects(() => setGarcomAtivo(NaN, true), (e) => e instanceof ErroValidacao && e.status === 400);
+  await assert.rejects(
+    () => entregarComoGarcom(-1, '00000000-0000-4000-8000-000000000000'),
+    (e) => e instanceof ErroValidacao && e.status === 400
+  );
+  assert.equal(ErroGarcom.prototype instanceof Error, true);
+});
+
+test('cozinha/bar não podem concluir entrega pelo endpoint genérico (ADR-007)', async () => {
+  // O guard roda antes de qualquer conexão com o banco, então o teste é herético.
+  await assert.rejects(() => setStatusPedido(1, 'entregue', 'cozinha'), (e) => e instanceof ErroPedido && e.status === 403);
+  await assert.rejects(() => setStatusPedido(1, 'entregue', 'bar'), (e) => e instanceof ErroPedido && e.status === 403);
+  await assert.rejects(() => setStatusItem(1, 'entregue'), (e) => e instanceof ErroPedido && e.status === 400);
+});
+
+/* ---------- Schema: DDL não pode morar no caminho da requisição ---------- */
+
+test('migrations incluem a tabela pix_avisos com índice', () => {
+  const sql = fs.readFileSync('db/migrations/0016_pix_avisos.sql', 'utf8');
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS pix_avisos/);
+  assert.match(sql, /idx_pix_avisos_sessao_status/);
+});
+
+test('handlers de pedido e caixa não disparam DDL em tempo de requisição', () => {
+  for (const file of ['db/caixa.js', 'db/pedidos.js', 'server.js']) {
+    const source = fs.readFileSync(file, 'utf8');
+    assert.doesNotMatch(source, /CREATE TABLE/, `${file} não deveria criar tabela`);
+    assert.doesNotMatch(source, /ensurePixAvisosTable\(/, `${file} não deveria chamar o DDL legado`);
+  }
+});
+
+test('relação ausente vira 503 acionável em vez de erro cru do PostgreSQL', () => {
+  const { erroDeSchema, ErroPixCliente } = require('../db/pix-cliente');
+  const marcado = erroDeSchema(Object.assign(new Error('relation "pix_avisos" does not exist'), { code: '42P01' }));
+  assert.ok(marcado instanceof ErroPixCliente);
+  assert.equal(marcado.status, 503);
+  const outro = new Error('outra coisa');
+  assert.equal(erroDeSchema(outro), outro);
+});
+
+/* ---------- PIX do cliente (hardening do colega, porta do ab9fa34) ----------
+   Os testes dele eram regex no fonte; aqui viram comportamentais — mesma proteção,
+   sem quebrar na próxima formatação. */
+
+const { informarPixPago, ErroPixCliente, validarUuid } = require('../db/pix-cliente');
+
+test('PIX rejeita token fora do formato UUID antes de tocar no PostgreSQL', async () => {
+  for (const token of ['', '  ', 'nao-existe', '../etc/passwd', '00000000-0000-0000-0000-000000000000', null, 42]) {
+    await assert.rejects(() => informarPixPago(token, {}), (e) => e instanceof ErroPixCliente && e.status === 400, String(token));
+  }
+  assert.equal(validarUuid('00000000-0000-4000-8000-000000000000'), '00000000-0000-4000-8000-000000000000');
+});
+
+test('PIX rejeita payload não-objeto e campos explícitos inválidos', async () => {
+  const uuid = '00000000-0000-4000-8000-000000000000';
+  // undefined é omissão legítima (vira {}); null/string/número/array são payload quebrado.
+  for (const corpo of [null, 'x', 42, []]) {
+    await assert.rejects(() => informarPixPago(uuid, corpo), /Dados do PIX inválidos/, String(corpo));
+  }
+  for (const pedidoId of ['abc', 1.5, 0, -3, true, {}]) {
+    await assert.rejects(() => informarPixPago(uuid, { pedidoId }), /Pedido (inválido|deve ser inteiro)/);
+  }
+  for (const valor of ['abc', 0, -1, true, NaN, Infinity, {}]) {
+    await assert.rejects(() => informarPixPago(uuid, { valor }), /Valor inválido/);
+  }
+});
+
+test('rotas de PIX e entrega não mascaram JSON inválido em payload vazio', () => {
+  const source = fs.readFileSync('server.js', 'utf8');
+  // body() já resolve {} para corpo ausente; engolir erro de parse virava
+  // "PIX com payload inventado" e "entregar todos os itens".
+  assert.doesNotMatch(source, /await body\(req\)\.catch\(\(\) => \(\{\}\)\)/);
+  assert.match(source, /const payload = await body\(req\);\s*const out = await informarPixPago/);
+  assert.equal((source.match(/await body\(req\);/g) || []).length >= 2, true);
 });

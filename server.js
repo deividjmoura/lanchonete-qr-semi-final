@@ -264,8 +264,10 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/mesas\/([^/]+)\/pix-informado$/)) && req.method === 'POST') {
       try {
-        const payload = await body(req).catch(() => ({}));
-        const out = await informarPixPago(m[1], payload || {});
+        /* JSON malformado é erro do cliente: sem este catch voraz a rota
+           executava a lógica de PIX com payload inventado ({}). */
+        const payload = await body(req);
+        const out = await informarPixPago(m[1], payload);
         broadcast('update', {
           type: 'pix_informado',
           mesaToken: m[1],
@@ -277,6 +279,8 @@ const server = http.createServer(async (req, res) => {
         return json(res, 200, out);
       } catch (e) {
         if (e instanceof ErroPixCliente) return json(res, e.status, { error: e.message });
+        // ErroValidacao (400) e corpo acima do limite (413) também saem como erro de cliente.
+        if (e && (e.status === 400 || e.status === 413)) return json(res, e.status, { error: e.message });
         throw e;
       }
     }
@@ -315,7 +319,9 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/pedidos\/(\d+)\/entregar$/)) && req.method === 'POST') {
       try {
-        const payload = await body(req).catch(() => ({}));
+        /* body(req) já devolve {} quando não há corpo; o catch voraz transformava
+           JSON quebrado em "entregar tudo". Sem ele, 400 honesto. */
+        const payload = await body(req);
         const itemIds = payload && (payload.itemIds || payload.itens || payload.ids);
         const out = await entregarComoGarcom(Number(m[2]), m[1], itemIds || null);
         broadcast('update', {
@@ -329,6 +335,7 @@ const server = http.createServer(async (req, res) => {
         return json(res, 200, out);
       } catch (e) {
         if (e instanceof ErroGarcom) return json(res, e.status, { error: e.message });
+        if (e && (e.status === 400 || e.status === 413)) return json(res, e.status, { error: e.message });
         throw e;
       }
     }
@@ -509,9 +516,10 @@ const server = http.createServer(async (req, res) => {
         throw e;
       }
     }
-    
+
     if (p === '/api/mesas' && req.method === 'GET') {
       try {
+        await exigirAcesso(req, 'admin');
         const rows = await listMesas();
         return json(res, 200, rows.map((m) => ({
           id: m.id,
@@ -521,6 +529,7 @@ const server = http.createServer(async (req, res) => {
           sessaoAberta: m.sessaoAberta,
         })));
       } catch (e) {
+        if (e instanceof ErroAuth) return json(res, e.status, { error: e.message });
         throw e;
       }
     }
@@ -628,7 +637,7 @@ const server = http.createServer(async (req, res) => {
         throw e;
       }
     }
-    
+
     if ((m = p.match(/^\/api\/admin\/categorias\/(\d+)$/)) && req.method === 'DELETE') {
       try {
         const out = await removerCategoria(Number(m[1]));
@@ -769,6 +778,24 @@ const server = http.createServer(async (req, res) => {
       if (p === '/garcom' || /^\/garcom\/[0-9a-f-]{36}$/i.test(p)) {
         const token = p.startsWith('/garcom/') ? p.slice('/garcom/'.length) : '';
         res.writeHead(302, { Location: token ? '/#/garcom/' + encodeURIComponent(token) : '/#/' });
+        return res.end();
+      }
+      /* HTMLs legados continuam acessíveis direto por arquivo; com a SPA ativa
+         eles são versões antigas SEM o seletor de tema — redireciona para a
+         rota equivalente do React e evita relato de "tema não funciona". */
+      const legacyParaSpa = {
+        '/admin.html': '/#/admin',
+        '/cozinha.html': '/#/cozinha',
+        '/bar.html': '/#/bar',
+        '/caixa.html': '/#/caixa',
+        '/login.html': '/#/login',
+        '/garcom.html': '/#/',
+        '/mesa.html': '/#/',
+        '/pedido.html': '/#/',
+        '/index.html': '/',
+      };
+      if (legacyParaSpa[p]) {
+        res.writeHead(302, { Location: legacyParaSpa[p] });
         return res.end();
       }
       /* GET / sempre serve o index — o hash (#/admin) NÃO vai ao servidor.

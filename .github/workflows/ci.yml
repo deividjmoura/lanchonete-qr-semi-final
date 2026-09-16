@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ['main']
+    branches: ['main', 'hardening/**', 'arena/**']
   pull_request:
     branches: ['main']
 
@@ -29,8 +29,21 @@ jobs:
       - name: Build
         run: npm run build
 
+      # dist/ é commitado porque o Railway serve esse build. src/ alterado sem
+      # rebuild = usuário continua com o bug (foi a saga do tema).
+      - name: dist/ matches src/
+        run: |
+          git add -A dist
+          if ! git diff --cached --quiet -- dist; then
+            echo "dist/ commitado difere do build deste src/. Rode: npm run build && git add dist && git commit"
+            git diff --cached --stat -- dist
+            exit 1
+          fi
+
       - name: Regression tests
         run: npm run test:regression
 
-      - name: Server syntax
-        run: node --check server.js
+      - name: Server and db syntax
+        run: |
+          node --check server.js
+          for f in db/*.js scripts/*.js; do node --check "$f"; done

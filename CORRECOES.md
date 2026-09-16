@@ -33,3 +33,41 @@ Base analisada: deividjmoura/lanchonete-qr-semi-final, commit a45d7fe.
 
 Nenhuma migração ou alteração de dados foi feita. Não execute setup/seed para aplicar estas correções em uma instalação existente.
 A publicação em produção depende do processo de implantação do repositório. A validação integrada com o banco e a verificação visual permanecem necessárias.
+
+---
+
+# Revisão Arena — 2026-09-16
+
+Base: origin/main (a293c6c) + hardening/pre-sale-audit (34bdf89).
+
+## Causa raiz do "tema escuro não funciona"
+A branch `redesign-qradmin` tem o mismatch relatado (`tema.ts` grava `data-theme="escuro"`,
+`index.css` só casa `[data-theme="dark"]` → ícone muda, cores não) e **não tem `dist/`
+commitado** — o deploy builda do fonte com hashes próprios, diferentes do `dist/` do repo.
+Se o Railway deploya dessa branch, nenhuma correção enviada ao `main` chegou ao ar.
+**Ação do dono:** no Railway, conferir Settings → Git → Branch = `main` e redeployar.
+
+## Correções aplicadas (branch arena, PR para main)
+1. Tema unificado e à prova de legado: valores canônicos `claro|escuro`; CSS aceita
+   `escuro`, `dark` e `html.dark`; JS normaliza `dark|light` salvos; fallback inline
+   completo; pré-paint cobre os dois temas (sem flash).
+2. Paleta clara suave aplicada também no CSS `:root` (antes só existia no fallback
+   inline do tema.ts — fontes divergentes da verdade).
+3. `dist/` rebuildado e commitado em sincronia com `src/` (estava defasado).
+4. Segurança do `hardening/pre-sale-audit` mesclada: bloqueio de SSRF no upload remoto,
+   seed de staff exige senha configurada (≥12 caracteres) em produção, validação de
+   Origin em requisições autenticadas (CSRF básico), proteção da listagem de mesas,
+   cookie de logout com Secure.
+5. HTMLs legados (`/admin.html`, `/login.html`, …) redirecionam para a rota SPA quando
+   `dist/` existe — versões antigas sem seletor de tema deixam de ficar acessíveis.
+6. Testes de regressão consertados (mock de DOM real: getAttribute/setAttribute/classList)
+   e ampliados: 11/11 passam (antes 4/6). Cobre aliases legados, flash claro, SSE, SSRF, Origin.
+7. Bundle: code-splitting de vendors (react/motion/icons) — principal 569→413 kB.
+
+## Verificações
+- `npm run build` (com typecheck): OK.
+- `tests/regressions.cjs`: 11/11.
+- `scripts/smoke.js` e `scripts/smoke-full.js`: OK (PostgreSQL real).
+- Chromium headless contra o build final: 22/22 checks de tema (toggle em todas as telas,
+  persistência, OS dark, redirects).
+- Nota: `data/db.json` NÃO é resíduo — é a fonte do seed (`db/seed.js`).

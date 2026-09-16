@@ -47,21 +47,54 @@ function garantirDirUpload() {
   if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
+/** IPv4 em notação decimal válida (0..255 x4). */
+function ipv4PrivadoOuReservado(ip) {
+  const oct = String(ip).split('.').map(Number);
+  if (oct.length !== 4 || oct.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return true;
+  const [a, b] = oct;
+  // 0/8, 10/8, 127/8, 169.254/16 (link-local), 172.16/12, 192/24 (IETF),
+  // 192.0.2/24 e 198.51.100/24 / 203.0.113/24 (documentação), 198.18/15 (benchmark),
+  // 100.64/10 (CGNAT), 240/4 (reservado) e multicast 224/4.
+  return (
+    a === 0 || a === 10 || a === 127 ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 0) ||
+    (a === 192 && b === 168) ||
+    (a === 198 && (b === 18 || b === 19)) ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    a >= 224
+  );
+}
+
+function ipv6PrivadoOuReservado(ip) {
+  const normalized = String(ip).toLowerCase().split('%')[0];
+  if (normalized === '::' || normalized === '::1') return true;
+  // IPv4 mapeado em IPv6 não pode virar porta de entrada. O WHATWG URL normaliza
+  // `::ffff:127.0.0.1` para forma hexadecimal (`::ffff:7f00:1`), então os dois jeitos.
+  const mapped = normalized.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (mapped) return ipv4PrivadoOuReservado(mapped[1]);
+  const mappedHex = normalized.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (mappedHex) {
+    const hi = parseInt(mappedHex[1], 16);
+    const lo = parseInt(mappedHex[2], 16);
+    return ipv4PrivadoOuReservado([(hi >> 8) & 255, hi & 255, (lo >> 8) & 255, lo & 255].join('.'));
+  }
+  // ULA fc00::/7, link-local fe80::/10, multicast ff00::/12
+  if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true;
+  if (/^fe[89ab]/.test(normalized)) return true;
+  if (normalized.startsWith('ff')) return true;
+  return false;
+}
+
 function ipPrivadoOuReservado(hostname) {
   if (!hostname) return true;
-  const h = String(hostname).toLowerCase();
-  if (h === 'localhost' || h.endsWith('.localhost')) return true;
-  if (h === '::1') return true;
-  // IPv4 literal
-  if (net.isIP(h) === 4) {
-    const p = h.split('.').map(Number);
-    if (p[0] === 10) return true;
-    if (p[0] === 127) return true;
-    if (p[0] === 0) return true;
-    if (p[0] === 169 && p[1] === 254) return true;
-    if (p[0] === 172 && p[1] >= 16 && p[1] <= 31) return true;
-    if (p[0] === 192 && p[1] === 168) return true;
-  }
+  const h = String(hostname).toLowerCase().replace(/^\[|\]$/g, '');
+  if (h === 'localhost' || h.endsWith('.localhost') || h.endsWith('.internal') ||
+      h.endsWith('.local' + 'host')) return true;
+  const family = net.isIP(h);
+  if (family === 4) return ipv4PrivadoOuReservado(h);
+  if (family === 6) return ipv6PrivadoOuReservado(h);
   return false;
 }
 
@@ -75,7 +108,9 @@ async function assertUrlSegura(rawUrl) {
   if (u.protocol !== 'http:' && u.protocol !== 'https:') {
     throw new ErroFoto(400, 'URL deve começar com http:// ou https://');
   }
-  if (!u.hostname) {
+  if (!u.hostname || u.username || u.password) {
+    // hostname vazio ou credencial embutida (http://user:pass@host/) — o par
+    // user:pass poderia ser usado para atingir um host interno com auth forjada
     throw new ErroFoto(400, 'URL de imagem inválida');
   }
   if (ipPrivadoOuReservado(u.hostname)) {
@@ -165,7 +200,16 @@ async function otimizarParaWebp(buf) {
   }
 }
 
-async function processarUploadFoto(input) {
+async function processarUploadFoto(raw) {
+  // server.js chama com o corpo já parseado ({ data | url }). Aceita também
+  // string/Buffer direto, que é o que scripts e testes usam.
+  let input = raw;
+  if (raw && typeof raw === 'object' && !Buffer.isBuffer(raw)) {
+    if (raw.data) input = raw.data;
+    else if (raw.url) input = raw.url;
+    else throw new ErroFoto(400, 'Envie data-URL base64, Buffer ou URL https');
+  }
+
   let buf;
   if (typeof input === 'string' && input.startsWith('data:')) {
     buf = parseDataUrl(input);
@@ -197,4 +241,8 @@ module.exports = {
   processarUploadFoto,
   ErroFoto,
   UPLOAD_DIR,
+  // nome histórico do validador, usado pelo tests/regressions.cjs e por scripts
+  validarDestinoRemoto: assertUrlSegura,
+  assertUrlSegura,
+  ipPrivadoOuReservado,
 };

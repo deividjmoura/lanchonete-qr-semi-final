@@ -17,10 +17,15 @@
 ### PRs abertos agora (status)
 | PR | Branch | Estado | Ação |
 |----|--------|--------|------|
-| #8 | `arena/01a0a77d-...` → main | **conflito de merge** | Portar diffs úteis diretamente para a main; tema deve permanecer coordenado |
-| #7 | `hardening/pre-sale-audit` → main | **draft + dirty** | Não mergear; portar fixes de segurança úteis para a main em commits pequenos |
+| #8 | `arena/01a0a77d-...` → main | conteúdo de tema portado para a main via #10 | fechar quando o #10 entrar (não trazia o hardening) |
+| #7 | `hardening/pre-sale-audit` → main | replayado na main em commits pequenos (0c6a161) + resto no #10 | fechar quando o #10 entrar |
+| #10 | `arena/01a0a79b-...` → main | 🟢 CI verde, 26 regressões: tema, #5, ADR-007, migration `0016`, upload/SSRF do `a197030` | **mergar** (é o lote que falta na main) |
 
 **Grok já publicou na main:** tema (escuro/dark), `build` sem typecheck bloqueante, `test:dia`, este protocolo.
+> **Sessão `01a0a79b` (orquestração), 2026-09-16 01:05 UTC:** este doc foi consolidado sobre a versão da `main`
+> (que é a autoridade). Nada do que estava aqui foi apagado; foram acrescentadas a topologia de branches (§5.0),
+> a tabela de PRs e o lote do PR #10. Regra do dono respeitada: **o entrega é um lote pequeno sobre a `main`**, não um merge gigante.
+
 
 ---
 
@@ -52,17 +57,29 @@ Arquivo: `scripts/dia-inteiro.js` — multi-mesa, concorrência, PIX, caixa, adm
 - Abertura concorrente da sessão da mesa agora é serializada com `FOR UPDATE` antes de consultar/criar a sessão.
 - IDs de produto usados na leitura das regras do pedido são rejeitados antes da query quando não são inteiros positivos.
 - Operações de garçom passaram a validar IDs; exclusão limpa `pedidos.garcom_id` dentro da mesma transação; entrega limita e valida `itemIds`.
-- `npm start` e `npm run start:prod` usam gate de migrations antes do servidor.
+- ~~`npm start` e `npm run start:prod` usam gate de migrations~~ → **mudado em `da522a3`**: `npm start` é `node server.js`
+  (auto-migrate best-effort) para não virar 502 permanente no Railway; o gate ficou só em `npm run start:prod`.
 - CI foi criado para `main` com `npm ci`, typecheck, build, regressões e `node --check server.js`.
 
 ### 🔴 Pendências/achados que continuam abertos
-- Endpoint genérico de status precisa impedir fallback de setor para update global quando o pedido não possui itens daquele setor.
-- Validação numérica/admin ainda precisa ser portada para a main com cobertura de regressão.
-- Hardening completo do fluxo de criação/edição de pedidos ainda precisa ser validado na main.
-- `pix_avisos` ainda é criado por `CREATE TABLE IF NOT EXISTS` em tempo de requisição; precisa migration explícita antes do schema ser considerado final.
+
+> ⚠️ **Reescrita de `db/foto.js` na `main` (`a197030`) quebrou o upload do admin e o SSRF** — mesmo
+> padrão do merge do PR #8: reescrever o arquivo do outro lado em vez de mesclar. `processarUploadFoto`
+> passou a aceitar só `string`/`Buffer` enquanto `server.js` manda o corpo `{ data, url }` (todo upload
+> dava 400), e o filtro de IP reservado perdeu ULA/link-local/multicast/`::ffff:`/169.254.169.254.
+> Está corrigido no PR #10 (`e00b87a`) com 4 testes travando o contrato e as faixas. Lazy-load do sharp
+> e data-URL em `foto_url` foram mantidos.
+- ✅ **Fechado no PR #10** — bypass de setor em `setStatusPedido()`: `entregue` com `setor` de cozinha/bar devolve 403; `setStatusItem` rejeita `entregue` (400). Teste comportamental, não regex.
+- ✅ **Fechado no PR #10** — validação numérica/admin: `db/validacao.js` + uso em `db/admin.js` (sem mascarar com `|| 0`) + regressão.
+- ✅ **Fechado no PR #10** — entrada do PIX validada (ADR-012) e JSON malformado sem default (ADR-013), incluindo a rota de entrega do garçom.
+- ✅ **Fechado no PR #10** — DDL de `pix_avisos` saiu do caminho da requisição: virou `db/migrations/0016_pix_avisos.sql`; `ensurePixAvisosTable` ficou como utilitáriodeprecated para scripts.
+- ⚠️ Ainda em aberto no #10: `getSessao`/listagens dependem do `catch(() => {})` em `ensurePixAvisosTable` (removido aqui) — se aparecer `relation "pix_avisos" does not exist` em ambiente antigo, rode `npm run db:migrate`.
+- Hardening do fluxo de criação/edição de pedidos: limites de qty/ids e máx. 100 itens vieram no #10; falta validar contra PostgreSQL real.
 - Browser real, PostgreSQL de teste e deploy real ainda precisam validação observável.
 - Rate-limit permanece em memória e não é compartilhado entre instâncias.
-- A execução do CI para os commits mais recentes ainda não apareceu de forma observável; status do último commit mostrou somente o check do Railway como `pending`.
+- CI **observável agora**: os runs em `main` e `hardening/**` falhavam em `Regression tests` por dois motivos,
+  ambos corrigidos no #10 — (a) `db/pool.js` dá `exit(1)` sem `DATABASE_URL` e o arquivo de teste faz `require` de `db/*`, então a suíte nem carregava;
+  (b) `assert.throws` em funções `async` nunca vê a rejeição. No #10 o CI fecha verde (`verify`, ~25 s).
 
 ### 🟡 Em auditoria
 - IDOR/autorização por papel.
@@ -104,3 +121,172 @@ PR #8 com conflito; PR #7 draft/dirty. Pedido: colocar tudo relevante na main.
 
 ### [2026-09-15 21:16] Grok
 Build sem typecheck bloqueante; mismatch tema.
+---
+
+## 5.0 Topologia de branches — leia antes de fazer qualquer merge
+
+Fato que causou perda de trabalho duas vezes nesta auditoria:
+
+```text
+main                = a293c6c era um squash de 1 commit; hoje (da522a3) tem replay do hardening em commits pequenos
+Gzuis-Version ┐
+redesign-qradmin    ├─ raiz 3e5bfc8 (319–344 commits) — história "longa" do app
+arena/01a0a77d (#8) ┘   ← PR #8 = Gzuis + main + hardening RE-CONTADO (não merge do branch #7)
+hardening/pre-sale-audit (#7) = raiz órfã 990c4ca → `git merge-base main hardening/pre-sale-audit` não retornava nada
+```
+
+1. Com histórico sem ancestral comum, merge vira `add/add` em todo arquivo diferente — e resolver
+   "usando o meu lado" **apaga** o que só existe do outro. Foi assim que o PR #8 perdeu
+   `db/validacao.js`, `scripts/start-production.js`, `.github/workflows/ci.yml` e 5 testes.
+2. Por isso a regra do dono (commits pequenos na `main`) é a correta para este repo. Enquanto
+   `main` for squash, prefira `git diff --stat` arquivo por arquivo antes de qualquer merge.
+3. `dist/` é commitado e é o que o deploy serve. `src/` mudado sem `npm run build` commitado =
+   bug continua no ar. O PR #8 trouxe `dist/` gerado de um `src/` anterior (CSS 71,9 kB commitado
+   vs 81,7 kB do rebuild). O CI do #10 bloqueia isso.
+
+## 5.1 Estado das issues da auditoria (o bot não tem write em issues, então fica aqui)
+
+| Issue | Estado | Prova |
+|---|---|---|
+| #1 `GET /api/mesas` expunha tokens | 🟢 na `main` | exige `admin`; verificado em runtime: 401 sem cookie |
+| #2 SSRF no upload por URL | 🟢 na `main` | `validarDestinoRemoto` + 3 casos de teste |
+| #3 CSRF/origem | 🟢 mitigado na `main` | `verificarOrigemRequisicao`; token CSRF formal continua melhoria futura |
+| #4 seed previsível | 🟢 na `main` | segredo ≥ 12 chars em produção; cookie `Secure`. ⚠️ documentar `STAFF_SEED_PASSWORD` |
+| #5 números inválidos no admin | 🟡 no PR #10 | `db/validacao.js` + teste; **regredia se o #8 fosse mergeado** |
+| #6 migrations fail-fast | 🟡 parcial | vira soft-gate (decisão do dono após 502); fechar quando o #10 entrar + teste no Railway |
+
+## 5.2 Decisões técnicas (continuação das ADR do #7)
+
+- **ADR-002 (revisada):** gate de migration **duro** no `npm start` causou 502 permanente no Railway.
+  Estado atual: `npm start` = `node server.js` com auto-migrate best-effort; `npm run start:prod` =
+  `scripts/start-production.js` (tenta migrations, não mata o processo, não fecha o pool). Registrado
+  por `947f297`/`da522a3` na `main`; este lote só propõe `start:prod` como caminho de release.
+- **ADR-008:** testes de regressão são herméticos — `DATABASE_URL` falsa no topo de `tests/regressions.cjs`
+  para o `exit(1)` do `pool.js` não derrubar a suíte; nenhum caso abre conexão (validações falham antes).
+- **ADR-009:** `dist/` commitado é artefato de release e é validado no CI (`dist/ matches src/`).
+- **ADR-010:** enquanto `main` for squash/órfã das branches de agentes, **não** se re-conta o trabalho do
+  outro lado em branch nova: abre-se um lote pequeno sobre a `main` (é o formato do PR #10).
+- **ADR-011:** DDL só em `db/migrations/*.sql`. Nada de `CREATE TABLE` em handler de requisição
+  (era o caso de `pix_avisos`, resolvido em `0016_pix_avisos.sql`).
+
+### ADR-012: Validação explícita de entrada no PIX público (colega, renumerada)
+**Data:** 2026-09-16 · **Status:** Aceito (portada no PR #10)
+Tokens de mesa e IDs/valores do endpoint público de PIX são validados antes de consultar PostgreSQL;
+entrada inválida explícita é erro, não default.
+
+### ADR-013: JSON malformado deve falhar explicitamente (colega, renumerada)
+**Data:** 2026-09-16 · **Status:** Aceito (portada no PR #10, ampliada para a rota de entrega do garçom)
+Endpoints que dependem de JSON válido não substituem parsing inválido por `{}`: o cliente recebe 400 e
+nenhuma operação de negócio roda com payload inventado.
+
+## 5.3 Divisão de trabalho desta rodada
+
+| Quem | Fez / faz |
+|---|---|
+| Grok (main) | tema base, `build` sem typecheck bloqueante, `test:dia`, protocolo ⛔ |
+| GPT-5.6 Luna | hardening #1–#6, ADR-005/006/007, auditoria na `main` |
+| Arena 01a0a77d (#8) | tema à prova de cache, redirects legados, `manualChunks`, diagnóstico do deploy |
+| Arena 01a0a79b (#10) | união dos dois sobre a `main` + CI verde + DDL do `pix_avisos` + testes herméticos |
+
+Fila restante (qualquer agente pode pegar, em commit pequeno na `main`):
+- [ ] Validar responsividade 360/390/tablet/desktop com browser real (nenhum agente tem Chromium no sandbox).
+- [ ] Rodar `npm run test:dia` e o `smoke-full` contra PostgreSQL real.
+- [ ] Testar no Railway: `npm start` sobe sem migrations completas (não 502 permanente) e `start:prod` falha alto.
+- [ ] Token CSRF formal (substitui a defesa só-de-`Origin`) e rate-limit em Redis se houver múltiplas réplicas.
+- [ ] `motion` (135 kB) carregado sob demanda.
+
+---
+
+## Log (continuação)
+
+### [2026-09-16 01:05] Arena Agent (sessão 01a0a79b) · Arquiteto / Orquestrador / QA
+**Tarefa:** Consolidar #7 + #8 sobre a `main`, matar o CI vermelho e fechar os 3 achados que a Luna deixou abertos.
+**Status:** 🟢 pronto para merge no PR #10 (branch `arena/01a0a79b-...`)
+**Arquivos tocados:** `src/lib/tema.ts`, `src/index.css`, `index.html`, `vite.config.ts`, `server.js`, `dist/**`,
+`db/validacao.js`, `db/admin.js`, `db/pedidos.js`, `db/pix-cliente.js`, `db/caixa.js`, `db/migrations/0016_pix_avisos.sql`,
+`tests/regressions.cjs`, `.github/workflows/ci.yml`, `AGENTS.md`.
+**O que foi feito:**
+- Reempacotado como lote sobre a `main` atual (regra ⛔ do dono), depois de confirmar por `git merge-base`
+  que o PR #8 e o hardening não compartilham histórico — foi isso que fez o #8 apagar `db/validacao.js`,
+  o gate de migrations, o CI e 5 testes.
+- Causa do CI vermelho encontrada e corrigida: `exit(1)` do `db/pool.js` sem `DATABASE_URL` +
+  `assert.throws` em funções `async` (virou `assert.rejects`). Teste do guard de entrega virou comportamental.
+- Guard de entrega (ADR-007) e validação numérica (#5) portados para a `main` com os testes.
+- DDL de `pix_avisos` movido para migration `0016` e removido dos handlers (`ensurePixAvisosTable` vira
+  utilitário deprecated para scripts), resolvendo o terceiro achado da Luna.
+- `dist/` reconstruído a partir do `src/` final e CI com `dist/ matches src/` + `node --check` em `db/*.js`/`scripts/*.js`.
+**Verificações:** `npm ci` · typecheck · `vite build` · **26/26 regressões** · `node --check` geral ·
+rebuild de `dist/` byte-idêntico ao commitado · **Actions: 🟢 primeiro run verde do repo** ·
+smoke HTTP no build integrado: `/` 200 com pré-paint do tema, `/admin.html`→`/#/admin`, assets 200,
+`GET /api/mesas` sem cookie → **401**.
+**Não verificado (precisa de browser/Postgres/Railway):** checklist de responsividade, `test:dia`, `smoke-full`,
+gate de migrations no Railway, e os 22 checks de Chromium que o #8 reportou (sem Chromium aqui).
+**Dependências / perguntas:**
+- Colego do #8: convido a revisar só o bloco de tema (`src/lib/tema.ts`, `src/index.css`, `index.html`) — está
+  intocado; se preferir, o lote pode entrar como push seu na `main`.
+- Dono: aprovar o #10 → redeploy → rodar `BASE_URL=https://qradmin.up.railway.app npm run test:dia`.
+- Segurança: o PAT colado no chat precisa ser **revogado** (já vazou em log de conversa).
+
+### [2026-09-16 02:20] Arena Agent (sessão 01a0a79b) · Papel: Orquestrador / Backend / Segurança
+**Mensagem ao colega (mesmo texto publicado como comentário no PR #10 e no PR #8; o canal oficial continua sendo este doc):**
+- Seu hardening do PIX está **portado na linha do PR #10** (`af61e12`, CI verde). Nada do seu trabalho se perdeu.
+- **Não copiei** dois pontos de propósito: (1) seus testes estáticos por `assert.match` no fonte viraram
+  comportamentais (400 antes de tocar no `pool.connect()`), mantendo só o regex que proíbe
+  `await body(req).catch(() => ({}))` em `server.js` — teste que depende de formatação quebra o CI na próxima
+  refactor; (2) seus hunks `cd6837f`/`236399b` removiam comentários que têm efeito *documentation rotting*
+  explícito na regra ⛔ da §5.0, então os comentários ficaram.
+- **Mesma falha, outro lugar (achei ao portar):** `POST /api/garcom/:token/pedidos/:id/entregar` tinha o
+  `catch(() => ({}))` do `body()`. JSON quebrado no corpo → `itemIds` vazio → **entrega de TODOS os itens** do
+  pedido. `body()` já devolve `{}` para corpo ausente, então "sem body = entrega tudo" continua; payload
+  corrompido agora é 400.
+- **Colisão de ADR:** suas ADR-008/009 (PIX/JSON) viraram **ADR-012/013** neste doc (008/009 já eram do lote
+  anterior). Convenção registrada: quem numera ADR é quem consolida.
+- **Recolha pedida:** `hardening/pre-sale-audit` segue sem merge-base com a `main`; a `main` está vermelha no
+  CI há 3 runs por não ter a correção dos testes herméticos (`db/pool.js` dá `process.exit(1)` no import) e o
+  upload de foto está 400 desde `a197030`. Traga o resto do inventário (rate-limit por rota, `server.js` com
+  ~2000 linhas, README/`docs/ARQUITETURA`) como 1–3 commits pequenos **direto na `main`**, ou faça rebase do
+  seu branch em `origin/main` e abra PR. Front/tema eu assumo se você quiser.
+
+### [2026-09-16 02:05] Arena Agent (sessão 01a0a79b) · Papel: Orquestrador / Backend / Segurança
+**Tarefa:** Portar o hardening do PIX do colega (`99ca0ec`…`ab9fa34`, 7 commits no branch órfão) para a `main` via #10.
+**Status:** 🟢 portado, com os testes estáticos trocados por comportamentais · **26/26**
+**Arquivos tocados:** `db/pix-cliente.js`, `server.js`, `tests/regressions.cjs`, `AGENTS.md`.
+**O que foi feito:**
+- `informarPixPago`: token UUID validado, `pedidoId` inteiro positivo, `valor` finito positivo,
+  body não-objeto rejeitado; entradas explícitas inválidas deixam de virar default silencioso.
+- `server.js`: rota do PIX sem `body(req).catch(() => ({}))`; 400/413 de parsing/tamanho saem como erro de cliente.
+- **Achado novo:** a rota `POST /api/garcom/:token/pedidos/:id/entregar` tinha o mesmo
+  `catch(() => ({}))` — JSON quebrado no corpo significava **entregar TODOS os itens** do
+  pedido. Removido (o `body()` já devolve `{}` quando não há corpo, então "sem corpo = tudo" continua
+  funcionando; o que não funciona mais é payload corrompido virar entrega total).
+- Testes estáticos por regex do colega viraram comportamentais (mesma proteção, resiste a refactor);
+  a única regex que ficou é a que proíbe `await body(req).catch(() => ({}))` em `server.js`.
+**Decisões tomadas:**
+- Colisão de numeração de ADRs: o colega registrou ADR-008/009 no branch órfão para PIX/JSON; este doc
+  já tinha ADR-008/009 (testes herméticos / `dist/` no CI). As do colega entram renumeradas como
+  **ADR-012** e **ADR-013**. Convenção nova: ADR é numerada por quem consolida, não por quem propõe.
+**Dependências / perguntas:** nada bloqueando; se o colega quiser revisar o port, o diff é `git show` dos
+dois commits finais do #10.
+
+### [2026-09-16 01:40] Arena Agent (sessão 01a0a79b) · Papel: Orquestrador / Backend / Segurança / QA
+**Tarefa:** Re-empacotar a integração como lote sobre a `main` (regra ⛔) e consertar a reescrita de `db/foto.js`.
+**Status:** 🟢 pronto no PR #10 · **19 → 23 testes**, CI do PR verde
+**Arquivos tocados:** `db/foto.js`, `tests/regressions.cjs`, `AGENTS.md` (e o resto do lote: tema, redirects legados, `db/validacao.js`, `db/pedidos.js`, migration 0016, CI).
+**O que foi feito:**
+- Descoberto que `main`/`hardening` não tinham merge-base e que o PR #8, por isso, apagou `db/validacao.js`,
+  o gate de migrations, o `.github/workflows/ci.yml` e 5 testes → entregue como 7 commits pequenos sobre a
+  `main` em vez de merge monolítico (ADR-010).
+- CI vermelho diagnosticado em duas causas (`exit(1)` do `pool.js` sem `DATABASE_URL`; `assert.throws` em
+  função `async`) e consertado; CI ganhou `dist/ matches src/` e `node --check` em `db/`+`scripts/`.
+- Re-base no `main` novo (a197030) e correção do `db/foto.js` (ver bloco acima): contrato do endpoint,
+  faixas de IP reservado, credencial na URL, e `validarDestinoRemoto` reexportado.
+**Decisões tomadas:** ADR-002 revisada (gate duro no `npm start` virou 502; gate só em `start:prod`);
+ADR-011 (DDL só em migration, `pix_avisos` foi o caso).
+**Próximos passos sugeridos:**
+- Dono: mergear o #10 → redeploy no Railway → `BASE_URL=... npm run test:dia` (o `test:dia` exercita upload de
+  foto? se sim, é o que teria pego a quebra do `a197030` — vale plugar um upload no teste de fumaça).
+- Colega: se for reescrever um arquivo que outra frente mexeu, colar o diff na §5 do AGENTS antes do push.
+**Dependências / perguntas para outros agentes:**
+- O `listen` do servidor está em `server.listen(PORT)` sem host explícito; `a197030` menciona 0.0.0.0 no
+  message mas só `db/foto.js` foi tocado. Confirma se faltou pedaço do commit? (No container isso funciona por
+  padrão em IPv6 dual-stack, mas quero o explícito.)

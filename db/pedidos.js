@@ -1,7 +1,6 @@
 // Criação de pedido, avanço de status, cancelar/editar (cliente) e leitura de sessão/fila.
 const pool = require('./pool');
 const { TRANSICOES, getMesaPorToken, getOuAbrirSessao, getProdutoComRegras } = require('./queries');
-const { ensurePixAvisosTable } = require('./pix-cliente');
 
 class ErroPedido extends Error {
   constructor(status, message) {
@@ -34,30 +33,55 @@ async function gravarItensPedido(client, pedidoId, itensInput) {
   const itensGravados = [];
   let total = 0;
 
+  // Limite defensivo: payload abusivo vira erro 400 em vez de loop longo dentro
+  // da transação (segura lock de estoque por mais tempo do que o necessário).
+  if (!Array.isArray(itensInput) || itensInput.length > 100) {
+    throw new ErroPedido(400, 'Quantidade de itens do pedido inválida');
+  }
+
   for (const item of itensInput) {
+    if (!item || typeof item !== 'object') continue;
     const produtoId = Number(item.productId ?? item.id);
+    if (!Number.isInteger(produtoId) || produtoId < 1) continue;
     const produto = await getProdutoComRegras(client, produtoId);
     if (!produto || !produto.disponivel) continue;
 
-    const quantidade = Math.max(1, Math.min(99, Number(item.qty) || 1));
+    // Fora de 1–99 é rejeitado explicitamente; antes era clamp silencioso
+    // (Math.max/Math.min), que escondia cliente quebrado e teste abusivo.
+    const rawQuantidade = item.qty;
+    const quantidade =
+      rawQuantidade === undefined || rawQuantidade === null || rawQuantidade === ''
+        ? 1
+        : Number(rawQuantidade);
+    if (!Number.isInteger(quantidade) || quantidade < 1 || quantidade > 99) {
+      throw new ErroPedido(400, `Quantidade inválida para "${produto.nome}"`);
+    }
 
     if (produto.controla_estoque) {
       const disp = produto.estoque == null ? 0 : Number(produto.estoque);
-      if (disp < quantidade) {
+      if (!Number.isFinite(disp) || disp < quantidade) {
         throw new ErroPedido(400, `Estoque insuficiente para "${produto.nome}" (disponível: ${disp})`);
       }
     }
 
-    const adicionaisSelecionados = Array.isArray(item.additions) ? item.additions : [];
+    const adicionaisSelecionados = Array.isArray(item.additions) ? item.additions.slice(0, 50) : [];
     const adicionaisValidos = [];
     for (const a of adicionaisSelecionados) {
-      const permitido = produto.adicionaisPermitidos.find((x) => x.id === Number(a.id));
+      if (!a || typeof a !== 'object') continue;
+      const adicionalId = Number(a.id);
+      if (!Number.isInteger(adicionalId) || adicionalId < 1) continue;
+      const permitido = produto.adicionaisPermitidos.find((x) => x.id === adicionalId);
       if (permitido) adicionaisValidos.push(permitido);
     }
 
-    const remocoesSolicitadas = Array.isArray(item.removals) ? item.removals : [];
+    const remocoesSolicitadas = Array.isArray(item.removals) ? item.removals.slice(0, 50) : [];
     const remocoesValidas = [
-      ...new Set(remocoesSolicitadas.filter((r) => produto.removiveisPermitidos.includes(r))),
+      ...new Set(
+        remocoesSolicitadas
+          .filter((r) => typeof r === 'string')
+          .map((r) => r.trim())
+          .filter((r) => produto.removiveisPermitidos.includes(r))
+      ),
     ];
 
     const pontoCarne =
@@ -191,6 +215,10 @@ async function criarPedido(token, body) {
 
 /** Cliente cancela pedido só enquanto status = recebido (ainda não em preparo). */
 async function cancelarPedidoCliente(token, pedidoId) {
+  const pedidoNumerico = Number(pedidoId);
+  if (!Number.isInteger(pedidoNumerico) || pedidoNumerico < 1) {
+    throw new ErroPedido(400, 'Pedido inválido');
+  }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -245,6 +273,10 @@ async function cancelarPedidoCliente(token, pedidoId) {
 async function editarPedidoCliente(token, pedidoId, body) {
   const itensInput = Array.isArray(body.items) ? body.items : [];
   if (!itensInput.length) throw new ErroPedido(400, 'O pedido editado está vazio — cancele se quiser remover');
+  const pedidoNumerico = Number(pedidoId);
+  if (!Number.isInteger(pedidoNumerico) || pedidoNumerico < 1) {
+    throw new ErroPedido(400, 'Pedido inválido');
+  }
 
   const client = await pool.connect();
   try {
@@ -324,7 +356,9 @@ async function editarPedidoCliente(token, pedidoId, body) {
 }
 /** Avança o pedido para o próximo status do fluxo (TRANSICOES). Usado pela cozinha/bar. */
 async function avancarStatusItem(pedidoId, setor = null) {
-  const { rows } = await pool.query(`SELECT status FROM pedidos WHERE id = $1`, [Number(pedidoId)]);
+  const id = Number(pedidoId);
+  if (!Number.isInteger(id) || id < 1) throw new ErroPedido(400, 'Pedido inválido');
+  const { rows } = await pool.query(`SELECT status FROM pedidos WHERE id = $1`, [id]);
   const pedido = rows[0];
   if (!pedido) throw new ErroPedido(404, 'Pedido não encontrado');
   const proximo = TRANSICOES[pedido.status];
@@ -470,7 +504,6 @@ async function getSessao(token) {
     const valorPago = Number(Number(pagRows[0].pago || 0).toFixed(2));
     const valorRestante = Number(Math.max(0, totalDevido - valorPago).toFixed(2));
 
-    await ensurePixAvisosTable(client).catch(function () {});
     const { rows: avisoRows } = await client.query(
       `SELECT id, pedido_id, valor, cliente_nome, status, criado_em, confirmado_em
        FROM pix_avisos
@@ -739,6 +772,8 @@ async function setStatusItem(itemId, statusAlvo, setorAuth = null) {
   if (!['recebido', 'em_producao', 'concluido'].includes(alvo)) {
     throw new ErroPedido(400, 'Status de item inválido');
   }
+  const id = Number(itemId);
+  if (!Number.isInteger(id) || id < 1) throw new ErroPedido(400, 'Item inválido');
 
   const client = await pool.connect();
   try {
@@ -806,6 +841,16 @@ async function setStatusPedido(pedidoId, statusAlvo, setor = null) {
   const alvo = String(statusAlvo || '').trim();
   if (!['recebido', 'em_producao', 'concluido', 'entregue'].includes(alvo)) {
     throw new ErroPedido(400, 'Status inválido');
+  }
+  const id = Number(pedidoId);
+  if (!Number.isInteger(id) || id < 1) throw new ErroPedido(400, 'Pedido inválido');
+
+  // ADR-007: entrega é operação do fluxo do garçom. Cozinha/bar chegam aqui com
+  // setor='cozinha'/'bar'; só chamada administrativa (sem setor) pode usar esta
+  // transição como override. Sem a guarda, um PATCH da cozinha quitava o pedido
+  // inteiro e o caixa fechava conta sem ninguém levar a comida.
+  if (alvo === 'entregue' && setor) {
+    throw new ErroPedido(403, 'Entrega deve ser registrada pelo garçom');
   }
 
   const client = await pool.connect();
