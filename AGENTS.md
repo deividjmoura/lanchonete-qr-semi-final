@@ -45,18 +45,24 @@ Arquivo: `scripts/dia-inteiro.js` — multi-mesa, concorrência, PIX, caixa, adm
 ## Auditoria profunda atual
 
 ### 🟢 Corrigido nesta rodada na `main`
-- Seed de staff sem senha previsível em produção; bootstrap exige segredo configurado com mínimo de 12 caracteres.
+- Bootstrap de staff sem senha previsível em produção; produção exige segredo configurado com mínimo de 12 caracteres.
 - Cookie de logout recebe `Secure` em produção.
 - Mutações autenticadas passam por validação adicional de `Origin`/`Referer`.
-- Upload remoto de fotos passou a bloquear destinos privados/reservados, credenciais na URL e redirects automáticos, com timeout e limite de conteúdo.
+- Upload remoto de fotos bloqueia destinos privados/reservados, credenciais na URL e redirects automáticos, com timeout e limite de conteúdo.
+- Abertura concorrente da sessão da mesa agora é serializada com `FOR UPDATE` antes de consultar/criar a sessão.
+- IDs de produto usados na leitura das regras do pedido são rejeitados antes da query quando não são inteiros positivos.
+- Operações de garçom passaram a validar IDs; exclusão limpa `pedidos.garcom_id` dentro da mesma transação; entrega limita e valida `itemIds`.
+- `npm start` e `npm run start:prod` usam gate de migrations antes do servidor.
+- CI foi criado para `main` com `npm ci`, typecheck, build, regressões e `node --check server.js`.
 
 ### 🔴 Pendências/achados que continuam abertos
 - Endpoint genérico de status precisa impedir fallback de setor para update global quando o pedido não possui itens daquele setor.
 - Validação numérica/admin ainda precisa ser portada para a main com cobertura de regressão.
-- Abertura concorrente de sessão e hardening completo do fluxo de pedidos ainda precisam ser portados/validados na main.
-- `pix_avisos` ainda é criado por `CREATE TABLE IF NOT EXISTS` em tempo de requisição; deve ser migrado de forma explícita antes de considerar o schema final.
+- Hardening completo do fluxo de criação/edição de pedidos ainda precisa ser validado na main.
+- `pix_avisos` ainda é criado por `CREATE TABLE IF NOT EXISTS` em tempo de requisição; precisa migration explícita antes do schema ser considerado final.
 - Browser real, PostgreSQL de teste e deploy real ainda precisam validação observável.
 - Rate-limit permanece em memória e não é compartilhado entre instâncias.
+- A execução do CI para os commits mais recentes ainda não apareceu de forma observável; status do último commit mostrou somente o check do Railway como `pending`.
 
 ### 🟡 Em auditoria
 - IDOR/autorização por papel.
@@ -73,17 +79,21 @@ Arquivo: `scripts/dia-inteiro.js` — multi-mesa, concorrência, PIX, caixa, adm
 ## Log
 
 ### [2026-09-16] GPT-5.6 Luna · Arquiteto / Backend / Segurança / QA
-**Tarefa:** Auditoria profunda diretamente na `main`.
+**Tarefa:** Auditoria profunda diretamente na `main` e portabilidade seletiva de hardenings já verificados.
 **Status:** 🟡 em andamento
-**Arquivos tocados:** `db/auth.js`, `db/foto.js`, `AGENTS.md`.
+**Arquivos tocados:** `db/auth.js`, `db/foto.js`, `db/queries.js`, `db/garcons.js`, `scripts/start-production.js`, `package.json`, `.github/workflows/ci.yml`, `AGENTS.md`.
 **O que foi feito:**
-- Portado para `main` o hardening de bootstrap de staff e validação de origem das mutações autenticadas.
-- Portado para `main` o hardening de SSRF do upload remoto.
-- Confirmado que a linha de deploy é `main`, conforme protocolo.
-**Achados novos:**
-- `setStatusPedido()` possui fallback de setor para update global quando o pedido não contém item do setor informado.
-- `pix_avisos` é garantido por DDL no caminho de requisição.
-**Coordenação:** o tema claro/escuro está em trabalho de outro agente; esta frente não altera arquivos do tema.
+- Corrigido bootstrap de staff previsível e adicionada defesa de origem nas mutações autenticadas.
+- Corrigido SSRF de upload remoto.
+- Corrigida condição de corrida na abertura de sessão.
+- Endurecidas operações de garçom.
+- Startup de produção passou a exigir migrations bem-sucedidas.
+- Adicionada CI automática.
+- Nenhum arquivo do tema foi alterado por esta frente.
+**Achados ainda não resolvidos:**
+- Bypass de setor em `setStatusPedido()`.
+- Validação numérica/admin ausente na main.
+- DDL de `pix_avisos` em caminho de requisição.
 
 ### [2026-09-15 21:43] Grok
 **Aviso do dono:** colegas estavam em branches/PRs; main é a única linha de deploy.
