@@ -14,12 +14,22 @@
     />
     <link rel="icon" type="image/png" href="/logo/favicon.png" />
     <script>
-      /* tema claro/escuro antes do primeiro paint (evita flash) */
-      var t;
-      try { t = localStorage.getItem("qradmin-tema"); } catch (e) {}
-      if (t !== "claro" && t !== "escuro")
-        t = window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "escuro" : "claro";
-      document.documentElement.dataset.theme = t;
+      /* tema antes do paint — data-theme=dark quando escuro (CSS legado Railway) */
+      (function () {
+        var t;
+        try { t = localStorage.getItem("qradmin-tema"); } catch (e) {}
+        if (t === "dark") t = "escuro";
+        if (t === "light") t = "claro";
+        if (t !== "claro" && t !== "escuro")
+          t = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "escuro" : "claro";
+        // Atributo no DOM: "dark" casa com [data-theme=dark] do CSS em produção
+        document.documentElement.setAttribute("data-theme", t === "escuro" ? "dark" : "claro");
+        document.documentElement.classList.toggle("dark", t === "escuro");
+        if (t === "escuro") {
+          document.documentElement.style.setProperty("--qr-page", "#0b1524");
+          document.documentElement.style.setProperty("--qr-text", "#eaf2fb");
+        }
+      })();
     </script>
   </head>
   <body>
