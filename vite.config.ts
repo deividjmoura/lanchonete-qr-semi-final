@@ -14,6 +14,18 @@ export default defineConfig({
       "@": path.resolve(__dirname, "src"),
     },
   },
+  build: {
+    /* separa vendors grandes — evita bundle único > 500 kB */
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom"],
+          motion: ["framer-motion"],
+          icons: ["lucide-react"],
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     allowedHosts: true,
