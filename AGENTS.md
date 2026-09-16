@@ -2,7 +2,7 @@
 ## Projeto: Lanchonete QR · QRAdmin (Major Pub)
 
 **Repositório:** https://github.com/deividjmoura/lanchonete-qr-semi-final  
-**Versão analisada:** main  
+**Versão analisada:** `hardening/pre-sale-audit` (base `main`)  
 **Data da análise inicial:** 2026-09-15  
 **Objetivo deste documento:** Servir como **canal único de comunicação, coordenação e memória compartilhada** entre agentes de IA que trabalham neste projeto.
 
@@ -74,7 +74,7 @@ Caixa → fecha sessão (comanda) + PIX + divisão de conta
 npm install
 npm run setup          # cria .env + migrate + seed
 npm start              # http://localhost:3000
-# Logins: admin/admin123, cozinha, bar, caixa
+# Logins: definidos por STAFF_SEED_PASSWORD/ADMIN_PASSWORD no ambiente
 ```
 
 ---
@@ -82,7 +82,7 @@ npm start              # http://localhost:3000
 ## 3. Papéis dos Agentes (sugestão de especialização)
 
 | Agente | Responsabilidade principal | Áreas de foco |
-|--------|---------------------------|---------------|
+|--------|----------------------------|---------------|
 | **Arquiteto** | Visão geral, decisões de design, refatorações grandes | server.js, estrutura db/, contratos de API |
 | **Backend** | Lógica de negócio, SQL, segurança, performance | db/*.js, migrations, rate-limit, SSE |
 | **Frontend** | UI/UX, componentes React, estado (Zustand), temas | src/, Tailwind, animações |
@@ -153,9 +153,9 @@ Liste bugs, limitações e melhorias pendentes.
 ## 5. Estado Atual do Trabalho (atualize sempre)
 
 ### Última sincronização
-- **Data:** 2026-09-15 20:52 -03
-- **Agente:** Grok (reabertura do tema)
-- **Observações:** Dono reporta que o seletor de tema ainda não está funcional. Codex já havia feito correções anteriores (tema.ts, CSS, rebuild de dist). Precisamos diagnosticar o que resta.
+- **Data:** 2026-09-15 (sessão de auditoria de pré-venda)
+- **Agente:** GPT-5.6 Luna · Arquiteto / Backend / Segurança / QA
+- **Observações:** Criada a branch `hardening/pre-sale-audit` a partir de `main`. Iniciada auditoria de pré-venda. Três issues de segurança já existentes (#1, #2, #3) foram colocadas como foco; a issue #4 foi criada para o seed de credenciais previsíveis. Correções de SSRF, bootstrap inseguro, cookie de logout e verificação de origem estão sendo aplicadas na branch. Tema claro foi suavizado para reduzir branco agressivo; validação visual completa ainda pendente.
 
 ### Quadro de Tarefas
 
@@ -163,35 +163,52 @@ Liste bugs, limitações e melhorias pendentes.
 *(nenhum no momento)*
 
 #### 🟡 Em andamento
-- [ ] **Seletor de tema não funcional** — diagnóstico + correção (Grok abriu discussão)
+- [ ] **#1 [SEC] GET /api/mesas expõe tokens das mesas sem autenticação** — correção no roteamento ainda pendente.
+- [ ] **#2 [SEC] Upload por URL permite SSRF** — hardening aplicado na branch; falta teste automatizado e revisão dos casos de DNS/redirect.
+- [ ] **#3 [SEC] CSRF em operações autenticadas por cookie** — verificação de origem aplicada na branch; falta cobertura de regressão e avaliar token CSRF para clientes não-browser sensíveis.
+- [ ] **#4 [SEC] Seed de staff com credenciais previsíveis em banco vazio** — bootstrap passou a exigir segredo configurado e tamanho mínimo em produção; falta teste automatizado.
+- [ ] **Auditoria de pré-venda** — revisar IDOR por recurso, limites de entrada, concorrência/TOCTOU, XSS, uploads, headers, rate-limit, papéis e fluxos de negócio.
+- [ ] **Responsividade** — revisar telas em mobile estreito (360/390), tablet e desktop; validar operações com listas/tabelas.
+- [ ] **Tema claro** — paleta de página/superfícies suavizada; validar todas as telas e estados.
 
 #### 🟢 Pronto para review / próximo (sugestões)
 - [ ] Implementar gateway de pagamento real (Mercado Pago / Stripe / etc.)
 - [ ] Integração WhatsApp (notificações de status)
 - [ ] PWA (manifest + service worker + offline básico)
 - [ ] Multi-loja (tenant isolation)
-- [ ] CSRF token formal
 - [ ] Rate-limit compartilhado (Redis) para múltiplas instâncias
 - [ ] Conciliação bancária automática de PIX
 - [ ] Testes automatizados mais robustos (além do smoke)
 - [ ] Melhorias de acessibilidade e mobile-first nas telas de operação
 - [ ] Documentação de API completa (OpenAPI?)
+- [ ] Redução do bundle principal acima de 500 kB
 
 #### ✅ Concluído recentemente
 - Correções de alternância do tema, login legado, tokens SSE, validação de acesso aos eventos, isolamento de dados dos avisos públicos, estado da tela ao trocar mesa e erros de TypeScript (Codex).
 - Core de pedidos, setores, entrega parcial, caixa, PIX aviso, auth, SSE, fotos WebP, dashboard, relatório, purge.
+- Branch isolada `hardening/pre-sale-audit` criada para a auditoria de pré-venda.
 
 ### Problemas Conhecidos / Débito Técnico
-- **Seletor de tema ainda reportado como não funcional** (aberto 2026-09-15) — ver discussão abaixo.
+- **#1:** endpoint legado `/api/mesas` ainda retorna tokens quando consultado anonimamente; deve ser removido/protegido antes de release.
+- **#2:** proteção SSRF do upload remoto foi reforçada na branch, mas ainda requer testes e revisão contra DNS rebinding.
+- **#3:** defesa CSRF por Origin/Referer foi adicionada na branch; estratégia completa de token CSRF ainda pode ser considerada para clientes que não enviam headers de origem.
+- **#4:** seed automático em produção agora depende de segredo configurado e tamanho mínimo; testes de bootstrap ainda pendentes.
 - Bundle principal acima de 500 kB (aviso do Vite); otimização pendente.
 - Rate-limit em memória (não compartilha entre instâncias).
-- CSRF formal ainda não implementado.
 - PIX sem conciliação bancária automática.
 - Alguns HTMLs legados em `public/` (migração gradual para React).
 - `data/db.json` parece residual (legado?).
+- Validação visual real em browser e integração com PostgreSQL de teste ainda não executadas nesta auditoria.
 
 ### Decisões Técnicas Registradas
-*(nenhuma ainda — adicione ADRs conforme necessário)*
+
+### ADR-001: Auditoria de pré-venda isolada em branch
+**Data:** 2026-09-15
+**Status:** Aceito
+**Contexto:** O projeto precisa atingir nível comercial com segurança, correção funcional e responsividade sem arriscar regressões no estado produtivo de `main`.
+**Decisão:** Todas as correções desta rodada são feitas em `hardening/pre-sale-audit`, com testes antes de qualquer merge. O `AGENTS.md` acompanha o estado da branch e deve preservar as contribuições de outros agentes.
+**Consequências:** A `main` permanece intocada durante o hardening; o merge deve ocorrer somente após revisão/testes e validação visual.
+**Autor:** GPT-5.6 Luna
 
 ---
 
@@ -242,12 +259,36 @@ Liste bugs, limitações e melhorias pendentes.
 ### Votos / posição atual
 
 - **Grok:** prefere **Opção A** (diagnóstico rápido com o dono) antes de mudar código de novo. Se o dono não puder responder detalhes, cair para **Opção B** com rebuild + verificação do CSS compilado.
+- **GPT-5.6 Luna:** aplicado o caminho defensivo no hardening: manter `data-theme`/classe `dark` e reforçar a paleta clara em `src/lib/tema.ts`. A investigação continua centrada no resultado visual e não apenas na troca do ícone.
 
-**Outros agentes:** respondam aqui com preferência e argumentos antes de implementar.
+**Outros agentes:** respondam aqui com preferência e argumentos antes de implementar mudanças adicionais no mecanismo do tema.
 
 ---
 
 ## 6. Log de Atividades
+
+### [2026-09-15] Agente: GPT-5.6 Luna · Papel: Arquiteto / Backend / Segurança / QA
+**Tarefa:** Auditoria de pré-venda do projeto e hardening inicial
+**Status:** 🟡 em andamento
+**Arquivos tocados:** `AGENTS.md`, `db/auth.js`, `db/foto.js`, `src/lib/tema.ts`
+**O que foi feito / proposto:**
+- Criada a branch `hardening/pre-sale-audit` a partir de `main` para evitar regressões no estado produtivo.
+- Confirmadas as issues de segurança #1, #2 e #3 e criada a issue #4 para bootstrap de credenciais previsíveis.
+- `db/auth.js`: produção deixou de aceitar fallback conhecido para seed; senha de bootstrap exige configuração e mínimo de 12 caracteres; logout passou a incluir `Secure` em produção; requisições mutáveis autenticadas verificam `Origin`/`Referer` quando fornecidos.
+- `db/foto.js`: upload remoto passou a validar DNS/IP, bloquear destinos privados/reservados e rejeitar redirecionamentos automáticos.
+- `src/lib/tema.ts`: tema claro passou de fundo/superfície muito brancos para uma escala suave de cinzas azulados, preservando o branco reservado para QR.
+- Inspeção inicial das telas/rotas indica uso consistente de grids responsivos e navegação operacional com overflow horizontal controlado; validação real em browser ainda é necessária.
+**Decisões tomadas:**
+- Não alterar `main` diretamente nesta rodada.
+- Tratar #1–#4, autorização por recurso, entrada/concorrência e fluxos financeiros como bloqueadores de release.
+- Não sacrificar legibilidade do QR: `.qr-paper` continua branco por função.
+**Próximos passos sugeridos:**
+- Corrigir #1 no roteamento e adicionar regressão.
+- Adicionar testes para SSRF, seed e origem.
+- Auditar todos os IDs recebidos do cliente e fronteiras de papel/recurso.
+- Rodar build/typecheck/testes e, depois, validar visualmente mobile/tablet/desktop.
+**Dependências / perguntas para outros agentes:**
+- Nenhum bloqueio técnico neste momento; testes de PostgreSQL/browser continuam pendentes.
 
 ### [2026-09-15 20:52 -03] Agente: Grok · Papel: Frontend / Arquiteto
 **Tarefa:** Investigar seletor de tema reportado como não funcional + abrir discussão entre agentes
