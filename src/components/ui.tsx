@@ -1,12 +1,12 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Flame, Moon, Sun } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode, type SyntheticEvent } from "react";
 import { cn } from "../utils/cn";
 import { alternarTema, temaAtual, EVENTO_TEMA, type Tema } from "../lib/tema";
 
 /* ---------- Logo ----------
- * Arquivos em public/logo/ (não em src/). Horizontal largo cortava no mobile
- * quando só h-* era aplicado sem max-width. Fallback: qradmin-mark.png. */
+ * public/logo/ — horizontal largo cortava no mobile sem max-width.
+ * Fallback: qradmin-mark.png se horizontal 404. */
 const LOGO_LIGHT = "/logo/qradmin-horizontal.png";
 const LOGO_DARK = "/logo/qradmin-horizontal-dark.png";
 const LOGO_MARK = "/logo/qradmin-mark.png";
@@ -19,7 +19,7 @@ export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
         ? "h-16 sm:h-20 max-h-20 max-w-[min(100%,18rem)] sm:max-w-[20rem]"
         : "h-10 max-h-10 max-w-[12rem]";
 
-  const onBroken = (e: React.SyntheticEvent<HTMLImageElement>) => {
+  const onBroken = (e: SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
     if (img.dataset.fallback === "1") return;
     img.dataset.fallback = "1";
@@ -36,14 +36,14 @@ export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
       <img
         src={LOGO_LIGHT}
         alt="QRAdmin"
-        className={cn("h-full w-auto max-w-full object-contain object-center qr-logo-light")}
+        className="h-full w-auto max-w-full object-contain object-center qr-logo-light"
         draggable={false}
         onError={onBroken}
       />
       <img
         src={LOGO_DARK}
         alt="QRAdmin"
-        className={cn("h-full w-auto max-w-full object-contain object-center qr-logo-dark")}
+        className="h-full w-auto max-w-full object-contain object-center qr-logo-dark"
         draggable={false}
         onError={onBroken}
       />
@@ -51,7 +51,6 @@ export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   );
 }
 
-/* ---------- Alternador de tema (claro/escuro) ---------- */
 export function ThemeToggle({ className }: { className?: string }) {
   const [tema, setTema] = useState<Tema>(() => temaAtual());
   useEffect(() => {
@@ -76,7 +75,6 @@ export function ThemeToggle({ className }: { className?: string }) {
   );
 }
 
-/* ---------- Botão ---------- */
 export function Btn({
   children,
   onClick,
@@ -123,7 +121,6 @@ export function Btn({
   );
 }
 
-/* ---------- Badge ---------- */
 export function Badge({
   children,
   tone = "amber",
@@ -154,7 +151,6 @@ export function Badge({
   );
 }
 
-/* ---------- Modal ---------- */
 export function Modal({
   open,
   onClose,
@@ -208,7 +204,6 @@ export function Modal({
   );
 }
 
-/* ---------- Quantity ---------- */
 export function Qtd({
   valor,
   onChange,
@@ -244,7 +239,6 @@ export function Qtd({
   );
 }
 
-/* ---------- Live pill ---------- */
 export function LivePill({ label = "ao vivo" }: { label?: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-500/10 border border-teal-500/30 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-teal-600">
@@ -257,7 +251,6 @@ export function LivePill({ label = "ao vivo" }: { label?: string }) {
   );
 }
 
-/* ---------- Secção header ---------- */
 export function Secao({ kicker, titulo, right }: { kicker: string; titulo: ReactNode; right?: ReactNode }) {
   return (
     <div className="flex items-end justify-between gap-4">
@@ -272,7 +265,6 @@ export function Secao({ kicker, titulo, right }: { kicker: string; titulo: React
   );
 }
 
-/* ---------- Input ---------- */
 export function Input({
   value,
   onChange,
