@@ -1,103 +1,73 @@
 # COORDENACAO.md — Lanchonete QR / QRAdmin
 
 > **Repo:** https://github.com/deividjmoura/lanchonete-qr-semi-final  
-> **Deploy:** https://qradmin.up.railway.app/ → branch **`main`**  
-> **Líder:** agente-lider (Grok) — **autorizado a decidir** sem pedir permissão ao dono  
-> **Sessão:** 18/09/2026
+> **Deploy:** https://qradmin.up.railway.app/ → **`main`**  
+> **Líder:** Grok — **decide sozinho** (dono autorizou)  
+> **Sessão:** 18/09 · **modo BUGFIX** · 5 agentes + líder
 
 ---
 
-## ⛔ Regras de ouro (obrigatórias)
+## ⛔ Regras
 
-1. **`main` é a única linha de verdade.** Trabalho concluído = **push/merge na `main` no mesmo ciclo**.
-2. **Não abrir dezenas de branches.** Preferência:
-   - **Opção A (padrão):** commit pequeno **direto na `main`** (1 domínio, testes ok).
-   - **Opção B (só se conflito real):** **uma** branch curta `wip/<dominio>` → PR → **merge imediato** → apagar branch.
-3. **Proibido:** deixar PR aberto “para depois”; branch arena longa; reescrever arquivo inteiro do colega sem merge consciente.
-4. **`dist/` acompanha `src/`.** Mudou front → `npm run build` e commit do `dist/` no mesmo push.
-5. **Não mexer em tema** (`src/lib/tema.ts`, `src/index.css` tema, pré-paint) sem claim `tema` aprovado no Registro.
-6. **1 domínio = 1 agente.** Domínio = pasta/arquivo, não “feature branch eterna”.
-7. Dúvida de arquitetura → anote no Registro; o **Líder decide** (não o dono humano a cada passo).
+1. Entrega = **push/merge na `main` no mesmo ciclo** (sem 50 branches).
+2. **1 item da fila = 1 agente.** Claim no Registro antes de codar.
+3. Front: `npm run build` + **commit `dist/`** junto.
+4. Tema global (`tema.ts` / pré-paint) só se o bug exigir e com note no claim.
+5. Bloqueio → `state:BLOCKED` aqui; **Líder decide**.
 
 ---
 
-## Domínios (claim no Registro antes de codar)
+## 🐛 Fila de bugs — AGORA (só 5)
 
-| Domínio | Arquivos típicos | Agente |
-|---------|------------------|--------|
-| `api-server` | `server.js` | livre |
-| `db-pedidos` | `db/pedidos.js`, `db/queries.js` | livre |
-| `db-caixa-pix` | `db/caixa.js`, `db/pix-*.js` | livre |
-| `db-auth-foto` | `db/auth.js`, `db/foto.js`, `db/garcons.js` | livre |
-| `db-migrations` | `db/migrations/*` | livre (cuidado) |
-| `front-mesa` | `src/screens` mesa/cliente | livre |
-| `front-ops` | cozinha/bar/garçom/caixa | livre |
-| `front-admin` | admin | livre |
-| `tema` | tema/css pré-paint | **bloqueado** até ordem |
-| `qa-scripts` | `tests/*`, `scripts/teste-*.js`, `scripts/dia-inteiro.js` | livre |
-| `ci-docs` | `.github/*`, docs | livre |
+| ID | Agente | Bug | Onde olhar | Done means |
+|----|--------|-----|------------|------------|
+| **B1** | agente-1 | **Logo / ilustração “ACESSO DA EQUIPE”** — marca isométrica + texto QRAdmin cortado ou sumindo no login/header (prints do dono). Logos vivem em `public/logo/`, **não** em `src/`; `Logo` em `ui.tsx` aponta `/logo/qradmin-horizontal(-dark).png`. CSS `.qr-logo-light` / `.qr-logo-dark`. | `src/components/ui.tsx` (`Logo`), `src/screens/Login.tsx`, `src/index.css` (qr-logo-*), `public/logo/*`, `OpsShell` se header “GEST…” | Login e header mostram logo legível claro+escuro, sem crop “GEST”, sem img quebrada; `dist/` commitado |
+| **B2** | agente-2 | **Fotos do cardápio no Admin** — miniatura quebrada / 404 (seed sem foto ou path inválido). Placeholder deve existir e ser usado. | `src/screens/Admin.tsx` (`img` produto), `public/assets/demo/placeholder.webp`, `db/foto.js`, seed | Miniatura nunca 404; fallback placeholder; teste ou prova no Registro |
+| **B3** | agente-3 | **PIX / chave** — normalização destrói EVP; Caixa deve avisar chave inválida. | `db/pix-normaliza.js`, `server.js` `/api/config/pix`, `src/screens/Caixa.tsx` | Regressão ou checklist: UUID/EVP preservado; UI mostra aviso se inválida |
+| **B4** | agente-4 | **`dist/` dessincronizado de `src/`** — deploy serve `dist/`; front “corrigido” no src e bug continua no ar. | `package.json` scripts, CI se houver check, rebuild | `npm run build` na main; `dist/` = src; CI ou note de hash |
+| **B5** | agente-5 | **Login staff / sessão** — senha ok mas não entra, cookie, redirect papel. | `src/screens/Login.tsx`, `src/store/usePub.ts` (`loginApi`), `db/auth.js`, `server.js` auth | Fluxo papel→senha→rota (cozinha/bar/caixa/admin) estável; erro legível se falhar |
+
+**Fora desta onda:** multi-loja, WhatsApp, PWA, redesign landing, rate-limit Redis.
 
 ---
 
-## Fila prioritária (Líder — 10:30)
+## Diagnóstico B1 (Líder)
 
-Pegue **um** item, registre claim, entregue na **main**.
+Prints do dono: tela escura “ACESSO DA EQUIPE”, logo isométrico mesa+QR, campo senha com chave, recorte “QRAdmin GEST…”.
 
-| ID | Prioridade | Tarefa | Done means |
-|----|------------|--------|------------|
-| **L1** | P0 | Smoke local: `npm ci` + `npm run test:regression` documentar resultado no Registro | saída 0 ou lista de falhas |
-| **L2** | P0 | Garantir CI verde na `main` (abrir Actions, se vermelho corrigir **na main**) | workflow success |
-| **L3** | P1 | Validar `GET /api/config/pix` + aviso de chave inválida no Caixa (regressão PIX EVP) | teste ou nota runtime |
-| **L4** | P1 | Rate-limit: documentar limites atuais + 1 melhoria mínima se trivial | doc no Registro ou código mínimo |
-| **L5** | P2 | Lazy `framer-motion` se bundle ainda pesado (sem quebrar UI) | build + dist commitado |
-| **L6** | P2 | Checklist responsividade 360/390 (texto no Registro; browser real se tiver) | notas |
-
-**Não fazer agora:** multi-loja, WhatsApp, PWA, gateway pagamento novo, redesign visual grande.
+- Código atual do Login **não** embute a ilustração isométrica em `src/` — usa componente `Logo` → arquivos em **`public/logo/`**.
+- Se a imagem “não está no src”, o fix correto é: garantir arquivos em `public/logo/`, paths `/logo/...`, CSS de tema, e **tamanho/crop** (horizontal grande pode cortar no mobile).
+- Não inventar branch longa: corrigir na **main**.
 
 ---
 
-## Como trabalhar (fluxo curto)
+## Fluxo
 
 ```text
-1. Ler este arquivo + AGENTS.md (histórico)
-2. Claim no Registro (domínio + ID da fila)
-3. Codar no menor escopo possível
-4. npm run test:regression  (e build se front)
-5. Push NA MAIN (ou 1 PR e merge na hora)
-6. Handoff no Registro: DONE + arquivos
+Claim AR-STATUS → codar 1 bug → test:regression → (build+dist se front) → MAIN → DONE no Registro
 ```
-
-### Formato de claim
 
 ```
 AR-STATUS
 sid:18/09
-agent:<id>
-claim:<dominio>
-task:L1|L2|…
+agent:agente-N
+claim:B1|B2|B3|B4|B5
 state:WIP|DONE|BLOCKED
 note:<curto>
 ```
 
 ---
 
-## Branches legadas (não usar; dono pode apagar depois)
+## Registro
 
-- `arena/*`, `hardening/pre-sale-audit`, `redesign-qradmin`, `Gzuis-Version`  
-Trabalho útil já deve estar na `main`. **Não branchar a partir delas.**
-
----
-
-## Registro de agentes
-
-## [agente-lider] — 10:30
+## [agente-lider] — 10:36
 ```
 AR-STATUS
 sid:18/09
 agent:lider
 claim:coordenacao
 state:WIP
-note:trunk-based ativo; fila L1–L6; decisões sem pedir dono
+note:fila só B1–B5 bugs; B1=logo acesso equipe public/logo
 ```
 
-## Aguardando claims L1–L6
+## Claims B1–B5 — preencher ao pegar
