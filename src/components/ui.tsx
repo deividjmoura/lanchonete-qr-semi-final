@@ -4,22 +4,48 @@ import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "../utils/cn";
 import { alternarTema, temaAtual, EVENTO_TEMA, type Tema } from "../lib/tema";
 
-/* ---------- Logo ---------- */
+/* ---------- Logo ----------
+ * Arquivos em public/logo/ (não em src/). Horizontal largo cortava no mobile
+ * quando só h-* era aplicado sem max-width. Fallback: qradmin-mark.png. */
+const LOGO_LIGHT = "/logo/qradmin-horizontal.png";
+const LOGO_DARK = "/logo/qradmin-horizontal-dark.png";
+const LOGO_MARK = "/logo/qradmin-mark.png";
+
 export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
-  const h = size === "sm" ? "h-8" : size === "lg" ? "h-20 sm:h-24" : "h-10";
+  const box =
+    size === "sm"
+      ? "h-8 max-h-8 max-w-[9rem]"
+      : size === "lg"
+        ? "h-16 sm:h-20 max-h-20 max-w-[min(100%,18rem)] sm:max-w-[20rem]"
+        : "h-10 max-h-10 max-w-[12rem]";
+
+  const onBroken = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    if (img.dataset.fallback === "1") return;
+    img.dataset.fallback = "1";
+    img.src = LOGO_MARK;
+  };
+
   return (
-    <span className="inline-flex items-center select-none">
+    <span
+      className={cn(
+        "inline-flex items-center justify-center select-none overflow-hidden",
+        box
+      )}
+    >
       <img
-        src="/logo/qradmin-horizontal.png"
+        src={LOGO_LIGHT}
         alt="QRAdmin"
-        className={cn(h, "w-auto object-contain shrink-0 qr-logo-light")}
+        className={cn("h-full w-auto max-w-full object-contain object-center qr-logo-light")}
         draggable={false}
+        onError={onBroken}
       />
       <img
-        src="/logo/qradmin-horizontal-dark.png"
+        src={LOGO_DARK}
         alt="QRAdmin"
-        className={cn(h, "w-auto object-contain shrink-0 qr-logo-dark")}
+        className={cn("h-full w-auto max-w-full object-contain object-center qr-logo-dark")}
         draggable={false}
+        onError={onBroken}
       />
     </span>
   );
@@ -140,7 +166,6 @@ export function Modal({
   onClose: () => void;
   children: ReactNode;
   wide?: boolean;
-  /** false = só fecha no X (formulários longos) */
   closeOnBackdrop?: boolean;
 }) {
   return (
