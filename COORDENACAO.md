@@ -1,35 +1,33 @@
-# COORDENACAO.md — Lanchonete QR / QRAdmin
+# Coordenação
 
-> **Líder:** Grok · 19/09 · **main**
+> Branch oficial: **`main`** apenas.  
+> Deploy: https://qradmin.up.railway.app/
 
----
+## Regras
 
-## Logo sem fundo (B1+)
+1. Trabalho e entrega na **`main`**.
+2. Mudou front → `npm run build` e commit do **`dist/`** junto.
+3. Não reabrir branches `arena/*`, `hardening/*`, `redesign-*`, `Gzuis-Version`.
 
-**Causa:** `qradmin-horizontal-dark.png` era RGB **sem alpha** + painel navy “assado” na arte.
+## Fila B1–B5 (encerrada)
 
-**Fix em `src/components/ui.tsx` (commit `bda9df3`):**
-- Um asset (`qradmin-horizontal.png`) nos dois temas
-- Canvas no load remove pixels navy/quase-pretos → fundo transparente
+| ID | Item | Status |
+|----|------|--------|
+| B1 | Logo acesso equipe | Feito |
+| B2 | Fotos Admin | Feito |
+| B3 | PIX EVP | Feito |
+| B4 | dist sincronizado | Feito |
+| B5 | Login staff | Feito |
 
-**Para aparecer no Railway** (serve `dist/`):
+## Limpeza de branches (local)
 
 ```bash
-git pull
-npm run build
-git add src/components/ui.tsx dist/
-git commit -m "fix: logo transparente + dist"
-git push origin main
+git push origin --delete \
+  Gzuis-Version \
+  arena/01a0a9bd-lanchonete-qr-semi-final \
+  arena/01a0a77d-lanchonete-qr-semi-final \
+  arena/01a0a79b-lanchonete-qr-semi-final \
+  arena/01a0b4be-lanchonete-qr-semi-final \
+  hardening/pre-sale-audit \
+  redesign-qradmin
 ```
-
----
-
-## Quadro B1–B5
-
-| ID | Status |
-|----|--------|
-| B1 Logo | DONE em src — **precisa dist** |
-| B2 Admin | DONE (restaurado) |
-| B3 PIX | DONE |
-| B4 dist | DONE (rebuild após logo) |
-| B5 Login | DONE |
