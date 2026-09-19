@@ -1,181 +1,120 @@
 <div align="center">
 
-# 🍔 Lanchonete QR · QRAdmin
+# QRAdmin
 
-**Pedidos por QR Code** — do celular do cliente até a cozinha, o bar, o garçom e o caixa.
-Identidade visual **QRAdmin** (navy + teal) com **tema claro/escuro** em todas as telas.
+**Pedidos por QR Code para lanchonetes e pubs**
 
-[![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Neon](https://img.shields.io/badge/Neon-00E599?style=for-the-badge&logo=neon&logoColor=black)](https://neon.tech/)
+Do celular do cliente até a cozinha, o bar, o garçom e o caixa — em tempo real.
+
+[![Demo](https://img.shields.io/badge/Demo-qradmin.up.railway.app-00C4B4?style=for-the-badge)](https://qradmin.up.railway.app/)
 
 </div>
 
 ---
 
-## 🚀 Como rodar (quick start)
+## O que é
 
-> ⚠️ **Não abra o HTML direto no navegador** (`file://`) — o app é full-stack e só
-> funciona servido pelo servidor Node abaixo.
+Sistema operacional completo para atendimento por mesa: o cliente escaneia o QR, monta o pedido no próprio celular (sem app) e a equipe acompanha cada etapa em telas dedicadas. A **comanda é acumulativa** — vários pedidos na mesma visita, fechamento único no caixa.
 
-1. **Node.js LTS** instalado (nodejs.org) e um **Postgres** acessível (local, Neon, Supabase…).
-2. Na pasta do projeto, um único comando cria o `.env`, roda migrations e seed:
-   ```bash
-   npm install
-   npm run setup
-   ```
-   Se o seu Postgres não for `postgres://usuario:senha@localhost:5432/lanchonete_qr`,
-   ajuste o `DATABASE_URL` no `.env` gerado e rode `npm run setup` de novo.
-3. Suba o servidor:
-   ```bash
-   npm start
-   ```
-4. Abra **http://localhost:3000** no navegador.
-   - Login de teste: `admin` / `admin123` (também `cozinha`, `bar`, `caixa`).
-   - **Tema claro/escuro**: botão de lua/sol no topo de qualquer tela — a escolha fica salva no dispositivo.
-
-O repositório já inclui o `dist/` (build do front), então `npm start` serve tudo
-sem precisar rodar `npm run build`. Se alterar o front em `src/`, rode
-`npm run build` antes.
+Identidade **QRAdmin** (navy + teal), com **tema claro e escuro** em todas as telas.
 
 ---
 
-## 🎬 O fluxo
+## Fluxo
 
 ```text
-  📱 Cliente          👨‍🍳 Cozinha / 🍸 Bar      🏃 Garçom          💵 Caixa
- ┌──────────┐       ┌──────────┐            ┌──────────┐       ┌──────────┐
- │ QR mesa  │ ───▶  │ prepara  │ ─────────▶ │ entrega  │ ───▶  │ fecha    │
- │ cardápio │       │ por setor│            │ (parcial)│       │ + PIX    │
- └──────────┘       └──────────┘            └──────────┘       └──────────┘
-       │                                                          ▲
-       └──────── conta acumulativa da sessão (comanda) ───────────┘
+Cliente (QR)  →  Cozinha / Bar  →  Garçom  →  Caixa
+   pedido           preparo         entrega     fecha + PIX
 ```
 
-Uma mesa pode fazer **vários pedidos** na mesma visita. O que vale no caixa é a **sessão** (comanda), não o pedido isolado. Itens só entram no total depois de **entregues**.
+Itens só entram no total da conta depois de **entregues**. O caixa fecha a **sessão** (comanda), não o pedido isolado.
 
 ---
 
-## 📊 Status atual
+## Funcionalidades implementadas
 
-| Módulo | Status |
-|:------:|:------:|
-| Postgres + Neon + migrations | ✅ |
-| Mesa (QR + cardápio + Escolher / personalizar) | ✅ |
-| Cozinha · Bar (setores) · voz | ✅ |
-| Garçom (entrega parcial) | ✅ |
-| Caixa · auth · SSE · divisão de conta | ✅ |
-| Estoque · dashboard · relatório · purge | ✅ |
-| PIX (QR EMV + aviso multi) | ✅ |
-| Fotos WebP (upload + persistência) | ✅ |
-| Gateway pagamento · WhatsApp · PWA · multi-loja | ⬜ planejado |
+### Cliente (mesa)
+- Cardápio digital via link/QR da mesa
+- Produtos simples, personalizáveis (adicionais e removíveis) e tipo **Escolher** (tamanho/sabor)
+- Carrinho, conta da sessão e **PIX** (QR EMV + copia-e-cola)
+- Aviso **“Já paguei no PIX”** para o caixa
 
----
+### Cozinha e Bar
+- Filas separadas por **setor** de produção
+- Avanço de status e **alerta de voz** (mesa + cliente)
 
-## 🖥️ Telas
+### Garçom
+- Acesso por token próprio
+- Entrega **total ou parcial** dos itens
+- Alerta de voz quando há item pronto
 
-| Papel | Rota | O que faz |
-|:-----:|:-----|:----------|
-| 👤 Cliente | `/mesa/:token` | Cardápio, **Escolher**, personalizar, carrinho, conta + PIX |
-| 👨‍🍳 Cozinha | `/cozinha` | Fila do setor cozinha + alerta de voz |
-| 🍸 Bar | `/bar` | Fila do setor bar |
-| 🏃 Garçom | `/garcom/:token` | Entrega (total ou parcial) + voz |
-| 💵 Caixa | `/caixa` | Fecha conta, divisão, desconto/taxa, confirma PIX |
-| ⚙️ Admin | `/admin` | Cardápio, mesas/QR, garçons, dashboard, relatório, histórico, purge |
-| 🔐 Login | `/login` | Auth por papel (`admin` · `cozinha` · `bar` · `caixa`) |
+### Caixa
+- Sessões abertas, pagamentos parciais e fechamento
+- **Divisão de conta** (N pessoas, valor por pessoa)
+- Desconto e taxa
+- Confirmação de avisos PIX (toast + som + voz)
 
----
+### Admin
+- Cardápio (categorias, produtos, ordem, estoque)
+- Mesas e QR fixo por mesa
+- Garçons (token e ativo/inativo)
+- Dashboard (faturamento, ticket, top produtos)
+- Relatório por período, histórico de pedidos e purge
+- Upload de fotos (otimização WebP)
 
-## 💠 PIX
-
-| Onde | Ação |
-|------|------|
-| **Mesa → Total** | QR + copia-e-cola quando há valor |
-| **Mesa** | **Já paguei no PIX** avisa o caixa |
-| **Caixa** | Toast + beep + voz · caixa confirma e registra |
-
-A conta **não** fecha sozinha — o caixa confirma.
-
-```http
-GET  /api/config/pix
-POST /api/mesas/:token/pix-informado
-```
+### Plataforma
+- Login por papel: admin, cozinha, bar, caixa
+- Sessão staff em cookie httpOnly
+- Atualização ao vivo via **SSE**
+- Postgres (migrations + seed)
+- Temas claro/escuro persistidos no dispositivo
 
 ---
 
-## ✂️ Divisão de conta (caixa)
+## Telas
 
-1. Informe N pessoas → valor por pessoa
-2. Registre pagamentos parciais
-3. Ao **Fechar conta**, o que faltar é quitado
-
-```http
-POST /api/caixa/sessoes/:id/pagamentos
-Body: { "valor": 25.50, "formaPagamento": "pix" }
-```
-
----
-
-## 📷 Fotos no cardápio
-
-1. Admin: arquivo ou link `https://…`
-2. Servidor otimiza (~480px, WebP) via **sharp**
-3. Persistência atual: `foto_url` no Postgres (data URL ou link externo)
+| Papel    | Rota              | Função principal                          |
+|----------|-------------------|-------------------------------------------|
+| Cliente  | `/mesa/:token`    | Cardápio, pedido, conta, PIX              |
+| Cozinha  | `/cozinha`        | Fila de preparo + voz                     |
+| Bar      | `/bar`            | Fila de bebidas + voz                     |
+| Garçom   | `/garcom/:token`  | Entrega (parcial ou total)                |
+| Caixa    | `/caixa`          | Pagamentos, divisão, PIX, fechamento      |
+| Admin    | `/admin`          | Operação, cardápio, mesas, relatórios     |
+| Equipe   | `/login`          | Acesso por papel                          |
 
 ---
 
-## 🥤 Tipos de produto no cardápio
+## Stack
 
-| Tipo | Botão do cliente | Cadastro |
-|------|------------------|----------|
-| Simples | **Adicionar** | Sem extras |
-| Lanche com extras | **Adicionar** + **Personalizar** | Adicionais (multi) + removíveis |
-| Bebida / tamanho / sabor | **Escolher** | Uma opção (rádio) — típico de bebidas |
-
-Produtos têm **setor de produção**: `cozinha` ou `bar` (fila separada).
-
----
-
-## 🔊 Alertas de voz
-
-| Tela | Quando | Conteúdo |
-|------|--------|----------|
-| Cozinha / Bar | Pedido novo / avanço | Mesa + cliente |
-| Garçom | Item pronto | Nº da mesa |
-| Caixa | PIX informado | Mesa + forma |
-
-Web Speech API no browser. No primeiro toque a voz “desbloqueia”.
+| Camada     | Tecnologia                                      |
+|------------|-------------------------------------------------|
+| Front      | React 19 · Vite · TypeScript · Tailwind · Zustand · Framer Motion |
+| API        | Node.js (HTTP nativo)                           |
+| Dados      | PostgreSQL                                      |
+| Tempo real | Server-Sent Events                              |
+| Imagens    | Sharp (WebP)                                    |
 
 ---
 
-## 📁 Estrutura
+## Status do produto
 
-```text
-lanchonete-qr/
-├── server.js           # HTTP nativo — API + estáticos
-├── db/                 # Postgres: pedidos, caixa, auth, dashboard…
-│   └── migrations/     # 0001 … 0015+
-├── src/                # React (Vite) — telas operacionais + admin
-├── public/             # HTML legado / assets / favicons
-└── scripts/            # smoke, seed helpers, fotos
-```
-
----
-
-## 🔒 Segurança (resumo)
-
-- Sessão staff em cookie **httpOnly** (scrypt na senha)
-- Rate-limit em memória em login e pedidos (por IP)
-- Headers básicos (CSP, nosniff, frame-deny)
-- SSE: staff autenticado **ou** `?mesa=<token-uuid>`
-- Preços e regras de adicional/remoção **sempre no servidor**
-
-Limitações conhecidas: rate-limit não compartilha entre instâncias; CSRF formal ainda não implementado; PIX sem conciliação bancária automática.
+| Área                         | Situação   |
+|------------------------------|------------|
+| Pedido por QR + comanda      | Pronto     |
+| Cozinha / Bar / Garçom / Caixa | Pronto   |
+| PIX (QR + aviso ao caixa)    | Pronto     |
+| Divisão de conta             | Pronto     |
+| Admin + dashboard + relatório| Pronto     |
+| Tema claro/escuro            | Pronto     |
+| Gateway de pagamento bancário| Planejado  |
+| WhatsApp / PWA / multi-loja  | Planejado  |
 
 ---
 
 <div align="center">
 
-**Feito com ☕ e QR Code** · [deividjmoura](https://github.com/deividjmoura)
+**QRAdmin** · pedidos por QR Code  
+[deividjmoura](https://github.com/deividjmoura)
 
 </div>
