@@ -5,76 +5,19 @@ import { cn } from "../utils/cn";
 import { alternarTema, temaAtual, EVENTO_TEMA, type Tema } from "../lib/tema";
 
 /* ---------- Logo ----------
- * Assets em public/logo/. Vários PNG têm painel navy opaco “assado” na arte.
- * - Um único asset horizontal (claro) nos dois temas (cyan legível em fundo escuro).
- * - No load, canvas remove pixels navy/quase-pretos → fundo realmente transparente.
- * - Fallback: mark se horizontal falhar. */
+ * public/logo/qradmin-horizontal.png — arte completa (mesa + QRAdmin).
+ * Knockout de navy foi removido: apagava a ilustração (fundo e traço usam tons parecidos).
+ * Um asset nos dois temas; max-width evita crop no mobile; fallback mark se 404. */
 const LOGO_SRC = "/logo/qradmin-horizontal.png";
 const LOGO_MARK = "/logo/qradmin-mark.png";
 
-/** Remove fundo navy/preto típico dos exports da marca (painel retangular). */
-function knockoutNavyData(imageData: ImageData) {
-  const d = imageData.data;
-  for (let i = 0; i < d.length; i += 4) {
-    const r = d[i];
-    const g = d[i + 1];
-    const b = d[i + 2];
-    const a = d[i + 3];
-    if (a < 8) continue;
-    // painel ~ rgb(15,45,72) e vizinhos
-    const navy =
-      r <= 42 && g <= 68 && b >= 32 && b <= 110 && b >= g - 10 && r <= g + 15;
-    const nearBlack = r + g + b < 48;
-    if (navy || nearBlack) d[i + 3] = 0;
-  }
-  return imageData;
-}
-
-function useLogoSrc(fallback = LOGO_MARK) {
-  const [src, setSrc] = useState(LOGO_SRC);
-
-  useEffect(() => {
-    let cancelled = false;
-    const img = new Image();
-    img.decoding = "async";
-    img.onload = () => {
-      try {
-        const c = document.createElement("canvas");
-        c.width = img.naturalWidth || img.width;
-        c.height = img.naturalHeight || img.height;
-        if (!c.width || !c.height) return;
-        const ctx = c.getContext("2d", { willReadFrequently: true });
-        if (!ctx) return;
-        ctx.drawImage(img, 0, 0);
-        const id = ctx.getImageData(0, 0, c.width, c.height);
-        knockoutNavyData(id);
-        ctx.putImageData(id, 0, 0);
-        const url = c.toDataURL("image/png");
-        if (!cancelled) setSrc(url);
-      } catch {
-        /* canvas tainted ou falha — mantém src original */
-      }
-    };
-    img.onerror = () => {
-      if (!cancelled) setSrc(fallback);
-    };
-    img.src = LOGO_SRC;
-    return () => {
-      cancelled = true;
-    };
-  }, [fallback]);
-
-  return src;
-}
-
 export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
-  const src = useLogoSrc();
   const box =
     size === "sm"
-      ? "h-8 max-h-8 max-w-[9rem]"
+      ? "h-8 max-h-8 max-w-[10rem]"
       : size === "lg"
-        ? "h-16 sm:h-20 max-h-20 max-w-[min(100%,18rem)] sm:max-w-[20rem]"
-        : "h-10 max-h-10 max-w-[12rem]";
+        ? "h-20 sm:h-24 max-h-24 max-w-[min(100%,20rem)] sm:max-w-[22rem]"
+        : "h-11 max-h-11 max-w-[13rem]";
 
   const onBroken = (e: SyntheticEvent<HTMLImageElement>) => {
     const el = e.currentTarget;
@@ -86,14 +29,14 @@ export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center justify-center select-none overflow-hidden bg-transparent",
+        "inline-flex items-center justify-center select-none overflow-hidden",
         box
       )}
     >
       <img
-        src={src}
+        src={LOGO_SRC}
         alt="QRAdmin"
-        className="h-full w-auto max-w-full object-contain object-center bg-transparent"
+        className="h-full w-auto max-w-full object-contain object-center"
         draggable={false}
         onError={onBroken}
       />
