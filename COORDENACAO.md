@@ -1,55 +1,38 @@
 # COORDENACAO.md — Lanchonete QR / QRAdmin
 
-> **Líder:** Grok · **main** only · bugfix 18/09  
-> PRs legados **#7 e #8 FECHADOS** (já na main). Não reabrir.
+> **Líder:** Grok · 19/09 · **main**
 
 ---
 
-## ⛔ Regras
+## 🚨 URGENTE — restaurar Admin.tsx
 
-1. Entrega na **`main`** no mesmo ciclo (sem 50 branches).
-2. **1 bug = 1 agente** (quadro abaixo).
-3. Front → `npm run build` + commit **`dist/`**.
-4. `BLOCKED` → Líder decide neste arquivo.
+O commit B2 **esvaziou** `src/screens/Admin.tsx`. Há um **stub de emergência** na main.
 
----
-
-## 🐛 Quadro
-
-| ID | Agente | Bug | Status |
-|----|--------|-----|--------|
-| **B1** | **agente-1** | Logo ACESSO DA EQUIPE | **DONE** main `7682bde` |
-| **B2** | agente-2 | Fotos Admin / placeholder | DESIGNADO |
-| **B3** | agente-3 | PIX chave EVP | DESIGNADO |
-| **B4** | **agente-arena** | dist/ = src/ rebuild | **DONE** — dist commitado com fix B1 |
-| **B5** | agente-5 | Login staff | DESIGNADO |
+```bash
+git checkout main && git pull
+git show b7bbe77a5cfd280e076d4c6bfe3ec0d39d4da839:src/screens/Admin.tsx > src/screens/Admin.tsx
+# opcional: fallback foto onError → /assets/demo/placeholder.webp
+npm run typecheck && npm run test:regression && npm run build
+git add src/screens/Admin.tsx dist/
+git commit -m "fix: restaurar Admin.tsx completo + dist"
+git push origin main
+```
 
 ---
 
-## Registro
+## Quadro B1–B5
 
-## [agente-lider]
+| ID | Status | Nota |
+|----|--------|------|
+| **B1** Logo equipe | **DONE** | max-width + fallback mark |
+| **B2** Fotos Admin | **URGENTE** | restaurar arquivo (comando acima) |
+| **B3** PIX EVP | **DONE** | já na main (#11) |
+| **B4** dist sync | **DONE** | rebuild + CI |
+| **B5** Login staff | **DONE** | loginApi estável |
 
-## [agente-1] B1
 ```
 AR-STATUS
-sid:18/09
-agent:agente-1
-claim:B1
-state:DONE
-note:Logo max-w + object-contain + onError→mark; ui.tsx na main. dist/ via B4.
+agent:lider
+state:WIP
+note:stub Admin; dono restaura do b7bbe77
 ```
-
-Arquivos: `src/components/ui.tsx`
-
-## [agente-arena] B4
-```
-AR-STATUS
-sid:18/09
-agent:agente-arena
-claim:B4
-state:DONE
-note:dist/ no HEAD (5317bc5) ainda servia JS antigo (index-Cmz7kfIH.js / index-DjaCUUaR.css) sem o fix do B1. Rebuild completo: rm -rf dist && npm run build → novos hashes index-CxzGNjBz.js / index-xKOWnGPp.css; index.html atualizado. dist/ commitado. typecheck PASS; regression 32/32 PASS; node --check server.js+db/+scripts/ OK; CI 'dist matches src' PASS.
-```
-
-Arquivos: `dist/` (rebuild); `COORDENACAO.md` (registro).
