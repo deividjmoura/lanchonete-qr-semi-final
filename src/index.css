@@ -372,3 +372,6 @@ body { background-image: radial-gradient(circle at 10% 0%,rgba(240,94,74,.065),t
 .brand-hero::after { content:""; position:absolute; inset:0 0 0 auto; width:34%; pointer-events:none; opacity:.065; background-image:url('/branding/delicias/totem.svg'); background-position:right center; background-repeat:no-repeat; background-size:contain; z-index:-1; }
 .brand-kicker { color:var(--delicias-wood); letter-spacing:.22em; text-transform:uppercase; font-size:.7rem; font-weight:800; }
 .brand-logo { filter:drop-shadow(0 4px 8px rgba(73,54,65,.12)); }
+
+.font-brand { font-family: Georgia, "Times New Roman", serif; }
+.bg-brand-shell { background:linear-gradient(130deg,var(--qr-page) 0%,var(--qr-white) 50%,var(--qr-brand-50) 100%); }
