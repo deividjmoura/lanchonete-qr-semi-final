@@ -17,8 +17,27 @@ const data=await res.json().catch(()=>({}));if(!res.ok){const e=new Error(data.e
 order.status='confirmed';order.serverOrderId=data.id;order.confirmedAt=Date.now();order.lastError=null;
 }catch(err){order.status=err.status&&err.status<500?'conflict':'offline';order.lastError=String(err.message||err);}await putOrder(order);await renderOrders();if(order.status==='confirmed')void loadOrderStatuses();}
 async function syncPending(){if(!navigator.onLine){setConnection();return}const pending=(await allOrders()).filter(o=>o.status==='offline');for(const o of pending)await syncOne(o.localId);setConnection()}function setConnection(){$('#connection').textContent=navigator.onLine?'Online · sincronização disponível':'Offline · pedidos ficam neste aparelho';$('#connection').style.color=navigator.onLine?'#166534':'#a16207'}function updateQr(){const n=Number($('#qrTable').value);const mesa=mesas.find(x=>Number(x.numero)===n);if(!mesa)return;const url=new URL('../',location.href).href+'#/mesa/'+mesa.token;$('#qrUrl').value=url;$('#qrImage').src=navigator.onLine?'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(url):'';$('#qrImage').onerror=()=>{$('#qrImage').alt='QR indisponível offline'}}$('#search').addEventListener('input',renderProducts);$('#saveOrder').addEventListener('click',saveOrder);$('#syncBtn').addEventListener('click',syncPending);$('#qrTable').addEventListener('change',updateQr);$('#copyQr').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('#qrUrl').value);$('#copyQr').textContent='Endereço copiado';setTimeout(()=>$('#copyQr').textContent='Copiar endereço',1500)}catch{ $('#qrUrl').select();document.execCommand('copy')}});window.addEventListener('online',syncPending);window.addEventListener('offline',setConnection);setConnection();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});openDb().then(async d=>{db=d;await recoverInterruptedSync();await loadProducts();try{await loadMesas();if(navigator.onLine){syncPending();loadDeliveries();loadOrderStatuses()}}catch(e){$('#identity').textContent=e.message;if(!navigator.onLine){try{mesas=JSON.parse(localStorage.getItem('waiter-mesas-cache-'+waiterToken)||'[]');tables.splice(0,tables.length,...mesas.map(x=>Number(x.numero)));populateTables();updateQr();renderTableGrid();}catch{}}}}).catch(e=>{console.error(e);alert('Não foi possível abrir o armazenamento offline neste navegador.')});
-let deferredInstall=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;const b=document.querySelector('#installBtn');if(b)b.hidden=false;});document.querySelector('#installBtn')?.addEventListener('click',async()=>{if(deferredInstall){deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;document.querySelector('#installBtn').hidden=true;}else alert('No menu do navegador, escolha Adicionar à tela inicial ou Instalar aplicativo.');});window.addEventListener('appinstalled',()=>{const b=document.querySelector('#installBtn');if(b)b.hidden=true;});
-
+let deferredInstall=null;
+const installBtn=document.querySelector('#installBtn');
+function refreshInstallState(){
+ if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true){installBtn.hidden=true;return}
+ installBtn.hidden=false;
+ installBtn.textContent=deferredInstall?'↓ Instalar aplicativo':'↓ Como instalar';
+}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;refreshInstallState()});
+installBtn?.addEventListener('click',async()=>{
+ if(deferredInstall){
+   const prompt=deferredInstall;deferredInstall=null;
+   await prompt.prompt();
+   const choice=await prompt.userChoice;
+   if(choice?.outcome!=='accepted')refreshInstallState();
+   return;
+ }
+ const ios=/iPhone|iPad|iPod/.test(navigator.userAgent);
+ alert(ios?'No Safari, toque em Compartilhar e depois em Adicionar à Tela de Início. O iOS não permite instalação automática.':'O navegador não disponibilizou a instalação automática. Use o menu do navegador → Instalar aplicativo / Adicionar à tela inicial. No Chrome Android compatível, o botão Instalar abre o convite automaticamente.');
+});
+window.addEventListener('appinstalled',()=>{installBtn.hidden=true;deferredInstall=null});
+refreshInstallState();
 
 async function loadDeliveries(){if(!navigator.onLine||!waiterToken)return;const root=$('#readyOrders');try{const orders=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/pedidos');root.replaceChildren();const ready=(Array.isArray(orders)?orders:[]).filter(p=>(p.itens||[]).some(i=>i.status==='concluido'));if(!ready.length){root.innerHTML='<p class="muted">Nenhum pedido pronto para entrega.</p>';return;}for(const order of ready){const card=document.createElement('article');card.className='order';const name=document.createElement('strong');name.textContent='Mesa '+(order.mesa||order.mesaNumero||'?')+' · Pedido #'+order.id;card.append(name);const details=document.createElement('p');details.className='muted';details.textContent=(order.itens||[]).filter(i=>i.status==='concluido').map(i=>(i.quantidade||i.qtd||1)+'× '+i.nome).join(', ');card.append(details);const btn=document.createElement('button');btn.textContent='Confirmar entrega';btn.onclick=async()=>{if(!confirm('Confirmar que entregou os itens prontos do pedido #'+order.id+'?'))return;btn.disabled=true;try{await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/pedidos/'+order.id+'/entregar',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});await loadDeliveries();}catch(e){alert(e.message);btn.disabled=false;}};card.append(btn);root.append(card)}}catch(e){root.textContent='Não foi possível consultar as entregas: '+e.message;}}
 document.querySelector('#refreshDeliveries')?.addEventListener('click',loadDeliveries);
