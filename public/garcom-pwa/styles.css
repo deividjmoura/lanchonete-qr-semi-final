@@ -19,3 +19,5 @@
 .item-state.state-concluido{background:#d9f4e1;color:#24683d}
 .item-state.state-entregue{background:#edf0f2;color:#54616a}
 @media(max-width:480px){.order-item-line{align-items:flex-start;flex-direction:column;gap:5px}.item-state{align-self:flex-start}}
+
+.table-actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:6px}.table-actions button{font-size:.72rem}.table-actions .leave-table{border-color:#f1b0a7;color:#ac4838}.table-tile.mine{margin-bottom:0}#modalOrderStatuses{margin-top:16px}#showActiveOrders{margin:8px 0 14px}.table-actions + .table-tile{margin-top:2px}
