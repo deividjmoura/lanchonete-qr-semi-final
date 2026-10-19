@@ -3,7 +3,61 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f05e4a"><meta name="description" content="Delicia's São Miguel · atendimento de mesa online e offline">
-<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg" type="image/svg+xml"><link rel="stylesheet" href="./styles.css">
+<link rel="manifest" href="./manifest.webmanifest"><style id="critical-pwa-layout">
+/* Layout seguro até quando o CSS externo estiver temporariamente indisponível. */
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+body{margin:0;background:#fffaf5;color:#493641;padding-bottom:90px}
+.app-header{background:#fffcf7;border-bottom:1px solid #eddfd0}
+.header-inner{max-width:1050px;margin:auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand-symbol{display:grid;place-items:center;width:40px;height:40px;flex-shrink:0;border-radius:12px;background:#f05e4a;color:#fff;font-size:24px}
+.brand h1{font-size:1.15rem;margin:2px 0;line-height:1.25}
+.brand-italic,.greeting em{font-family:Georgia,serif;color:#e45a48}
+.eyebrow,.section-eyebrow{font-size:.67rem;font-weight:800;letter-spacing:.13em;color:#a66a4d}
+.header-actions{display:flex;align-items:center;gap:8px}
+.connection-pill{font-size:.72rem;color:#2d7957;background:#e8f4e9;padding:7px 10px;border-radius:20px}
+.workspace{max-width:1000px;margin:0 auto;padding:23px 15px}
+.greeting{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;margin-bottom:17px}
+.greeting h2{font-size:clamp(1.4rem,5vw,2.1rem);margin:5px 0;letter-spacing:-.04em}
+.subtitle,.muted,.hint{color:#80736c;line-height:1.5;font-size:.85rem}
+.page{display:none!important}
+.page.active{display:block!important}
+.hero-panel{position:relative;overflow:hidden;border-radius:20px;background:linear-gradient(120deg,#533944,#975c52);color:white;min-height:220px}
+.hero-content{position:relative;padding:25px;z-index:2;max-width:530px}
+.hero-content h3{font-size:clamp(1.65rem,6vw,2.7rem);line-height:1.15;margin:12px 0}
+.hero-content em{font-family:Georgia,serif;color:#ffd1b8}
+.hero-content p{font-size:.86rem;line-height:1.55;color:#fff4ec}
+.hero-mascot{display:none!important}
+.quick-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}
+.quick-card{display:flex!important;flex-direction:column;align-items:flex-start;gap:7px;position:relative;min-width:0;min-height:142px;padding:17px;border:1px solid #eadbd0;border-radius:17px;background:white;color:#493641;text-align:left;overflow:hidden}
+.quick-card .quick-icon{font-size:23px;color:#f05e4a}
+.quick-card strong{font-size:.94rem;line-height:1.2}
+.quick-card small{font-size:.75rem;line-height:1.3;color:#80736c}
+.quick-card .quick-arrow{position:absolute;right:12px;top:12px}
+.quick-card .count{position:static;margin-top:2px;font-size:.7rem;border-radius:20px;padding:5px 9px;background:#fff0e7;color:#c44f3d}
+button{cursor:pointer;font:inherit}
+.primary,.button-light{display:inline-flex;align-items:center;justify-content:center;background:#f05e4a;color:#fff;border:0;border-radius:12px;padding:12px 17px;font-weight:750}
+.button-light{background:#fff5eb;color:#493641}
+.secondary{padding:10px 12px;background:#fff;color:#493641;border:1px solid #dfcfc2;border-radius:12px}
+.notice,.panel{border-radius:17px;padding:17px;background:white;border:1px solid #eddfd0;margin-bottom:15px}
+.notice{display:flex;gap:10px;background:#f1f5e9}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:20;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;background:#fffdfa;border-top:1px solid #eddfd0;padding:7px 5px calc(8px + env(safe-area-inset-bottom))}
+.bottom-nav button{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;padding:6px 2px;background:transparent;border:0;border-radius:9px;color:#81746e;font-size:.65rem}
+.bottom-nav button.active{color:#e85644;background:#fff0e9}
+.nav-icon{font-size:21px}
+.sheet:not([open]){display:none}
+.sheet{border:0;padding:0;width:min(750px,100%);max-height:94dvh;border-radius:20px;background:#fffaf5;color:#493641}
+.sheet::backdrop{background:#251c24a9}
+.sheet-top,.sheet-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px;background:#fff;border-bottom:1px solid #eddfd0}
+.sheet-body{padding:17px;max-height:calc(94dvh - 160px);overflow:auto}
+.field{display:grid;gap:5px;margin-bottom:12px;font-size:.82rem;font-weight:700}
+input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5c5;border-radius:10px}
+.products,.table-grid,.orders-list{display:grid;gap:10px}
+.product,.order,.table-tile{padding:14px;background:white;border:1px solid #eddfd0;border-radius:13px}
+@media(max-width:480px){.header-inner{align-items:flex-start}.header-actions{flex-direction:column;align-items:flex-end}.brand h1{font-size:1rem}.workspace{padding:18px 13px}.sync-button{font-size:.72rem;padding:7px}.hero-content{padding:23px 19px}.quick-card{min-height:130px;padding:14px}.quick-grid{gap:10px}.sheet{width:100%;height:100dvh;max-height:100dvh;border-radius:0}.sheet-body{max-height:calc(100dvh - 150px)}}
+</style><link rel="icon" href="./icon.svg" type="image/svg+xml"><link rel="stylesheet" href="./styles.css">
 <title>Atendimento · Delicia's São Miguel</title>
 </head>
 <body>
@@ -22,7 +76,7 @@
   <section class="page active" id="page-home" data-page="home" aria-label="Início">
     <div class="hero-panel">
       <div class="hero-content"><span class="eyebrow light">ATENDIMENTO MAIS ÁGIL</span><h3>Um pedido de cada vez.<br><em>Todo mundo feliz.</em></h3><p>Abra uma mesa, anote o consumo ou deixe o cliente pedir pelo próprio QR.</p><button class="button-light" id="newOrderHome" type="button">＋ Novo pedido <span>→</span></button></div>
-      <img class="hero-mascot" src="/branding/delicias/cozinheira.svg" alt="" loading="lazy" onerror="this.hidden=true">
+      
     </div>
     <div class="quick-grid">
       <button class="quick-card" id="openTablesHome" type="button"><span class="quick-icon">▦</span><strong>Mesas</strong><small>Assumir ou compartilhar QR</small><span class="quick-arrow">↗</span></button>
