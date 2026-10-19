@@ -54,11 +54,34 @@ function buildPoolConfig() {
 
 const base = buildPoolConfig();
 
+function inteiroPositivoOuPadrao(nome, padrao) {
+  const n = Number(process.env[nome]);
+  return Number.isFinite(n) && n > 0 ? Math.trunc(n) : padrao;
+}
+
+// Orçamentos de tempo do lado do servidor: uma transação travada não pode
+// segurar lock de mesa/produto (nem uma conexão do pool) para sempre no pico.
+// São tetos folgados para operação normal (consulta legítima é milissegundos);
+// servem para transformar "travou e ninguém sabe" em erro visível e lock
+// liberado. Ajustáveis por ambiente; 0/inválido cai no padrão.
+const statementTimeoutMs = inteiroPositivoOuPadrao('PG_STATEMENT_TIMEOUT_MS', 30_000);
+const lockTimeoutMs = inteiroPositivoOuPadrao('PG_LOCK_TIMEOUT_MS', 15_000);
+const idleTxTimeoutMs = inteiroPositivoOuPadrao('PG_IDLE_TX_TIMEOUT_MS', 30_000);
+
 const pool = new Pool({
   ...base,
-  max: Number(process.env.PG_POOL_MAX || 10),
+  // 70 mesas simultâneas não significam 70 conexões: cada pedido segura uma
+  // conexão por poucos ms. O padrão 10 é conservador (planos pequenos de PG);
+  // em instância única com Postgres dedicado, PG_POOL_MAX=20 dá folga ao pico
+  // (ver RELATORIO e .env.example). Acima disso o gargalo vira o próprio PG.
+  max: inteiroPositivoOuPadrao('PG_POOL_MAX', 10),
   idleTimeoutMillis: 30_000,
-  connectionTimeoutMillis: Number(process.env.PG_CONNECT_TIMEOUT_MS || 10_000),
+  connectionTimeoutMillis: inteiroPositivoOuPadrao('PG_CONNECT_TIMEOUT_MS', 10_000),
+  keepAlive: true,
+  statement_timeout: statementTimeoutMs,
+  lock_timeout: lockTimeoutMs,
+  idle_in_transaction_session_timeout: idleTxTimeoutMs,
+  query_timeout: statementTimeoutMs,
 });
 
 pool.on('error', (err) => {
