@@ -507,11 +507,11 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    if ((m = p.match(/^\\/api\\/caixa\\/sessoes\\/(\\d+)\\/comprovante$/)) && req.method === 'GET') {
+    if ((m = p.match(/^\/api\/caixa\/sessoes\/(\\d+)\/comprovante$/)) && req.method === 'GET') {
       try { return json(res, 200, await comprovanteSessao(m[1])); }
       catch(e) { if(e instanceof ErroComprovante) return json(res,e.status,{error:e.message}); throw e; }
     }
-    if ((m = p.match(/^\\/api\\/admin\\/sessoes\\/(\\d+)\\/comprovante$/)) && req.method === 'GET') {
+    if ((m = p.match(/^\/api\/admin\/sessoes\/(\\d+)\/comprovante$/)) && req.method === 'GET') {
       try { return json(res, 200, await comprovanteSessao(m[1])); }
       catch(e) { if(e instanceof ErroComprovante) return json(res,e.status,{error:e.message}); throw e; }
     }
