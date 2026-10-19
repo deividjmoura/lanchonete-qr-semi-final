@@ -89,6 +89,43 @@ async function criarPedidoGarcom(token, numeroBruto, body) {
   return criarPedido(rows[0].token, body, { garcomId:garcom.id, garcomNome:garcom.nome });
 }
 
+async function listarAtendimentosGarcom(token) {
+  const garcom=await validarGarcom(token);
+  const {rows}=await pool.query(`
+    SELECT p.id,p.status,p.criado_em,p.editado_em,p.cliente_nome,p.observacao_geral,
+           m.numero AS mesa,s.id AS sessao_id,
+           COALESCE(json_agg(json_build_object(
+             'id',ip.id,'productId',ip.produto_id,'nome',pr.nome,
+             'qty',ip.quantidade,'unitPrice',ip.preco_unitario,
+             'status',COALESCE(ip.status,'recebido'),'setor',COALESCE(pr.setor,'cozinha'),
+             'note',ip.observacao
+           ) ORDER BY ip.id) FILTER(WHERE ip.id IS NOT NULL),'[]'::json) AS itens
+    FROM mesa_sessoes s
+    JOIN mesas m ON m.id=s.mesa_id
+    JOIN pedidos p ON p.sessao_id=s.id
+    LEFT JOIN itens_pedido ip ON ip.pedido_id=p.id
+    LEFT JOIN produtos pr ON pr.id=ip.produto_id
+    WHERE s.status='aberta' AND s.garcom_responsavel_id=$1
+    GROUP BY p.id,m.numero,s.id
+    ORDER BY p.criado_em DESC LIMIT 250`,[garcom.id]);
+  return rows.map(x=>({id:x.id,mesa:x.mesa,sessaoId:x.sessao_id,status:x.status,
+    criadoEm:x.criado_em,editadoEm:x.editado_em,clienteNome:x.cliente_nome,
+    note:x.observacao_geral,itens:x.itens,
+    podeEditar:x.status==='recebido'&&x.itens.every(i=>i.status==='recebido')}));
+}
+async function editarPedidoGarcom(token,pedidoId,body){
+  const garcom=await validarGarcom(token);
+  const id=Number(pedidoId);
+  if(!Number.isSafeInteger(id)||id<1)throw new ErroAtendimento(400,'Pedido inválido');
+  const {rows}=await pool.query(`
+    SELECT m.token FROM pedidos p
+    JOIN mesa_sessoes s ON s.id=p.sessao_id
+    JOIN mesas m ON m.id=s.mesa_id
+    WHERE p.id=$1 AND s.status='aberta' AND s.garcom_responsavel_id=$2`,[id,garcom.id]);
+  if(!rows[0])throw new ErroAtendimento(403,'Pedido não pertence às suas mesas em atendimento');
+  const {editarPedidoCliente}=require('./pedidos');
+  return editarPedidoCliente(rows[0].token,id,body);
+}
 async function metricasGarcons({ data } = {}) {
   const dia = data || new Intl.DateTimeFormat('en-CA', { timeZone: process.env.APP_TIMEZONE || 'America/Sao_Paulo',
     year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date());
@@ -112,4 +149,4 @@ async function metricasGarcons({ data } = {}) {
     garcons: rows.map(x=>({ id:x.id, nome:x.nome, ativo:x.ativo, atendimentos:x.atendimentos,
       vendas:Number(x.vendas), ticketMedio:Number(x.ticket_medio) })) };
 }
-module.exports={ ErroAtendimento, listarMesasGarcom, assumirMesa, criarPedidoGarcom, metricasGarcons };
+module.exports={ ErroAtendimento, listarMesasGarcom, assumirMesa, criarPedidoGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons };
