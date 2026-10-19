@@ -71,7 +71,7 @@ export default function Admin() {
           )}
         >
           {aba === a.id && (
-            <motion.span layoutId="adm-aba" className="absolute inset-0 rounded-xl bg-gradient-to-br from-brand-500 to-teal-600" transition={{ type: "spring", stiffness: 420, damping: 32 }} />
+            <motion.span layoutId="adm-aba" className="absolute inset-0 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600" transition={{ type: "spring", stiffness: 420, damping: 32 }} />
           )}
           <a.icon className="relative z-10 size-3.5" />
           <span className="relative z-10 hidden sm:inline">{a.label}</span>
@@ -81,7 +81,7 @@ export default function Admin() {
   );
 
   return (
-    <OpsShell ativo="admin" kicker="gestão · admin" titulo={<>Comando <span className="text-gradient">do pub</span></>} extra={extras}>
+    <OpsShell ativo="admin" kicker="gestão · a casa" titulo={<>Delicia’s <span className="text-gradient">São Miguel</span></>} extra={extras}>
       <AnimatePresence mode="wait">
         <motion.div
           key={aba}
