@@ -88,12 +88,14 @@ export function OpsShell({
       {/* ambientes */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
         <div className="glow-orb absolute -top-40 left-1/4 size-[34rem] bg-brand-500/12" />
-        <div className="glow-orb absolute top-1/3 -right-40 size-[28rem] bg-navy-500/10" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(0,196,180,0.07),transparent_62%)]" />
+        <div className="glow-orb absolute top-1/3 -right-40 size-[28rem] bg-amber-500/10" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(240,94,74,0.07),transparent_62%)]" />
       </div>
 
+      {/* Elemento artesanal do ambiente: marca d'água, sem competir com a marca */}
+      <div aria-hidden="true" className="fixed -z-10 bottom-0 right-0 w-36 sm:w-52 h-80 opacity-[.045] pointer-events-none" style={{ background:"url('/branding/delicias/totem.svg') center bottom / contain no-repeat" }} />
       {/* header */}
-      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-3 sm:px-6 h-14 sm:h-16 flex items-center gap-1.5 sm:gap-3 min-w-0">
           <button
             onClick={() => {
@@ -127,7 +129,7 @@ export function OpsShell({
                 {ativo === n.id && (
                   <motion.span
                     layoutId="ops-nav"
-                    className="absolute inset-0 rounded-full bg-gradient-to-br from-brand-500 to-teal-600"
+                    className="absolute inset-0 rounded-full bg-gradient-to-br from-brand-500 to-brand-600"
                     transition={{ type: "spring", stiffness: 420, damping: 32 }}
                   />
                 )}

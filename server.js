@@ -22,6 +22,8 @@ const { informarPixPago, ErroPixCliente } = require('./db/pix-cliente');
 const {
   ErroAdmin,
   listMesas,
+  quantidadeMesasAtivas,
+  ativarMesas,
   getCardapioAdmin,
   criarCategoria,
   atualizarCategoria,
@@ -560,6 +562,20 @@ const server = http.createServer(async (req, res) => {
     }
     if (p === '/api/admin/mesas' && req.method === 'GET') {
       return json(res, 200, await listMesas());
+    }
+    if (p === '/api/admin/mesas/config' && req.method === 'GET') {
+      return json(res, 200, { quantidade: await quantidadeMesasAtivas(), limite: 70 });
+    }
+    if (p === '/api/admin/mesas/ativar' && req.method === 'POST') {
+      try {
+        const payload = await body(req);
+        const out = await ativarMesas(payload.quantidade);
+        broadcast('update', { type: 'mesas_ativadas' });
+        return json(res, 200, out);
+      } catch (e) {
+        if (e instanceof ErroAdmin) return json(res, e.status, { error: e.message });
+        throw e;
+      }
     }
     if (p === '/api/admin/garcons' && req.method === 'GET') {
       return json(res, 200, await listGarcons());

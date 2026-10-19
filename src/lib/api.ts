@@ -84,6 +84,9 @@ export const api = {
 
   mesasPublic: () => apiGet<any[]>("/api/mesas"),
   adminMesas: () => apiGet<any[]>("/api/admin/mesas"),
+  adminMesasConfig: () => apiGet<{ quantidade: number; limite: number }>("/api/admin/mesas/config"),
+  ativarMesas: (quantidade: number) =>
+    apiSend<{ quantidade: number }>("/api/admin/mesas/ativar", "POST", { quantidade }),
   adminCardapio: () => apiGet<any[]>("/api/admin/cardapio"),
   // (duplicata removida — ver adminDashboard(params) mais abaixo, que substituía
   // esta silenciosamente em runtime; TS só acusa o conflito com checagem estrita)

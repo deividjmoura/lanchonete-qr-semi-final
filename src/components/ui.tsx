@@ -1,45 +1,15 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Flame, Moon, Sun } from "lucide-react";
-import { useEffect, useState, type ReactNode, type SyntheticEvent } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "../utils/cn";
 import { alternarTema, temaAtual, EVENTO_TEMA, type Tema } from "../lib/tema";
 
-/* ---------- Logo ----------
- * public/logo/qradmin-horizontal.png — arte completa (mesa + QRAdmin).
- * Knockout de navy foi removido: apagava a ilustração (fundo e traço usam tons parecidos).
- * Um asset nos dois temas; max-width evita crop no mobile; fallback mark se 404. */
-const LOGO_SRC = "/logo/qradmin-horizontal.png";
-const LOGO_MARK = "/logo/qradmin-mark.png";
-
+/* Identidade da casa: logotipo tipográfico + selo da cozinheira.
+   As imagens de referência são preservadas como direção visual do produto. */
 export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
-  const box =
-    size === "sm"
-      ? "h-8 max-h-8 max-w-[10rem]"
-      : size === "lg"
-        ? "h-20 sm:h-24 max-h-24 max-w-[min(100%,20rem)] sm:max-w-[22rem]"
-        : "h-11 max-h-11 max-w-[13rem]";
-
-  const onBroken = (e: SyntheticEvent<HTMLImageElement>) => {
-    const el = e.currentTarget;
-    if (el.dataset.fallback === "1") return;
-    el.dataset.fallback = "1";
-    el.src = LOGO_MARK;
-  };
-
   return (
-    <span
-      className={cn(
-        "inline-flex items-center justify-center select-none overflow-hidden",
-        box
-      )}
-    >
-      <img
-        src={LOGO_SRC}
-        alt="QRAdmin"
-        className="h-full w-auto max-w-full object-contain object-center"
-        draggable={false}
-        onError={onBroken}
-      />
+    <span className={cn("brand-logo inline-flex shrink-0 items-center overflow-hidden rounded-xl bg-[#f05e4a] shadow-sm",size === "sm" ? "h-10 w-[90px] sm:w-[118px]" : size === "lg" ? "h-[118px] w-[270px] sm:h-[145px] sm:w-[330px]" : "h-16 w-[150px]")}>
+      <img src="/branding/delicias/logo-original.svg" alt="Delicia’s São Miguel" className="w-full h-full object-contain" draggable={false}/>
     </span>
   );
 }
@@ -99,7 +69,7 @@ export function Btn({
         size === "lg" && "h-13 px-7 text-base",
         full && "w-full",
         variant === "brand" &&
-          "bg-gradient-to-br from-brand-500 to-teal-600 text-white shadow-[0_10px_30px_-8px_rgba(0,196,180,0.5)] hover:shadow-[0_14px_38px_-6px_rgba(0,196,180,0.65)]",
+          "bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-[0_10px_30px_-8px_rgba(240,94,74,0.5)] hover:shadow-[0_14px_38px_-6px_rgba(240,94,74,0.65)]",
         variant === "lime" &&
           "bg-gradient-to-br from-teal-400 to-teal-600 text-white shadow-[0_10px_30px_-8px_rgba(20,184,166,0.45)]",
         variant === "ghost" && "bg-slate-100/70 text-slate-700 hover:bg-slate-100 border border-slate-200",

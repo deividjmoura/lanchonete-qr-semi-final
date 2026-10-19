@@ -71,7 +71,7 @@ export default function Admin() {
           )}
         >
           {aba === a.id && (
-            <motion.span layoutId="adm-aba" className="absolute inset-0 rounded-xl bg-gradient-to-br from-brand-500 to-teal-600" transition={{ type: "spring", stiffness: 420, damping: 32 }} />
+            <motion.span layoutId="adm-aba" className="absolute inset-0 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600" transition={{ type: "spring", stiffness: 420, damping: 32 }} />
           )}
           <a.icon className="relative z-10 size-3.5" />
           <span className="relative z-10 hidden sm:inline">{a.label}</span>
@@ -81,7 +81,7 @@ export default function Admin() {
   );
 
   return (
-    <OpsShell ativo="admin" kicker="gestão · admin" titulo={<>Comando <span className="text-gradient">do pub</span></>} extra={extras}>
+    <OpsShell ativo="admin" kicker="gestão · a casa" titulo={<>Delicia’s <span className="text-gradient">São Miguel</span></>} extra={extras}>
       <AnimatePresence mode="wait">
         <motion.div
           key={aba}
@@ -1070,8 +1070,46 @@ function Mesas() {
   const mesas = usePub((s) => s.mesas);
   const sessoes = usePub((s) => s.sessoes);
   const pedidos = usePub((s) => s.pedidos);
+  const hydrateMesas = usePub((s) => s.hydrateMesas);
   const fecharSessao = usePub((s) => s.fecharSessao);
   const [copiado, setCopiado] = useState<number | null>(null);
+  const [quantidade, setQuantidade] = useState(20);
+  const [limite, setLimite] = useState(70);
+  const [carregando, setCarregando] = useState(true);
+  const [adicionando, setAdicionando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [qrPendente, setQrPendente] = useState<{ token: string; numero: number } | null>(null);
+  const qrRef = useRef<SVGSVGElement | null>(null);
+
+  useEffect(() => {
+    let montado = true;
+    api.adminMesasConfig()
+      .then((config) => {
+        if (!montado) return;
+        setQuantidade(config.quantidade);
+        setLimite(config.limite);
+      })
+      .catch((e) => { if (montado) setErro(e.message || "Não foi possível carregar as mesas habilitadas"); })
+      .finally(() => { if (montado) setCarregando(false); });
+    return () => { montado = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!qrPendente || !qrRef.current) return;
+    // SVG vetorial: permanece nítido em impressão de qualquer tamanho.
+    const svg = qrRef.current.cloneNode(true) as SVGSVGElement;
+    svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    const arquivo = new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml;charset=utf-8" });
+    const endereco = URL.createObjectURL(arquivo);
+    const link = document.createElement("a");
+    link.href = endereco;
+    link.download = `mesa-${String(qrPendente.numero).padStart(2, "0")}-qr.svg`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(endereco);
+    setQrPendente(null);
+  }, [qrPendente]);
 
   const copiarLink = async (token: string, id: number) => {
     const url = mesaClienteUrl(token);
@@ -1084,57 +1122,85 @@ function Mesas() {
     }
   };
 
+  const adicionarMesas = async () => {
+    const restante = limite - quantidade;
+    if (restante <= 0) return;
+    const resposta = prompt(`Quantas mesas deseja adicionar? (1 a ${restante})`, String(Math.min(10, restante)));
+    if (resposta === null) return;
+    const extra = Number(resposta);
+    if (!Number.isSafeInteger(extra) || extra < 1 || extra > restante) {
+      setErro(`Informe uma quantidade inteira entre 1 e ${restante}.`);
+      return;
+    }
+    setAdicionando(true);
+    setErro(null);
+    try {
+      const config = await api.ativarMesas(quantidade + extra);
+      setQuantidade(config.quantidade);
+      await hydrateMesas();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Falha ao ativar mesas");
+    } finally {
+      setAdicionando(false);
+    }
+  };
+
+  const visiveis = [...mesas].filter((m) => m.numero <= quantidade).sort((a, b) => a.numero - b.numero);
+
   return (
-    <div>
-      <p className="text-sm text-slate-500 mb-4 max-w-xl">
-        Cada mesa tem um link/QR fixo. Imprima o QR e cole na mesa — o cliente escaneia e já entra no cardápio com o número certo. Sem menu de equipe no celular do cliente.
-      </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {mesas.map((m) => {
-          const s = sessoes.find((x) => x.mesaId === m.id && x.status === "aberta");
-          const consumo = s ? totalSessao(pedidos, s.id) : 0;
-          const url = mesaClienteUrl(m.token);
+    <section className="space-y-4">
+      <div className="glass rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h3 className="font-semibold text-navy-900 text-base">Mesas do estabelecimento</h3>
+          <p className="text-sm text-slate-500 mt-1">
+            {carregando ? "Carregando..." : `${quantidade} mesas habilitadas · limite de ${limite}`}
+            {" "}— copie o link ou baixe o QR quando precisar imprimir.
+          </p>
+        </div>
+        <Btn size="sm" onClick={() => void adicionarMesas()} disabled={carregando || adicionando || quantidade >= limite}>
+          <Plus className="size-4" /> {adicionando ? "Adicionando..." : quantidade >= limite ? "Limite atingido" : "Adicionar mesas"}
+        </Btn>
+      </div>
+      {erro && <p role="alert" className="text-sm text-rose-500">{erro}</p>}
+      <div className="glass rounded-2xl overflow-hidden divide-y divide-slate-700/20">
+        {visiveis.map((m) => {
+          const sessao = sessoes.find((x) => x.mesaId === m.id && x.status === "aberta");
+          const consumo = sessao ? totalSessao(pedidos, sessao.id) : 0;
           return (
-            <div
-              key={m.id}
-              className={cn(
-                "relative glass rounded-3xl p-4 sm:p-5 text-center overflow-hidden",
-                s && "ring-brand"
-              )}
-            >
-              <div className="flex items-center justify-between">
-                <Badge tone={s ? "amber" : "zinc"} pulse={!!s}>
-                  {s ? "ocupada" : "livre"}
-                </Badge>
-                <span className="font-mono text-[10px] text-slate-400">#{String(m.numero).padStart(2, "0")}</span>
+            <div key={m.id} className="flex items-center gap-3 sm:gap-5 px-4 py-3 hover:bg-white/5 transition-colors">
+              <div className="flex items-center justify-center size-11 shrink-0 rounded-xl bg-slate-700/20 font-display text-xl text-navy-900">
+                {m.numero}
               </div>
-              <p className="font-display text-4xl sm:text-5xl text-navy-900 mt-3 leading-none">{m.numero}</p>
-              <p className="text-[10px] uppercase tracking-[0.24em] text-slate-500 mt-1">{m.nome}</p>
-
-              <div className="mt-4 mx-auto w-fit rounded-2xl qr-paper p-2.5">
-                <QRCodeSVG value={url} size={108} fgColor="#0a2540" level="M" includeMargin={false} />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-navy-900 text-sm">Mesa {String(m.numero).padStart(2, "0")}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge tone={sessao ? "amber" : "zinc"}>{sessao ? "Ocupada" : "Livre"}</Badge>
+                  {sessao && <span className="text-xs text-slate-500">{BRL(consumo)}</span>}
+                </div>
               </div>
-
-              <p className="mt-3 font-mono text-[10px] text-slate-500 break-all leading-snug px-1">{url}</p>
-
-              <div className="mt-3 flex flex-col gap-1.5">
-                <Btn size="sm" full onClick={() => void copiarLink(m.token, m.id)}>
-                  <Copy className="size-3.5" /> {copiado === m.id ? "Copiado!" : "Copiar link da mesa"}
-                </Btn>
-                {s ? (
-                  <>
-                    <p className="font-mono text-sm text-brand-600 py-1">{BRL(consumo)} consumo</p>
-                    <Btn size="sm" variant="danger" full onClick={() => fecharSessao(s.id, "dinheiro")}>
-                      Liberar mesa
-                    </Btn>
-                  </>
-                ) : null}
+              <div className="flex items-center gap-2 shrink-0">
+                <button type="button" title={copiado === m.id ? "Link copiado" : "Copiar link da mesa"} aria-label={`Copiar link da mesa ${m.numero}`} onClick={() => void copiarLink(m.token, m.id)}
+                  className="size-10 inline-flex items-center justify-center rounded-xl border border-slate-600/30 text-slate-400 hover:text-brand-500 hover:border-brand-500 transition-colors">
+                  <Copy className="size-4" />
+                </button>
+                <button type="button" title="Baixar QR em SVG" aria-label={`Baixar QR da mesa ${m.numero}`} onClick={() => setQrPendente({ token: m.token, numero: m.numero })}
+                  className="size-10 inline-flex items-center justify-center rounded-xl border border-slate-600/30 text-slate-400 hover:text-brand-500 hover:border-brand-500 transition-colors">
+                  <Download className="size-4" />
+                </button>
+                {sessao && <button type="button" onClick={() => fecharSessao(sessao.id, "dinheiro")} title="Liberar mesa" aria-label={`Liberar mesa ${m.numero}`} className="text-xs text-rose-500 hover:underline px-1">Liberar</button>}
               </div>
             </div>
           );
         })}
+        {!carregando && visiveis.length === 0 && <p className="p-5 text-sm text-slate-500">Nenhuma mesa cadastrada. Verifique a inicialização do banco.</p>}
       </div>
-    </div>
+      {qrPendente && (
+        <div aria-hidden="true" className="absolute -left-[9999px] top-0 pointer-events-none">
+          <QRCodeSVG ref={qrRef} value={mesaClienteUrl(qrPendente.token)} size={320} includeMargin level="H" fgColor="#0a2540" bgColor="#ffffff" />
+        </div>
+      )}
+      <p className="text-xs text-slate-500">A ampliação preserva os links e os pedidos existentes. O QR é baixado em SVG vetorial, ideal para impressão.</p>
+    </section>
   );
 }
 
