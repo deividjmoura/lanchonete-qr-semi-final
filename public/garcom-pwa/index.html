@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#b91c1c"><meta name="description" content="Atendimento de garçom com suporte offline.">
+<link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./styles.css">
+<title>QR Admin · Garçom</title>
+</head>
+<body>
+<header class="top"><div><span class="eyebrow">QR ADMIN</span><h1>Atendimento</h1><p id="connection">Verificando conexão…</p></div><button id="syncBtn" class="secondary">Sincronizar</button></header>
+<main>
+<section class="panel">
+<div class="section-title"><div><span class="eyebrow">01 · MESA</span><h2>Novo pedido</h2></div><span id="queueCount" class="count">0 pendentes</span></div>
+<div class="fields"><label>Mesa<select id="tableSelect"></select></label><label>Nome do cliente<input id="customerName" maxlength="80" placeholder="Ex.: Maria" autocomplete="off"></label></div>
+</section>
+<section class="panel">
+<div class="section-title"><div><span class="eyebrow">02 · CARDÁPIO</span><h2>Escolha os produtos</h2></div></div>
+<input id="search" class="search" type="search" placeholder="Buscar produto…" aria-label="Buscar produto">
+<div id="products" class="products"></div>
+</section>
+<section class="panel">
+<div class="section-title"><div><span class="eyebrow">03 · REVISÃO</span><h2>Seu pedido</h2></div></div>
+<div id="cart"><p class="muted">Adicione produtos ao pedido.</p></div>
+<label>Observações do pedido<textarea id="orderNote" rows="2" maxlength="500" placeholder="Ex.: entregar primeiro as bebidas"></textarea></label>
+<div class="submit-row"><strong id="total">R$ 0,00</strong><button id="saveOrder">Salvar pedido</button></div>
+<p class="hint">O pedido é guardado neste aparelho antes de qualquer tentativa de envio.</p>
+</section>
+<section class="panel">
+<div class="section-title"><div><span class="eyebrow">04 · ACOMPANHAMENTO</span><h2>Pedidos deste aparelho</h2></div></div><div id="orders"></div>
+</section>
+<section class="panel">
+<div class="section-title"><div><span class="eyebrow">05 · AUTOATENDIMENTO</span><h2>QR da mesa</h2></div></div>
+<p class="muted">Compartilhe o endereço da mesa para o cliente pedir pelo próprio celular. O QR abre o fluxo público existente.</p>
+<div class="fields"><label>Mesa do QR<select id="qrTable"></select></label><label>Endereço público<input id="qrUrl" readonly></label></div>
+<div class="qr-row"><img id="qrImage" alt="QR code da mesa" width="160" height="160"><button id="copyQr" class="secondary">Copiar endereço</button></div>
+<p class="hint">A imagem QR precisa de internet para ser gerada. O endereço permanece disponível offline.</p>
+</section>
+<section class="panel">
+<div class="section-title"><div><span class="eyebrow">06 · COBRANÇA</span><h2>Conta e pagamento</h2></div></div>
+<p class="muted">Interface preparada. A consulta e as ações de cobrança ficam desabilitadas até o backend publicar os contratos documentados.</p>
+<button class="secondary" disabled>Consultar conta da mesa</button> <button class="secondary" disabled>Solicitar cobrança</button>
+</section>
+</main>
+<footer>Atendimento PWA · Os pedidos offline ainda não foram recebidos pela cozinha.</footer>
+<script type="module" src="./app.js"></script>
+</body></html>

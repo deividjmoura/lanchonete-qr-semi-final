@@ -1,0 +1,12 @@
+{
+  "name": "QR Admin · Atendimento do Garçom",
+  "short_name": "Atendimento",
+  "description": "PWA de atendimento online e offline",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f5f3",
+  "theme_color": "#b91c1c",
+  "lang": "pt-BR",
+  "icons": []
+}
