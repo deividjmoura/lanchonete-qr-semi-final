@@ -2,119 +2,184 @@
 
 # QRAdmin
 
-**Pedidos por QR Code para lanchonetes e pubs**
+**Sistema de pedidos e operação por QR Code para um único estabelecimento**
 
-Do celular do cliente até a cozinha, o bar, o garçom e o caixa — em tempo real.
+Feito para a operação da **Delicia’s São Miguel**: cliente, cozinha, bar, garçom e caixa trabalham no mesmo fluxo, com o PostgreSQL como fonte oficial dos dados.
 
-[![Demo](https://img.shields.io/badge/Demo-qradmin.up.railway.app-00C4B4?style=for-the-badge)](https://qradmin.up.railway.app/)
+[![Produção](https://img.shields.io/badge/Deploy-Railway-7B61FF?style=for-the-badge)](https://qradmin.up.railway.app/)
 
 </div>
 
 ---
 
-## O que é
+## Objetivo e escopo
 
-Sistema operacional completo para atendimento por mesa: o cliente escaneia o QR, monta o pedido no próprio celular (sem app) e a equipe acompanha cada etapa em telas dedicadas. A **comanda é acumulativa** — vários pedidos na mesma visita, fechamento único no caixa.
+O QRAdmin é uma aplicação **single-tenant**: uma instalação representa um único estabelecimento. O foco atual é colocar o produto em operação em uma lanchonete real, com fluxo simples e dados consistentes.
 
-Identidade **QRAdmin** (navy + teal), com **tema claro e escuro** em todas as telas.
+- Não é, neste momento, um SaaS multi-loja.
+- Não existe isolamento de dados por estabelecimento em todas as consultas da aplicação; não reutilize esta instalação para outra empresa esperando separação automática.
+- Não há gateway bancário integrado nem confirmação automática de recebimento PIX.
+- O sistema registra pedidos, preparo, entrega e lançamentos de pagamento; a confirmação do dinheiro/PIX recebido continua sendo responsabilidade da equipe.
 
----
-
-## Fluxo
+## Fluxo operacional
 
 ```text
-Cliente (QR)  →  Cozinha / Bar  →  Garçom  →  Caixa
-   pedido           preparo         entrega     fecha + PIX
+Cliente escaneia o QR da mesa
+        ↓
+Cardápio → carrinho → pedido
+        ↓
+Cozinha ou bar prepara os itens
+        ↓
+Garçom entrega os itens prontos
+        ↓
+Caixa confere os itens entregues, registra pagamento e fecha a comanda
 ```
 
-Itens só entram no total da conta depois de **entregues**. O caixa fecha a **sessão** (comanda), não o pedido isolado.
+A comanda da mesa é acumulativa: a mesa pode receber vários pedidos durante a visita. O total cobrável é calculado no servidor a partir dos itens entregues, não do total enviado pelo navegador.
 
----
+## Funcionalidades
 
-## Funcionalidades implementadas
+### Cliente — QR da mesa
+- Abre o cardápio no navegador, sem instalar aplicativo.
+- Pesquisa produtos, escolhe adicionais/removíveis disponíveis e monta o carrinho.
+- Informa o nome e envia pedidos para a comanda da mesa.
+- Acompanha o andamento do pedido.
+- O cliente **não registra pagamento nem confirma recebimento PIX** pela tela pública nesta versão.
 
-### Cliente (mesa)
-- Cardápio digital via link/QR da mesa
-- Produtos simples, personalizáveis (adicionais e removíveis) e tipo **Escolher** (tamanho/sabor)
-- Carrinho, conta da sessão e **PIX** (QR EMV + copia-e-cola)
-- Aviso **“Já paguei no PIX”** para o caixa
-
-### Cozinha e Bar
-- Filas separadas por **setor** de produção
-- Avanço de status e **alerta de voz** (mesa + cliente)
+### Cozinha e bar
+- Filas separadas por setor de produção.
+- Transições de status dos itens e pedidos.
+- Atualização em tempo real via Server-Sent Events (SSE) e alertas sonoros/voz nas telas compatíveis.
 
 ### Garçom
-- Acesso por token próprio
-- Entrega **total ou parcial** dos itens
-- Alerta de voz quando há item pronto
+- Link individual por token, que pode ser desativado pelo administrador.
+- Atribuição de mesas, identificação do responsável e histórico de transferência.
+- Entrega total ou parcial dos itens que ficaram prontos.
+- PWA em `/garcom-pwa/`, com manifesto instalável e fila local no IndexedDB para pedidos criados sem conexão.
+- A sincronização offline depende de reconexão e do aplicativo voltar a executar no navegador. Preços, disponibilidade e estoque são sempre validados pelo servidor; um conflito precisa ser revisado, não presumido como pedido confirmado.
+- **A PWA ainda precisa de validação ponta a ponta em navegador/dispositivo real e PostgreSQL isolado antes de ser considerada pronta para a venda.**
 
 ### Caixa
-- Sessões abertas, pagamentos parciais e fechamento
-- **Divisão de conta** (N pessoas, valor por pessoa)
-- Desconto e taxa
-- Confirmação de avisos PIX (toast + som + voz)
+- Lista de comandas abertas e itens entregues.
+- Registro de pagamentos parciais, fechamento de comanda, desconto e taxa de serviço.
+- Formas de pagamento registradas: dinheiro, PIX, débito e crédito.
+- Comprovante de consumo **não fiscal**.
+- O QR PIX é estático/configurado por chave. A equipe deve verificar o recebimento no aplicativo bancário antes de considerar o valor pago; gerar QR ou receber aviso não prova liquidação bancária.
 
-### Admin
-- Cardápio (categorias, produtos, ordem, estoque)
-- Mesas e QR fixo por mesa
-- Garçons (token e ativo/inativo)
-- Dashboard (faturamento, ticket, top produtos)
-- Relatório por período, histórico de pedidos e purge
-- Upload de fotos (otimização WebP)
+### Administração
+- Categorias, produtos, preços, disponibilidade, setor de produção, estoque e adicionais.
+- Configuração de mesas e geração de QR fixo por mesa (até 70 mesas habilitadas pela interface atual).
+- Cadastro e ativação/desativação de garçons.
+- Indicadores diários, relatórios por período, histórico e ferramenta de limpeza de histórico.
+- Upload/otimização de fotos para WebP.
 
-### Plataforma
-- Login por papel: admin, cozinha, bar, caixa
-- Sessão staff em cookie httpOnly
-- Atualização ao vivo via **SSE**
-- Postgres (migrations + seed)
-- Temas claro/escuro persistidos no dispositivo
+## Telas e endereços
 
----
+| Área | Endereço | Uso |
+|---|---|---|
+| Início | `/` | Entrada do sistema |
+| Cliente | `/#/mesa/:token` | Cardápio e pedido da mesa |
+| Login | `/#/login` | Acesso da equipe |
+| Cozinha | `/#/cozinha` | Fila de preparo |
+| Bar | `/#/bar` | Fila de bebidas |
+| Garçom | `/#/garcom/:token` | Redireciona para a PWA |
+| PWA do garçom | `/garcom-pwa/?token=...` | Atendimento móvel e fila offline |
+| Caixa | `/#/caixa` | Pagamentos e fechamento |
+| Administração | `/#/admin` | Cardápio, mesas, equipe e relatórios |
 
-## Telas
+Os tokens presentes nos links de mesa e garçom funcionam como credenciais de acesso. Não os publique em issues, prints públicos ou logs; desative o garçom se o link for exposto.
 
-| Papel    | Rota              | Função principal                          |
-|----------|-------------------|-------------------------------------------|
-| Cliente  | `/mesa/:token`    | Cardápio, pedido, conta, PIX              |
-| Cozinha  | `/cozinha`        | Fila de preparo + voz                     |
-| Bar      | `/bar`            | Fila de bebidas + voz                     |
-| Garçom   | `/garcom/:token`  | Entrega (parcial ou total)                |
-| Caixa    | `/caixa`          | Pagamentos, divisão, PIX, fechamento      |
-| Admin    | `/admin`          | Operação, cardápio, mesas, relatórios     |
-| Equipe   | `/login`          | Acesso por papel                          |
+## Tecnologias
 
----
+- **Frontend principal:** React 19, Vite, TypeScript, Tailwind CSS, Zustand e Framer Motion.
+- **PWA do garçom:** JavaScript, HTML/CSS, Service Worker e IndexedDB.
+- **Servidor/API:** Node.js com HTTP nativo.
+- **Banco:** PostgreSQL com migrations SQL versionadas.
+- **Tempo real:** Server-Sent Events (SSE).
+- **Fotos:** Sharp, conversão e redimensionamento WebP.
 
-## Stack
+O PostgreSQL é a fonte de verdade. `data/db.json` é um catálogo de demonstração usado pelo seed, não um banco operacional em produção.
 
-| Camada     | Tecnologia                                      |
-|------------|-------------------------------------------------|
-| Front      | React 19 · Vite · TypeScript · Tailwind · Zustand · Framer Motion |
-| API        | Node.js (HTTP nativo)                           |
-| Dados      | PostgreSQL                                      |
-| Tempo real | Server-Sent Events                              |
-| Imagens    | Sharp (WebP)                                    |
+## Rodar localmente
 
----
+Requisitos: Node.js 20 ou superior e um PostgreSQL de desenvolvimento/teste.
 
-## Status do produto
+1. Instale as dependências:
 
-| Área                         | Situação   |
-|------------------------------|------------|
-| Pedido por QR + comanda      | Pronto     |
-| Cozinha / Bar / Garçom / Caixa | Pronto   |
-| PIX (QR + aviso ao caixa)    | Pronto     |
-| Divisão de conta             | Pronto     |
-| Admin + dashboard + relatório| Pronto     |
-| Tema claro/escuro            | Pronto     |
-| Gateway de pagamento bancário| Planejado  |
-| WhatsApp / PWA / multi-loja  | Planejado  |
+   ```bash
+   npm ci
+   ```
+
+2. Copie `.env.example` para `.env` e configure `DATABASE_URL` para um **banco local/de teste**.
+
+3. Defina uma senha inicial forte em `STAFF_SEED_PASSWORD` (mínimo de 12 caracteres em produção). Configure também `PIX_CHAVE`, `PIX_NOME`, `PIX_CIDADE` e `APP_TIMEZONE` quando aplicável.
+
+4. Aplique as migrations e, somente se o banco for novo/de teste, carregue o catálogo de demonstração:
+
+   ```bash
+   npm run db:migrate
+   npm run db:seed
+   ```
+
+5. Gere o frontend e inicie o servidor:
+
+   ```bash
+   npm run build
+   npm start
+   ```
+
+6. Abra `http://localhost:3000`.
+
+**Cuidado com o seed:** `FORCE_SEED=1 npm run db:seed` é destrutivo. Ele apaga pedidos, sessões, pagamentos e cardápio antes de substituir os dados de demonstração. Nunca rode esse comando no banco de produção. Personalize o cardápio e a identidade do estabelecimento pelo ambiente de teste antes de colocar a instalação em uso.
+
+## Testes e validação
+
+Comandos disponíveis:
+
+```bash
+npm run typecheck
+npm run build
+npm run test:regression
+npm run test:smoke
+npm run test:full
+npm run test:seguranca
+npm run test:carga
+npm run test:carga70
+npm run test:dia
+```
+
+- `test:regression`: regressões automatizadas, incluindo contratos do backend e testes estáticos da PWA.
+- `test:smoke` e `test:full`: precisam de servidor, PostgreSQL e usuários/cardápio preparados; criam ou alteram dados.
+- `test:seguranca`: testa autorização, IDOR, CSRF, limite de corpo e outras defesas contra um servidor real; cria/edita dados de teste e não deve apontar para produção.
+- `test:carga`, `test:carga70` e `test:dia`: cenários operacionais/concor­rentes que alteram dados. Rode-os **somente em ambiente isolado**, nunca no banco usado pela lanchonete.
+
+O CI do GitHub executa instalação limpa, TypeScript, build, testes de regressão e verificações de sintaxe. CI verde não substitui teste de integração contra PostgreSQL, teste visual em navegador real nem validação no Railway.
+
+## Banco e deploy
+
+- As migrations ficam em `db/migrations/` e são aplicadas em ordem pelo runner `npm run db:migrate`.
+- O servidor tenta verificar/aplicar migrations ao iniciar, mas esse caminho é **best-effort**: pode iniciar mesmo se a migration falhar. Confira os logs do deploy e confirme que todas as migrations esperadas foram aplicadas antes de operar.
+- Não rode migrations, seed ou testes mutáveis sem confirmar qual banco está conectado.
+- Antes da primeira operação comercial, valide login/perfis, pedido até entrega, estoque, fechamento e pagamentos em banco isolado; teste também restauração de backup.
+- A PWA deve ser validada em Android/navegador real, inclusive reconexão, conflito de sincronização, atualização do Service Worker e links de mesa/garçom.
+
+## Estado honesto do produto
+
+| Área | Situação |
+|---|---|
+| Fluxo base de QR, comanda, cozinha/bar e caixa | Implementado; requer validação final no ambiente de operação |
+| Segurança e concorrência do backend | Há proteções e regressões automatizadas; ainda requer auditoria comportamental e teste com PostgreSQL real |
+| PWA de atendimento do garçom | Implementação integrada; requer validação ponta a ponta antes de ser considerada estável |
+| Comprovante de consumo não fiscal | Implementado; não substitui documento fiscal |
+| PIX | QR/chave estática e lançamento manual; sem gateway ou confirmação bancária automática |
+| Multi-loja / multi-tenant | Fora do escopo atual |
+| Pronto para venda/produção | **Não declarar pronto até concluir a validação isolada e operacional** |
 
 ---
 
 <div align="center">
 
-**QRAdmin** · pedidos por QR Code  
+**QRAdmin** · sistema de pedidos por QR Code para um estabelecimento  
 [deividjmoura](https://github.com/deividjmoura)
 
 </div>
