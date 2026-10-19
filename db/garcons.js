@@ -177,6 +177,7 @@ async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null) {
       `UPDATE pedidos
        SET garcom_id = COALESCE(garcom_id, $2),
            garcom_nome = COALESCE(garcom_nome, $3),
+           garcom_entregou_id = $2,
            claimed_at = COALESCE(claimed_at, now())
        WHERE id = $1`,
       [pedido.id, garcom.id, garcom.nome]
