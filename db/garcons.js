@@ -23,24 +23,14 @@ async function listGarcons() {
 }
 
 async function removerGarcom(id) {
+  // Exclusão lógica: as métricas e a autoria financeira históricas devem permanecer.
   const gid = numeroInteiroPositivo(id, 'id do garçom');
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    await client.query('UPDATE pedidos SET garcom_id = NULL WHERE garcom_id = $1', [gid]);
-    const { rows } = await client.query(
-      'DELETE FROM garcons WHERE id = $1 RETURNING id, nome',
-      [gid]
-    );
-    if (!rows[0]) throw new ErroGarcom(404, 'Garçom não encontrado');
-    await client.query('COMMIT');
-    return rows[0];
-  } catch (err) {
-    try { await client.query('ROLLBACK'); } catch (_) {}
-    throw err;
-  } finally {
-    client.release();
-  }
+  const { rows } = await pool.query(
+    'UPDATE garcons SET ativo = FALSE WHERE id = $1 RETURNING id, nome',
+    [gid]
+  );
+  if (!rows[0]) throw new ErroGarcom(404, 'Garçom não encontrado');
+  return { ...rows[0], desativado: true };
 }
 
 async function criarGarcom(body) {
@@ -177,6 +167,7 @@ async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null) {
       `UPDATE pedidos
        SET garcom_id = COALESCE(garcom_id, $2),
            garcom_nome = COALESCE(garcom_nome, $3),
+           garcom_entregou_id = $2,
            claimed_at = COALESCE(claimed_at, now())
        WHERE id = $1`,
       [pedido.id, garcom.id, garcom.nome]

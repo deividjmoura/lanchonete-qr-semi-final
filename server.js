@@ -59,6 +59,7 @@ const {
   garantirStaffSeed,
 } = require('./db/auth');
 const { golpePermitido } = require('./db/rateLimit');
+const { ErroAtendimento, listarMesasGarcom, assumirMesa, criarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
 const { normalizarChavePix, inspecionarChavePix } = require('./db/pix-normaliza');
 const { subscribe, broadcast } = require('./db/events');
 const pool = require('./db/pool');
@@ -359,6 +360,31 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    // Atendimento móvel: identidade pelo token individual e ativo do garçom.
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas$/)) && req.method === 'GET') {
+      try { return json(res, 200, await listarMesasGarcom(m[1])); }
+      catch (e) { if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message }); throw e; }
+    }
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\\d+)\/assumir$/)) && req.method === 'POST') {
+      try {
+        const out = await assumirMesa(m[1], m[2], await body(req));
+        broadcast('update', { type: 'mesa_assumida', mesa: out.mesa });
+        return json(res, 200, out);
+      } catch (e) {
+        if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message });
+        throw e;
+      }
+    }
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\\d+)\/pedidos$/)) && req.method === 'POST') {
+      try {
+        const pedido = await criarPedidoGarcom(m[1], m[2], await body(req));
+        if (!pedido.idempotentReplay) broadcast('update', { type: 'pedido_novo', mesa: pedido.mesa });
+        return json(res, pedido.idempotentReplay ? 200 : 201, pedido);
+      } catch (e) {
+        if (e instanceof ErroAtendimento || e instanceof ErroPedido) return json(res, e.status, { error: e.message });
+        throw e;
+      }
+    }
     if (p === '/api/login' && req.method === 'POST') {
       const ip = clientIp(req);
       if (!golpePermitido(`login:${ip}`, { janelaMs: 5 * 60 * 1000, max: 8 })) {
@@ -559,6 +585,10 @@ const server = http.createServer(async (req, res) => {
         if (e instanceof ErroAuth) return json(res, e.status, { error: e.message });
         throw e;
       }
+    }
+    if (p === '/api/admin/garcons/metricas' && req.method === 'GET') {
+      try { return json(res, 200, await metricasGarcons({ data: u.searchParams.get('data') })); }
+      catch (e) { if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message }); throw e; }
     }
     if (p === '/api/admin/mesas' && req.method === 'GET') {
       return json(res, 200, await listMesas());

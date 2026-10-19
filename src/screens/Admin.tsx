@@ -866,6 +866,17 @@ function Garcons() {
   const [busy, setBusy] = useState(false);
   const [copiado, setCopiado] = useState<number | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [dataMetricas, setDataMetricas] = useState(() => dataLocal());
+  const [metricas, setMetricas] = useState<Array<{id:number; nome:string; atendimentos:number; vendas:number; ticketMedio:number}>>([]);
+  const [erroMetricas, setErroMetricas] = useState<string | null>(null);
+
+  useEffect(() => {
+    let ativo = true;
+    api.metricasGarcons(dataMetricas)
+      .then((r) => { if (ativo) { setMetricas(r.garcons); setErroMetricas(null); } })
+      .catch((e) => { if (ativo) setErroMetricas(e.message || "Falha ao carregar indicadores"); });
+    return () => { ativo = false; };
+  }, [dataMetricas]);
 
   const carregar = async () => {
     try {
@@ -949,6 +960,34 @@ function Garcons() {
 
   return (
     <div className="space-y-6">
+      <section className="glass rounded-3xl p-4 sm:p-5" aria-label="Desempenho diário de garçons">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            <h3 className="font-display text-2xl text-navy-900">Desempenho da equipe</h3>
+            <p className="text-xs text-slate-500">Receita de contas fechadas atribuída ao garçom responsável pela sessão</p>
+          </div>
+          <input type="date" aria-label="Data das vendas" value={dataMetricas}
+            onChange={(e) => setDataMetricas(e.target.value)}
+            className="rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-navy-900" />
+        </div>
+        {erroMetricas && <p role="alert" className="text-sm text-rose-600 mb-3">{erroMetricas}</p>}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[460px] text-sm text-left">
+            <thead className="border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
+              <tr><th className="py-3 pr-2">Garçom</th><th className="py-3 px-2 text-right">Contas</th><th className="py-3 px-2 text-right">Ticket médio</th><th className="py-3 pl-2 text-right">Vendas</th></tr>
+            </thead>
+            <tbody>
+              {metricas.map((g) => <tr key={g.id} className="border-b border-slate-200/70">
+                <td className="py-3 pr-2 font-semibold text-navy-900">{g.nome}</td>
+                <td className="py-3 px-2 text-right tabular-nums">{g.atendimentos}</td>
+                <td className="py-3 px-2 text-right tabular-nums">{BRL(g.ticketMedio)}</td>
+                <td className="py-3 pl-2 text-right tabular-nums font-semibold text-brand-600">{BRL(g.vendas)}</td>
+              </tr>)}
+              {!metricas.length && <tr><td colSpan={4} className="py-5 text-center text-slate-500">Nenhum atendimento fechado nesta data</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </section>
       <section className="glass rounded-3xl p-4 sm:p-5">
         <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
           <div>
