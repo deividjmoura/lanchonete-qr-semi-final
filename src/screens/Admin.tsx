@@ -11,7 +11,7 @@ import { Badge, Btn, Input, Modal } from "../components/ui";
 import { ir } from "../router";
 import { api } from "../lib/api";
 import { descricaoPadrao } from "../lib/descricao";
-import { imprimirComandaHistorico, imprimirRelatorioPdf } from "../lib/print";
+import { imprimirComandaHistorico, imprimirRelatorioPdf, imprimirComprovanteConsumo } from "../lib/print";
 import type { ItemPedido, Pedido } from "../lib/types";
 import { CATEGORIAS } from "../lib/data";
 import type { Produto, TipoProduto } from "../lib/types";
@@ -1576,7 +1576,7 @@ function Relatorio() {
                 <th className="py-2 pr-2">Cliente</th>
                 <th className="py-2 pr-2">Cobrado</th>
                 <th className="py-2 pr-2">Forma</th>
-                <th className="py-2">Fechada</th>
+                <th className="py-2">Fechada</th><th className="py-2">Recibo</th>
               </tr>
             </thead>
             <tbody>
@@ -1589,6 +1589,15 @@ function Relatorio() {
                   <td className="py-2 pr-2 text-[11px]">{c.forma || "—"}</td>
                   <td className="py-2 font-mono text-[10px] text-slate-500">
                     {c.fechadaEm ? String(c.fechadaEm).slice(0, 16).replace("T", " ") : "—"}
+                  </td>
+                  <td className="py-2 pl-2">
+                    <button type="button" title="Imprimir comprovante de consumo e pagamento"
+                      className="text-xs font-bold text-brand-600 hover:underline"
+                      onClick={() => void api.comprovanteSessaoAdmin(Number(c.id))
+                        .then(imprimirComprovanteConsumo)
+                        .catch((e) => alert(e.message || "Não foi possível gerar o comprovante"))}>
+                      <Printer className="size-4 inline" /> Comprovante
+                    </button>
                   </td>
                 </tr>
               ))}
