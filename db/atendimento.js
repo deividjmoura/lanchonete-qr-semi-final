@@ -98,7 +98,9 @@ async function listarAtendimentosGarcom(token) {
              'id',ip.id,'productId',ip.produto_id,'nome',pr.nome,
              'qty',ip.quantidade,'unitPrice',ip.preco_unitario,
              'status',COALESCE(ip.status,'recebido'),'setor',COALESCE(pr.setor,'cozinha'),
-             'note',ip.observacao
+             'note',ip.observacao,
+             'additions',(SELECT COALESCE(json_agg(json_build_object('id',a.adicional_id)),'[]'::json) FROM itens_pedido_adicionais a WHERE a.item_pedido_id=ip.id),
+             'removals',(SELECT COALESCE(json_agg(ing.ingrediente),'[]'::json) FROM itens_pedido_remocoes ing WHERE ing.item_pedido_id=ip.id)
            ) ORDER BY ip.id) FILTER(WHERE ip.id IS NOT NULL),'[]'::json) AS itens
     FROM mesa_sessoes s
     JOIN mesas m ON m.id=s.mesa_id
