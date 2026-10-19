@@ -202,6 +202,18 @@ const mime = {
 
 const server = http.createServer(async (req, res) => {
   try {
+    // Railway encerra TLS no proxy. A conexao Node interna permanece HTTP,
+    // mas clientes publicos nunca devem navegar em HTTP.
+    const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim().toLowerCase();
+    const host = String(req.headers.host || '');
+    if (process.env.NODE_ENV === 'production' &&
+        forwardedProto === 'http' && /^[a-z0-9.-]+(?::\\d{1,5})?$/i.test(host)) {
+      res.writeHead(308, {
+        Location: 'https://' + host + (req.url || '/'),
+        'Cache-Control': 'no-store'
+      });
+      return res.end();
+    }
     const u = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
     const p = u.pathname;
 
