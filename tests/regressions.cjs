@@ -450,3 +450,132 @@ test('payload PIX (BR Code) é TLV válido com CRC16 correto', () => {
     assert.ok(mai[1].val.length > 0, 'campo 26 sem chave');
   }
 });
+
+/* ------------------------------------------------------------------ *
+ * Transacional 70 mesas: retry, idempotência, lote e locks ordenados
+ * ------------------------------------------------------------------ */
+const { comRetryConcorrencia, ehErroConcorrenciaTransitorio } = require('../db/retry');
+const { normalizarIdempotencyKey, idempotencyKeyDoCorpo } = require('../db/conta');
+const queriesModulo = require('../db/queries');
+const caixaModulo = require('../db/caixa');
+const pedidosModulo = require('../db/pedidos');
+
+test('retry só repete deadlock/serialização (40P01/40001), nunca erro de negócio', async () => {
+  const semDormir = async () => {};
+  let tentativas = 0;
+  const resultado = await comRetryConcorrencia(
+    async () => {
+      tentativas += 1;
+      if (tentativas < 3) { const e = new Error('deadlock'); e.code = '40P01'; throw e; }
+      return 'ok';
+    },
+    { dormir: semDormir }
+  );
+  assert.equal(resultado, 'ok');
+  assert.equal(tentativas, 3);
+
+  let uma = 0;
+  await assert.rejects(
+    () => comRetryConcorrencia(async () => { uma += 1; throw new ErroPedido(409, 'conflito'); }, { dormir: semDormir }),
+    (e) => e instanceof ErroPedido && e.status === 409
+  );
+  assert.equal(uma, 1);
+  assert.equal(ehErroConcorrenciaTransitorio(Object.assign(new Error('x'), { code: '40001' })), true);
+  assert.equal(ehErroConcorrenciaTransitorio(new Error('x')), false);
+});
+
+test('chave de idempotência: ausente é opcional, presente inválida é rejeitada', () => {
+  assert.equal(normalizarIdempotencyKey(undefined), null);
+  assert.equal(normalizarIdempotencyKey(''), null);
+  assert.equal(normalizarIdempotencyKey('   '), null);
+  assert.equal(normalizarIdempotencyKey('f47ac10b-58cc-4372-a567-0e02b2c3d479'), 'f47ac10b-58cc-4372-a567-0e02b2c3d479');
+  assert.equal(normalizarIdempotencyKey('curta'), false);
+  assert.equal(normalizarIdempotencyKey('tem espaço aqui'), false);
+  assert.equal(normalizarIdempotencyKey(42), false);
+  assert.equal(idempotencyKeyDoCorpo({ clientRequestId: 'abcd1234-ef' }), 'abcd1234-ef');
+  assert.equal(idempotencyKeyDoCorpo({}), null);
+  assert.equal(idempotencyKeyDoCorpo(null), null);
+});
+
+test('produtos com regras em LOTE: 3 consultas para o carrinho inteiro', async () => {
+  let consultas = 0;
+  const client = {
+    async query(sql) {
+      consultas += 1;
+      if (/produtos_ingredientes_removiveis/.test(sql)) return { rows: [{ produto_id: 1, ingrediente: 'cebola' }] };
+      if (/FROM produtos/.test(sql)) {
+        return { rows: [
+          { id: 1, nome: 'A', preco: 10, disponivel: true, pede_ponto_carne: false, controla_estoque: false, estoque: null },
+          { id: 2, nome: 'B', preco: 20, disponivel: true, pede_ponto_carne: false, controla_estoque: true, estoque: 5 },
+        ] };
+      }
+      if (/FROM adicionais/.test(sql)) return { rows: [{ id: 9, produto_id: 2, nome: 'Extra', preco: 3 }] };
+      if (/removiveis/.test(sql)) return { rows: [{ produto_id: 1, ingrediente: 'cebola' }] };
+      return { rows: [] };
+    },
+  };
+  const mapa = await queriesModulo.getProdutosComRegras(client, [1, 2, 2, 999]);
+  assert.equal(consultas, 3);
+  assert.equal(mapa.get(2).adicionaisPermitidos.length, 1);
+  assert.deepEqual(mapa.get(1).removiveisPermitidos, ['cebola']);
+  assert.equal(mapa.has(999), false);
+});
+
+test('trava de produtos dedupa e ordena ids (ordem global anti-deadlock)', async () => {
+  let params = null;
+  let sqlUsado = '';
+  const client = { async query(sql, p) { sqlUsado = sql; params = p; return { rows: [] }; } };
+  const travados = await queriesModulo.travarProdutosEmOrdem(client, [9, 2, 5, 2, 0, -1]);
+  assert.deepEqual(travados, [2, 5, 9]);
+  assert.deepEqual(params[0], [2, 5, 9]);
+  assert.match(sqlUsado, /ORDER BY id FOR UPDATE/);
+});
+
+test('migration 0018 cria unicidades de idempotência e vínculo PIX 1:1', () => {
+  const sql = fs.readFileSync('db/migrations/0018_transacional_idempotencia.sql', 'utf8');
+  for (const trecho of [
+    'uq_pedidos_sessao_idempotency',
+    'uq_pagamentos_sessao_idempotency',
+    'uq_sessoes_fechamento_idempotency',
+    'uq_pagamentos_pix_aviso',
+    'pix_aviso_id',
+    'idx_pedidos_sessao_status',
+  ]) {
+    assert.match(sql, new RegExp(trecho), trecho);
+  }
+});
+
+test('caixa/pedidos rejeitam ids e corpos inválidos antes de abrir conexão', async () => {
+  const ehCaixa400 = (e) => e instanceof caixaModulo.ErroCaixa && e.status === 400;
+  await assert.rejects(() => caixaModulo.registrarPagamento('abc', { valor: 1, formaPagamento: 'pix' }), ehCaixa400);
+  await assert.rejects(() => caixaModulo.registrarPagamento(1, null), ehCaixa400);
+  await assert.rejects(() => caixaModulo.fecharSessao(NaN, { formaPagamento: 'pix' }), ehCaixa400);
+  await assert.rejects(() => caixaModulo.confirmarPixAviso(1, 'x'), ehCaixa400);
+  await assert.rejects(
+    () => pedidosModulo.criarPedido('00000000-0000-4000-8000-000000000000', null),
+    (e) => e instanceof ErroPedido && e.status === 400
+  );
+  await assert.rejects(
+    () => pedidosModulo.criarPedido('00000000-0000-4000-8000-000000000000', { items: [{}], idempotencyKey: 'x' }),
+    /idempotência inválida/
+  );
+});
+
+test('SSE público é coalescido (1 aviso/janela); staff recebe tudo na hora', async () => {
+  const staff = new EventEmitter();
+  const publico = new EventEmitter();
+  let staffWrites = 0;
+  let publicWrites = 0;
+  staff.write = () => { staffWrites += 1; };
+  publico.write = () => { publicWrites += 1; };
+  subscribe(staff);
+  subscribe(publico, { publicClient: true });
+  for (let i = 0; i < 5; i++) broadcast('update', { i });
+  assert.equal(staffWrites, 5, 'staff não pode perder evento');
+  assert.equal(publicWrites, 1, 'público recebe o primeiro na hora e colapsa a rajada');
+  await new Promise((r) => setTimeout(r, 450));
+  assert.equal(publicWrites, 2, 'e um último aviso ao fim da janela');
+  staff.emit('close');
+  publico.emit('close');
+  assert.equal(clientCount(), 0);
+});

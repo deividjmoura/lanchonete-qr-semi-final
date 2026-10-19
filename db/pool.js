@@ -71,9 +71,11 @@ const idleTxTimeoutMs = inteiroPositivoOuPadrao('PG_IDLE_TX_TIMEOUT_MS', 30_000)
 const pool = new Pool({
   ...base,
   // 70 mesas simultâneas não significam 70 conexões: cada pedido segura uma
-  // conexão por poucos ms. O padrão 10 é conservador (planos pequenos de PG);
-  // em instância única com Postgres dedicado, PG_POOL_MAX=20 dá folga ao pico
-  // (ver RELATORIO e .env.example). Acima disso o gargalo vira o próprio PG.
+  // conexão por poucos ms. O padrão 10 é conservador (planos pequenos de PG).
+  // No teste de carga de 70 mesas, PG_POOL_MAX=20 NÃO deu ganho mensurável
+  // (431 vs 428 req/s): o gargalo era CPU/latência de commit, não o pool.
+  // Só aumente observando conexões ativas/espera (pg_stat_activity); pool
+  // maior que a capacidade do Postgres só move a fila para dentro do banco.
   max: inteiroPositivoOuPadrao('PG_POOL_MAX', 10),
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: inteiroPositivoOuPadrao('PG_CONNECT_TIMEOUT_MS', 10_000),
