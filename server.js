@@ -197,6 +197,7 @@ const mime = {
   '.webp': 'image/webp',
   '.gif': 'image/gif',
   '.svg': 'image/svg+xml',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
 };
 
 const server = http.createServer(async (req, res) => {
@@ -927,6 +928,17 @@ const server = http.createServer(async (req, res) => {
           const data = await fs.promises.readFile(fp);
           return send(res, 200, mime[path.extname(fp)] || 'application/octet-stream', data);
         } catch (_) {}
+      }
+    }
+
+    // O shell instalável do garçom vive em /public/garcom-pwa/.
+    // Sem esta exceção o fallback SPA captura /garcom-pwa/ e entrega o React principal.
+    if (p === '/garcom-pwa' || p === '/garcom-pwa/') {
+      try {
+        const data = await fs.promises.readFile(path.join(ROOT, 'public', 'garcom-pwa', 'index.html'));
+        return send(res, 200, 'text/html; charset=utf-8', data);
+      } catch (_) {
+        return send(res, 404, 'text/plain', 'PWA indisponível');
       }
     }
 
