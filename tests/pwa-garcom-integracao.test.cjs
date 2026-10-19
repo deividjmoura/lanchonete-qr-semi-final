@@ -2,12 +2,21 @@ const test=require('node:test');const assert=require('node:assert/strict');
 const fs=require('node:fs');const path=require('node:path');const cp=require('node:child_process');
 const root=path.join(__dirname,'..','public','garcom-pwa');
 const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+const server=fs.readFileSync(path.join(__dirname,'..','server.js'),'utf8');
 const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
 const manifest=JSON.parse(fs.readFileSync(path.join(root,'manifest.webmanifest'),'utf8'));
 test('PWA JavaScript e Service Worker têm sintaxe válida',()=>{
  cp.execFileSync(process.execPath,['--check',path.join(root,'app.js')]);
  cp.execFileSync(process.execPath,['--check',path.join(root,'sw.js')]);
 });
+
+test('Rotas de assumir mesa e criar pedido aceitam números reais de mesa',()=>{
+ assert.ok(server.includes('mesas\\/(\\d+)\\/assumir'),'rota assumir usa \u005cd\u002b, não barra invertida literal');
+ assert.ok(server.includes('mesas\\/(\\d+)\\/pedidos'),'rota pedidos usa \u005cd\u002b, não barra invertida literal');
+ assert.equal(server.includes('mesas\\/(\\\\d+)\\/assumir'),false,'não usar \u005c\u005cd na regex da rota assumir');
+ assert.equal(server.includes('mesas\\/(\\\\d+)\\/pedidos'),false,'não usar \u005c\u005cd na regex da rota pedidos');
+});
+
 test('PWA acessa rotas reais, não endpoint genérico de demonstração',()=>{
  assert.match(app,/\/api\/cardapio/);
  assert.match(app,/\/api\/garcom\//);
