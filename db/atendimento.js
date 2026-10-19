@@ -72,6 +72,23 @@ async function assumirMesa(token, numeroBruto, body = {}) {
     throw e;
   } finally { client.release(); }
 }
+async function criarPedidoGarcom(token, numeroBruto, body) {
+  const garcom = await validarGarcom(token);
+  const numero = Number(numeroBruto);
+  if (!Number.isSafeInteger(numero) || numero < 1 || numero > 70) {
+    throw new ErroAtendimento(400, 'Número de mesa inválido');
+  }
+  const { rows } = await pool.query(
+    `SELECT m.token FROM mesas m
+      JOIN mesa_sessoes s ON s.mesa_id=m.id AND s.status='aberta'
+      WHERE m.numero=$1 AND s.garcom_responsavel_id=$2`,
+    [numero, garcom.id]
+  );
+  if (!rows[0]) throw new ErroAtendimento(409, 'Assuma a mesa antes de enviar o pedido');
+  const { criarPedido } = require('./pedidos');
+  return criarPedido(rows[0].token, body, { garcomId:garcom.id, garcomNome:garcom.nome });
+}
+
 async function metricasGarcons({ data } = {}) {
   const dia = data || new Intl.DateTimeFormat('en-CA', { timeZone: process.env.APP_TIMEZONE || 'America/Sao_Paulo',
     year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date());
@@ -95,4 +112,4 @@ async function metricasGarcons({ data } = {}) {
     garcons: rows.map(x=>({ id:x.id, nome:x.nome, ativo:x.ativo, atendimentos:x.atendimentos,
       vendas:Number(x.vendas), ticketMedio:Number(x.ticket_medio) })) };
 }
-module.exports={ ErroAtendimento, listarMesasGarcom, assumirMesa, metricasGarcons };
+module.exports={ ErroAtendimento, listarMesasGarcom, assumirMesa, criarPedidoGarcom, metricasGarcons };
