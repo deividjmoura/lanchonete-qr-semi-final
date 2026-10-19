@@ -62,7 +62,7 @@ const { golpePermitido } = require('./db/rateLimit');
 const { normalizarChavePix, inspecionarChavePix } = require('./db/pix-normaliza');
 const { subscribe, broadcast } = require('./db/events');
 const pool = require('./db/pool');
-const { comprovanteSessao, ErroComprovante } = require('./db/comprovante');
+const { comprovanteSessao, listarComprovantesRecentes, ErroComprovante } = require('./db/comprovante');
 const { getMesaPorToken } = require('./db/queries');
 const { eventAccess } = require('./db/event-access');
 const {
@@ -514,6 +514,9 @@ const server = http.createServer(async (req, res) => {
     if ((m = p.match(/^\/api\/admin\/sessoes\/(\\d+)\/comprovante$/)) && req.method === 'GET') {
       try { return json(res, 200, await comprovanteSessao(m[1])); }
       catch(e) { if(e instanceof ErroComprovante) return json(res,e.status,{error:e.message}); throw e; }
+    }
+    if (p === '/api/caixa/comprovantes' && req.method === 'GET') {
+      return json(res, 200, await listarComprovantesRecentes());
     }
     if (p === '/api/caixa/sessoes' && req.method === 'GET') {
       return json(res, 200, await listSessoesAbertas());
