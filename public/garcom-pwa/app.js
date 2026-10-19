@@ -178,16 +178,19 @@ async function loadOrderStatuses(){
      if(o.podeEditar){const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent='Editar pedido';edit.onclick=()=>editLiveOrder(o);card.append(edit)}
      root.append(card);
      // Nunca repete avisos ao entrar novamente na página ou após reabrir.
-     if(!firstLiveLoad&&ready.length&&!announcedReady.has(o.id)){announcedReady.add(o.id);notifyReady(o)}
-     if(ready.length)announcedReady.add(o.id);
+     const newReady=ready.filter(i=>!announcedReady.has(Number(i.id)));
+     if(!firstLiveLoad&&newReady.length)notifyReady(o,newReady.length);
+     ready.forEach(i=>announcedReady.add(Number(i.id)));
    }
    firstLiveLoad=false;liveOrders=rows;
  }catch(e){$('#activeOrderStatuses').textContent='Falha ao atualizar pedidos: '+e.message;}
 }
-function notifyReady(o){
+function notifyReady(o,quantidade=1){
  const title='Pedido pronto · Mesa '+o.mesa;
- const body='Pedido #'+o.id+' já pode ser entregue.';
+ const body=quantidade+' item(ns) do pedido #'+o.id+' já podem ser entregues.';
  $('#alertMessage').textContent=title+' — '+body;
+ const toast=$('#readyToast');$('#readyToastTitle').textContent=title;$('#readyToastDescription').textContent=body;toast.hidden=false;
+
  try{navigator.vibrate?.([140,80,140])}catch{}
  if('Notification'in window&&Notification.permission==='granted'){
    try{new Notification(title,{body,tag:'ready-'+o.id,icon:'./icon-192.png'})}catch{}
@@ -200,3 +203,6 @@ $('#enableAlerts').addEventListener('click',async()=>{
  else $('#alertMessage').textContent='Avisos de pedidos prontos ativados enquanto o app estiver aberto.';
  if(window.speechSynthesis){try{const utter=new SpeechSynthesisUtterance('Avisos ativados');utter.lang='pt-BR';speechSynthesis.speak(utter)}catch{}}
 });
+
+$('#readyToastAction').addEventListener('click',()=>{switchTab('deliveries');$('#readyToast').hidden=true});
+$('#readyToastDismiss').addEventListener('click',()=>{$('#readyToast').hidden=true});
