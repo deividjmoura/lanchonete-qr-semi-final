@@ -197,6 +197,7 @@ const mime = {
   '.webp': 'image/webp',
   '.gif': 'image/gif',
   '.svg': 'image/svg+xml',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
 };
 
 const server = http.createServer(async (req, res) => {
