@@ -1,12 +1,19 @@
 {
-  "name": "QR Admin · Atendimento do Garçom",
-  "short_name": "Atendimento",
+  "name": "Delicia’s São Miguel · Atendimento",
+  "short_name": "Delicia’s",
   "description": "PWA de atendimento online e offline",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f6f5f3",
-  "theme_color": "#b91c1c",
+  "background_color": "#fff8f0",
+  "theme_color": "#f05e4a",
   "lang": "pt-BR",
-  "icons": []
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
