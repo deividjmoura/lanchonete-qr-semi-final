@@ -422,8 +422,9 @@ async function cancelarPedidoCliente(token, pedidoId) {
        FROM pedidos p
        JOIN mesa_sessoes s ON s.id = p.sessao_id
        WHERE p.id = $1 AND s.mesa_id = $2 AND s.status = 'aberta'
+         AND ($3::int IS NULL OR s.garcom_responsavel_id = $3)
        FOR UPDATE OF p`,
-      [Number(pedidoId), mesa.id]
+      [Number(pedidoId), mesa.id, garcomResponsavelId]
     );
     const pedido = rows[0];
     if (!pedido) throw new ErroPedido(404, 'Pedido não encontrado nesta mesa');
@@ -463,7 +464,7 @@ async function cancelarPedidoCliente(token, pedidoId) {
 }
 
 /** Cliente edita itens do pedido só enquanto status = recebido. Marca editado_em. */
-async function editarPedidoCliente(token, pedidoId, body) {
+async function editarPedidoCliente(token, pedidoId, body, garcomResponsavelId = null) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new ErroPedido(400, 'Dados do pedido inválidos');
   }

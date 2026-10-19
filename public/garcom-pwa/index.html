@@ -67,6 +67,7 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
     <div class="header-actions"><span class="connection-pill" id="connection">Verificando rede…</span><button id="installBtn" class="icon-text secondary" type="button">↓ Instalar</button></div>
   </div>
 </header>
+<div id="readyToast" role="status" aria-live="polite" hidden class="ready-toast"><strong id="readyToastTitle">Pedido pronto!</strong><span id="readyToastDescription"></span><button id="readyToastAction" type="button">Ver entregas →</button><button id="readyToastDismiss" type="button" aria-label="Dispensar aviso">×</button></div>
 <main class="workspace">
   <div class="greeting">
     <div><p id="identity" class="section-eyebrow">Carregando seu atendimento…</p><h2 id="pageTitle">Seu salão, <em>em ordem.</em></h2><p id="pageSubtitle" class="subtitle">Mesas, pedidos e entregas sem bagunça.</p></div>
@@ -90,18 +91,19 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
   <section class="page" id="page-tables" data-page="tables" aria-label="Mesas">
     <div class="section-heading"><div><span class="section-eyebrow">SEU SALÃO</span><h3>Mesas e atendimento</h3></div><button class="primary small" id="newOrderTables" type="button">＋ Novo pedido</button></div>
     <div class="panel compact"><label class="field">Escolha uma mesa<select id="tableSelect" aria-label="Mesa para atendimento"></select></label><label class="field">Nome do cliente<input id="customerName" maxlength="80" placeholder="Como podemos chamar o cliente?" autocomplete="off"></label><div class="action-row"><button class="primary" id="assumeTable" type="button">Assumir mesa</button><button class="secondary" id="showQr" type="button">Mostrar QR da mesa</button></div><p id="tableMessage" class="muted small-copy">Você pode assumir uma mesa mesmo quando o cliente já fez um pedido pelo QR.</p></div>
-    <div class="panel"><div class="section-heading"><h4>Mesas disponíveis</h4><button id="refreshTables" class="text-button" type="button">Atualizar ↻</button></div><div id="tableGrid" class="table-grid"><p class="muted">Carregando mesas…</p></div></div>
+    <div class="panel"><div class="section-heading"><h4>Minhas mesas <span id="myTablesCount" class="status confirmed">0</span></h4><span class="muted small-copy">Você pode atender várias mesas ao mesmo tempo</span></div><div id="myTables" class="table-grid"></div></div>
+    <div class="panel"><div class="section-heading"><h4>Todas as mesas</h4><button id="refreshTables" class="text-button" type="button">Atualizar ↻</button></div><div id="tableGrid" class="table-grid"><p class="muted">Carregando mesas…</p></div></div>
   </section>
 
   <section class="page" id="page-orders" data-page="orders" aria-label="Meus pedidos">
     <div class="section-heading"><div><span class="section-eyebrow">HISTÓRICO LOCAL</span><h3>Meus pedidos</h3></div><button class="primary small" id="newOrderOrders" type="button">＋ Novo pedido</button></div>
     <div class="notice"><span>↻</span><p>Pedidos <strong>salvos offline</strong> permanecem aqui até serem confirmados pelo servidor. Não são considerados enviados antes disso.</p></div>
-    <div id="orders" class="orders-list"></div>
+    <div id="orders" class="orders-list"></div><div class="section-heading" style="margin-top:22px"><h4>Pedidos nas minhas mesas</h4><button class="secondary small" type="button" id="refreshOrderStatus">Atualizar ↻</button></div><div id="activeOrderStatuses" class="orders-list"></div>
   </section>
 
   <section class="page" id="page-deliveries" data-page="deliveries" aria-label="Entregas">
     <div class="section-heading"><div><span class="section-eyebrow">COZINHA E BAR</span><h3>Prontos para entregar</h3></div><button id="refreshDeliveries" class="secondary small" type="button">Atualizar ↻</button></div>
-    <div id="readyOrders" class="orders-list"><p class="muted">Conecte-se para consultar os pedidos prontos.</p></div>
+    <button id="enableAlerts" class="secondary small" type="button" style="margin-bottom:12px">🔔 Ativar avisos de pedidos prontos</button><p id="alertMessage" class="muted small-copy"></p><div id="readyOrders" class="orders-list"><p class="muted">Conecte-se para consultar os pedidos prontos.</p></div>
   </section>
 
   <section class="page" id="page-billing" data-page="billing" aria-label="Cobrança">

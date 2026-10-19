@@ -22,9 +22,11 @@ const NAV_ALL = [
    · Caixa: pix informado / sessão fechada                          */
 export function useAnuncios(papel: "cozinha" | "bar" | "garcom" | "caixa") {
   const eventos = usePub((s) => s.eventos);
-  const visto = useRef(0);
+  const visto = useRef<number | null>(null);
   useEffect(() => {
-    const novos = eventos.filter((e) => e.seq > visto.current);
+    // Eventos anteriores à montagem não devem gerar voz ao abrir/reabrir a tela.
+    if (visto.current === null) { visto.current = Math.max(0, ...eventos.map((e) => e.seq)); return; }
+    const novos = eventos.filter((e) => e.seq > visto.current!);
     if (!novos.length) return;
     visto.current = Math.max(...novos.map((e) => e.seq));
     if (audioMudo()) return;

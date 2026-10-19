@@ -117,7 +117,10 @@ const ajustesCaixaLocais = new Map<number, { desconto: number; taxa: number }>()
 
 /* primeiro hydrate não anuncia fila já existente */
 let anuncioCozinhaPronto = false;
+let anuncioBarPronto = false;
 let anuncioGarcomPronto = false;
+const cozinhaIdsVistos = new Set<number>();
+const barIdsVistos = new Set<number>();
 
 /** Evita que SSE/poll sobrescreva UI no meio de um PATCH (flicker some/volta). */
 let opsMutating = 0;
@@ -258,14 +261,17 @@ export const usePub = create<PubState>((set, get) => ({
       const prevIds = new Set(prev.map((p) => p.id));
       const prevById = new Map(prev.map((p) => [p.id, p]));
       for (const p of fila) {
-        if (p.status === "na_fila" && !prevIds.has(p.id)) {
+        const primeiraVez = !barIdsVistos.has(p.id);
+        barIdsVistos.add(p.id);
+        if (anuncioBarPronto && primeiraVez && p.status === "na_fila" && !prevIds.has(p.id)) {
           emit(get, set, "pedido-novo", p.clienteNome || "Cliente", p.mesaNome);
         }
         const before = prevById.get(p.id);
-        if (p.status === "pronto" && (!before || before.status !== "pronto")) {
+        if (anuncioBarPronto && p.status === "pronto" && (!before || before.status !== "pronto")) {
           emit(get, set, "pedido-pronto", `Pronto · ${p.clienteNome || "cliente"}`, p.mesaNome);
         }
       }
+      anuncioBarPronto = true;
       const ativosIds = new Set(fila.map((p) => p.id));
       const rest = prev.filter((p) => !ativosIds.has(p.id) && p.status === "entregue");
       const next = [...fila, ...rest];
@@ -290,14 +296,16 @@ export const usePub = create<PubState>((set, get) => ({
       const prev = get().pedidos;
       const prevIds = new Set(prev.map((p) => p.id));
       const prevById = new Map(prev.map((p) => [p.id, p]));
-      if (anuncioCozinhaPronto) {
+      {
         for (const p of cozinha) {
-          if (p.status === "na_fila" && !prevIds.has(p.id)) {
+          const primeiraVez = !cozinhaIdsVistos.has(p.id);
+          cozinhaIdsVistos.add(p.id);
+          if (anuncioCozinhaPronto && primeiraVez && p.status === "na_fila" && !prevIds.has(p.id)) {
             emit(get, set, "pedido-novo", p.clienteNome || "Cliente", p.mesaNome);
           }
           const before = prevById.get(p.id);
           /* anuncios de pronto: transição real ou pedido que já chega como pronto */
-          if (p.status === "pronto" && (!before || before.status !== "pronto")) {
+          if (anuncioCozinhaPronto && p.status === "pronto" && (!before || before.status !== "pronto")) {
             emit(get, set, "pedido-pronto", `Pronto · ${p.clienteNome || "cliente"}`, p.mesaNome);
           }
         }
