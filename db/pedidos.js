@@ -1,6 +1,17 @@
 // Criação de pedido, avanço de status, cancelar/editar (cliente) e leitura de sessão/fila.
 const pool = require('./pool');
-const { TRANSICOES, getMesaPorToken, getOuAbrirSessao, getProdutoComRegras } = require('./queries');
+const {
+  TRANSICOES,
+  getMesaPorToken,
+  getOuAbrirSessao,
+  getProdutosComRegras,
+  travarProdutosEmOrdem,
+} = require('./queries');
+const { idempotencyKeyDoCorpo, colunaExiste, sincronizarValorTotalSessao } = require('./conta');
+const { comRetryConcorrencia } = require('./retry');
+const { invalidarCardapio } = require('./cardapio');
+
+const pedidosTemIdempotencyKey = colunaExiste('pedidos', 'idempotency_key');
 
 class ErroPedido extends Error {
   constructor(status, message) {
@@ -11,27 +22,116 @@ class ErroPedido extends Error {
 
 async function restaurarEstoqueDoPedido(client, pedidoId) {
   const { rows: itens } = await client.query(
-    `SELECT ip.produto_id, ip.quantidade, pr.controla_estoque
+    `SELECT ip.produto_id, ip.quantidade, pr.controla_estoque, pr.disponivel, pr.estoque
      FROM itens_pedido ip
      JOIN produtos pr ON pr.id = ip.produto_id
-     WHERE ip.pedido_id = $1`,
+     WHERE ip.pedido_id = $1
+     ORDER BY ip.produto_id`,
     [pedidoId]
   );
+  // Agrega por produto e atualiza em ordem crescente de id (ordem global de
+  // locks): o mesmo produto em 2 itens vira 1 update, e carrinhos de mesas
+  // diferentes nunca travam produtos em ordens opostas.
+  const porProduto = new Map();
   for (const it of itens) {
     if (!it.controla_estoque) continue;
+    const atual = porProduto.get(it.produto_id) || { quantidade: 0, disponivel: it.disponivel, estoque: it.estoque };
+    atual.quantidade += it.quantidade;
+    porProduto.set(it.produto_id, atual);
+  }
+  let mudouDisponibilidade = false;
+  for (const [produtoId, it] of porProduto) {
+    // Só volta a ficar disponivel quem estava indisponivel POR FALTA de estoque
+    // (estoque <= 0 antes da devolucao). Produto pausado manualmente pelo admin
+    // com estoque positivo nao pode "ressuscitar" porque um cliente cancelou.
     await client.query(
       `UPDATE produtos
        SET estoque = COALESCE(estoque, 0) + $1,
-           disponivel = true
+           disponivel = CASE WHEN COALESCE(estoque, 0) <= 0 THEN true ELSE disponivel END
        WHERE id = $2 AND controla_estoque = true`,
-      [it.quantidade, it.produto_id]
+      [it.quantidade, produtoId]
     );
+    if (it.disponivel === false && (it.estoque == null || Number(it.estoque) <= 0)) {
+      mudouDisponibilidade = true;
+    }
   }
+  return { mudouDisponibilidade };
+}
+
+/** Reconstroi a resposta de um pedido ja gravado (replay idempotente). */
+async function carregarPedidoGravado(client, pedidoId) {
+  const { rows: pedRows } = await client.query(
+    `SELECT id, status, criado_em, cliente_nome, editado_em, observacao_geral
+     FROM pedidos WHERE id = $1`,
+    [pedidoId]
+  );
+  const pedido = pedRows[0];
+  if (!pedido) return null;
+  const { rows: itensRows } = await client.query(
+    `SELECT ip.id, ip.produto_id, pr.nome, ip.quantidade, ip.preco_unitario, ip.ponto_carne, ip.observacao
+     FROM itens_pedido ip
+     JOIN produtos pr ON pr.id = ip.produto_id
+     WHERE ip.pedido_id = $1 ORDER BY ip.id`,
+    [pedidoId]
+  );
+  const itemIds = itensRows.map((i) => i.id);
+  const adPorItem = new Map();
+  const remPorItem = new Map();
+  if (itemIds.length) {
+    const { rows: adRows } = await client.query(
+      `SELECT ipa.item_pedido_id, a.id AS adicional_id, a.nome, ipa.preco_unitario
+       FROM itens_pedido_adicionais ipa
+       JOIN adicionais a ON a.id = ipa.adicional_id
+       WHERE ipa.item_pedido_id = ANY($1::int[])`,
+      [itemIds]
+    );
+    for (const a of adRows) {
+      if (!adPorItem.has(a.item_pedido_id)) adPorItem.set(a.item_pedido_id, []);
+      adPorItem.get(a.item_pedido_id).push({ id: a.adicional_id, nome: a.nome, preco: Number(a.preco_unitario) });
+    }
+    const { rows: remRows } = await client.query(
+      `SELECT item_pedido_id, ingrediente FROM itens_pedido_remocoes WHERE item_pedido_id = ANY($1::int[])`,
+      [itemIds]
+    );
+    for (const r of remRows) {
+      if (!remPorItem.has(r.item_pedido_id)) remPorItem.set(r.item_pedido_id, []);
+      remPorItem.get(r.item_pedido_id).push(r.ingrediente);
+    }
+  }
+  let total = 0;
+  const itens = itensRows.map((i) => {
+    const adicionais = adPorItem.get(i.id) || [];
+    const unitTotal = Number(i.preco_unitario) + adicionais.reduce((sum, a) => sum + a.preco, 0);
+    total += unitTotal * i.quantidade;
+    return {
+      id: i.id,
+      produtoId: i.produto_id,
+      nome: i.nome,
+      quantidade: i.quantidade,
+      precoUnitario: Number(i.preco_unitario),
+      adicionais,
+      removals: remPorItem.get(i.id) || [],
+      pontoCarne: i.ponto_carne,
+      observacao: i.observacao,
+      unitTotal: Number(unitTotal.toFixed(2)),
+    };
+  });
+  return {
+    id: pedido.id,
+    status: pedido.status,
+    criadoEm: pedido.criado_em,
+    editadoEm: pedido.editado_em || null,
+    clienteNome: pedido.cliente_nome || null,
+    observacaoGeral: pedido.observacao_geral,
+    itens,
+    total: Number(total.toFixed(2)),
+  };
 }
 
 async function gravarItensPedido(client, pedidoId, itensInput) {
   const itensGravados = [];
   let total = 0;
+  let mudouDisponibilidade = false;
 
   // Limite defensivo: payload abusivo vira erro 400 em vez de loop longo dentro
   // da transação (segura lock de estoque por mais tempo do que o necessário).
@@ -39,11 +139,24 @@ async function gravarItensPedido(client, pedidoId, itensInput) {
     throw new ErroPedido(400, 'Quantidade de itens do pedido inválida');
   }
 
+  // Produtos travados em ordem crescente de id e lidos em 3 consultas no total
+  // (antes: 3 consultas POR ITEM, segurando o lock da mesa e a conexão). A
+  // trava prévia em ordem global é também o que impede deadlock entre
+  // carrinhos simultâneos de mesas diferentes com itens em ordens opostas.
+  const idsSolicitados = [];
+  for (const item of itensInput) {
+    if (!item || typeof item !== 'object') continue;
+    const produtoId = Number(item.productId ?? item.id);
+    if (Number.isInteger(produtoId) && produtoId >= 1) idsSolicitados.push(produtoId);
+  }
+  await travarProdutosEmOrdem(client, idsSolicitados);
+  const produtosPorId = await getProdutosComRegras(client, idsSolicitados);
+
   for (const item of itensInput) {
     if (!item || typeof item !== 'object') continue;
     const produtoId = Number(item.productId ?? item.id);
     if (!Number.isInteger(produtoId) || produtoId < 1) continue;
-    const produto = await getProdutoComRegras(client, produtoId);
+    const produto = produtosPorId.get(produtoId);
     if (!produto || !produto.disponivel) continue;
 
     // Fora de 1–99 é rejeitado explicitamente; antes era clamp silencioso
@@ -66,10 +179,16 @@ async function gravarItensPedido(client, pedidoId, itensInput) {
 
     const adicionaisSelecionados = Array.isArray(item.additions) ? item.additions.slice(0, 50) : [];
     const adicionaisValidos = [];
+    const adicionaisVistos = new Set();
     for (const a of adicionaisSelecionados) {
       if (!a || typeof a !== 'object') continue;
       const adicionalId = Number(a.id);
       if (!Number.isInteger(adicionalId) || adicionalId < 1) continue;
+      // O mesmo adicional 2x no payload violava a PK (item, adicional) e o
+      // pedido inteiro caia com 500. Duplicado de cliente não é erro de
+      // servidor: deduplica e segue.
+      if (adicionaisVistos.has(adicionalId)) continue;
+      adicionaisVistos.add(adicionalId);
       const permitido = produto.adicionaisPermitidos.find((x) => x.id === adicionalId);
       if (permitido) adicionaisValidos.push(permitido);
     }
@@ -98,35 +217,52 @@ async function gravarItensPedido(client, pedidoId, itensInput) {
     );
     const itemId = itemRows[0].id;
 
-    for (const a of adicionaisValidos) {
+    if (adicionaisValidos.length) {
+      const params = [];
+      const valores = adicionaisValidos.map((a) => {
+        params.push(itemId, a.id, a.preco);
+        const b = params.length - 3;
+        return `($${b + 1}, $${b + 2}, $${b + 3})`;
+      });
       await client.query(
         `INSERT INTO itens_pedido_adicionais (item_pedido_id, adicional_id, preco_unitario)
-         VALUES ($1, $2, $3)`,
-        [itemId, a.id, a.preco]
+         VALUES ${valores.join(', ')}`,
+        params
       );
     }
-    for (const ingrediente of remocoesValidas) {
+    if (remocoesValidas.length) {
+      const params = [];
+      const valores = remocoesValidas.map((ingrediente) => {
+        params.push(itemId, ingrediente);
+        const b = params.length - 2;
+        return `($${b + 1}, $${b + 2})`;
+      });
       await client.query(
-        `INSERT INTO itens_pedido_remocoes (item_pedido_id, ingrediente) VALUES ($1, $2)`,
-        [itemId, ingrediente]
+        `INSERT INTO itens_pedido_remocoes (item_pedido_id, ingrediente) VALUES ${valores.join(', ')}`,
+        params
       );
     }
 
     if (produto.controla_estoque) {
-      const { rowCount } = await client.query(
+      // Decremento atômico com guarda: sob corrida, quem perde recebe 409 e a
+      // transação inteira desfaz — o estoque nunca fica negativo. A trava
+      // ordenada adquirida acima serializa este ponto sem deadlock.
+      const { rows: baixas, rowCount } = await client.query(
         `UPDATE produtos
          SET estoque = estoque - $1,
              disponivel = CASE WHEN estoque - $1 <= 0 THEN false ELSE disponivel END
-         WHERE id = $2 AND controla_estoque = true AND estoque >= $1`,
+         WHERE id = $2 AND controla_estoque = true AND estoque >= $1
+         RETURNING estoque, disponivel`,
         [quantidade, produto.id]
       );
       if (!rowCount) {
         throw new ErroPedido(409, `Estoque de "${produto.nome}" esgotou durante o pedido`);
       }
-      produto.estoque = Number(produto.estoque) - quantidade;
+      produto.estoque = Number(baixas[0].estoque);
+      if (baixas[0].disponivel === false) mudouDisponibilidade = true;
     }
 
-    const precoAdicionais = adicionaisValidos.reduce((s, a) => s + Number(a.preco), 0);
+    const precoAdicionais = adicionaisValidos.reduce((soma, a) => soma + Number(a.preco), 0);
     const unitTotal = Number(produto.preco) + precoAdicionais;
     total += unitTotal * quantidade;
 
@@ -145,10 +281,15 @@ async function gravarItensPedido(client, pedidoId, itensInput) {
   }
 
   if (!itensGravados.length) throw new ErroPedido(400, 'Nenhum item válido no pedido');
-  return { itensGravados, total: Number(total.toFixed(2)) };
+  return { itensGravados, total: Number(total.toFixed(2)), mudouDisponibilidade };
 }
 
 async function criarPedido(token, body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw new ErroPedido(400, 'Dados do pedido inválidos');
+  }
+  const chaveIdempotencia = idempotencyKeyDoCorpo(body);
+  if (chaveIdempotencia === false) throw new ErroPedido(400, 'Chave de idempotência inválida');
   const itensInput = Array.isArray(body.items) ? body.items : [];
   if (!itensInput.length) throw new ErroPedido(400, 'O pedido está vazio');
 
@@ -161,6 +302,24 @@ async function criarPedido(token, body) {
 
     const sessaoId = await getOuAbrirSessao(client, mesa.id);
 
+    // Idempotência: a mesa está travada (getOuAbrirSessao) desde o início da
+    // transação, então "verifica e insere" aqui é livre de corrida para esta
+    // sessão; o índice único parcial da migration 0018 é a segunda trava.
+    // Um retry (timeout no celular, duplo toque) devolve o pedido original
+    // em vez de criar um segundo pedido e baixar o estoque de novo.
+    const usarChave = chaveIdempotencia ? await pedidosTemIdempotencyKey(client) : false;
+    if (usarChave) {
+      const { rows: existentes } = await client.query(
+        'SELECT id FROM pedidos WHERE sessao_id = $1 AND idempotency_key = $2 LIMIT 1',
+        [sessaoId, chaveIdempotencia]
+      );
+      if (existentes[0]) {
+        const replay = await carregarPedidoGravado(client, existentes[0].id);
+        await client.query('COMMIT');
+        return { ...replay, sessaoId, mesa: mesa.numero, idempotentReplay: true };
+      }
+    }
+
     const clienteNome = String(body.clienteNome || body.cliente_nome || '')
       .trim()
       .slice(0, 80) || null;
@@ -172,11 +331,17 @@ async function criarPedido(token, body) {
     }
 
     const observacaoGeral = String(body.note || '').trim().slice(0, 500) || null;
-    const { rows: pedidoRows } = await client.query(
-      `INSERT INTO pedidos (sessao_id, observacao_geral, cliente_nome)
-       VALUES ($1, $2, $3) RETURNING id, status, criado_em, cliente_nome, editado_em`,
-      [sessaoId, observacaoGeral, clienteNome]
-    );
+    const { rows: pedidoRows } = usarChave
+      ? await client.query(
+          `INSERT INTO pedidos (sessao_id, observacao_geral, cliente_nome, idempotency_key)
+           VALUES ($1, $2, $3, $4) RETURNING id, status, criado_em, cliente_nome, editado_em`,
+          [sessaoId, observacaoGeral, clienteNome, chaveIdempotencia]
+        )
+      : await client.query(
+          `INSERT INTO pedidos (sessao_id, observacao_geral, cliente_nome)
+           VALUES ($1, $2, $3) RETURNING id, status, criado_em, cliente_nome, editado_em`,
+          [sessaoId, observacaoGeral, clienteNome]
+        );
     const pedido = pedidoRows[0];
 
     await client.query(
@@ -184,12 +349,17 @@ async function criarPedido(token, body) {
       [sessaoId]
     );
 
-    const { itensGravados, total } = await gravarItensPedido(client, pedido.id, itensInput);
+    const { itensGravados, total, mudouDisponibilidade } = await gravarItensPedido(
+      client, pedido.id, itensInput
+    );
     if (!itensGravados.length) {
       throw new ErroPedido(400, 'Nenhum item válido no pedido (produto indisponível ou id inválido)');
     }
 
     await client.query('COMMIT');
+    // Produto esgotou neste pedido: o cardápio em cache não pode continuar
+    // oferecendo o que acabou por mais 30s.
+    if (mudouDisponibilidade) invalidarCardapio();
 
     return {
       id: pedido.id,
@@ -202,6 +372,7 @@ async function criarPedido(token, body) {
       observacaoGeral,
       itens: itensGravados,
       total,
+      idempotentReplay: false,
     };
   } catch (err) {
     try {
@@ -242,7 +413,7 @@ async function cancelarPedidoCliente(token, pedidoId) {
       );
     }
 
-    await restaurarEstoqueDoPedido(client, pedido.id);
+    const restaurou = await restaurarEstoqueDoPedido(client, pedido.id);
 
     await client.query(
       `DELETE FROM itens_pedido_adicionais
@@ -258,6 +429,7 @@ async function cancelarPedidoCliente(token, pedidoId) {
     await client.query(`DELETE FROM pedidos WHERE id = $1`, [pedido.id]);
 
     await client.query('COMMIT');
+    if (restaurou.mudouDisponibilidade) invalidarCardapio();
     return { ok: true, id: pedido.id, cancelado: true, mesa: mesa.numero };
   } catch (err) {
     try {
@@ -271,6 +443,9 @@ async function cancelarPedidoCliente(token, pedidoId) {
 
 /** Cliente edita itens do pedido só enquanto status = recebido. Marca editado_em. */
 async function editarPedidoCliente(token, pedidoId, body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw new ErroPedido(400, 'Dados do pedido inválidos');
+  }
   const itensInput = Array.isArray(body.items) ? body.items : [];
   if (!itensInput.length) throw new ErroPedido(400, 'O pedido editado está vazio — cancele se quiser remover');
   const pedidoNumerico = Number(pedidoId);
@@ -301,7 +476,7 @@ async function editarPedidoCliente(token, pedidoId, body) {
       );
     }
 
-    await restaurarEstoqueDoPedido(client, pedido.id);
+    const restaurou = await restaurarEstoqueDoPedido(client, pedido.id);
 
     await client.query(
       `DELETE FROM itens_pedido_adicionais
@@ -320,7 +495,9 @@ async function editarPedidoCliente(token, pedidoId, body) {
         ? String(body.note || '').trim().slice(0, 500) || null
         : pedido.observacao_geral;
 
-    const { itensGravados, total } = await gravarItensPedido(client, pedido.id, itensInput);
+    const { itensGravados, total, mudouDisponibilidade } = await gravarItensPedido(
+      client, pedido.id, itensInput
+    );
 
     const { rows: updated } = await client.query(
       `UPDATE pedidos
@@ -332,6 +509,7 @@ async function editarPedidoCliente(token, pedidoId, body) {
     );
 
     await client.query('COMMIT');
+    if (mudouDisponibilidade || restaurou.mudouDisponibilidade) invalidarCardapio();
 
     return {
       id: updated[0].id,
@@ -368,9 +546,26 @@ async function avancarStatusItem(pedidoId, setor = null) {
   return setStatusPedido(pedidoId, proximo, setor);
 }
 
+// Leitura da sessão num snapshot único (REPEATABLE READ READ ONLY): sem isso,
+// pedidos/itens/pagamentos vinham de consultas separadas em momentos
+// diferentes e, com a mesa pedindo enquanto o caixa lança pagamento, a tela
+// podia mostrar restante que nunca existiu em nenhum instante real.
 async function getSessao(token) {
   const client = await pool.connect();
   try {
+    await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+    const resultado = await lerSessao(client, token);
+    await client.query('COMMIT');
+    return resultado;
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function lerSessao(client, token) {
     const mesa = await getMesaPorToken(client, token);
     if (!mesa) throw new ErroPedido(404, 'Mesa não encontrada');
 
@@ -536,9 +731,6 @@ async function getSessao(token) {
       valorPago,
       valorRestante,
     };
-  } finally {
-    client.release();
-  }
 }
 
 async function anexarExtrasAosItens(itens) {
@@ -836,6 +1028,17 @@ async function setStatusItem(itemId, statusAlvo, setorAuth = null) {
 /**
  * Define status do pedido (React Cozinha/Bar: PATCH /api/pedidos/:id/status).
  * Se setor for informado, só avança itens daquele setor; o pedido-pai é recalculado.
+ *
+ * Endurecimento transacional (70 mesas):
+ * - SOMENTE AVANÇO, item a item: 'recebido' como alvo vira 409 se qualquer
+ *   item afetado já avançou, e nenhum alvo move itens 'entregue'. Antes, o
+ *   caminho sem setor fazia UPDATE incondicional — um admin/cozinha podia
+ *   "des-entregar" itens já lançados na conta e o garçom somava o valor de
+ *   novo na re-entrega (cobrança duplicada reproduzida em teste).
+ * - A entrega por este endpoint (override admin, sem setor) sincroniza
+ *   mesa_sessoes.valor_total na mesma transação. Antes só o fluxo do garçom
+ *   somava; aqui o caixa fechava a conta por R$ 0 (também reproduzido).
+ * - Pedido e itens são travados na ordem global (pedido → itens por id).
  */
 async function setStatusPedido(pedidoId, statusAlvo, setor = null) {
   const alvo = String(statusAlvo || '').trim();
@@ -858,7 +1061,7 @@ async function setStatusPedido(pedidoId, statusAlvo, setor = null) {
     await client.query('BEGIN');
     const { rows } = await client.query(
       `SELECT id, status, sessao_id FROM pedidos WHERE id = $1 FOR UPDATE`,
-      [Number(pedidoId)]
+      [id]
     );
     const pedido = rows[0];
     if (!pedido) throw new ErroPedido(404, 'Pedido não encontrado');
@@ -866,10 +1069,30 @@ async function setStatusPedido(pedidoId, statusAlvo, setor = null) {
       throw new ErroPedido(409, 'Pedido já entregue');
     }
 
+    const { rows: itens } = await client.query(
+      `SELECT ip.id, COALESCE(ip.status, 'recebido') AS status,
+              COALESCE(pr.setor, 'cozinha') AS setor
+       FROM itens_pedido ip
+       JOIN produtos pr ON pr.id = ip.produto_id
+       WHERE ip.pedido_id = $1
+       ORDER BY ip.id
+       FOR UPDATE OF ip`,
+      [pedido.id]
+    );
+
+    // Se o pedido não tem NENHUM item deste setor (ex.: só bebida e quem
+    // chamou foi a cozinha), avança TODOS os itens — evita 200 "mentiroso"
+    // e o 409 posterior no garçom.
+    let setorEfetivo = setor;
+    if (setor && !itens.some((i) => i.setor === setor)) setorEfetivo = null;
+    const afetados = setorEfetivo ? itens.filter((i) => i.setor === setorEfetivo) : itens;
+
     if (alvo === 'entregue') {
-      // entrega fecha todos os itens
+      // Override administrativo: fecha todos os itens E lança o valor na conta,
+      // recomputado dos itens entregues (db/conta.js) na mesma transação.
       await client.query(
-        `UPDATE itens_pedido SET status = 'entregue' WHERE pedido_id = $1`,
+        `UPDATE itens_pedido SET status = 'entregue'
+         WHERE pedido_id = $1 AND COALESCE(status, 'recebido') <> 'entregue'`,
         [pedido.id]
       );
       const { rows: updated } = await client.query(
@@ -877,72 +1100,39 @@ async function setStatusPedido(pedidoId, statusAlvo, setor = null) {
          RETURNING id, status, criado_em, editado_em, cliente_nome, sessao_id`,
         [pedido.id]
       );
+      await sincronizarValorTotalSessao(client, pedido.sessao_id);
       await client.query('COMMIT');
       return { ...updated[0], statusAnterior: pedido.status };
     }
 
-    // Conta quantos itens pertencem ao setor pedido (se houver filtro)
-    let setorEfetivo = setor;
-    if (setor) {
-      const { rows: cnt } = await client.query(
-        `SELECT COUNT(*)::int AS n
-         FROM itens_pedido ip
-         JOIN produtos pr ON pr.id = ip.produto_id
-         WHERE ip.pedido_id = $1
-           AND COALESCE(pr.setor, 'cozinha') = $2`,
-        [pedido.id, setor]
-      );
-      // Se o pedido não tem NENHUM item deste setor (ex.: só bebida e quem
-      // chamou foi a cozinha), avança TODOS os itens — evita 200 "mentiroso"
-      // e o 409 posterior no garçom.
-      if (!cnt[0] || cnt[0].n === 0) {
-        setorEfetivo = null;
+    if (alvo === 'recebido') {
+      const avancado = afetados.find((i) => i.status !== 'recebido');
+      if (avancado) {
+        throw new ErroPedido(
+          409,
+          `Não é permitido regredir o pedido: já há item(ns) em "${avancado.status}"`
+        );
       }
+      const atualizado = await sincronizarStatusPedido(client, pedido.id);
+      await client.query('COMMIT');
+      return {
+        ...(atualizado || { id: pedido.id, status: pedido.status }),
+        statusAnterior: pedido.status,
+        itensAtualizados: 0,
+        setorAplicado: setorEfetivo,
+      };
     }
 
+    // Avanço condicional por estado de origem — nunca regressão, nunca toca
+    // item concluido/entregue ao pedir um degrau anterior.
+    const origens = alvo === 'em_producao' ? ['recebido'] : ['recebido', 'em_producao'];
+    const idsMover = afetados.filter((i) => origens.includes(i.status)).map((i) => i.id);
     let rowCount = 0;
-    if (setorEfetivo) {
-      if (alvo === 'em_producao') {
-        const r = await client.query(
-          `UPDATE itens_pedido ip
-           SET status = 'em_producao'
-           FROM produtos pr
-           WHERE ip.produto_id = pr.id
-             AND ip.pedido_id = $1
-             AND COALESCE(pr.setor, 'cozinha') = $2
-             AND COALESCE(ip.status, 'recebido') = 'recebido'`,
-          [pedido.id, setorEfetivo]
-        );
-        rowCount = r.rowCount || 0;
-      } else if (alvo === 'concluido') {
-        const r = await client.query(
-          `UPDATE itens_pedido ip
-           SET status = 'concluido'
-           FROM produtos pr
-           WHERE ip.produto_id = pr.id
-             AND ip.pedido_id = $1
-             AND COALESCE(pr.setor, 'cozinha') = $2
-             AND COALESCE(ip.status, 'recebido') IN ('recebido', 'em_producao')`,
-          [pedido.id, setorEfetivo]
-        );
-        rowCount = r.rowCount || 0;
-      } else if (alvo === 'recebido') {
-        const r = await client.query(
-          `UPDATE itens_pedido ip
-           SET status = 'recebido'
-           FROM produtos pr
-           WHERE ip.produto_id = pr.id
-             AND ip.pedido_id = $1
-             AND COALESCE(pr.setor, 'cozinha') = $2`,
-          [pedido.id, setorEfetivo]
-        );
-        rowCount = r.rowCount || 0;
-      }
-    } else {
-      // Sem filtro de setor (ou fallback): avança todos os itens do pedido
+    if (idsMover.length) {
       const r = await client.query(
-        `UPDATE itens_pedido SET status = $2 WHERE pedido_id = $1`,
-        [pedido.id, alvo]
+        `UPDATE itens_pedido SET status = $2
+         WHERE id = ANY($1::int[]) AND COALESCE(status, 'recebido') = ANY($3::text[])`,
+        [idsMover, alvo, origens]
       );
       rowCount = r.rowCount || 0;
     }
@@ -964,7 +1154,8 @@ async function setStatusPedido(pedidoId, statusAlvo, setor = null) {
 }
 
 async function checkinCliente(token, body) {
-  const nome = String(body.clienteNome || body.cliente_nome || body.nome || '')
+  const dados = body && typeof body === 'object' && !Array.isArray(body) ? body : {};
+  const nome = String(dados.clienteNome || dados.cliente_nome || dados.nome || '')
     .trim()
     .slice(0, 80);
   if (!nome) throw new ErroPedido(400, 'Informe um nome');
@@ -988,18 +1179,25 @@ async function checkinCliente(token, body) {
   }
 }
 
+// Mutações exportadas com retry estreito de deadlock (40P01) / abort de
+// serialização (40001): a transação abortada não gravou nada, então repetir a
+// operação inteira é seguro — e some com os 500 esporádicos de pico.
+function comRetry(rotulo, fn) {
+  return (...args) => comRetryConcorrencia(() => fn(...args), { rotulo });
+}
+
 module.exports = {
-  criarPedido,
+  criarPedido: comRetry('criarPedido', criarPedido),
   avancarStatusItem,
-  setStatusItem,
-  setStatusPedido,
+  setStatusItem: comRetry('setStatusItem', setStatusItem),
+  setStatusPedido: comRetry('setStatusPedido', setStatusPedido),
   sincronizarStatusPedido,
   getSessao,
   getFilaCozinha,
   getFilaBar,
   getFilaGarcom,
-  checkinCliente,
-  cancelarPedidoCliente,
-  editarPedidoCliente,
+  checkinCliente: comRetry('checkinCliente', checkinCliente),
+  cancelarPedidoCliente: comRetry('cancelarPedidoCliente', cancelarPedidoCliente),
+  editarPedidoCliente: comRetry('editarPedidoCliente', editarPedidoCliente),
   ErroPedido,
 };
