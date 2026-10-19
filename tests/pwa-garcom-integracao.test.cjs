@@ -9,14 +9,12 @@ test('PWA JavaScript e Service Worker têm sintaxe válida',()=>{
  cp.execFileSync(process.execPath,['--check',path.join(root,'app.js')]);
  cp.execFileSync(process.execPath,['--check',path.join(root,'sw.js')]);
 });
-
 test('Rotas de assumir mesa e criar pedido aceitam números reais de mesa',()=>{
- assert.ok(server.includes('mesas\\/(\\d+)\\/assumir'),'rota assumir usa \u005cd\u002b, não barra invertida literal');
- assert.ok(server.includes('mesas\\/(\\d+)\\/pedidos'),'rota pedidos usa \u005cd\u002b, não barra invertida literal');
- assert.equal(server.includes('mesas\\/(\\\\d+)\\/assumir'),false,'não usar \u005c\u005cd na regex da rota assumir');
- assert.equal(server.includes('mesas\\/(\\\\d+)\\/pedidos'),false,'não usar \u005c\u005cd na regex da rota pedidos');
+ assert.ok(server.includes('mesas\\/(\\d+)\\/assumir'),'rota assumir usa \\d+, não barra invertida literal');
+ assert.ok(server.includes('mesas\\/(\\d+)\\/pedidos'),'rota pedidos usa \\d+, não barra invertida literal');
+ assert.equal(server.includes('mesas\\/(\\\\d+)\\/assumir'),false,'não usar \\\\d na regex da rota assumir');
+ assert.equal(server.includes('mesas\\/(\\\\d+)\\/pedidos'),false,'não usar \\\\d na regex da rota pedidos');
 });
-
 test('PWA acessa rotas reais, não endpoint genérico de demonstração',()=>{
  assert.match(app,/\/api\/cardapio/);
  assert.match(app,/\/api\/garcom\//);
