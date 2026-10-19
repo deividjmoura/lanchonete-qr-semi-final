@@ -59,7 +59,7 @@ const {
   garantirStaffSeed,
 } = require('./db/auth');
 const { golpePermitido } = require('./db/rateLimit');
-const { ErroAtendimento, listarMesasGarcom, assumirMesa, criarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
+const { ErroAtendimento, listarMesasGarcom, assumirMesa, criarPedidoGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
 const { normalizarChavePix, inspecionarChavePix } = require('./db/pix-normaliza');
 const { subscribe, broadcast } = require('./db/events');
 const pool = require('./db/pool');
@@ -363,6 +363,20 @@ const server = http.createServer(async (req, res) => {
     }
 
     // Atendimento móvel: identidade pelo token individual e ativo do garçom.
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/atendimentos$/)) && req.method === 'GET') {
+      try { return json(res,200,await listarAtendimentosGarcom(m[1])); }
+      catch(e){ if(e instanceof ErroAtendimento)return json(res,e.status,{error:e.message});throw e; }
+    }
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/pedidos\/(\d+)$/)) && req.method === 'PUT') {
+      try {
+        const out=await editarPedidoGarcom(m[1],m[2],await body(req));
+        broadcast('update',{type:'pedido_editado',pedidoId:out.id,mesa:out.mesa});
+        return json(res,200,out);
+      }catch(e){
+        if(e instanceof ErroAtendimento||e instanceof ErroPedido)return json(res,e.status,{error:e.message});
+        throw e;
+      }
+    }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas$/)) && req.method === 'GET') {
       try { return json(res, 200, await listarMesasGarcom(m[1])); }
       catch (e) { if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message }); throw e; }
