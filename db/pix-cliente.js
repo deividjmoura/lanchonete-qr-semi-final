@@ -2,6 +2,7 @@
 // acontece quando o caixa confirma o aviso (pagamento parcial).
 const pool = require('./pool');
 const { numeroInteiroPositivo } = require('./validacao');
+const { totalEntregueDaSessao } = require('./conta');
 
 class ErroPixCliente extends Error {
   constructor(status, message) {
@@ -106,8 +107,10 @@ async function informarPixPago(token, body = {}) {
       [sessaoId]
     );
     const valorPago = Number(sumRows[0].pago || 0);
-    // total devido = valor_total da sessão (já só entregues no fluxo atual)
-    const valorTotal = Number(sessao.valor_total || 0);
+    // Total devido recomputado dos itens entregues (db/conta.js), não do
+    // acumulador valor_total: se algum caminho de entrega divergiu o
+    // acumulador, o cliente não fica autorizado a avisar valor errado.
+    const valorTotal = await totalEntregueDaSessao(client, sessaoId);
     const valorRestante = Number(Math.max(0, valorTotal - valorPago).toFixed(2));
 
     if (valorRestante <= 0.009) {
@@ -194,10 +197,10 @@ async function informarPixPago(token, body = {}) {
 
     const { rows: updated } = await client.query(
       `UPDATE mesa_sessoes
-       SET pix_informado_em = now()
-       WHERE id = $1
+       SET pix_informado_em = now(), valor_total = $2
+       WHERE id = $1 AND status = 'aberta'
        RETURNING id, pix_informado_em`,
-      [sessaoId]
+      [sessaoId, valorTotal]
     );
 
     await client.query('COMMIT');

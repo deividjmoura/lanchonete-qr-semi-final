@@ -1,6 +1,19 @@
 // Caixa: sessões abertas, pagamentos parciais (divisão) e fechamento.
 const pool = require('./pool');
 const { erroDeSchema } = require('./pix-cliente');
+const {
+  totalEntregueDaSessao,
+  totaisEntreguesPorSessao,
+  totalPagoDaSessao,
+  sincronizarValorTotalSessao,
+  idempotencyKeyDoCorpo,
+  colunaExiste,
+} = require('./conta');
+const { comRetryConcorrencia } = require('./retry');
+
+const pagamentosTemIdempotencyKey = colunaExiste('sessao_pagamentos', 'idempotency_key');
+const pagamentosTemPixAviso = colunaExiste('sessao_pagamentos', 'pix_aviso_id');
+const sessoesTemFechamentoKey = colunaExiste('mesa_sessoes', 'fechamento_idempotency_key');
 
 const FORMAS = new Set(['dinheiro', 'pix', 'cartao_debito', 'cartao_credito']);
 
@@ -9,6 +22,37 @@ class ErroCaixa extends Error {
     super(message);
     this.status = status;
   }
+}
+
+function validarSessaoId(sessaoId) {
+  const n = Number(sessaoId);
+  if (!Number.isInteger(n) || n < 1) throw new ErroCaixa(400, 'Sessão inválida');
+  return n;
+}
+
+/**
+ * Trava a sessão na ORDEM GLOBAL de locks: mesa primeiro, sessão depois.
+ * As consultas antigas faziam `FOR UPDATE` num JOIN mesa+sessão, cuja ordem
+ * de travamento é a do plano de execução — contra criarPedido (que trava a
+ * mesa e depois mexe na sessão) isso é deadlock esperando o pico de sexta.
+ */
+async function travarSessao(client, sessaoId) {
+  const { rows: refs } = await client.query(
+    'SELECT mesa_id FROM mesa_sessoes WHERE id = $1',
+    [sessaoId]
+  );
+  if (!refs[0]) throw new ErroCaixa(404, 'Sessão não encontrada');
+  await client.query('SELECT id FROM mesas WHERE id = $1 FOR UPDATE', [refs[0].mesa_id]);
+  const { rows } = await client.query(
+    `SELECT s.*, m.numero AS mesa
+     FROM mesa_sessoes s
+     JOIN mesas m ON m.id = s.mesa_id
+     WHERE s.id = $1
+     FOR UPDATE OF s`,
+    [sessaoId]
+  );
+  if (!rows[0]) throw new ErroCaixa(404, 'Sessão não encontrada');
+  return rows[0];
 }
 
 function montarItensComExtras(itensRows, addByItem, remByItem) {
@@ -39,8 +83,27 @@ function parseMoney(v) {
   return Number(n.toFixed(2));
 }
 
+// Listagem do caixa num snapshot único e com a MESMA definição de "devido"
+// da tela do cliente: soma de itens com status='entregue', recomputada
+// (db/conta.js) — inclui entrega parcial, que antes entrava no valorTotal
+// (acumulador) mas não aparecia nos itens, então itens x total não fechavam.
 async function listSessoesAbertas() {
-  const { rows: sessoes } = await pool.query(
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+    const resultado = await lerSessoesAbertas(client);
+    await client.query('COMMIT');
+    return resultado;
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function lerSessoesAbertas(client) {
+  const { rows: sessoes } = await client.query(
     `SELECT s.id, s.aberta_em, s.valor_total, s.pix_informado_em, s.cliente_nome,
             m.id AS mesa_id, m.numero AS mesa
      FROM mesa_sessoes s
@@ -51,7 +114,7 @@ async function listSessoesAbertas() {
   if (!sessoes.length) return [];
 
   const sessaoIds = sessoes.map((s) => s.id);
-  const { rows: pedidos } = await pool.query(
+  const { rows: pedidos } = await client.query(
     `SELECT id, sessao_id, status, criado_em, observacao_geral, cliente_nome
      FROM pedidos
      WHERE sessao_id = ANY($1::int[])
@@ -59,7 +122,9 @@ async function listSessoesAbertas() {
     [sessaoIds]
   );
 
-  const { rows: pagRows } = await pool.query(
+  const totaisEntregues = await totaisEntreguesPorSessao(client, sessaoIds);
+
+  const { rows: pagRows } = await client.query(
     `SELECT id, sessao_id, valor, forma_pagamento, criado_em
      FROM sessao_pagamentos
      WHERE sessao_id = ANY($1::int[])
@@ -80,7 +145,7 @@ async function listSessoesAbertas() {
 
   let avisoRows = [];
   try {
-    const av = await pool.query(
+    const av = await client.query(
       `SELECT a.id, a.sessao_id, a.pedido_id, a.valor, a.cliente_nome, a.status, a.criado_em
        FROM pix_avisos a
        WHERE a.sessao_id = ANY($1::int[]) AND a.status = 'pendente'
@@ -103,39 +168,38 @@ async function listSessoesAbertas() {
     });
   }
 
-
-  const entregueIds = pedidos.filter((p) => p.status === 'entregue').map((p) => p.id);
+  // Itens ENTREGUES (total ou parcialmente): é o que já pode ser cobrado.
+  const pedidoIds = pedidos.map((p) => p.id);
   let itensRows = [];
   const addByItem = new Map();
   const remByItem = new Map();
 
-  if (entregueIds.length) {
-    const itensRes = await pool.query(
+  if (pedidoIds.length) {
+    const itensRes = await client.query(
       `SELECT ip.id, ip.pedido_id, pr.nome, ip.quantidade, ip.preco_unitario, ip.ponto_carne, ip.observacao
        FROM itens_pedido ip
        JOIN produtos pr ON pr.id = ip.produto_id
        WHERE ip.pedido_id = ANY($1::int[])
+         AND COALESCE(ip.status, 'recebido') = 'entregue'
        ORDER BY ip.id`,
-      [entregueIds]
+      [pedidoIds]
     );
     itensRows = itensRes.rows;
     const itemIds = itensRows.map((i) => i.id);
     if (itemIds.length) {
-      const [adRes, remRes] = await Promise.all([
-        pool.query(
-          `SELECT ipa.item_pedido_id, a.nome, ipa.preco_unitario
-           FROM itens_pedido_adicionais ipa
-           JOIN adicionais a ON a.id = ipa.adicional_id
-           WHERE ipa.item_pedido_id = ANY($1::int[])`,
-          [itemIds]
-        ),
-        pool.query(
-          `SELECT item_pedido_id, ingrediente
-           FROM itens_pedido_remocoes
-           WHERE item_pedido_id = ANY($1::int[])`,
-          [itemIds]
-        ),
-      ]);
+      const adRes = await client.query(
+        `SELECT ipa.item_pedido_id, a.nome, ipa.preco_unitario
+         FROM itens_pedido_adicionais ipa
+         JOIN adicionais a ON a.id = ipa.adicional_id
+         WHERE ipa.item_pedido_id = ANY($1::int[])`,
+        [itemIds]
+      );
+      const remRes = await client.query(
+        `SELECT item_pedido_id, ingrediente
+         FROM itens_pedido_remocoes
+         WHERE item_pedido_id = ANY($1::int[])`,
+        [itemIds]
+      );
       for (const a of adRes.rows) {
         if (!addByItem.has(a.item_pedido_id)) addByItem.set(a.item_pedido_id, []);
         addByItem.get(a.item_pedido_id).push({ nome: a.nome, preco: Number(a.preco_unitario) });
@@ -164,8 +228,8 @@ async function listSessoesAbertas() {
     const entregues = [];
     let pendentes = 0;
     for (const p of lista) {
-      if (p.status === 'entregue') {
-        const raw = itensByPedido.get(p.id) || [];
+      const raw = itensByPedido.get(p.id) || [];
+      if (raw.length) {
         const itens = montarItensComExtras(raw, addByItem, remByItem);
         const totalPedido = Number(itens.reduce((acc, i) => acc + i.subtotal, 0).toFixed(2));
         entregues.push({
@@ -176,13 +240,12 @@ async function listSessoesAbertas() {
           itens,
           total: totalPedido,
         });
-      } else {
-        pendentes += 1;
       }
+      if (p.status !== 'entregue') pendentes += 1;
     }
     const pagamentos = pagBySessao.get(s.id) || [];
     const valorPago = Number(pagamentos.reduce((acc, p) => acc + p.valor, 0).toFixed(2));
-    const valorTotal = Number(s.valor_total);
+    const valorTotal = totaisEntregues.get(s.id) ?? 0;
     const valorRestante = Number(Math.max(0, valorTotal - valorPago).toFixed(2));
     return {
       id: s.id,
@@ -204,7 +267,14 @@ async function listSessoesAbertas() {
 }
 
 /** Registra pagamento parcial (divisão de conta). Não fecha a sessão. */
-async function registrarPagamento(sessaoId, body) {
+async function registrarPagamento(sessaoIdBruto, body) {
+  const sessaoId = validarSessaoId(sessaoIdBruto);
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw new ErroCaixa(400, 'Dados de pagamento inválidos');
+  }
+  const chaveIdempotencia = idempotencyKeyDoCorpo(body);
+  if (chaveIdempotencia === false) throw new ErroCaixa(400, 'Chave de idempotência inválida');
+
   const forma = String(body.formaPagamento || body.forma_pagamento || '')
     .trim()
     .toLowerCase();
@@ -222,36 +292,63 @@ async function registrarPagamento(sessaoId, body) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const { rows } = await client.query(
-      `SELECT s.id, s.status, s.valor_total, m.numero AS mesa
-       FROM mesa_sessoes s
-       JOIN mesas m ON m.id = s.mesa_id
-       WHERE s.id = $1
-       FOR UPDATE`,
-      [sessaoId]
-    );
-    const sessao = rows[0];
-    if (!sessao) throw new ErroCaixa(404, 'Sessão não encontrada');
+    const sessao = await travarSessao(client, sessaoId);
     if (sessao.status !== 'aberta') throw new ErroCaixa(409, 'Sessão já está fechada');
 
-    const { rows: sumRows } = await client.query(
-      `SELECT COALESCE(SUM(valor), 0)::float AS pago
-       FROM sessao_pagamentos WHERE sessao_id = $1`,
-      [sessaoId]
-    );
-    const jaPago = Number(sumRows[0].pago);
-    const total = Number(sessao.valor_total);
+    // Replay idempotente: toque duplo no caixa / retry de rede com a mesma
+    // chave devolve o lançamento original em vez de baixar o valor 2x.
+    // A sessão travada serializa o "verifica e insere"; o índice único da
+    // migration 0018 é a segunda trava.
+    const usarChave = chaveIdempotencia ? await pagamentosTemIdempotencyKey(client) : false;
+    if (usarChave) {
+      const { rows: existentes } = await client.query(
+        `SELECT id, valor, forma_pagamento, criado_em
+         FROM sessao_pagamentos WHERE sessao_id = $1 AND idempotency_key = $2 LIMIT 1`,
+        [sessaoId, chaveIdempotencia]
+      );
+      if (existentes[0]) {
+        const total = await sincronizarValorTotalSessao(client, sessaoId);
+        const valorPago = await totalPagoDaSessao(client, sessaoId);
+        await client.query('COMMIT');
+        return {
+          ok: true,
+          mesa: sessao.mesa,
+          pagamento: {
+            id: existentes[0].id,
+            valor: Number(existentes[0].valor),
+            formaPagamento: existentes[0].forma_pagamento,
+            criadoEm: existentes[0].criado_em,
+          },
+          valorTotal: total,
+          valorPago,
+          valorRestante: Number(Math.max(0, total - valorPago).toFixed(2)),
+          idempotentReplay: true,
+        };
+      }
+    }
+
+    // Teto contra cobrança a maior calculado do total AUTORITATIVO (itens
+    // entregues agora), não do acumulador histórico da sessão.
+    const total = await sincronizarValorTotalSessao(client, sessaoId);
+    const jaPago = await totalPagoDaSessao(client, sessaoId);
     const restante = Number(Math.max(0, total - jaPago).toFixed(2));
     if (valor > restante + 0.009) {
       throw new ErroCaixa(400, `Valor maior que o restante (R$ ${restante.toFixed(2).replace('.', ',')})`);
     }
 
-    const { rows: ins } = await client.query(
-      `INSERT INTO sessao_pagamentos (sessao_id, valor, forma_pagamento)
-       VALUES ($1, $2, $3)
-       RETURNING id, valor, forma_pagamento, criado_em`,
-      [sessaoId, valor, forma]
-    );
+    const { rows: ins } = usarChave
+      ? await client.query(
+          `INSERT INTO sessao_pagamentos (sessao_id, valor, forma_pagamento, idempotency_key)
+           VALUES ($1, $2, $3, $4)
+           RETURNING id, valor, forma_pagamento, criado_em`,
+          [sessaoId, valor, forma, chaveIdempotencia]
+        )
+      : await client.query(
+          `INSERT INTO sessao_pagamentos (sessao_id, valor, forma_pagamento)
+           VALUES ($1, $2, $3)
+           RETURNING id, valor, forma_pagamento, criado_em`,
+          [sessaoId, valor, forma]
+        );
     await client.query('COMMIT');
 
     const valorPago = Number((jaPago + valor).toFixed(2));
@@ -267,6 +364,7 @@ async function registrarPagamento(sessaoId, body) {
       valorTotal: total,
       valorPago,
       valorRestante: Number(Math.max(0, total - valorPago).toFixed(2)),
+      idempotentReplay: false,
     };
   } catch (err) {
     try {
@@ -278,7 +376,14 @@ async function registrarPagamento(sessaoId, body) {
   }
 }
 
-async function fecharSessao(sessaoId, body) {
+async function fecharSessao(sessaoIdBruto, body) {
+  const sessaoId = validarSessaoId(sessaoIdBruto);
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw new ErroCaixa(400, 'Dados de fechamento inválidos');
+  }
+  const chaveIdempotencia = idempotencyKeyDoCorpo(body);
+  if (chaveIdempotencia === false) throw new ErroCaixa(400, 'Chave de idempotência inválida');
+
   const forma = String(body.formaPagamento || body.forma_pagamento || '')
     .trim()
     .toLowerCase();
@@ -297,18 +402,35 @@ async function fecharSessao(sessaoId, body) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    const sessao = await travarSessao(client, sessaoId);
 
-    const { rows } = await client.query(
-      `SELECT s.id, s.status, s.valor_total, s.mesa_id, m.numero AS mesa
-       FROM mesa_sessoes s
-       JOIN mesas m ON m.id = s.mesa_id
-       WHERE s.id = $1
-       FOR UPDATE`,
-      [sessaoId]
-    );
-    const sessao = rows[0];
-    if (!sessao) throw new ErroCaixa(404, 'Sessão não encontrada');
-    if (sessao.status !== 'aberta') throw new ErroCaixa(409, 'Sessão já está fechada');
+    const usarChave = chaveIdempotencia ? await sessoesTemFechamentoKey(client) : false;
+    if (sessao.status !== 'aberta') {
+      // Retry do MESMO fechamento (timeout depois do COMMIT): devolve o
+      // resultado original em vez de 409 — sem nova baixa, sem confusão no
+      // caixa sobre se a conta fechou ou não.
+      if (usarChave && sessao.fechamento_idempotency_key === chaveIdempotencia) {
+        const valorPago = await totalPagoDaSessao(client, sessaoId);
+        await client.query('COMMIT');
+        return {
+          id: sessao.id,
+          mesa: sessao.mesa,
+          valorTotal: Number(sessao.valor_total),
+          desconto: Number(sessao.desconto || 0),
+          taxaServico: Number(sessao.taxa_servico || 0),
+          valorCobrado: Number(
+            sessao.valor_cobrado != null ? sessao.valor_cobrado : sessao.valor_total
+          ),
+          valorPago,
+          formaPagamento: sessao.forma_pagamento,
+          abertaEm: sessao.aberta_em,
+          fechadaEm: sessao.fechada_em,
+          status: 'fechada',
+          idempotentReplay: true,
+        };
+      }
+      throw new ErroCaixa(409, 'Sessão já está fechada');
+    }
 
     const { rows: pendentes } = await client.query(
       `SELECT COUNT(*)::int AS n FROM pedidos
@@ -322,19 +444,27 @@ async function fecharSessao(sessaoId, body) {
       );
     }
 
-    const valorTotal = Number(sessao.valor_total);
+    // Fecha sobre o total recomputado dos itens entregues: se algum caminho
+    // histórico deixou o acumulador para trás, a conta fecha certa hoje e o
+    // valor corrigido fica persistido para dashboard/relatório.
+    const valorTotal = await totalEntregueDaSessao(client, sessaoId);
     if (desconto > valorTotal + 0.001) {
       throw new ErroCaixa(400, 'Desconto não pode ser maior que o total da conta');
     }
     const valorCobrado = Number((valorTotal - desconto + taxaServico).toFixed(2));
     if (valorCobrado < 0) throw new ErroCaixa(400, 'Valor cobrado inválido');
 
-    const { rows: sumRows } = await client.query(
-      `SELECT COALESCE(SUM(valor), 0)::float AS pago
-       FROM sessao_pagamentos WHERE sessao_id = $1`,
-      [sessaoId]
-    );
-    let valorPago = Number(sumRows[0].pago);
+    let valorPago = await totalPagoDaSessao(client, sessaoId);
+    if (valorPago > valorCobrado + 0.009) {
+      // Pagamentos parciais já superam o que seria cobrado com esse desconto:
+      // fechar mesmo assim registraria conta paga a maior sem estorno nenhum
+      // (reproduzido em teste). O caixa precisa decidir conscientemente.
+      throw new ErroCaixa(
+        409,
+        `Pagamentos já lançados (R$ ${valorPago.toFixed(2).replace('.', ',')}) excedem o valor a cobrar ` +
+        `(R$ ${valorCobrado.toFixed(2).replace('.', ',')}). Ajuste o desconto ou devolva a diferença antes de fechar.`
+      );
+    }
     const falta = Number((valorCobrado - valorPago).toFixed(2));
     if (falta > 0.009) {
       await client.query(
@@ -345,19 +475,36 @@ async function fecharSessao(sessaoId, body) {
       valorPago = Number((valorPago + falta).toFixed(2));
     }
 
-    const { rows: updated } = await client.query(
-      `UPDATE mesa_sessoes
-       SET status = 'fechada',
-           fechada_em = now(),
-           forma_pagamento = $1,
-           desconto = $2,
-           taxa_servico = $3,
-           valor_cobrado = $4
-       WHERE id = $5
-       RETURNING id, valor_total, desconto, taxa_servico, valor_cobrado,
-                 forma_pagamento, fechada_em, aberta_em`,
-      [forma, desconto, taxaServico, valorCobrado, sessaoId]
-    );
+    const { rows: updated } = usarChave
+      ? await client.query(
+          `UPDATE mesa_sessoes
+           SET status = 'fechada',
+               fechada_em = now(),
+               forma_pagamento = $1,
+               desconto = $2,
+               taxa_servico = $3,
+               valor_cobrado = $4,
+               valor_total = $6,
+               fechamento_idempotency_key = $7
+           WHERE id = $5
+           RETURNING id, valor_total, desconto, taxa_servico, valor_cobrado,
+                     forma_pagamento, fechada_em, aberta_em`,
+          [forma, desconto, taxaServico, valorCobrado, sessaoId, valorTotal, chaveIdempotencia]
+        )
+      : await client.query(
+          `UPDATE mesa_sessoes
+           SET status = 'fechada',
+               fechada_em = now(),
+               forma_pagamento = $1,
+               desconto = $2,
+               taxa_servico = $3,
+               valor_cobrado = $4,
+               valor_total = $6
+           WHERE id = $5
+           RETURNING id, valor_total, desconto, taxa_servico, valor_cobrado,
+                     forma_pagamento, fechada_em, aberta_em`,
+          [forma, desconto, taxaServico, valorCobrado, sessaoId, valorTotal]
+        );
 
     await client.query("UPDATE mesas SET status = 'livre' WHERE id = $1", [sessao.mesa_id]);
     await client.query('COMMIT');
@@ -375,6 +522,7 @@ async function fecharSessao(sessaoId, body) {
       abertaEm: row.aberta_em,
       fechadaEm: row.fechada_em,
       status: 'fechada',
+      idempotentReplay: false,
     };
   } catch (err) {
     try {
@@ -388,22 +536,19 @@ async function fecharSessao(sessaoId, body) {
 
 
 /** Caixa confirma aviso PIX do cliente → registra pagamento parcial e quita o aviso. */
-async function confirmarPixAviso(sessaoId, avisoId) {
+async function confirmarPixAviso(sessaoIdBruto, avisoIdBruto) {
+  const sessaoId = validarSessaoId(sessaoIdBruto);
+  const avisoIdNum = Number(avisoIdBruto);
+  if (!Number.isInteger(avisoIdNum) || avisoIdNum < 1) {
+    throw new ErroCaixa(400, 'Aviso PIX inválido');
+  }
+  const avisoId = avisoIdNum;
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-
-    const { rows: sessRows } = await client.query(
-      `SELECT s.id, s.status, s.valor_total, m.numero AS mesa
-       FROM mesa_sessoes s
-       JOIN mesas m ON m.id = s.mesa_id
-       WHERE s.id = $1
-       FOR UPDATE`,
-      [sessaoId]
-    );
-    const sessao = sessRows[0];
-    if (!sessao) throw new ErroCaixa(404, 'Sessão não encontrada');
-    if (sessao.status !== 'aberta') throw new ErroCaixa(409, 'Sessão já está fechada');
+    const sessao = await travarSessao(client, sessaoId);
+    const temVinculo = await pagamentosTemPixAviso(client);
 
     const { rows: avRows } = await client.query(
       `SELECT id, sessao_id, valor, status, pedido_id, cliente_nome
@@ -413,18 +558,49 @@ async function confirmarPixAviso(sessaoId, avisoId) {
     );
     const aviso = avRows[0];
     if (!aviso) throw new ErroCaixa(404, 'Aviso PIX não encontrado');
+
     if (aviso.status !== 'pendente') {
+      // Clique duplo na confirmação: se o pagamento daquele aviso já existe,
+      // devolve-o (idempotente) em vez de erro. O índice único
+      // (pix_aviso_id) garante no banco que nunca haverá um segundo.
+      if (temVinculo) {
+        const { rows: pagos } = await client.query(
+          `SELECT id, valor, forma_pagamento, criado_em
+           FROM sessao_pagamentos WHERE pix_aviso_id = $1 LIMIT 1`,
+          [avisoId]
+        );
+        if (pagos[0]) {
+          const total = sessao.status === 'aberta'
+            ? await totalEntregueDaSessao(client, sessaoId)
+            : Number(sessao.valor_total || 0);
+          const valorPagoReplay = await totalPagoDaSessao(client, sessaoId);
+          await client.query('COMMIT');
+          return {
+            ok: true,
+            mesa: sessao.mesa,
+            sessaoId,
+            avisoId,
+            pagamento: {
+              id: pagos[0].id,
+              valor: Number(pagos[0].valor),
+              formaPagamento: pagos[0].forma_pagamento,
+              criadoEm: pagos[0].criado_em,
+            },
+            valorPago: valorPagoReplay,
+            valorRestante: Number(Math.max(0, total - valorPagoReplay).toFixed(2)),
+            clienteNome: aviso.cliente_nome || null,
+            pedidoId: aviso.pedido_id,
+            idempotentReplay: true,
+          };
+        }
+      }
       throw new ErroCaixa(409, 'Este aviso já foi tratado');
     }
+    if (sessao.status !== 'aberta') throw new ErroCaixa(409, 'Sessão já está fechada');
 
     const valor = Number(Number(aviso.valor).toFixed(2));
-    const { rows: sumRows } = await client.query(
-      `SELECT COALESCE(SUM(valor), 0)::float AS pago
-       FROM sessao_pagamentos WHERE sessao_id = $1`,
-      [sessaoId]
-    );
-    const jaPago = Number(sumRows[0].pago);
-    const total = Number(sessao.valor_total);
+    const total = await sincronizarValorTotalSessao(client, sessaoId);
+    const jaPago = await totalPagoDaSessao(client, sessaoId);
     const restante = Number(Math.max(0, total - jaPago).toFixed(2));
     if (valor > restante + 0.009) {
       throw new ErroCaixa(
@@ -433,12 +609,19 @@ async function confirmarPixAviso(sessaoId, avisoId) {
       );
     }
 
-    const { rows: ins } = await client.query(
-      `INSERT INTO sessao_pagamentos (sessao_id, valor, forma_pagamento)
-       VALUES ($1, $2, 'pix')
-       RETURNING id, valor, forma_pagamento, criado_em`,
-      [sessaoId, valor]
-    );
+    const { rows: ins } = temVinculo
+      ? await client.query(
+          `INSERT INTO sessao_pagamentos (sessao_id, valor, forma_pagamento, pix_aviso_id)
+           VALUES ($1, $2, 'pix', $3)
+           RETURNING id, valor, forma_pagamento, criado_em`,
+          [sessaoId, valor, avisoId]
+        )
+      : await client.query(
+          `INSERT INTO sessao_pagamentos (sessao_id, valor, forma_pagamento)
+           VALUES ($1, $2, 'pix')
+           RETURNING id, valor, forma_pagamento, criado_em`,
+          [sessaoId, valor]
+        );
 
     await client.query(
       `UPDATE pix_avisos SET status = 'confirmado', confirmado_em = now() WHERE id = $1`,
@@ -474,6 +657,7 @@ async function confirmarPixAviso(sessaoId, avisoId) {
       valorRestante: Number(Math.max(0, total - valorPago).toFixed(2)),
       clienteNome: aviso.cliente_nome || null,
       pedidoId: aviso.pedido_id,
+      idempotentReplay: false,
     };
   } catch (err) {
     try {
@@ -485,11 +669,15 @@ async function confirmarPixAviso(sessaoId, avisoId) {
   }
 }
 
+function comRetry(rotulo, fn) {
+  return (...args) => comRetryConcorrencia(() => fn(...args), { rotulo });
+}
+
 module.exports = {
   listSessoesAbertas,
-  registrarPagamento,
-  confirmarPixAviso,
-  fecharSessao,
+  registrarPagamento: comRetry('registrarPagamento', registrarPagamento),
+  confirmarPixAviso: comRetry('confirmarPixAviso', confirmarPixAviso),
+  fecharSessao: comRetry('fecharSessao', fecharSessao),
   ErroCaixa,
   FORMAS,
 };
