@@ -12,6 +12,7 @@ import { elapsed } from "../lib/utils";
 import { imprimirComandaGarcom } from "../lib/print";
 
 export default function Garcom({ token }: { token: string }) {
+  useEffect(() => { if (token) window.location.replace(`/garcom-pwa/?token=${encodeURIComponent(token)}`); }, [token]);
   useAnuncios("garcom");
   useAgora(1000);
 
