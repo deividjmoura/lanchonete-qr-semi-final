@@ -1,5 +1,7 @@
 const pool = require('./pool');
 const { numeroInteiroPositivo } = require('./validacao');
+const { sincronizarValorTotalSessao } = require('./conta');
+const { comRetryConcorrencia } = require('./retry');
 
 class ErroGarcom extends Error {
   constructor(status, message) {
@@ -81,7 +83,9 @@ async function getGarcomPorToken(token) {
  * Entrega parcial ou total.
  * - Sem itemIds: entrega TODOS os itens com status=concluido deste pedido.
  * - Com itemIds: entrega só esses (desde que estejam concluido).
- * Soma só o valor dos itens recém-entregues em mesa_sessoes.valor_total.
+ * mesa_sessoes.valor_total é ressincronizado a partir dos itens entregues da
+ * sessão (db/conta.js) — nunca incrementado às cegas, para uma entrega
+ * repetida/regressão histórica não poder somar o mesmo item duas vezes.
  */
 async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null) {
   const pid = numeroInteiroPositivo(pedidoId, 'id do pedido');
@@ -164,12 +168,10 @@ async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null) {
       [idsEntregar]
     );
     const valorEntregue = Number(totalRows[0].total) || 0;
-    if (valorEntregue > 0) {
-      await client.query(
-        'UPDATE mesa_sessoes SET valor_total = valor_total + $1 WHERE id = $2',
-        [valorEntregue, pedido.sessao_id]
-      );
-    }
+    // Espelha o total autoritativo (todos os itens entregues da sessão) em vez
+    // de somar: se qualquer caminho anterior divergiu o acumulador, a conta
+    // se cura aqui em vez de carregar o erro até o fechamento.
+    await sincronizarValorTotalSessao(client, pedido.sessao_id);
 
     await client.query(
       `UPDATE pedidos
@@ -321,6 +323,7 @@ module.exports = {
   setGarcomAtivo,
   removerGarcom,
   getGarcomPorToken,
-  entregarComoGarcom,
+  entregarComoGarcom: (...args) =>
+    comRetryConcorrencia(() => entregarComoGarcom(...args), { rotulo: 'entregarComoGarcom' }),
   listPedidosRecentes,
 };
