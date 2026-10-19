@@ -98,7 +98,7 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
   <section class="page" id="page-orders" data-page="orders" aria-label="Meus pedidos">
     <div class="section-heading"><div><span class="section-eyebrow">HISTÓRICO LOCAL</span><h3>Meus pedidos</h3></div><button class="primary small" id="newOrderOrders" type="button">＋ Novo pedido</button></div>
     <div class="notice"><span>↻</span><p>Pedidos <strong>salvos offline</strong> permanecem aqui até serem confirmados pelo servidor. Não são considerados enviados antes disso.</p></div>
-    <div id="orders" class="orders-list"></div><div class="section-heading" style="margin-top:22px"><h4>Pedidos nas minhas mesas</h4><button class="secondary small" type="button" id="refreshOrderStatus">Atualizar ↻</button></div><div id="activeOrderStatuses" class="orders-list"></div>
+    <div id="orders" class="orders-list"></div><div class="section-heading" style="margin-top:22px"><h4>Pedidos nas minhas mesas</h4><button class="secondary small" type="button" id="refreshOrderStatus">Atualizar ↻</button></div><button type="button" id="showActiveOrders" class="primary">Abrir pedidos das mesas</button><div id="activeOrderStatuses" class="orders-list" hidden></div>
   </section>
 
   <section class="page" id="page-deliveries" data-page="deliveries" aria-label="Entregas">
@@ -137,6 +137,10 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
   <div class="sheet-footer"><strong id="total">R$ 0,00</strong><button class="primary" id="saveOrder" type="button">Salvar pedido</button></div>
 </dialog>
 
+<dialog id="ordersModal" class="sheet" aria-labelledby="ordersModalTitle">
+ <div class="sheet-top"><div><span class="section-eyebrow">ACOMPANHAMENTO</span><h2 id="ordersModalTitle">Pedidos da mesa</h2></div><button type="button" id="closeOrdersModal" class="close-button" aria-label="Fechar pedidos">×</button></div>
+ <div class="sheet-body"><p class="muted">Acompanhe o preparo e veja o que já foi entregue em cada pedido.</p><div id="modalOrderStatuses" class="orders-list"></div></div>
+</dialog>
 <dialog id="qrModal" class="sheet small-sheet" aria-labelledby="qrTitle">
  <div class="sheet-top"><div><span class="section-eyebrow">AUTOATENDIMENTO</span><h2 id="qrTitle">QR da mesa</h2></div><button type="button" id="closeQr" class="close-button" aria-label="Fechar">×</button></div>
  <div class="sheet-body center-content"><p class="muted">Mostre este QR para o cliente pedir pelo celular.</p><label class="field">Mesa<select id="qrTable"></select></label><div class="qr-row"><img id="qrImage" alt="Código QR do cliente" width="200" height="200"></div><label class="field">Link da mesa<input id="qrUrl" readonly></label><button class="primary full" id="copyQr" type="button">Copiar link</button><p class="hint">O endereço continua disponível offline. A imagem do QR requer conexão para carregar.</p></div>
