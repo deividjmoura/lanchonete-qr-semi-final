@@ -44,7 +44,7 @@ export default function Login() {
   const ativo = PAPEIS.find((p) => p.id === papel);
 
   return (
-    <div className="relative min-h-dvh flex items-center justify-center p-5 overflow-hidden">
+    <div className="relative min-h-dvh flex items-center justify-center p-5 overflow-hidden bg-brand-shell">
       <div className="fixed inset-0 -z-10">
         <div className="glow-orb absolute -top-40 left-[15%] size-[30rem] bg-brand-500/12" />
         <div className="glow-orb absolute bottom-[-10rem] right-[5%] size-[28rem] bg-brand-500/10" />
@@ -66,18 +66,19 @@ export default function Login() {
         initial={{ opacity: 0, y: 30, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-md"
+        className="w-full max-w-md relative"
       >
+        <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-14 w-32 h-60 sm:w-44 opacity-[.09]" style={{background:"url('/branding/delicias/totem.svg') center / contain no-repeat"}} />
         <div className="text-center mb-8">
           <div className="flex justify-center">
             <Logo size="lg" />
           </div>
           <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.32em] text-slate-500">
-            acesso da equipe
+            gestão da casa · São Miguel
           </p>
         </div>
 
-        <div className="glass-deep noise rounded-4xl p-6 sm:p-8">
+        <div className="glass-deep noise rounded-4xl p-6 sm:p-8 border border-brand-500/15 shadow-xl shadow-brand-500/5">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             {PAPEIS.map((p) => (
               <button
