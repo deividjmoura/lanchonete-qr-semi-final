@@ -48,15 +48,17 @@ button{cursor:pointer;font:inherit}
 .bottom-nav button.active{color:#e85644;background:#fff0e9}
 .nav-icon{font-size:21px}
 .sheet:not([open]){display:none}
-.sheet{border:0;padding:0;width:min(750px,100%);max-height:94dvh;border-radius:20px;background:#fffaf5;color:#493641}
+/* Diálogos centralizados: nunca ocupar a tela toda nem ancorar na lateral. */
+.sheet{border:0;padding:0;background:#fffaf5;color:#493641}
+dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!important;width:min(calc(100vw - 32px),520px)!important;max-width:520px!important;height:fit-content!important;max-height:min(82dvh,690px)!important;border-radius:24px!important;display:flex!important;flex-direction:column;overflow:hidden;box-shadow:0 20px 72px #251d1d55}
 .sheet::backdrop{background:#251c24a9}
 .sheet-top,.sheet-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px;background:#fff;border-bottom:1px solid #eddfd0}
-.sheet-body{padding:17px;max-height:calc(94dvh - 160px);overflow:auto}
+.sheet-body{padding:17px;min-height:0;max-height:none!important;overflow-y:auto;overscroll-behavior:contain;flex:1 1 auto}
 .field{display:grid;gap:5px;margin-bottom:12px;font-size:.82rem;font-weight:700}
 input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5c5;border-radius:10px}
 .products,.table-grid,.orders-list{display:grid;gap:10px}
 .product,.order,.table-tile{padding:14px;background:white;border:1px solid #eddfd0;border-radius:13px}
-@media(max-width:480px){.header-inner{align-items:flex-start}.header-actions{flex-direction:column;align-items:flex-end}.brand h1{font-size:1rem}.workspace{padding:18px 13px}.sync-button{font-size:.72rem;padding:7px}.hero-content{padding:23px 19px}.quick-card{min-height:130px;padding:14px}.quick-grid{gap:10px}.sheet{width:100%;height:100dvh;max-height:100dvh;border-radius:0}.sheet-body{max-height:calc(100dvh - 150px)}}
+@media(max-width:480px){.header-inner{align-items:flex-start}.header-actions{flex-direction:column;align-items:flex-end}.brand h1{font-size:1rem}.workspace{padding:18px 13px}.sync-button{font-size:.72rem;padding:7px}.hero-content{padding:23px 19px}.quick-card{min-height:130px;padding:14px}.quick-grid{gap:10px}dialog.sheet[open]{width:calc(100vw - 26px)!important;max-height:min(80dvh,640px)!important;border-radius:22px!important}.sheet-body{max-height:none!important}}
 </style><link rel="icon" href="./icon.svg" type="image/svg+xml"><link rel="stylesheet" href="./styles.css">
 <title>Atendimento · Delicia's São Miguel</title>
 </head>
@@ -121,16 +123,16 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
 </nav>
 
 <dialog id="orderModal" class="sheet" aria-labelledby="modalTitle">
-  <div class="sheet-top"><div><span class="section-eyebrow">NOVO ATENDIMENTO</span><h2 id="modalTitle">Montar pedido</h2></div><button type="button" class="close-button" id="closeOrder" aria-label="Fechar">×</button></div>
+  <div class="sheet-top"><div><span class="section-eyebrow">NOVO ATENDIMENTO</span><h2 id="modalTitle">Montar pedido</h2></div><button type="button" class="close-button" id="closeOrder" aria-label="Fechar" autofocus>×</button></div>
   <div class="sheet-body">
-    <div class="step-card"><span class="step-number">01</span><div><strong>Cliente e mesa</strong><p>Escolha uma mesa na aba Mesas ou use o campo abaixo.</p></div></div>
+    <div class="step-card"><span class="step-number">01</span><div><strong>Cliente e mesa</strong><p>Escolha a mesa e informe o cliente.</p></div></div>
     <div class="modal-fields"><label class="field">Mesa<select id="modalTable"></select></label><label class="field">Nome do cliente<input id="modalCustomer" placeholder="Ex.: Patrícia" maxlength="80"></label></div>
     <div class="action-row"><button id="modalAssume" class="secondary" type="button">Assumir / abrir mesa</button><button id="modalQr" class="text-button" type="button">Mostrar QR</button></div>
     <p id="modalMessage" class="muted small-copy"></p>
-    <div class="step-card top-gap"><span class="step-number">02</span><div><strong>Escolher produtos</strong><p>Como no cardápio do cliente, pesquise e adicione ao carrinho.</p></div></div>
+    <div class="step-card top-gap"><span class="step-number">02</span><div><strong>Escolher produtos</strong><p>Busque pelo nome e adicione ao pedido.</p></div></div>
     <input id="search" class="search" type="search" placeholder="⌕ Digite o nome do produto…" autocomplete="off" aria-label="Buscar produto">
     <div id="products" class="products"></div>
-    <div class="step-card top-gap"><span class="step-number">03</span><div><strong>Seu pedido</strong><p>Confira quantidades, adicionais e observações.</p></div></div>
+    <div class="step-card top-gap"><span class="step-number">03</span><div><strong>Seu pedido</strong><p>Revise os itens antes de salvar.</p></div></div>
     <div id="cart"><p class="muted">Escolha algum produto para começar.</p></div>
     <label class="field">Observações gerais<textarea id="orderNote" rows="2" maxlength="500" placeholder="Ex.: bebidas primeiro"></textarea></label>
   </div>
