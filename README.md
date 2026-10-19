@@ -142,13 +142,16 @@ npm run build
 npm run test:regression
 npm run test:smoke
 npm run test:full
+npm run test:seguranca
 npm run test:carga
+npm run test:carga70
 npm run test:dia
 ```
 
 - `test:regression`: regressões automatizadas, incluindo contratos do backend e testes estáticos da PWA.
 - `test:smoke` e `test:full`: precisam de servidor, PostgreSQL e usuários/cardápio preparados; criam ou alteram dados.
-- `test:carga` e `test:dia`: cenários operacionais/concor­rentes que alteram dados. Rode-os **somente em ambiente isolado**, nunca no banco usado pela lanchonete.
+- `test:seguranca`: testa autorização, IDOR, CSRF, limite de corpo e outras defesas contra um servidor real; cria/edita dados de teste e não deve apontar para produção.
+- `test:carga`, `test:carga70` e `test:dia`: cenários operacionais/concor­rentes que alteram dados. Rode-os **somente em ambiente isolado**, nunca no banco usado pela lanchonete.
 
 O CI do GitHub executa instalação limpa, TypeScript, build, testes de regressão e verificações de sintaxe. CI verde não substitui teste de integração contra PostgreSQL, teste visual em navegador real nem validação no Railway.
 
