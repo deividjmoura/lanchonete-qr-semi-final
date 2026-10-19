@@ -1,6 +1,6 @@
 // Popula categorias/produtos/adicionais a partir do data/db.json atual.
 // Idempotente: se já existir categoria, aborta cardápio sem FORCE_SEED.
-// Mesas 1..NUM_MESAS sempre garantidas.
+// Mesas 1..NUM_MESAS sempre garantidas (sem apagar registros existentes).
 // Compatível com schema simples e com V3 (estabelecimento_id).
 //
 // Uso: node db/seed.js
@@ -12,7 +12,13 @@ const pool = require('./pool');
 const { garantirStaffSeed } = require('./auth');
 
 const DB_JSON = path.join(__dirname, '..', 'data', 'db.json');
-const NUM_MESAS = 20;
+// Capacidade operacional configurável sem apagar mesas ou pedidos existentes.
+// Default conservador de 70 mesas; pode ser ajustado por NUM_MESAS (1..200).
+const numeroConfigurado = Number(process.env.NUM_MESAS || 70);
+if (!Number.isSafeInteger(numeroConfigurado) || numeroConfigurado < 1 || numeroConfigurado > 200) {
+  throw new Error('NUM_MESAS deve ser um inteiro entre 1 e 200');
+}
+const NUM_MESAS = numeroConfigurado;
 
 async function columnExists(client, table, column) {
   const { rows } = await client.query(
