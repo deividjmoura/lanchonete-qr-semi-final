@@ -2,50 +2,88 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#b91c1c"><meta name="description" content="Atendimento de garçom com suporte offline.">
-<link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./styles.css">
-<title>Delicia’s São Miguel · Garçom</title>
+<meta name="theme-color" content="#f05e4a"><meta name="description" content="Delicia's São Miguel · atendimento de mesa online e offline">
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg" type="image/svg+xml"><link rel="stylesheet" href="./styles.css">
+<title>Atendimento · Delicia's São Miguel</title>
 </head>
 <body>
-<header class="top"><div><span class="eyebrow">DELÍCIA’S SÃO MIGUEL</span><h1>Atendimento</h1><p id="connection">Verificando conexão…</p><p id="identity">Validando identidade do garçom…</p></div><div><button id="installBtn" class="secondary" type="button">Instalar aplicativo</button><button id="syncBtn" class="secondary">Sincronizar</button></div></header>
-<main>
-<section class="panel">
-<div class="section-title"><div><span class="eyebrow">01 · MESA</span><h2>Novo pedido</h2></div><span id="queueCount" class="count">0 pendentes</span></div>
-<div class="fields"><label>Mesa<select id="tableSelect"></select></label><label>Nome do cliente<input id="customerName" maxlength="80" placeholder="Ex.: Maria" autocomplete="off"></label></div>
-</section>
-<section class="panel">
-<div class="section-title"><div><span class="eyebrow">02 · CARDÁPIO</span><h2>Escolha os produtos</h2></div></div>
-<input id="search" class="search" type="search" placeholder="Buscar produto…" aria-label="Buscar produto">
-<div id="products" class="products"></div>
-</section>
-<section class="panel">
-<div class="section-title"><div><span class="eyebrow">03 · REVISÃO</span><h2>Seu pedido</h2></div></div>
-<div id="cart"><p class="muted">Adicione produtos ao pedido.</p></div>
-<label>Observações do pedido<textarea id="orderNote" rows="2" maxlength="500" placeholder="Ex.: entregar primeiro as bebidas"></textarea></label>
-<div class="submit-row"><strong id="total">R$ 0,00</strong><button id="saveOrder">Salvar pedido</button></div>
-<p class="hint">O pedido é guardado neste aparelho antes de qualquer tentativa de envio.</p>
-</section>
-<section class="panel">
-<div class="section-title"><div><span class="eyebrow">04 · ACOMPANHAMENTO</span><h2>Pedidos deste aparelho</h2></div></div><div id="orders"></div>
-</section>
-<section class="panel">
-<div class="section-title"><div><span class="eyebrow">05 · ENTREGAS</span><h2>Pedidos prontos para entregar</h2></div></div>
-<div id="readyOrders"><p class="muted">Conecte-se para consultar a cozinha.</p></div>
-<button id="refreshDeliveries" class="secondary" type="button">Atualizar entregas</button>
-</section>
-<section class="panel">
-<div class="section-title"><div><span class="eyebrow">06 · AUTOATENDIMENTO</span><h2>QR da mesa</h2></div></div>
-<p class="muted">Compartilhe o endereço da mesa para o cliente pedir pelo próprio celular. O QR abre o fluxo público existente.</p>
-<div class="fields"><label>Mesa do QR<select id="qrTable"></select></label><label>Endereço público<input id="qrUrl" readonly></label></div>
-<div class="qr-row"><img id="qrImage" alt="QR code da mesa" width="160" height="160"><button id="copyQr" class="secondary">Copiar endereço</button></div>
-<p class="hint">A imagem QR precisa de internet para ser gerada. O endereço permanece disponível offline.</p>
-</section>
-<section class="panel">
-<div class="section-title"><div><span class="eyebrow">07 · COBRANÇA</span><h2>Conta e pagamento</h2></div></div>
-<p class="muted">Interface preparada. A consulta e as ações de cobrança ficam desabilitadas até o backend publicar os contratos documentados.</p>
-<button class="secondary" disabled>Consultar conta da mesa</button> <button class="secondary" disabled>Solicitar cobrança</button>
-</section>
+<header class="app-header">
+  <div class="header-inner">
+    <div class="brand"><span class="brand-symbol" aria-hidden="true">✳</span><div><span class="eyebrow">DELÍCIA'S SÃO MIGUEL</span><h1>Atendimento <span class="brand-italic">de praia</span></h1></div></div>
+    <div class="header-actions"><span class="connection-pill" id="connection">Verificando rede…</span><button id="installBtn" class="icon-text secondary" type="button">↓ Instalar</button></div>
+  </div>
+</header>
+<main class="workspace">
+  <div class="greeting">
+    <div><p id="identity" class="section-eyebrow">Carregando seu atendimento…</p><h2 id="pageTitle">Seu salão, <em>em ordem.</em></h2><p id="pageSubtitle" class="subtitle">Mesas, pedidos e entregas sem bagunça.</p></div>
+    <button id="syncBtn" class="secondary sync-button" type="button">↻ Sincronizar</button>
+  </div>
+
+  <section class="page active" id="page-home" data-page="home" aria-label="Início">
+    <div class="hero-panel">
+      <div class="hero-content"><span class="eyebrow light">ATENDIMENTO MAIS ÁGIL</span><h3>Um pedido de cada vez.<br><em>Todo mundo feliz.</em></h3><p>Abra uma mesa, anote o consumo ou deixe o cliente pedir pelo próprio QR.</p><button class="button-light" id="newOrderHome" type="button">＋ Novo pedido <span>→</span></button></div>
+      <img class="hero-mascot" src="/branding/delicias/cozinheira.svg" alt="" loading="lazy" onerror="this.hidden=true">
+    </div>
+    <div class="quick-grid">
+      <button class="quick-card" id="openTablesHome" type="button"><span class="quick-icon">▦</span><strong>Mesas</strong><small>Assumir ou compartilhar QR</small><span class="quick-arrow">↗</span></button>
+      <button class="quick-card" id="openOrdersHome" type="button"><span class="quick-icon">▤</span><strong>Meus pedidos</strong><small>Offline, enviados e conflitos</small><span id="queueCount" class="count">0 pendentes</span></button>
+      <button class="quick-card" id="openDeliveriesHome" type="button"><span class="quick-icon">♨</span><strong>Entregas</strong><small>O que já saiu da cozinha</small><span class="quick-arrow">↗</span></button>
+      <button class="quick-card" id="openBillingHome" type="button"><span class="quick-icon">R$</span><strong>Cobrança</strong><small>Consumo e fechamento</small><span class="quick-arrow">↗</span></button>
+    </div>
+    <div class="notice"><span aria-hidden="true">◉</span><p><b>Sem internet?</b> Continue anotando. Pedidos salvos neste aparelho só chegam à cozinha após sincronização confirmada.</p></div>
+  </section>
+
+  <section class="page" id="page-tables" data-page="tables" aria-label="Mesas">
+    <div class="section-heading"><div><span class="section-eyebrow">SEU SALÃO</span><h3>Mesas e atendimento</h3></div><button class="primary small" id="newOrderTables" type="button">＋ Novo pedido</button></div>
+    <div class="panel compact"><label class="field">Escolha uma mesa<select id="tableSelect" aria-label="Mesa para atendimento"></select></label><label class="field">Nome do cliente<input id="customerName" maxlength="80" placeholder="Como podemos chamar o cliente?" autocomplete="off"></label><div class="action-row"><button class="primary" id="assumeTable" type="button">Assumir mesa</button><button class="secondary" id="showQr" type="button">Mostrar QR da mesa</button></div><p id="tableMessage" class="muted small-copy">Você pode assumir uma mesa mesmo quando o cliente já fez um pedido pelo QR.</p></div>
+    <div class="panel"><div class="section-heading"><h4>Mesas disponíveis</h4><button id="refreshTables" class="text-button" type="button">Atualizar ↻</button></div><div id="tableGrid" class="table-grid"><p class="muted">Carregando mesas…</p></div></div>
+  </section>
+
+  <section class="page" id="page-orders" data-page="orders" aria-label="Meus pedidos">
+    <div class="section-heading"><div><span class="section-eyebrow">HISTÓRICO LOCAL</span><h3>Meus pedidos</h3></div><button class="primary small" id="newOrderOrders" type="button">＋ Novo pedido</button></div>
+    <div class="notice"><span>↻</span><p>Pedidos <strong>salvos offline</strong> permanecem aqui até serem confirmados pelo servidor. Não são considerados enviados antes disso.</p></div>
+    <div id="orders" class="orders-list"></div>
+  </section>
+
+  <section class="page" id="page-deliveries" data-page="deliveries" aria-label="Entregas">
+    <div class="section-heading"><div><span class="section-eyebrow">COZINHA E BAR</span><h3>Prontos para entregar</h3></div><button id="refreshDeliveries" class="secondary small" type="button">Atualizar ↻</button></div>
+    <div id="readyOrders" class="orders-list"><p class="muted">Conecte-se para consultar os pedidos prontos.</p></div>
+  </section>
+
+  <section class="page" id="page-billing" data-page="billing" aria-label="Cobrança">
+    <div class="section-heading"><div><span class="section-eyebrow">FECHAMENTO DE CONTA</span><h3>Cobrança</h3></div></div>
+    <div class="panel coming-soon"><span class="coming-icon">▤</span><h4>Fechamento em preparação</h4><p>O pagamento pelo garçom ficará disponível aqui após a integração financeira segura. Por enquanto, a confirmação do pagamento e o fechamento da mesa são feitos no Caixa.</p><button class="secondary" disabled type="button">Cobrança pelo garçom — em breve</button></div>
+  </section>
 </main>
-<footer>Atendimento PWA · Pedidos offline só aparecem na cozinha quando a sincronização for confirmada.</footer>
+
+<nav class="bottom-nav" aria-label="Navegação do garçom">
+  <button type="button" data-tab="home" class="active" aria-current="page"><span class="nav-icon">⌂</span><span>Início</span></button>
+  <button type="button" data-tab="tables"><span class="nav-icon">▦</span><span>Mesas</span></button>
+  <button type="button" data-tab="orders"><span class="nav-icon">▤</span><span>Pedidos</span></button>
+  <button type="button" data-tab="deliveries"><span class="nav-icon">♨</span><span>Entregas</span></button>
+  <button type="button" data-tab="billing"><span class="nav-icon">R$</span><span>Cobrança</span></button>
+</nav>
+
+<dialog id="orderModal" class="sheet" aria-labelledby="modalTitle">
+  <div class="sheet-top"><div><span class="section-eyebrow">NOVO ATENDIMENTO</span><h2 id="modalTitle">Montar pedido</h2></div><button type="button" class="close-button" id="closeOrder" aria-label="Fechar">×</button></div>
+  <div class="sheet-body">
+    <div class="step-card"><span class="step-number">01</span><div><strong>Cliente e mesa</strong><p>Escolha uma mesa na aba Mesas ou use o campo abaixo.</p></div></div>
+    <div class="modal-fields"><label class="field">Mesa<select id="modalTable"></select></label><label class="field">Nome do cliente<input id="modalCustomer" placeholder="Ex.: Patrícia" maxlength="80"></label></div>
+    <div class="action-row"><button id="modalAssume" class="secondary" type="button">Assumir / abrir mesa</button><button id="modalQr" class="text-button" type="button">Mostrar QR</button></div>
+    <p id="modalMessage" class="muted small-copy"></p>
+    <div class="step-card top-gap"><span class="step-number">02</span><div><strong>Escolher produtos</strong><p>Como no cardápio do cliente, pesquise e adicione ao carrinho.</p></div></div>
+    <input id="search" class="search" type="search" placeholder="⌕ Buscar no cardápio…" aria-label="Buscar produto">
+    <div id="products" class="products"></div>
+    <div class="step-card top-gap"><span class="step-number">03</span><div><strong>Seu pedido</strong><p>Confira quantidades, adicionais e observações.</p></div></div>
+    <div id="cart"><p class="muted">Escolha algum produto para começar.</p></div>
+    <label class="field">Observações gerais<textarea id="orderNote" rows="2" maxlength="500" placeholder="Ex.: bebidas primeiro"></textarea></label>
+  </div>
+  <div class="sheet-footer"><strong id="total">R$ 0,00</strong><button class="primary" id="saveOrder" type="button">Salvar pedido</button></div>
+</dialog>
+
+<dialog id="qrModal" class="sheet small-sheet" aria-labelledby="qrTitle">
+ <div class="sheet-top"><div><span class="section-eyebrow">AUTOATENDIMENTO</span><h2 id="qrTitle">QR da mesa</h2></div><button type="button" id="closeQr" class="close-button" aria-label="Fechar">×</button></div>
+ <div class="sheet-body center-content"><p class="muted">Mostre este QR para o cliente pedir pelo celular.</p><label class="field">Mesa<select id="qrTable"></select></label><div class="qr-row"><img id="qrImage" alt="Código QR do cliente" width="200" height="200"></div><label class="field">Link da mesa<input id="qrUrl" readonly></label><button class="primary full" id="copyQr" type="button">Copiar link</button><p class="hint">O endereço continua disponível offline. A imagem do QR requer conexão para carregar.</p></div>
+</dialog>
 <script type="module" src="./app.js"></script>
 </body></html>
