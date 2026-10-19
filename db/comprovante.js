@@ -46,4 +46,14 @@ async function comprovanteSessao(idBruto) {
   }catch(e){try{await client.query('ROLLBACK')}catch(_){} throw e}
   finally{client.release()}
 }
-module.exports={comprovanteSessao,ErroComprovante};
+async function listarComprovantesRecentes() {
+  const {rows}=await pool.query(`
+    SELECT s.id,m.numero AS mesa,s.fechada_em,s.cliente_nome,
+      COALESCE(s.valor_cobrado,s.valor_total)::numeric(12,2) AS total
+    FROM mesa_sessoes s JOIN mesas m ON m.id=s.mesa_id
+    WHERE s.status='fechada'
+    ORDER BY s.fechada_em DESC,s.id DESC LIMIT 25`);
+  return rows.map(r=>({id:r.id,mesa:r.mesa,fechadaEm:r.fechada_em,
+    clienteNome:r.cliente_nome,total:Number(r.total)}));
+}
+module.exports={comprovanteSessao,listarComprovantesRecentes,ErroComprovante};
