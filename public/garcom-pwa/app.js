@@ -128,6 +128,10 @@ function renderMyTables(){
   const title=document.createElement('strong');title.textContent='Mesa '+m.numero;
   const info=document.createElement('small');info.textContent=(m.clienteNome||'Cliente não informado')+' · Anotar novo pedido ↗';
   btn.append(title,info);btn.onclick=()=>openOrder(m.numero);root.append(btn);
+  const actions=document.createElement('div');actions.className='table-actions';
+  const detail=document.createElement('button');detail.className='secondary small';detail.textContent='Ver pedidos';detail.onclick=()=>openOrdersModal(m.numero);
+  const leave=document.createElement('button');leave.className='secondary small leave-table';leave.textContent='Deixar mesa';leave.onclick=()=>leaveTable(m.numero);
+  actions.append(detail,leave);root.append(actions);
  }
 }
 let editingDraftId=null;
@@ -168,9 +172,10 @@ async function loadOrderStatuses(){
  if(!navigator.onLine||!waiterToken)return;
  try{
    const rows=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/atendimentos');
-   const root=$('#activeOrderStatuses');root.replaceChildren();
+   const root=$('#modalOrderStatuses');root.replaceChildren();
    if(!rows.length){root.innerHTML='<p class="muted">Nenhum pedido nas suas mesas abertas.</p>'}
    for(const o of rows){
+     const showOrder=selectedOrdersTable===null||Number(o.mesa)===selectedOrdersTable;
      const ready=(o.itens||[]).filter(i=>i.status==='concluido');
      const card=document.createElement('article');card.className='order';
      const heading=document.createElement('div');heading.className='order-head';
@@ -188,7 +193,7 @@ async function loadOrderStatuses(){
      }
      card.append(items);
      if(o.podeEditar){const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent='Editar pedido';edit.onclick=()=>editLiveOrder(o);card.append(edit)}
-     root.append(card);
+     if(showOrder)root.append(card);
      // Nunca repete avisos ao entrar novamente na página ou após reabrir.
      const newReady=ready.filter(i=>!announcedReady.has(Number(i.id)));
      if(!firstLiveLoad&&newReady.length&&readyAlertsEnabled)notifyReady(o,newReady.length);
@@ -197,7 +202,7 @@ async function loadOrderStatuses(){
      localStorage.setItem(READY_STORAGE,JSON.stringify([...announcedReady]));
    }
    firstLiveLoad=false;liveOrders=rows;
- }catch(e){$('#activeOrderStatuses').textContent='Falha ao atualizar pedidos: '+e.message;}
+ }catch(e){$('#modalOrderStatuses').textContent='Falha ao atualizar pedidos: '+e.message;}
 }
 function notifyReady(o,quantidade=1){
  const title='Pedido pronto · Mesa '+o.mesa;
@@ -223,3 +228,23 @@ if(readyAlertsEnabled)$('#enableAlerts').textContent='🔔 Avisos de entrega ati
 
 $('#readyToastAction').addEventListener('click',()=>{switchTab('deliveries');$('#readyToast').hidden=true});
 $('#readyToastDismiss').addEventListener('click',()=>{$('#readyToast').hidden=true});
+
+let selectedOrdersTable=null;
+function openOrdersModal(table){
+ selectedOrdersTable=Number(table)||null;
+ $('#ordersModalTitle').textContent=selectedOrdersTable?'Pedidos · Mesa '+selectedOrdersTable:'Pedidos das minhas mesas';
+ $('#ordersModal').showModal();
+ void loadOrderStatuses();
+}
+async function leaveTable(table){
+ if(!navigator.onLine){alert('Para deixar a mesa, conecte-se à internet.');return}
+ if(!confirm('Deixar a mesa '+table+'? A conta do cliente continuará aberta.'))return;
+ try{
+   await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/mesas/'+table+'/deixar',{method:'POST'});
+   await loadMesas();await loadOrderStatuses();
+   $('#tableMessage').textContent='Você deixou a mesa '+table+'. A conta continua aberta.';
+ }catch(e){alert(e.message||'Não foi possível deixar a mesa.')}
+}
+$('#showActiveOrders').addEventListener('click',()=>openOrdersModal(null));
+$('#closeOrdersModal').addEventListener('click',()=>$('#ordersModal').close());
+$('#ordersModal').addEventListener('close',()=>{selectedOrdersTable=null});
