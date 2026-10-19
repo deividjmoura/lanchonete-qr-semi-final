@@ -623,3 +623,39 @@ export function imprimirRelatorioPdf(opts: {
     alert("Não foi possível abrir o relatório.");
   }
 }
+
+
+/** Comprovante financeiro de uma sessão FECHADA; não tem validade fiscal. */
+export function imprimirComprovanteConsumo(c: {
+  id:number; mesa:number; clienteNome?:string|null; garcomNome?:string|null;
+  abertaEm:string; fechadaEm:string; totalConsumo:number; desconto:number; taxa:number;
+  valorCobrado:number; valorPago:number; saldo:number;
+  itens:Array<{nome:string;quantidade:number;precoUnitario:number;adicionais:number;adicionaisNomes?:string;total:number;pedidoId:number}>;
+  pagamentos:Array<{id:number;valor:number;forma:string;criadoEm:string}>;
+}) {
+  const linha=(label:string,v:number)=>`<div class="meta" style="display:flex;justify-content:space-between;gap:8px;margin:3px 0"><span>${esc(label)}</span><b>${esc(BRL(v))}</b></div>`;
+  const itens=c.itens.map(i=>`<div class="item"><div class="item-head" style="display:flex;justify-content:space-between;gap:8px">
+      <span>${esc(i.quantidade)}x ${esc(i.nome)}</span><span>${esc(BRL(i.total))}</span></div>
+      ${i.adicionaisNomes?`<div class="item-extra">+ ${esc(i.adicionaisNomes)}</div>`:""}</div>`).join("");
+  const pagamentos=c.pagamentos.map(p=>`<div class="meta" style="display:flex;justify-content:space-between;gap:8px">
+    <span>${esc(formaLabel(p.forma))}</span><b>${esc(BRL(p.valor))}</b></div>`).join("");
+  const body=`<div class="center"><p class="title">DELÍCIA'S SÃO MIGUEL</p>
+    <p class="sub">COMPROVANTE DE CONSUMO<br><b>DOCUMENTO NÃO FISCAL</b></p></div>
+    <hr class="line-solid"/>
+    <div class="center"><div class="mesa">MESA ${esc(c.mesa)}</div><b>CONTA #${esc(c.id)}</b></div>
+    <div class="meta" style="margin-top:6px"><b>Cliente:</b> ${esc(c.clienteNome||"Não informado")}</div>
+    ${c.garcomNome?`<div class="meta"><b>Garçom:</b> ${esc(c.garcomNome)}</div>`:""}
+    <div class="meta"><b>Aberta:</b> ${esc(fmtHora(c.abertaEm))}</div>
+    <div class="meta"><b>Fechada:</b> ${esc(fmtHora(c.fechadaEm))}</div>
+    <hr class="line"/>${itens||'<p class="meta">Nenhum item entregue.</p>'}<hr class="line"/>
+    ${linha("Consumo",c.totalConsumo)}
+    ${linha("Desconto", -c.desconto)}
+    ${linha("Taxa",c.taxa)}
+    <hr class="line-solid"/>${linha("TOTAL COBRADO",c.valorCobrado)}
+    <hr class="line"/><p class="bold">PAGAMENTOS REGISTRADOS</p>
+    ${pagamentos||'<p class="meta">Nenhum pagamento registrado</p>'}
+    <hr class="line"/>${linha("Total recebido",c.valorPago)}
+    ${linha("Saldo",c.saldo)}
+    <div class="foot">Documento não fiscal. Não substitui NFC-e ou NF-e.<br>Obrigado pela preferência!</div>`;
+  openPrintWindow(`Comprovante de consumo - Mesa ${c.mesa}`,body,true);
+}

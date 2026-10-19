@@ -11,6 +11,7 @@ import { ir, useAgora } from "../router";
 import type { FormaPagamento, Sessao } from "../lib/types";
 import { FORMAS, consumoSessao, pagoSessao, usePub } from "../store/usePub";
 import { api } from "../lib/api";
+import { imprimirComprovanteConsumo } from "../lib/print";
 import { BRL, elapsed, montarPixEMV } from "../lib/utils";
 import type { PixConfig } from "../lib/types";
 import { cn } from "../utils/cn";
@@ -40,6 +41,20 @@ export default function Caixa() {
 
   const pedidos = usePub((s) => s.pedidos);
   const [selId, setSelId] = useState<number | null>(null);
+  const [comprovantes, setComprovantes] = useState<Array<{id:number;mesa:number;clienteNome:string|null;total:number;fechadaEm:string}>>([]);
+  const atualizarComprovantes = () => {
+    void api.comprovantesRecentes().then(setComprovantes).catch(() => null);
+  };
+  useEffect(() => {
+    atualizarComprovantes();
+    const t = setInterval(atualizarComprovantes, 20000);
+    return () => clearInterval(t);
+  }, []);
+  const imprimirConta = async (id:number) => {
+    try { imprimirComprovanteConsumo(await api.comprovanteSessao(id)); }
+    catch (e) { alert(e instanceof Error ? e.message : "Falha ao imprimir comprovante"); }
+  };
+
 
   const abertas = sessoes.filter((s) => s.status === "aberta");
   const selecionada = abertas.find((s) => s.id === selId) || abertas[0] || null;
@@ -163,6 +178,27 @@ export default function Caixa() {
           </AnimatePresence>
         </section>
       </div>
+      <section className="mt-6 glass rounded-3xl p-4 sm:p-5" aria-label="Comprovantes de contas fechadas">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div>
+            <h2 className="font-semibold text-navy-900">Comprovantes recentes</h2>
+            <p className="text-xs text-slate-500">Reimprima o consumo e os pagamentos das últimas contas fechadas</p>
+          </div>
+          <Btn size="sm" variant="outline" onClick={atualizarComprovantes}>Atualizar</Btn>
+        </div>
+        <div className="space-y-2">
+          {comprovantes.map(c => <div key={c.id} className="flex items-center gap-3 justify-between rounded-xl bg-slate-100 p-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-navy-900">Mesa {c.mesa} · Conta #{c.id}</p>
+              <p className="text-xs text-slate-500">{c.clienteNome || "Cliente não informado"} · {BRL(c.total)}</p>
+            </div>
+            <Btn size="sm" variant="outline" onClick={() => void imprimirConta(c.id)}>
+              <Receipt className="size-4"/> Imprimir
+            </Btn>
+          </div>)}
+          {!comprovantes.length && <p className="text-sm text-slate-500 py-3">Nenhuma conta fechada recentemente.</p>}
+        </div>
+      </section>
     </OpsShell>
   );
 }
