@@ -284,7 +284,7 @@ async function gravarItensPedido(client, pedidoId, itensInput) {
   return { itensGravados, total: Number(total.toFixed(2)), mudouDisponibilidade };
 }
 
-async function criarPedido(token, body) {
+async function criarPedido(token, body, atendimento = null) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new ErroPedido(400, 'Dados do pedido inválidos');
   }
@@ -301,6 +301,18 @@ async function criarPedido(token, body) {
     if (!mesa) throw new ErroPedido(404, 'Mesa não encontrada');
 
     const sessaoId = await getOuAbrirSessao(client, mesa.id);
+
+    // Pedido lançado por garçom: o servidor valida autoria dentro da mesma
+    // transação, sob o lock da mesa, inclusive durante uma transferência.
+    if (atendimento) {
+      const { rows: atribuidos } = await client.query(
+        'SELECT garcom_responsavel_id FROM mesa_sessoes WHERE id = $1 FOR UPDATE',
+        [sessaoId]
+      );
+      if (atribuidos[0]?.garcom_responsavel_id !== atendimento.garcomId) {
+        throw new ErroPedido(409, 'Assuma a mesa antes de enviar o pedido');
+      }
+    }
 
     // Idempotência: a mesa está travada (getOuAbrirSessao) desde o início da
     // transação, então "verifica e insere" aqui é livre de corrida para esta
@@ -343,6 +355,15 @@ async function criarPedido(token, body) {
           [sessaoId, observacaoGeral, clienteNome]
         );
     const pedido = pedidoRows[0];
+    if (atendimento) {
+      await client.query(
+        `UPDATE pedidos
+           SET garcom_registrou_id=$2, garcom_id=$2, garcom_nome=$3,
+               origem_pedido='garcom', claimed_at=now()
+          WHERE id=$1`,
+        [pedido.id, atendimento.garcomId, atendimento.garcomNome]
+      );
+    }
 
     await client.query(
       `UPDATE mesa_sessoes SET pix_informado_em = NULL WHERE id = $1`,
