@@ -59,7 +59,7 @@ const {
   garantirStaffSeed,
 } = require('./db/auth');
 const { golpePermitido } = require('./db/rateLimit');
-const { ErroAtendimento, listarMesasGarcom, assumirMesa, metricasGarcons } = require('./db/atendimento');
+const { ErroAtendimento, listarMesasGarcom, assumirMesa, criarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
 const { normalizarChavePix, inspecionarChavePix } = require('./db/pix-normaliza');
 const { subscribe, broadcast } = require('./db/events');
 const pool = require('./db/pool');
@@ -372,6 +372,16 @@ const server = http.createServer(async (req, res) => {
         return json(res, 200, out);
       } catch (e) {
         if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message });
+        throw e;
+      }
+    }
+    if ((m = p.match(/^\\/api\\/garcom\\/([^/]+)\\/mesas\\/(\\d+)\\/pedidos$/)) && req.method === 'POST') {
+      try {
+        const pedido = await criarPedidoGarcom(m[1], m[2], await body(req));
+        if (!pedido.idempotentReplay) broadcast('update', { type: 'pedido_novo', mesa: pedido.mesa });
+        return json(res, pedido.idempotentReplay ? 200 : 201, pedido);
+      } catch (e) {
+        if (e instanceof ErroAtendimento || e instanceof ErroPedido) return json(res, e.status, { error: e.message });
         throw e;
       }
     }
