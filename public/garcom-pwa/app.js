@@ -71,7 +71,7 @@ function openOrder(tableNumber){
  editingServerId=null;editingDraftId=null;cart.clear();renderCart();const n=Number(tableNumber||$('#tableSelect').value||tables[0]);if(n)$('#modalTable').value=String(n);
  $('#modalCustomer').value=$('#customerName').value||'';
  $('#modalMessage').textContent='';
- $('#orderModal').showModal();$('#modalCustomer').focus();
+ $('#orderModal').showModal();
 }
 function openQr(n){
  const table=Number(n||$('#modalTable').value||$('#tableSelect').value);
@@ -267,3 +267,15 @@ async function leaveTable(table){
 $('#showActiveOrders').addEventListener('click',()=>openOrdersModal(null));
 $('#closeOrdersModal').addEventListener('click',()=>$('#ordersModal').close());
 $('#ordersModal').addEventListener('close',()=>{selectedOrdersTable=null});
+
+
+// O navegador mantém o fundo inerte durante showModal(); impedir rolagem ao fundo.
+for (const modal of document.querySelectorAll('dialog.sheet')) {
+  modal.addEventListener('click', event => {
+    // Fechar apenas quando o toque foi diretamente no backdrop do dialog.
+    if (event.target !== modal) return;
+    const rect = modal.getBoundingClientRect();
+    if (event.clientX < rect.left || event.clientX > rect.right ||
+        event.clientY < rect.top || event.clientY > rect.bottom) modal.close();
+  });
+}
