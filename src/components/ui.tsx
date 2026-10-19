@@ -7,16 +7,9 @@ import { alternarTema, temaAtual, EVENTO_TEMA, type Tema } from "../lib/tema";
 /* Identidade da casa: logotipo tipográfico + selo da cozinheira.
    As imagens de referência são preservadas como direção visual do produto. */
 export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
-  const compact = size === "sm";
   return (
-    <span className={cn("brand-logo inline-flex items-center gap-2 select-none min-w-0", compact ? "max-w-[13rem]" : size === "lg" ? "max-w-[21rem]" : "max-w-[17rem]")}>
-      <span aria-hidden="true" className={cn("rounded-full shrink-0 flex items-center justify-center bg-brand-500/10 border border-brand-500/25",compact ? "size-9" : "size-12")}>
-        <img src="/branding/delicias/cozinheira.svg" alt="" className="h-full w-full object-contain" />
-      </span>
-      <span className="flex flex-col leading-none min-w-0">
-        <span className={cn("font-brand serif tracking-tight text-navy-900 whitespace-nowrap",compact ? "text-[22px]" : size === "lg" ? "text-4xl" : "text-3xl")}>Delicia’s</span>
-        <span className={cn("font-semibold uppercase tracking-[.26em] text-brand-600 whitespace-nowrap",compact ? "text-[8px]" : "text-[10px]")}>São Miguel</span>
-      </span>
+    <span className={cn("brand-logo inline-flex shrink-0 items-center overflow-hidden rounded-xl bg-[#f05e4a] shadow-sm",size === "sm" ? "h-10 w-[90px] sm:w-[118px]" : size === "lg" ? "h-[118px] w-[270px] sm:h-[145px] sm:w-[330px]" : "h-16 w-[150px]")}>
+      <img src="/branding/delicias/logo-original.svg" alt="Delicia’s São Miguel" className="w-full h-full object-contain" draggable={false}/>
     </span>
   );
 }
