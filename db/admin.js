@@ -50,6 +50,42 @@ async function listMesas() {
   }));
 }
 
+// Configuração operacional: a lista começa com 20 mesas, cresce até 70.
+// Os tokens existentes permanecem intactos; nenhuma mesa é excluída.
+async function quantidadeMesasAtivas() {
+  const { rows } = await pool.query('SELECT quantidade FROM configuracao_mesas WHERE id = 1');
+  return Number(rows[0]?.quantidade ?? 20);
+}
+
+async function ativarMesas(quantidade) {
+  if (!Number.isSafeInteger(quantidade) || quantidade < 1 || quantidade > 70) {
+    throw new ErroAdmin(400, 'Informe uma quantidade inteira de 1 a 70 mesas');
+  }
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Serializa ampliações simultâneas e protege do limite excedido.
+    const { rows } = await client.query('SELECT quantidade FROM configuracao_mesas WHERE id = 1 FOR UPDATE');
+    if (!rows.length) throw new ErroAdmin(500, 'Configuração de mesas não inicializada');
+    const atual = Number(rows[0].quantidade);
+    if (quantidade < atual) throw new ErroAdmin(400, 'Não é permitido desativar mesas por esta operação');
+    if (quantidade > 70) throw new ErroAdmin(400, 'Limite de 70 mesas');
+    // Seed já provisiona até NUM_MESAS; garantir que há registros antes de habilitar.
+    const { rows: existentes } = await client.query('SELECT COUNT(*)::int AS total FROM mesas WHERE numero BETWEEN 1 AND $1', [quantidade]);
+    if (existentes[0].total < quantidade) {
+      throw new ErroAdmin(409, 'Mesas ainda não provisionadas. Configure NUM_MESAS=70 e execute o seed.');
+    }
+    await client.query('UPDATE configuracao_mesas SET quantidade = $1 WHERE id = 1', [quantidade]);
+    await client.query('COMMIT');
+    return { quantidade };
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 function mapProdutoRow(p) {
   return {
     id: p.id,
@@ -515,6 +551,8 @@ async function removerCategoria(id) {
 module.exports = {
   ErroAdmin,
   listMesas,
+  quantidadeMesasAtivas,
+  ativarMesas,
   getCardapioAdmin,
   criarCategoria,
   atualizarCategoria,
