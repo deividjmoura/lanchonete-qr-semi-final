@@ -367,7 +367,7 @@ const server = http.createServer(async (req, res) => {
       try { return json(res, 200, await listarMesasGarcom(m[1])); }
       catch (e) { if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message }); throw e; }
     }
-    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\\d+)\/assumir$/)) && req.method === 'POST') {
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/assumir$/)) && req.method === 'POST') {
       try {
         const out = await assumirMesa(m[1], m[2], await body(req));
         broadcast('update', { type: 'mesa_assumida', mesa: out.mesa });
@@ -377,7 +377,7 @@ const server = http.createServer(async (req, res) => {
         throw e;
       }
     }
-    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\\d+)\/pedidos$/)) && req.method === 'POST') {
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/pedidos$/)) && req.method === 'POST') {
       try {
         const pedido = await criarPedidoGarcom(m[1], m[2], await body(req));
         if (!pedido.idempotentReplay) broadcast('update', { type: 'pedido_novo', mesa: pedido.mesa });
