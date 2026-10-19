@@ -29,14 +29,19 @@
 <div class="section-title"><div><span class="eyebrow">04 · ACOMPANHAMENTO</span><h2>Pedidos deste aparelho</h2></div></div><div id="orders"></div>
 </section>
 <section class="panel">
-<div class="section-title"><div><span class="eyebrow">05 · AUTOATENDIMENTO</span><h2>QR da mesa</h2></div></div>
+<div class="section-title"><div><span class="eyebrow">05 · ENTREGAS</span><h2>Pedidos prontos para entregar</h2></div></div>
+<div id="readyOrders"><p class="muted">Conecte-se para consultar a cozinha.</p></div>
+<button id="refreshDeliveries" class="secondary" type="button">Atualizar entregas</button>
+</section>
+<section class="panel">
+<div class="section-title"><div><span class="eyebrow">06 · AUTOATENDIMENTO</span><h2>QR da mesa</h2></div></div>
 <p class="muted">Compartilhe o endereço da mesa para o cliente pedir pelo próprio celular. O QR abre o fluxo público existente.</p>
 <div class="fields"><label>Mesa do QR<select id="qrTable"></select></label><label>Endereço público<input id="qrUrl" readonly></label></div>
 <div class="qr-row"><img id="qrImage" alt="QR code da mesa" width="160" height="160"><button id="copyQr" class="secondary">Copiar endereço</button></div>
 <p class="hint">A imagem QR precisa de internet para ser gerada. O endereço permanece disponível offline.</p>
 </section>
 <section class="panel">
-<div class="section-title"><div><span class="eyebrow">06 · COBRANÇA</span><h2>Conta e pagamento</h2></div></div>
+<div class="section-title"><div><span class="eyebrow">07 · COBRANÇA</span><h2>Conta e pagamento</h2></div></div>
 <p class="muted">Interface preparada. A consulta e as ações de cobrança ficam desabilitadas até o backend publicar os contratos documentados.</p>
 <button class="secondary" disabled>Consultar conta da mesa</button> <button class="secondary" disabled>Solicitar cobrança</button>
 </section>
