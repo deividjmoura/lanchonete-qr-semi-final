@@ -3,6 +3,7 @@ import {
   Check,
   ChevronRight,
   ClipboardList,
+  ConciergeBell,
   Flame,
   HandPlatter,
   Minus,
@@ -119,6 +120,12 @@ export default function Mesa({ token }: { token: string }) {
   const totalConta = sessao ? totalSessao(pedidos, sessao.id) : 0;
   const totalCart = cart.reduce((a, c) => a + totalItem(c), 0);
   const qtdCart = cart.reduce((a, c) => a + c.qtd, 0);
+
+  const garcomResponsavel = useMemo(() => {
+    if (sessao?.garcomNome) return sessao.garcomNome;
+    const pedComGarcom = pedidosMesa.find((p) => p.garcomNome);
+    return pedComGarcom?.garcomNome || null;
+  }, [sessao, pedidosMesa]);
 
   const categorias = useMemo(() => {
     const ordered = [...categoriasStore].sort((a, b) => a.ordem - b.ordem).map((c) => c.nome);
@@ -301,6 +308,13 @@ export default function Mesa({ token }: { token: string }) {
         <Receipt className="size-6 text-brand-600" /> Sua conta
       </h3>
 
+      {garcomResponsavel && (
+        <div className="mt-3 flex items-center gap-2 rounded-2xl bg-violet-500/10 border border-violet-500/20 px-3.5 py-2.5 text-xs text-violet-900">
+          <ConciergeBell className="size-4 text-violet-600 shrink-0" />
+          <span>Garçom responsável: <strong className="font-semibold">{garcomResponsavel}</strong></span>
+        </div>
+      )}
+
       {pedidosMesa.length === 0 ? (
         <div className="flex-1 grid place-items-center py-14 text-center">
           <div>
@@ -315,9 +329,17 @@ export default function Mesa({ token }: { token: string }) {
             return (
               <div key={p.id} className="rounded-2xl bg-slate-100/60 border border-slate-200 p-3.5">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-bold text-slate-500">
-                    Pedido <span className="font-mono text-navy-900">#{p.id}</span> · {p.clienteNome}
-                  </p>
+                  <div>
+                    <p className="text-xs font-bold text-slate-500">
+                      Pedido <span className="font-mono text-navy-900">#{p.id}</span> · {p.clienteNome}
+                    </p>
+                    {p.garcomNome && (
+                      <p className="text-[11px] text-violet-700 font-semibold flex items-center gap-1 mt-0.5">
+                        <ConciergeBell className="size-3 text-violet-600" />
+                        <span>Garçom: {p.garcomNome}</span>
+                      </p>
+                    )}
+                  </div>
                   <Badge tone={p.status === "entregue" ? "lime" : p.status === "pronto" ? "sky" : p.status === "em_producao" ? "amber" : "zinc"} pulse={p.status !== "entregue"}>
                     {STATUS_ORDEM[stepIdx].label}
                   </Badge>
@@ -428,13 +450,12 @@ export default function Mesa({ token }: { token: string }) {
         </div>
       )}
 
-      {/* total da visita — pagamento só no caixa / garçom (igual main) */}
+      {/* total dos pedidos */}
       <div className="pt-4 mt-4 border-t border-slate-200">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs uppercase tracking-widest text-slate-500 font-bold">total da visita</span>
+        <div className="flex items-center justify-between">
+          <span className="text-xs uppercase tracking-widest text-slate-500 font-bold">total dos pedidos</span>
           <span className="font-display text-4xl text-gradient">{BRL(totalConta)}</span>
         </div>
-        <p className="text-xs text-slate-500 text-center">Pagamento no caixa ou com o garçom.</p>
       </div>
     </div>
   );
@@ -454,7 +475,12 @@ export default function Mesa({ token }: { token: string }) {
         <div className="mx-auto max-w-7xl px-3 sm:px-6 h-14 sm:h-16 flex items-center gap-2 sm:gap-3 min-w-0">
           <Logo size="sm" />
           <Badge tone="amber" className="ml-1">{mesa.nome}</Badge>
-          {sessao && sessao.pixAvisos > 0 && <Badge tone="lime">pix {sessao.pixAvisos}×</Badge>}
+          {garcomResponsavel && (
+            <Badge tone="violet" className="ml-1 inline-flex items-center gap-1">
+              <ConciergeBell className="size-3" />
+              <span>{garcomResponsavel}</span>
+            </Badge>
+          )}
           <div className="flex-1" />
           <ThemeToggle />
           <button
@@ -499,6 +525,11 @@ export default function Mesa({ token }: { token: string }) {
               </h1>
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 <Badge tone="lime" pulse>cozinha recebendo</Badge>
+                {garcomResponsavel && (
+                  <Badge tone="violet" className="inline-flex items-center gap-1">
+                    <ConciergeBell className="size-3" /> atendido por {garcomResponsavel}
+                  </Badge>
+                )}
                 <Badge tone="zinc">peça quantas vezes quiser</Badge>
                 <Badge tone="zinc">tudo entra na mesma conta</Badge>
               </div>

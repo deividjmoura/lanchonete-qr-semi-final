@@ -141,6 +141,8 @@ export function Modal({
         >
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
           <motion.div
+            role="dialog"
+            aria-modal="true"
             initial={{ y: 60, opacity: 0, scale: 0.98 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 50, opacity: 0, scale: 0.98 }}
@@ -155,6 +157,7 @@ export function Modal({
             <button
               type="button"
               onClick={onClose}
+              aria-label="Fechar"
               className="btn-press absolute top-4 right-4 z-10 grid place-items-center size-10 rounded-full bg-slate-100 border border-slate-200 text-navy-900 hover:bg-slate-200 cursor-pointer"
             >
               <X className="size-4.5" />

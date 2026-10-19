@@ -69,6 +69,7 @@ export interface Pedido {
   mesaId: number;
   mesaNome: string;
   clienteNome: string;
+  garcomNome?: string;
   itens: ItemPedido[];
   status: PedidoStatus;
   criadoEm: number;
@@ -95,6 +96,7 @@ export interface Sessao {
   fechadaEm: number | null;
   pagamentos: Pagamento[];
   pixAvisos: number;
+  garcomNome?: string;
   desconto: number; // R$ (ajuste local até fechar — backend aplica no close)
   taxa: number; // R$
   /** totais vindos de GET /api/caixa/sessoes */
