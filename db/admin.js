@@ -216,7 +216,9 @@ async function criarProduto(body) {
     const { rows: catRows } = await pool.query('SELECT nome FROM categorias WHERE id = $1', [categoriaId]);
     const catNome = (catRows[0] && catRows[0].nome) || '';
     const n = String(catNome).toLowerCase();
+    const nomeBebida = /heineken|budweiser|stella artois|corona|skol|brahma|antarctica|amstel|spaten|itaipava|bohemia|long neck|cerveja|chopp|chope|coca.cola|guaran[aá]|sprite|fanta|pepsi|energ[eé]tico|red bull|monster|suco|[aá]gua|refrigerante|caipirinha|vodka|whisk|vinho/i.test(nome);
     setor =
+      nomeBebida ||
       n.includes('bebida') ||
       n.includes('suco') ||
       n.includes('drink') ||
