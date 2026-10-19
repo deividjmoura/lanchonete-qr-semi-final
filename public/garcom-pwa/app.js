@@ -17,8 +17,27 @@ const data=await res.json().catch(()=>({}));if(!res.ok){const e=new Error(data.e
 order.status='confirmed';order.serverOrderId=data.id;order.confirmedAt=Date.now();order.lastError=null;
 }catch(err){order.status=err.status&&err.status<500?'conflict':'offline';order.lastError=String(err.message||err);}await putOrder(order);await renderOrders();if(order.status==='confirmed')void loadOrderStatuses();}
 async function syncPending(){if(!navigator.onLine){setConnection();return}const pending=(await allOrders()).filter(o=>o.status==='offline');for(const o of pending)await syncOne(o.localId);setConnection()}function setConnection(){$('#connection').textContent=navigator.onLine?'Online · sincronização disponível':'Offline · pedidos ficam neste aparelho';$('#connection').style.color=navigator.onLine?'#166534':'#a16207'}function updateQr(){const n=Number($('#qrTable').value);const mesa=mesas.find(x=>Number(x.numero)===n);if(!mesa)return;const url=new URL('../',location.href).href+'#/mesa/'+mesa.token;$('#qrUrl').value=url;$('#qrImage').src=navigator.onLine?'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(url):'';$('#qrImage').onerror=()=>{$('#qrImage').alt='QR indisponível offline'}}$('#search').addEventListener('input',renderProducts);$('#saveOrder').addEventListener('click',saveOrder);$('#syncBtn').addEventListener('click',syncPending);$('#qrTable').addEventListener('change',updateQr);$('#copyQr').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('#qrUrl').value);$('#copyQr').textContent='Endereço copiado';setTimeout(()=>$('#copyQr').textContent='Copiar endereço',1500)}catch{ $('#qrUrl').select();document.execCommand('copy')}});window.addEventListener('online',syncPending);window.addEventListener('offline',setConnection);setConnection();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});openDb().then(async d=>{db=d;await recoverInterruptedSync();await loadProducts();try{await loadMesas();if(navigator.onLine){syncPending();loadDeliveries();loadOrderStatuses()}}catch(e){$('#identity').textContent=e.message;if(!navigator.onLine){try{mesas=JSON.parse(localStorage.getItem('waiter-mesas-cache-'+waiterToken)||'[]');tables.splice(0,tables.length,...mesas.map(x=>Number(x.numero)));populateTables();updateQr();renderTableGrid();}catch{}}}}).catch(e=>{console.error(e);alert('Não foi possível abrir o armazenamento offline neste navegador.')});
-let deferredInstall=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;const b=document.querySelector('#installBtn');if(b)b.hidden=false;});document.querySelector('#installBtn')?.addEventListener('click',async()=>{if(deferredInstall){deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;document.querySelector('#installBtn').hidden=true;}else alert('No menu do navegador, escolha Adicionar à tela inicial ou Instalar aplicativo.');});window.addEventListener('appinstalled',()=>{const b=document.querySelector('#installBtn');if(b)b.hidden=true;});
-
+let deferredInstall=null;
+const installBtn=document.querySelector('#installBtn');
+function refreshInstallState(){
+ if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true){installBtn.hidden=true;return}
+ installBtn.hidden=false;
+ installBtn.textContent=deferredInstall?'↓ Instalar aplicativo':'↓ Como instalar';
+}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;refreshInstallState()});
+installBtn?.addEventListener('click',async()=>{
+ if(deferredInstall){
+   const prompt=deferredInstall;deferredInstall=null;
+   await prompt.prompt();
+   const choice=await prompt.userChoice;
+   if(choice?.outcome!=='accepted')refreshInstallState();
+   return;
+ }
+ const ios=/iPhone|iPad|iPod/.test(navigator.userAgent);
+ alert(ios?'No Safari, toque em Compartilhar e depois em Adicionar à Tela de Início. O iOS não permite instalação automática.':'O navegador não disponibilizou a instalação automática. Use o menu do navegador → Instalar aplicativo / Adicionar à tela inicial. No Chrome Android compatível, o botão Instalar abre o convite automaticamente.');
+});
+window.addEventListener('appinstalled',()=>{installBtn.hidden=true;deferredInstall=null});
+refreshInstallState();
 
 async function loadDeliveries(){if(!navigator.onLine||!waiterToken)return;const root=$('#readyOrders');try{const orders=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/pedidos');root.replaceChildren();const ready=(Array.isArray(orders)?orders:[]).filter(p=>(p.itens||[]).some(i=>i.status==='concluido'));if(!ready.length){root.innerHTML='<p class="muted">Nenhum pedido pronto para entrega.</p>';return;}for(const order of ready){const card=document.createElement('article');card.className='order';const name=document.createElement('strong');name.textContent='Mesa '+(order.mesa||order.mesaNumero||'?')+' · Pedido #'+order.id;card.append(name);const details=document.createElement('p');details.className='muted';details.textContent=(order.itens||[]).filter(i=>i.status==='concluido').map(i=>(i.quantidade||i.qtd||1)+'× '+i.nome).join(', ');card.append(details);const btn=document.createElement('button');btn.textContent='Confirmar entrega';btn.onclick=async()=>{if(!confirm('Confirmar que entregou os itens prontos do pedido #'+order.id+'?'))return;btn.disabled=true;try{await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/pedidos/'+order.id+'/entregar',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});await loadDeliveries();}catch(e){alert(e.message);btn.disabled=false;}};card.append(btn);root.append(card)}}catch(e){root.textContent='Não foi possível consultar as entregas: '+e.message;}}
 document.querySelector('#refreshDeliveries')?.addEventListener('click',loadDeliveries);
@@ -128,6 +147,10 @@ function renderMyTables(){
   const title=document.createElement('strong');title.textContent='Mesa '+m.numero;
   const info=document.createElement('small');info.textContent=(m.clienteNome||'Cliente não informado')+' · Anotar novo pedido ↗';
   btn.append(title,info);btn.onclick=()=>openOrder(m.numero);root.append(btn);
+  const actions=document.createElement('div');actions.className='table-actions';
+  const detail=document.createElement('button');detail.className='secondary small';detail.textContent='Ver pedidos';detail.onclick=()=>openOrdersModal(m.numero);
+  const leave=document.createElement('button');leave.className='secondary small leave-table';leave.textContent='Deixar mesa';leave.onclick=()=>leaveTable(m.numero);
+  actions.append(detail,leave);root.append(actions);
  }
 }
 let editingDraftId=null;
@@ -168,9 +191,10 @@ async function loadOrderStatuses(){
  if(!navigator.onLine||!waiterToken)return;
  try{
    const rows=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/atendimentos');
-   const root=$('#activeOrderStatuses');root.replaceChildren();
+   const root=$('#modalOrderStatuses');root.replaceChildren();
    if(!rows.length){root.innerHTML='<p class="muted">Nenhum pedido nas suas mesas abertas.</p>'}
    for(const o of rows){
+     const showOrder=selectedOrdersTable===null||Number(o.mesa)===selectedOrdersTable;
      const ready=(o.itens||[]).filter(i=>i.status==='concluido');
      const card=document.createElement('article');card.className='order';
      const heading=document.createElement('div');heading.className='order-head';
@@ -188,7 +212,7 @@ async function loadOrderStatuses(){
      }
      card.append(items);
      if(o.podeEditar){const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent='Editar pedido';edit.onclick=()=>editLiveOrder(o);card.append(edit)}
-     root.append(card);
+     if(showOrder)root.append(card);
      // Nunca repete avisos ao entrar novamente na página ou após reabrir.
      const newReady=ready.filter(i=>!announcedReady.has(Number(i.id)));
      if(!firstLiveLoad&&newReady.length&&readyAlertsEnabled)notifyReady(o,newReady.length);
@@ -197,7 +221,7 @@ async function loadOrderStatuses(){
      localStorage.setItem(READY_STORAGE,JSON.stringify([...announcedReady]));
    }
    firstLiveLoad=false;liveOrders=rows;
- }catch(e){$('#activeOrderStatuses').textContent='Falha ao atualizar pedidos: '+e.message;}
+ }catch(e){$('#modalOrderStatuses').textContent='Falha ao atualizar pedidos: '+e.message;}
 }
 function notifyReady(o,quantidade=1){
  const title='Pedido pronto · Mesa '+o.mesa;
@@ -223,3 +247,23 @@ if(readyAlertsEnabled)$('#enableAlerts').textContent='🔔 Avisos de entrega ati
 
 $('#readyToastAction').addEventListener('click',()=>{switchTab('deliveries');$('#readyToast').hidden=true});
 $('#readyToastDismiss').addEventListener('click',()=>{$('#readyToast').hidden=true});
+
+let selectedOrdersTable=null;
+function openOrdersModal(table){
+ selectedOrdersTable=Number(table)||null;
+ $('#ordersModalTitle').textContent=selectedOrdersTable?'Pedidos · Mesa '+selectedOrdersTable:'Pedidos das minhas mesas';
+ $('#ordersModal').showModal();
+ void loadOrderStatuses();
+}
+async function leaveTable(table){
+ if(!navigator.onLine){alert('Para deixar a mesa, conecte-se à internet.');return}
+ if(!confirm('Deixar a mesa '+table+'? A conta do cliente continuará aberta.'))return;
+ try{
+   await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/mesas/'+table+'/deixar',{method:'POST'});
+   await loadMesas();await loadOrderStatuses();
+   $('#tableMessage').textContent='Você deixou a mesa '+table+'. A conta continua aberta.';
+ }catch(e){alert(e.message||'Não foi possível deixar a mesa.')}
+}
+$('#showActiveOrders').addEventListener('click',()=>openOrdersModal(null));
+$('#closeOrdersModal').addEventListener('click',()=>$('#ordersModal').close());
+$('#ordersModal').addEventListener('close',()=>{selectedOrdersTable=null});
