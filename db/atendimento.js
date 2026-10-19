@@ -72,6 +72,28 @@ async function assumirMesa(token, numeroBruto, body = {}) {
     throw e;
   } finally { client.release(); }
 }
+async function deixarMesa(token, numeroBruto) {
+  const garcom = await validarGarcom(token);
+  const numero = Number(numeroBruto);
+  if (!Number.isSafeInteger(numero) || numero < 1 || numero > 70) throw new ErroAtendimento(400,'Mesa inválida');
+  const client=await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const {rows:mesas}=await client.query('SELECT id FROM mesas WHERE numero=$1 FOR UPDATE',[numero]);
+    if(!mesas.length)throw new ErroAtendimento(404,'Mesa não encontrada');
+    const {rows:sessoes}=await client.query("SELECT id,garcom_responsavel_id FROM mesa_sessoes WHERE mesa_id=$1 AND status='aberta' FOR UPDATE",[mesas[0].id]);
+    if(!sessoes.length||sessoes[0].garcom_responsavel_id!==garcom.id)throw new ErroAtendimento(409,'Esta mesa não está atribuída a você');
+    // Não deixar pedidos em preparo ou prontos sem responsável.
+    const {rows:pendentes}=await client.query(`
+      SELECT COUNT(*)::int AS total FROM pedidos p
+      JOIN itens_pedido ip ON ip.pedido_id=p.id
+      WHERE p.sessao_id=$1 AND COALESCE(ip.status,'recebido') <> 'entregue'`,[sessoes[0].id]);
+    if(pendentes[0].total>0)throw new ErroAtendimento(409,'Existem itens ainda não entregues. Entregue-os ou transfira a mesa para outro garçom antes de deixá-la.');
+    await client.query('UPDATE mesa_sessoes SET garcom_responsavel_id=NULL WHERE id=$1',[sessoes[0].id]);
+    await client.query('COMMIT');
+    return {mesa:numero,liberada:true,sessaoId:sessoes[0].id};
+  }catch(e){await client.query('ROLLBACK').catch(()=>{});throw e}finally{client.release()}
+}
 async function criarPedidoGarcom(token, numeroBruto, body) {
   const garcom = await validarGarcom(token);
   const numero = Number(numeroBruto);
@@ -151,4 +173,4 @@ async function metricasGarcons({ data } = {}) {
     garcons: rows.map(x=>({ id:x.id, nome:x.nome, ativo:x.ativo, atendimentos:x.atendimentos,
       vendas:Number(x.vendas), ticketMedio:Number(x.ticket_medio) })) };
 }
-module.exports={ ErroAtendimento, listarMesasGarcom, assumirMesa, criarPedidoGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons };
+module.exports={ ErroAtendimento, listarMesasGarcom, assumirMesa, deixarMesa, criarPedidoGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons };
