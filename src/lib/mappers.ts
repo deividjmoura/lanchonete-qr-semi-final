@@ -153,6 +153,12 @@ export function mapSessaoFromMesaApi(_token: string, mesaMeta: Mesa | undefined,
      parciais já lançados pelo caixa. */
   const totalDevido = Number(data.totalDevido ?? data.valorTotal ?? 0);
   const valorPago = Number(data.valorPago ?? 0);
+  const garcomMesa =
+    data.garcomNome ||
+    data.garcom_nome ||
+    (data.pedidos || []).find((p: any) => p.garcom_nome || p.garcomNome)?.garcom_nome ||
+    (data.pedidos || []).find((p: any) => p.garcom_nome || p.garcomNome)?.garcomNome;
+
   const sessao: Sessao = {
     id: Number(data.sessaoId),
     mesaId,
@@ -162,6 +168,7 @@ export function mapSessaoFromMesaApi(_token: string, mesaMeta: Mesa | undefined,
     fechadaEm: null,
     pagamentos: [],
     pixAvisos: Array.isArray(data.pixAvisos) ? data.pixAvisos.length : 0,
+    garcomNome: garcomMesa ? String(garcomMesa) : undefined,
     desconto: 0,
     taxa: 0,
     valorTotal: totalDevido,
@@ -198,12 +205,14 @@ export function mapSessaoFromMesaApi(_token: string, mesaMeta: Mesa | undefined,
       };
     });
     const total = Number(p.totalPedido ?? itens.reduce((s, i) => s + i.totalUnit * i.qtd, 0));
+    const garcomNome = p.garcom_nome || p.garcomNome || undefined;
     return {
       id: Number(p.id),
       sessaoId: sessao.id,
       mesaId,
       mesaNome,
       clienteNome: String(p.cliente_nome || p.clienteNome || data.clienteNome || ""),
+      garcomNome: garcomNome ? String(garcomNome) : undefined,
       itens,
       status: statusToUi(String(p.status)),
       criadoEm: p.criado_em || p.criadoEm ? new Date(p.criado_em || p.criadoEm).getTime() : Date.now(),
@@ -249,6 +258,7 @@ export function mapCozinhaPedidos(rows: any[]): Pedido[] {
         ? `Mesa ${String(p.mesa ?? p.mesa_numero).padStart(2, "0")}`
         : String(p.mesaNome || "Mesa"),
       clienteNome: String(p.cliente_nome || p.clienteNome || ""),
+      garcomNome: p.garcom_nome || p.garcomNome || undefined,
       itens,
       status: statusToUi(String(p.status)),
       criadoEm: p.criado_em || p.criadoEm ? new Date(p.criado_em || p.criadoEm).getTime() : Date.now(),
@@ -335,6 +345,7 @@ export function mapCaixaSessoes(rows: any[]): { sessoes: Sessao[]; pedidos: Pedi
         mesaId,
         mesaNome,
         clienteNome: String(p.clienteNome || p.cliente_nome || s.clienteNome || ""),
+        garcomNome: p.garcom_nome || p.garcomNome || undefined,
         itens,
         status: "entregue",
         criadoEm: p.criadoEm || p.criado_em ? new Date(p.criadoEm || p.criado_em).getTime() : Date.now(),

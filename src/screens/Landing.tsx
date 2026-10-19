@@ -44,6 +44,7 @@ export default function Landing() {
 
   const sessoes = usePub((s) => s.sessoes);
   const pedidos = usePub((s) => s.pedidos);
+  const mesas = usePub((s) => s.mesas);
 
   const naFila = pedidos.filter((p) => p.status === "na_fila" || p.status === "em_producao").length;
   const comandas = sessoes.filter((s) => s.status === "aberta").length;
@@ -97,10 +98,31 @@ export default function Landing() {
                 <div className="inline-flex items-center gap-3 rounded-2xl border border-brand-500/30 bg-brand-500/10 px-4 py-3">
                   <QrCode className="size-6 text-brand-600 shrink-0" />
                   <p className="text-sm text-slate-700 leading-snug max-w-xs">
-                    <b className="text-navy-900">Cliente:</b> escaneie o QR Code da sua mesa — o número já vem no link.
+                    <b className="text-navy-900">Cliente:</b> escaneie o QR Code fixo da sua mesa — o cardápio e os pedidos iniciam direto por ele.
                   </p>
                 </div>
               </div>
+
+              {mesas.length > 0 && (
+                <div className="mt-5">
+                  <p className="text-[11px] uppercase tracking-wider font-bold text-slate-500 mb-2">
+                    Iniciar pelo QR da mesa:
+                  </p>
+                  <div className="flex flex-wrap gap-2 max-w-xl">
+                    {mesas.map((m) => (
+                      <button
+                        key={m.token}
+                        type="button"
+                        onClick={() => ir(`/mesa/${m.token}`)}
+                        className="btn-press inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/80 hover:bg-white px-3 py-1.5 text-xs font-semibold text-navy-900 shadow-sm transition cursor-pointer"
+                      >
+                        <QrCode className="size-3 text-brand-600" />
+                        <span>{m.nome}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </motion.div>
 
             {/* placar ao vivo */}

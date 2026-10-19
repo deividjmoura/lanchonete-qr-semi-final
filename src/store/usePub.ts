@@ -102,7 +102,8 @@ function formaToApi(forma: FormaPagamento): string {
 }
 
 function mesaToken(get: () => PubState, mesaId: number): string | null {
-  return get().mesas.find((m) => m.id === mesaId)?.token || null;
+  const m = get().mesas.find((x) => x.id === mesaId || x.numero === mesaId);
+  return m?.token || null;
 }
 
 function tokenByPedido(get: () => PubState, pedidoId: number): string | null {
