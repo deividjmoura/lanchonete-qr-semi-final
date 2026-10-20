@@ -4,7 +4,7 @@ Esta pasta preserva o trabalho de **prévia visual de 20/10/2026** em uma branch
 
 ## Como revisar
 
-Abra \`garcom-layout.html\` em um navegador (arquivo local). Funciona sem servidor, banco de dados, token, instalação de dependências ou acesso ao ambiente de produção. No celular, utilize a navegação inferior e os botões de "Novo pedido"/"Ver pedidos".
+Abra `garcom-layout.html` em um navegador (arquivo local). Funciona sem servidor, banco de dados, token, instalação de dependências ou acesso ao ambiente de produção. No celular, utilize a navegação inferior e os botões de "Novo pedido"/"Ver pedidos".
 
 A demonstração cobre:
 
@@ -23,7 +23,7 @@ A demonstração cobre:
 - O protótipo não envia pedidos, não escreve no banco, não altera mesa, não instala PWA e não sincroniza.
 - "Bar" e "Cozinha" no protótipo são rótulos demonstrativos, **não** um teste do encaminhamento no backend.
 - As imagens previamente geradas no chat também são prévias do HTML/CSS existente da PWA, não evidências de funcionamento ponta a ponta.
-- A UI real está em \`public/garcom-pwa/\` e já possui elementos \`<dialog>\` para pedidos/status; uma mudança futura precisa ser avaliada ali e testada em dispositivo real.
+- A UI real está em `public/garcom-pwa/` e já possui elementos `<dialog>` para pedidos/status; uma mudança futura precisa ser avaliada ali e testada em dispositivo real.
 
 ## Para uma eventual implementação posterior
 
