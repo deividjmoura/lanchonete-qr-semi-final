@@ -184,7 +184,7 @@ test('retry não repete erro de negócio e respeita limite de tentativas de conc
 const poolPedidos = require('../db/pool');
 const TOKEN_MESA_TESTE = '123e4567-e89b-42d3-a456-426614174000';
 
-function clientePedidoFake({ estoqueDisponivel = true, falharNoInsertAdicional = false } = {}) {
+function clientePedidoFake({ estoqueDisponivel = true, falharNoInsertAdicional = false, produtoDisponivel = true, produtoExiste = true } = {}) {
   const calls = [];
   let nextItemId = 700;
   const client = {
@@ -409,5 +409,32 @@ test('pedido inexistente não avança status e libera conexão após rollback', 
     assert.equal(client.released, true);
   } finally {
     poolPedidos.connect = originalConnect;
+  }
+});
+
+
+test('criação rejeita produto inexistente e produto indisponível sem confirmar pedido', async () => {
+  for (const options of [{ produtoExiste: false }, { produtoDisponivel: false }]) {
+    const fake = clientePedidoFake(options);
+    await comPoolDePedidoFake(fake, () => assert.rejects(
+      criarPedido(TOKEN_MESA_TESTE, { items: [{ productId: 8, qty: 1 }] }),
+      (error) => error instanceof ErroPedido && error.status === 400 && /Nenhum item válido/.test(error.message)
+    ));
+    assert.ok(fake.calls.some((c) => c.sql === 'ROLLBACK'));
+    assert.equal(fake.calls.some((c) => c.sql === 'COMMIT'), false);
+    assert.equal(fake.client.released, true);
+  }
+});
+
+test('criação rejeita quantidades zero e acima do limite sem inserir itens', async () => {
+  for (const qty of [0, 100, -1]) {
+    const fake = clientePedidoFake();
+    await comPoolDePedidoFake(fake, () => assert.rejects(
+      criarPedido(TOKEN_MESA_TESTE, { items: [{ productId: 8, qty }] }),
+      (error) => error instanceof ErroPedido && error.status === 400 && /Quantidade inválida/.test(error.message)
+    ));
+    assert.ok(fake.calls.some((c) => c.sql === 'ROLLBACK'));
+    assert.equal(fake.calls.some((c) => c.sql === 'COMMIT'), false);
+    assert.equal(fake.calls.some((c) => c.sql.includes('INSERT INTO itens_pedido (')), false);
   }
 });
