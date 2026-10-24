@@ -535,3 +535,131 @@ Não alterar a regra atual de cobrança nesta auditoria. Cliente e caixa devem e
 3. Separar defeitos estáticos confirmados de hipóteses que dependem de transação concorrente.
 4. Decidir política de dia operacional antes de modificar consultas e relatórios.
 5. Não fazer merge/deploy, não tocar em produção e não aplicar correções financeiras amplas nesta etapa.
+
+
+---
+
+## 13. Auditoria de segurança operacional e antifraude — 2026-10-24
+
+**Continuidade:** leitura prévia dos PRs #33 (testes de regressão com mocks) e #34 (auditoria estática) concluída. Esta seção complementa o relatório existente; não reabre os achados anteriores como se fossem novos e não altera código da aplicação. A leitura de código é baseada na `main` atual disponível no GitHub; a documentação permanece na branch `audit/production-readiness`.
+
+### A-17 — P1 condicional / política operacional: QR fixo continua válido e pedido abre sessão automaticamente
+
+**Status:** comportamento indicado pela implementação; sequência real de fechar/reabrir ainda não foi testada com PostgreSQL descartável. A gravidade depende da política escolhida para o estabelecimento.
+
+**Evidência concreta**
+- `db/migrations/0001_init.sql`: `mesas.token` é UUID único persistido na linha da mesa, com geração padrão no provisionamento.
+- `db/admin.js:listMesas()` declara que os tokens das mesas existentes permanecem intactos.
+- `db/pedidos.js:criarPedido(token, body)` resolve a mesa por token e chama `getOuAbrirSessao(client, mesa.id)`.
+- `db/queries.js:getOuAbrirSessao()` reutiliza sessão aberta ou insere uma nova quando não encontra uma. O fluxo público de pedido não exige que um funcionário tenha aberto/assumido a sessão.
+- `db/pedidos.js:checkinCliente()` também usa `getOuAbrirSessao()`.
+
+**Cenário/impacto:** alguém que fotografou/copou o QR pode continuar a chamar o endpoint público depois do fechamento. Pelo fluxo estático, o primeiro pedido após fechamento pode criar outra sessão automaticamente. Isso permite pedidos remotos/indesejados se a operação esperava autorização presencial do funcionário; não é, por si só, defeito se o produto deliberadamente permite iniciar nova comanda a partir do QR fixo.
+
+**Correção/recomendação:** não escolher arquitetura ainda. Responsável deve decidir entre QR fixo sempre ativo, abertura explícita por funcionário, token por sessão/rotação, ou prova de presença adicional (por exemplo PIN curto). Comparar fraude, acessibilidade e fricção operacional. A issue #47 contém cenários e critérios de aceite.
+
+**Teste de regressão necessário, somente em PostgreSQL descartável**
+1. Criar pedido com token da mesa de teste e guardar IDs/status.
+2. Fechar sessão pelo fluxo real de caixa.
+3. Repetir pedido com o token antigo sem funcionário; verificar HTTP, sessão/pedido criados e linhas persistidas.
+4. Reabrir/assumir a mesa e repetir com o mesmo QR.
+5. Repetir com token inválido e mesa desabilitada.
+6. Executar a matriz conforme a política aprovada e confirmar que ela continua válida após restart.
+
+### A-18 — P1/P2: ausência de trilha de auditoria completa e identidade individual fraca nas contas de staff
+
+**Status:** lacuna confirmada por inspeção estática; não foi consultado o banco de produção para procurar tabelas/dados adicionais, e não se afirma nada sobre retenção de logs externos.
+
+**Evidência concreta**
+- `db/auth.js:garantirStaffSeed()` cria logins genéricos `admin`, `cozinha`, `bar` e `caixa` com o mesmo hash derivado de `STAFF_SEED_PASSWORD` (fallback para `ADMIN_PASSWORD`). A validação de produção exige ao menos 12 caracteres, mas isso não torna a senha individual por funcionário.
+- `scripts/reset-senha.js` aplica a mesma senha aos logins genéricos `admin`, `cozinha` e `caixa`.
+- `db/migrations/0005_staff.sql` guarda identidade de sessão de login (`staff_sessoes.staff_id`), mas isso não grava automaticamente o ator em cada operação de negócio.
+- `db/migrations/0009_sessao_pagamentos.sql` define pagamentos com sessão, valor, forma e horário, sem coluna de ator.
+- As rotas de caixa chamam `registrarPagamento()`, `confirmarPixAviso()` e `fecharSessao()` sem passar a identidade do staff para essas funções.
+- `mesa_atendimento_historico` registra transferências; pedidos têm campos de autoria do garçom, mas não existe, na cadeia examinada, trilha geral persistente de ator/ação/alvo/resultado para todos os eventos.
+- `db/pedidos.js:cancelarPedidoCliente()` exclui o pedido e os itens associados depois de restaurar estoque; não grava evento persistente de cancelamento nessa função.
+
+**Impacto:** com logins por função e dispositivos compartilhados, uma sessão de staff não prova qual funcionário físico realizou uma ação. Em disputas sobre pagamento, confirmação manual de PIX, desconto, fechamento, alteração/entrega ou cancelamento, o banco pode guardar o resultado sem atribuição suficiente do autor. O histórico de transferência e os campos de garçom são controles parciais, não auditoria completa.
+
+**Correção/recomendação:** definir primeiro quais ações exigem conta nominal, PIN individual/reautenticação ou aprovação de gerente. Depois, registrar evento persistente com ator, ação, alvo, horário, resultado e contexto mínimo; evitar segredos no evento. Operação financeira e evento de auditoria devem ser atômicos ou ter estratégia de consistência explícita. Issue #48 detalha critérios verificáveis e perguntas de política.
+
+**Teste necessário:** dois funcionários identificados, incluindo alternância em tablet compartilhado; executar ações permitidas/negadas; conferir que ator, alvo, horário, resultado e valores relevantes correspondem ao que foi persistido, sem guardar senha/token. Incluir rollback e falha entre operação e log usando PostgreSQL descartável.
+
+### A-19 — P1 condicional: script de redefinição imprime a senha em stdout
+
+**Status:** defeito confirmado por inspeção estática; não há evidência de que o script tenha sido executado com senha real.
+
+**Evidência concreta**
+- `scripts/reset-senha.js` lê `STAFF_SEED_PASSWORD`, `ADMIN_PASSWORD` ou fallback.
+- Imprime o segredo diretamente em `console.log('Senha atualizada para:', JSON.stringify(senha))`.
+- Também constrói uma linha de teste `curl` contendo a mesma senha.
+- O script atualiza logins genéricos para a mesma senha.
+
+**Cenário/impacto:** se o script for executado com credencial real, stdout pode ser retido em histórico do terminal, sessão remota ou log automatizado. A exposição da credencial depende da execução; não se presume que tenha ocorrido em produção.
+
+**Correção/recomendação:** nunca imprimir senha ou comando contendo segredo; retornar somente logins/status; não usar fallback previsível em fluxo de redefinição; considerar redefinição individual. Se houver evidência de execução anterior com senha real em log acessível, o responsável deve avaliar exposição e rotação por procedimento seguro. Issue #49.
+
+**Teste necessário:** usar senha fictícia única, capturar stdout/stderr e afirmar que o segredo e qualquer comando que o contenha não aparecem; testar configuração ausente sem modificar contas. Não usar contas ou segredos reais.
+
+### A-20 — P1/P2, decisão de política: desconto pode chegar ao total integral sem aprovação explícita de gerente
+
+**Status:** regra confirmada estaticamente; classificar como falha exige saber a política comercial desejada.
+
+**Evidência concreta**
+- `server.js` protege `/api/caixa/*` por papel `caixa`; portanto, o fluxo exige sessão de staff autorizada como caixa.
+- `db/caixa.js:fecharSessao()` valida que o desconto não seja maior que o total, mas aceita desconto igual ao total; calcula `valorCobrado = valorTotal - desconto + taxaServico`.
+- Não foi encontrada verificação de limite por percentual/valor nem segundo fator/aprovação de gerente nessa função.
+- A operação não recebe a identidade de staff para persistir quem aplicou o desconto (ver A-18).
+
+**Impacto:** qualquer pessoa que opere uma sessão autenticada na conta compartilhada de caixa pode, conforme as regras atuais, fechar uma conta com desconto integral (respeitando as demais validações). Isso pode ser legítimo em cortesias, cancelamentos comerciais ou ajustes aprovados; sem política explícita, não se pode declarar fraude.
+
+**Correção/recomendação:** o responsável deve definir limite padrão, motivos obrigatórios, quais descontos exigem aprovação de gerente, como a aprovação é registrada e quem pode conceder cortesia integral. Não alterar a regra de cobrança antes dessa decisão. Rastreabilidade e testes estão na issue #48.
+
+**Teste necessário:** casos abaixo/do/acima do limite escolhido, desconto integral, pagamentos parciais anteriores, gerente aprovado/rejeitado, usuário sem permissão e replay da mesma chave; validar centavos e estado final em PostgreSQL descartável.
+
+### A-21 — P2: rate limit depende de IP encaminhado e pode penalizar clientes no mesmo NAT
+
+**Status:** comportamento de código confirmado; configuração real do proxy e possibilidade de acesso direto ao serviço não foram verificadas.
+
+**Evidência concreta**
+- `server.js:clientIp()` em produção usa o primeiro item de `X-Forwarded-For` quando o cabeçalho existe, sem uma validação local de proxy confiável.
+- `POST /api/login` usa chave `login:<ip>`, máximo 8 tentativas em 5 minutos.
+- Criação de pedido usa `pedido:<ip>:<mesaToken>`, máximo 10 pedidos em 5 minutos.
+- `db/rateLimit.js:golpePermitido()` guarda buckets num `Map` local e o próprio comentário alerta que não é compartilhado entre processos/instâncias.
+
+**Cenário/impacto:** se um cliente conseguir definir o primeiro `X-Forwarded-For` que o servidor aceita, poderá variar a chave e contornar o limite; isso depende da topologia e das regras do proxy, não está confirmado no deployment. Em sentido oposto, clientes diferentes no mesmo Wi-Fi/NAT compartilham IP e podem afetar o limite para a mesma mesa. Reinícios/instâncias múltiplas não compartilham o contador local.
+
+**Correção/recomendação:** confirmar a cadeia de proxy e confiar em IP encaminhado somente quando a origem for proxy confiável e os cabeçalhos forem normalizados. Escolher a chave de rate limit após medir falsos bloqueios: IP, token, sessão ou combinação. Se houver múltiplas instâncias, usar limite compartilhado ou declarar a limitação. Issue #50 complementa o achado A-02 do PR #34.
+
+**Teste necessário, somente em ambiente isolado:** XFF ausente, válido, múltiplo e forjado; cliente A/B no mesmo IP e na mesma mesa; mesmo IP em mesas diferentes; token diferente pelo mesmo cliente; duas instâncias e reinício; comparar HTTP 429 e a chave efetiva. Não rodar contra produção.
+
+### Matriz de permissões e perguntas ao responsável
+
+- **Autenticação por papel:** as rotas de staff usam cookie de sessão e os guards por papel; o teste existente `scripts/teste-seguranca.js:tPrivilegios()` inclui casos de anônimo e cruzamento de papéis, mas é um script contra servidor real e não foi executado nesta auditoria.
+- **Garçons:** os tokens bearer individuais e os limites de autorização entre mesas/garçons continuam tratados nos achados anteriores do PR #34. A exposição de tokens de mesa em `GET /api/garcom/:token/mesas` continua sendo A-10; não foi duplicada como novo achado.
+- **Cancelamento/alteração/entrega:** os achados A-10–A-14 do PR #34 continuam relevantes; a issue #47 trata apenas do ciclo de vida do QR e abertura de sessão.
+- **Descontos/fechamento:** autorização por papel caixa existe no código; aprovação adicional, limite de desconto e identidade individual são decisões de política ainda não implementadas.
+- **Auditoria persistente:** a existência de horários em registros operacionais ou do histórico de transferência não prova uma trilha imutável e completa de todos os eventos.
+
+### Relação com trabalhos existentes e duplicidade
+
+- PR #33 cobre testes com mocks/contratos e deixa integração real com PostgreSQL pendente; não valida a sequência de QR antigo, nem a atribuição persistente de operações.
+- PR #34 já documenta tokens, autorização de garçons e rate limit. A-21 acrescenta a chave efetiva de login/pedido, risco de XFF e impacto de NAT, e aponta para issue #50; A-10 e demais achados existentes não foram duplicados.
+- Issue #39 trata de integração financeira e concorrência em PostgreSQL descartável. Ela não substitui os cenários de ciclo de vida do QR, auditoria de autoria, vazamento de segredo no script ou confiança no proxy.
+- Issue #1 refere-se ao endpoint `GET /api/mesas`; a presente análise de QR fixo é distinta. Não reclassificar a issue #1 como prova de que o endpoint atual esteja público.
+- Issues novas abertas porque a busca de issues abertas não encontrou tarefa equivalente para estes escopos: #47 (QR/sessão), #48 (autoria/auditoria), #49 (segredo em reset de senha) e #50 (proxy/rate limit).
+
+### Comandos executados e resultados reais nesta passada
+
+- Leitura somente via GitHub do conteúdo dos PRs #33 e #34, relatório existente e arquivos `server.js`, `db/pedidos.js`, `db/queries.js`, `db/admin.js`, `db/auth.js`, `db/caixa.js`, `db/garcons.js`, `db/rateLimit.js`, `scripts/reset-senha.js`, `scripts/teste-seguranca.js` e migrations relacionadas: concluída.
+- Busca de issues abertas por QR/sessão, staff/auditoria, rate limit/proxy, autorização/transferência e antifraude: concluída; nenhuma issue equivalente encontrada para os quatro escopos criados.
+- Criadas issues #47, #48, #49 e #50 com critérios de aceite reproduzíveis.
+- Comandos shell, testes de aplicação, navegador, chamadas HTTP, PostgreSQL descartável, migration, teste de rate limit e teste de carga: **não executados**. Não há ambiente isolado de execução disponível nesta passada.
+- `scripts/teste-seguranca.js` foi lido, mas **não executado**: cria pedidos, tenta cancelar/editar pedidos, faz logins e aciona rate limit; só deve ser usado com servidor e banco descartáveis confirmados.
+- Nenhuma configuração do Railway, conta real, segredo real, dado de produção, migration ou deploy foi acessado/alterado.
+
+### Conclusão e bloqueios
+
+O código indica que o QR da mesa é permanente e que um pedido público pode abrir sessão sem ação prévia de funcionário; confirmar o comportamento por teste isolado ainda é pendente. A trilha de autoria financeira/operacional é incompleta na camada de banco examinada; o script de redefinição expõe a senha se executado; o desconto integral não exige aprovação adicional; e a segurança do rate limit depende da confiança real no proxy e do compartilhamento de IP.
+
+**Nada foi corrigido nesta entrega.** A branch contém apenas documentação; as quatro issues são tarefas abertas, não implementação. Não fazer merge/deploy nem testar mutações em produção. Decisões pendentes do responsável: política do QR/sessão, contas individuais/PIN para dispositivos compartilhados, retenção e acesso à auditoria, limite e aprovação de descontos, e topologia confiável do proxy.
