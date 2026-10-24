@@ -261,6 +261,45 @@ test('cozinha/bar não podem concluir entrega pelo endpoint genérico (ADR-007)'
   await assert.rejects(() => setStatusItem(1, 'entregue'), (e) => e instanceof ErroPedido && e.status === 400);
 });
 
+test('cancelamento público cancela pedido recebido e restaura estoque na mesma transação', async () => {
+  const pool = require('../db/pool');
+  const { cancelarPedidoCliente } = require('../db/pedidos');
+  const originalConnect = pool.connect;
+  const calls = [];
+  let released = false;
+  const client = {
+    async query(sql, params = []) {
+      calls.push({ sql, params });
+      if (sql.includes('SELECT id, numero, status FROM mesas WHERE token')) {
+        return { rows: [{ id: 7, numero: 3, status: 'ocupada' }] };
+      }
+      if (sql.includes('SELECT p.id, p.status, p.sessao_id')) {
+        return { rows: [{ id: 99, status: 'recebido', sessao_id: 42 }] };
+      }
+      if (sql.includes('SELECT ip.produto_id, ip.quantidade')) {
+        return { rows: [{ produto_id: 5, quantidade: 2, controla_estoque: true, disponivel: false, estoque: 0 }] };
+      }
+      if (sql.includes('UPDATE produtos')) return { rows: [], rowCount: 1 };
+      return { rows: [], rowCount: 1 };
+    },
+    release() { released = true; },
+  };
+  pool.connect = async () => client;
+  try {
+    const result = await cancelarPedidoCliente('12345678-1234-4234-8234-123456789abc', 99);
+    assert.deepEqual(result, { ok: true, id: 99, cancelado: true, mesa: 3 });
+    const selectPedido = calls.find((c) => c.sql.includes('SELECT p.id, p.status, p.sessao_id'));
+    assert.deepEqual(selectPedido.params, [99, 7, null], 'cancelamento público não deve referenciar garçom inexistente');
+    assert.ok(calls.some((c) => c.sql.includes('UPDATE produtos') && c.params[0] === 2 && c.params[1] === 5),
+      'estoque deve ser restaurado antes do commit');
+    assert.ok(calls.some((c) => c.sql === 'COMMIT'));
+    assert.equal(calls.some((c) => c.sql === 'ROLLBACK'), false);
+    assert.equal(released, true);
+  } finally {
+    pool.connect = originalConnect;
+  }
+});
+
 /* ---------- Schema: DDL não pode morar no caminho da requisição ---------- */
 
 test('migrations incluem a tabela pix_avisos com índice', () => {
