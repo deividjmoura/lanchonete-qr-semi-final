@@ -16,6 +16,7 @@ const { ErroValidacao, numeroFinito, numeroInteiroPositivo } = require('../db/va
 const { getOuAbrirSessao, getProdutoComRegras } = require('../db/queries');
 const { ErroGarcom, removerGarcom, setGarcomAtivo, entregarComoGarcom } = require('../db/garcons');
 const { ErroPedido, setStatusPedido, setStatusItem } = require('../db/pedidos');
+const { sanitizarAlvoRequisicao, sanitizarDetalheErro } = require('../db/log-sanitizer');
 
 /* Mock mínimo de <html> que espelha o DOM real:
    dataset ↔ data-theme ficam sincronizados com getAttribute/setAttribute. */
@@ -141,6 +142,23 @@ test('cliente SSE envia token e encerra conexão no cleanup', () => {
   context.exports.connectEvents(() => {}, { garcom: 'abc' })();
   assert.equal(url, '/api/events?garcom=abc');
   context.exports.connectEvents(() => {})(); assert.equal(url, '/api/events');
+});
+
+test('logs HTTP omitem tokens bearer de caminho, query e mensagens de erro', () => {
+  const token = '12345678-1234-4234-8234-123456789abc';
+  assert.equal(
+    sanitizarAlvoRequisicao(`/api/garcom/${token}/pedidos?token=${token}`),
+    '/api/garcom/[REDACTED]/pedidos'
+  );
+  assert.equal(
+    sanitizarAlvoRequisicao(`/mesa/${token}?mesa=${token}`),
+    '/mesa/[REDACTED]'
+  );
+  assert.equal(
+    sanitizarAlvoRequisicao(`/api/events?garcom=${token}&mesa=${token}`),
+    '/api/events'
+  );
+  assert.doesNotMatch(sanitizarDetalheErro(new Error(`Falha para token ${token}`)), new RegExp(token));
 });
 
 test('upload de foto rejeita destinos SSRF locais', async () => {
