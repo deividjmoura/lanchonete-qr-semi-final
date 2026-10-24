@@ -6,8 +6,9 @@ const { randomUUID } = require('node:crypto');
 const pool = require('../db/pool');
 const pedidos = require('../db/pedidos');
 const caixa = require('../db/caixa');
+const garcons = require('../db/garcons');
 
-test('pedido idempotente, entrega, pagamento parcial e fechamento persistem invariantes', async (t) => {
+test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persistem invariantes', async () => {
   const databaseUrl = new URL(process.env.DATABASE_URL || '');
   assert.ok(['127.0.0.1', 'localhost', 'postgres'].includes(databaseUrl.hostname),
     'Integração bloqueada: host deve ser o PostgreSQL descartável do CI');
@@ -20,12 +21,14 @@ test('pedido idempotente, entrega, pagamento parcial e fechamento persistem inva
   let mesaId;
   let categoriaId;
   let produtoId;
+  let produtoExtraId;
   let sessaoId;
+  let garcomId;
 
   try {
     const mesa = await pool.query(
       'INSERT INTO mesas (numero, token) VALUES ($1, $2) RETURNING id',
-      [9000 + Math.floor(Math.random() * 900), token]
+      [900000 + Math.floor(Math.random() * 90000), token]
     );
     mesaId = mesa.rows[0].id;
     categoriaId = (await pool.query(
@@ -33,12 +36,27 @@ test('pedido idempotente, entrega, pagamento parcial e fechamento persistem inva
       ['CI integração ' + suffix]
     )).rows[0].id;
     produtoId = (await pool.query(
-      'INSERT INTO produtos (categoria_id, nome, preco, disponivel) VALUES ($1, $2, 12.50, TRUE) RETURNING id',
-      [categoriaId, 'Produto CI ' + suffix]
+      `INSERT INTO produtos
+         (categoria_id, nome, preco, disponivel, controla_estoque, estoque)
+       VALUES ($1, $2, 12.50, TRUE, TRUE, 5) RETURNING id`,
+      [categoriaId, 'Produto com estoque CI ' + suffix]
     )).rows[0].id;
+    produtoExtraId = (await pool.query(
+      `INSERT INTO produtos (categoria_id, nome, preco, disponivel)
+       VALUES ($1, $2, 5.00, TRUE) RETURNING id`,
+      [categoriaId, 'Produto extra CI ' + suffix]
+    )).rows[0].id;
+    const garcom = await garcons.criarGarcom({ nome: 'Garçom CI ' + suffix });
+    garcomId = garcom.id;
 
     const key = 'ci-' + randomUUID();
-    const body = { idempotencyKey: key, items: [{ productId: produtoId, qty: 2 }] };
+    const body = {
+      idempotencyKey: key,
+      items: [
+        { productId: produtoId, qty: 2 },
+        { productId: produtoExtraId, qty: 1 },
+      ],
+    };
     const [first, retry] = await Promise.all([
       pedidos.criarPedido(token, body),
       pedidos.criarPedido(token, body),
@@ -54,22 +72,87 @@ test('pedido idempotente, entrega, pagamento parcial e fechamento persistem inva
     sessaoId = persisted.rows[0].sessao_id;
 
     const itemRows = await pool.query(
-      'SELECT id, quantidade, preco_unitario FROM itens_pedido WHERE pedido_id = $1',
+      `SELECT id, produto_id, quantidade, preco_unitario, status
+       FROM itens_pedido WHERE pedido_id = $1 ORDER BY id`,
       [first.id]
     );
-    assert.equal(itemRows.rowCount, 1, 'retry não pode duplicar item');
+    assert.equal(itemRows.rowCount, 2, 'retry não pode duplicar itens');
+    assert.equal(itemRows.rows[0].produto_id, produtoId);
     assert.equal(itemRows.rows[0].quantidade, 2);
     assert.equal(Number(itemRows.rows[0].preco_unitario), 12.5);
+    assert.equal(itemRows.rows[1].produto_id, produtoExtraId);
+    assert.equal(itemRows.rows[1].quantidade, 1);
+    assert.equal(Number(itemRows.rows[1].preco_unitario), 5);
 
-    await pedidos.setStatusPedido(first.id, 'entregue');
-    const totalEntregue = await pool.query(
-      `SELECT SUM(ip.quantidade * ip.preco_unitario)::numeric(10,2) AS total
-       FROM itens_pedido ip WHERE ip.pedido_id = $1 AND ip.status = 'entregue'`,
+    // O retry concorrente não pode baixar o estoque duas vezes.
+    let stock = await pool.query(
+      'SELECT estoque, disponivel FROM produtos WHERE id = $1',
+      [produtoId]
+    );
+    assert.equal(stock.rows[0].estoque, 3, 'estoque deve baixar apenas 2 unidades para o pedido idempotente');
+    assert.equal(stock.rows[0].disponivel, true);
+
+    // Pedido acima do saldo deve falhar sem alterar estoque nem persistir outro pedido.
+    await assert.rejects(
+      () => pedidos.criarPedido(token, {
+        idempotencyKey: 'ci-overstock-' + randomUUID(),
+        items: [{ productId: produtoId, qty: 4 }],
+      }),
+      /Estoque insuficiente/
+    );
+    stock = await pool.query('SELECT estoque FROM produtos WHERE id = $1', [produtoId]);
+    assert.equal(stock.rows[0].estoque, 3, 'pedido recusado não pode alterar estoque');
+    const orderCount = await pool.query(
+      'SELECT COUNT(*)::int AS n FROM pedidos WHERE sessao_id = $1',
+      [sessaoId]
+    );
+    assert.equal(orderCount.rows[0].n, 1, 'pedido recusado não pode deixar pedido parcial');
+
+    // Ambos ficam prontos, mas o garçom entrega somente um item de cada vez.
+    await pedidos.setStatusItem(itemRows.rows[0].id, 'concluido');
+    await pedidos.setStatusItem(itemRows.rows[1].id, 'concluido');
+    const entregaParcial = await garcons.entregarComoGarcom(
+      first.id, garcom.token, [itemRows.rows[0].id]
+    );
+    assert.equal(entregaParcial.parcial, true);
+    assert.equal(entregaParcial.status, 'concluido');
+    assert.equal(Number(entregaParcial.valorEntregue), 25);
+
+    const partialState = await pool.query(
+      `SELECT p.status AS pedido_status, ip.id, ip.status AS item_status,
+              s.valor_total
+       FROM pedidos p
+       JOIN itens_pedido ip ON ip.pedido_id = p.id
+       JOIN mesa_sessoes s ON s.id = p.sessao_id
+       WHERE p.id = $1 ORDER BY ip.id`,
       [first.id]
     );
-    assert.equal(Number(totalEntregue.rows[0].total), 25);
-    const totalSessao = await pool.query('SELECT valor_total FROM mesa_sessoes WHERE id = $1', [sessaoId]);
-    assert.equal(Number(totalSessao.rows[0].valor_total), 25);
+    assert.equal(partialState.rows[0].item_status, 'entregue');
+    assert.equal(partialState.rows[1].item_status, 'concluido');
+    assert.equal(partialState.rows[0].pedido_status, 'concluido');
+    assert.equal(Number(partialState.rows[0].valor_total), 25,
+      'total da sessão deve incluir somente o item já entregue');
+
+    const entregaFinal = await garcons.entregarComoGarcom(
+      first.id, garcom.token, [itemRows.rows[1].id]
+    );
+    assert.equal(entregaFinal.parcial, false);
+    assert.equal(entregaFinal.status, 'entregue');
+    assert.equal(Number(entregaFinal.valorEntregue), 5);
+
+    const deliveredTotal = await pool.query(
+      `SELECT SUM(ip.quantidade * ip.preco_unitario)::numeric(10,2) AS total
+       FROM itens_pedido ip
+       WHERE ip.pedido_id = $1 AND ip.status = 'entregue'`,
+      [first.id]
+    );
+    assert.equal(Number(deliveredTotal.rows[0].total), 30);
+    const totalSessao = await pool.query(
+      'SELECT valor_total FROM mesa_sessoes WHERE id = $1',
+      [sessaoId]
+    );
+    assert.equal(Number(totalSessao.rows[0].valor_total), 30,
+      'total da sessão deve refletir todos e somente os itens entregues');
 
     const paymentKey = 'pay-' + randomUUID();
     const payBody = { idempotencyKey: paymentKey, formaPagamento: 'pix', valor: 10 };
@@ -92,8 +175,8 @@ test('pedido idempotente, entrega, pagamento parcial e fechamento persistem inva
       idempotencyKey: 'close-' + randomUUID(),
     });
     assert.equal(closed.status, 'fechada');
-    assert.equal(closed.valorTotal, 25);
-    assert.equal(closed.valorPago, 25);
+    assert.equal(closed.valorTotal, 30);
+    assert.equal(closed.valorPago, 30);
 
     const finalState = await pool.query(
       `SELECT s.status, s.valor_total, s.valor_cobrado,
@@ -103,25 +186,27 @@ test('pedido idempotente, entrega, pagamento parcial e fechamento persistem inva
       [sessaoId]
     );
     assert.equal(finalState.rows[0].status, 'fechada');
-    assert.equal(Number(finalState.rows[0].valor_total), 25);
-    assert.equal(Number(finalState.rows[0].valor_cobrado), 25);
+    assert.equal(Number(finalState.rows[0].valor_total), 30);
+    assert.equal(Number(finalState.rows[0].valor_cobrado), 30);
     assert.equal(finalState.rows[0].pagamentos, 2, 'pagamento parcial + saldo do fechamento');
     assert.equal(finalState.rows[0].pedidos, 1);
   } finally {
     // Limpeza limitada aos identificadores sintéticos criados por este teste.
-    if (sessaoId || mesaId) {
+    if (mesaId) {
       const ids = await pool.query(
-        "SELECT id FROM mesa_sessoes WHERE mesa_id = $1",
-        [mesaId || -1]
+        'SELECT id FROM mesa_sessoes WHERE mesa_id = $1',
+        [mesaId]
       );
       for (const row of ids.rows) {
         await pool.query('DELETE FROM sessao_pagamentos WHERE sessao_id = $1', [row.id]);
         await pool.query('DELETE FROM pedidos WHERE sessao_id = $1', [row.id]);
       }
-      await pool.query('DELETE FROM mesa_sessoes WHERE mesa_id = $1', [mesaId || -1]);
+      await pool.query('DELETE FROM mesa_sessoes WHERE mesa_id = $1', [mesaId]);
     }
+    if (garcomId) await pool.query('DELETE FROM garcons WHERE id = $1', [garcomId]);
     if (mesaId) await pool.query('DELETE FROM mesas WHERE id = $1', [mesaId]);
     if (produtoId) await pool.query('DELETE FROM produtos WHERE id = $1', [produtoId]);
+    if (produtoExtraId) await pool.query('DELETE FROM produtos WHERE id = $1', [produtoExtraId]);
     if (categoriaId) await pool.query('DELETE FROM categorias WHERE id = $1', [categoriaId]);
     await pool.end();
   }
