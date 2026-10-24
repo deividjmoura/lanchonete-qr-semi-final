@@ -62,3 +62,27 @@ test('invalid client IP never becomes an attacker-controlled rate-limit identity
   assert.equal(loginRateLimitKey('not-an-ip'), 'login:unknown');
   assert.equal(orderRateLimitKey('not-an-ip', 'mesa-a'), 'pedido:unknown:mesa-a');
 });
+
+const { spawnSync } = require('node:child_process');
+const { golpePermitido } = require('../db/rateLimit');
+
+test('rate limit atual compartilha a chave IP/mesa dentro do mesmo processo', () => {
+  const suffix = `issue50-${process.pid}-${Date.now()}`;
+  const mesaA = orderRateLimitKey('198.51.100.7', `mesa-a-${suffix}`);
+  const mesaB = orderRateLimitKey('198.51.100.7', `mesa-b-${suffix}`);
+  assert.equal(golpePermitido(mesaA, { janelaMs: 60_000, max: 1 }), true);
+  assert.equal(golpePermitido(mesaA, { janelaMs: 60_000, max: 1 }), false);
+  assert.equal(golpePermitido(mesaB, { janelaMs: 60_000, max: 1 }), true);
+});
+
+test('rate limit atual é independente entre processos e recomeça após reinício', () => {
+  const key = `issue50-restart-${Date.now()}`;
+  const script = `const {golpePermitido}=require('./db/rateLimit'); process.stdout.write(String(golpePermitido(process.argv[1], {janelaMs:60000,max:1}));`;
+  const run = () => spawnSync(process.execPath, ['-e', script, key], { cwd: process.cwd(), encoding: 'utf8', timeout: 5_000 });
+  const first = run();
+  const secondProcess = run();
+  assert.equal(first.status, 0, first.stderr);
+  assert.equal(secondProcess.status, 0, secondProcess.stderr);
+  assert.equal(first.stdout, 'true');
+  assert.equal(secondProcess.stdout, 'true');
+});
