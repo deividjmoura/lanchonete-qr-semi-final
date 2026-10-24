@@ -32,7 +32,7 @@ test('criação de pedido rejeita carrinho ausente ou vazio antes de abrir conex
 
 test('criação de pedido rejeita chave de idempotência malformada antes do banco', async () => {
   await rejeicao400(criarPedido('token-mesa', {
-    idempotencyKey: 'not-a-uuid',
+    idempotencyKey: 'bad key!',
     items: [{ productId: 1, qty: 1 }],
   }));
   await rejeicao400(criarPedido('token-mesa', {
