@@ -469,7 +469,7 @@ Cada tarefa deve ter branch própria e PR para `main`; revisar checks e diff e n
 
 - Terminal, npm ci, npm test, npm run test:regression, npm run typecheck, npm run build, testes HTTP, PostgreSQL, navegador e carga: **não executados**. O acesso disponível permitiu leitura de arquivos e metadados via GitHub, não checkout executável local.
 - Leitura dos arquivos listados acima na branch audit/production-readiness: concluída.
-- CI do commit anterior 5cd300aaee9463d74e851cc888b498772a79733e: run #156, conclusão success (https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40118121079). Esse resultado não é teste desta passada e não valida os novos apontamentos.
+- CI executado para o commit de documentação b2fe653eb74af1df8a015270d74101bb9266166d: run #163, conclusão success (https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40118914869). Os logs confirmam npm ci, npm run typecheck, npm run build, npm run test:regression (94 testes, 94 passaram, 0 falharam) e verificações de sintaxe de server/db. Como o PR altera somente documentação, esses checks verificam a integridade do projeto nesse commit, mas não testam dinamicamente os achados nem incluem PostgreSQL/browser/carga.
 - Nenhum teste mutável foi executado; nenhuma migration foi aplicada; nenhum dado, variável ou log de produção foi acessado.
 
 ### Situação dos achados após a revisão complementar
