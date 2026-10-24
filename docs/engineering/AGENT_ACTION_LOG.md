@@ -36,3 +36,13 @@ Este documento registra ações e limites de validação por sessão. Acrescenta
 - CI da correção F01 no head `592a722eea1c99ab30b0fc53ec0d473e3406d611`: [run 40126835090](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40126835090) **SUCCESS**. Passaram instalação, typecheck, build, integridade de `dist/`, regressões e sintaxe.
 - Commits finais de código/teste após o primeiro CI: app `5e7c80bd6ce20cb1680eeec9299532dabc565437`; teste `592a722eea1c99ab30b0fc53ec0d473e3406d611`.
 - Ainda pendente: teste de navegador real/escaneamento do SVG e confirmação do modo offline com Service Worker instalado. Sem produção, Railway, banco, migrations ou deploy.
+
+
+## 2026-10-24 — revisão adicional do PR #69 (cache de assets)
+
+- Revisados os diffs dos PRs #65, #69, #57, #58, #71 e #73 para identificar riscos sem duplicar mudanças de runtime.
+- **F04 — novo falso positivo confirmado no código do PR #69:** `cacheControlForStaticAsset()` considera hash qualquer sufixo de 8+ caracteres após hífen/ponto. Nome estável como `/assets/app-production.js` também passa e receberia `public, max-age=31536000, immutable`, embora o nome não garanta versionamento por conteúdo.
+- Deixado comentário de revisão no PR #69, review ID `5639718197`, pedindo correspondência com o padrão real do build e regressões para nomes estáveis longos e assets reais de `dist/assets`.
+- Não alterei o código nem a branch do PR #69. O achado foi registrado no relatório F01–F05 nesta branch; aguardando resposta/correção do agente responsável.
+- F02 continua bloqueado pela confirmação da topologia de proxy; F03 continua sem prova de falha na regex, e um teste HTTP real exigiria ambiente isolado com autenticação/DB; F05 continua exigindo coordenação entre #57 e #58.
+- Sem merge, deploy, acesso/mutação de produção, banco, segredo ou migration. PRs #35/#36/#37 preservados.
