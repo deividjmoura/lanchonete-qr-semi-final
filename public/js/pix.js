@@ -90,11 +90,16 @@
 
     qrUrl(valor) {
       const payload = this.montarPayload(valor);
-      if (!payload) return '';
-      return (
-        'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' +
-        encodeURIComponent(payload)
-      );
+      if (!payload || typeof global.qrcode !== 'function') return '';
+      try {
+        const qr = global.qrcode(0, 'M');
+        qr.addData(payload);
+        qr.make();
+        const svg = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+        return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      } catch (_) {
+        return '';
+      }
     },
   };
 
