@@ -8,8 +8,12 @@ const pedidos = require('../db/pedidos');
 const caixa = require('../db/caixa');
 
 test('pedido idempotente, entrega, pagamento parcial e fechamento persistem invariantes', async (t) => {
-  assert.match(process.env.DATABASE_URL || '', /localhost|127\.0\.0\.1|postgres(:|\/\/)/i,
-    'Este teste só deve rodar contra PostgreSQL descartável local do CI');
+  const databaseUrl = new URL(process.env.DATABASE_URL || '');
+  assert.ok(['127.0.0.1', 'localhost', 'postgres'].includes(databaseUrl.hostname),
+    'Integração bloqueada: host deve ser o PostgreSQL descartável do CI');
+  assert.equal(databaseUrl.pathname, '/qradmin_test',
+    'Integração bloqueada: database deve ser qradmin_test; produção nunca é permitida');
+  assert.equal(process.env.NODE_ENV, 'test', 'Integração exige NODE_ENV=test');
 
   const token = randomUUID();
   const suffix = randomUUID().slice(0, 8);
