@@ -1,6 +1,7 @@
 const test=require('node:test');const assert=require('node:assert/strict');
 const fs=require('node:fs');const path=require('node:path');const cp=require('node:child_process');
 const root=path.join(__dirname,'..','public','garcom-pwa');
+const adminHtml=fs.readFileSync(path.join(__dirname,'..','public','admin.html'),'utf8');
 const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const qrGenerator=require(path.join(root,'qrcode-generator.js'));
@@ -31,6 +32,13 @@ test('Fila de sincronização preserva uma chave por operação e isola garçom'
  assert.match(app,/ownerToken:waiterToken/);
  assert.match(app,/o\.ownerToken===waiterToken/);
  assert.match(app,/err\.status&&err\.status<500\?'conflict'/);
+});
+test('QR da tela administrativa é gerado localmente sem enviar token a serviço externo',()=>{
+ assert.doesNotMatch(adminHtml,/api\\.qrserver\\.com/);
+ assert.match(adminHtml,/qrcode-generator\\.js/);
+ assert.match(adminHtml,/window\\.qrcode\\(0,'M'\\)/);
+ assert.match(adminHtml,/qr\\.addData\\(host\\+'\\/mesa\\/'\\+mesa\\.token\\)/);
+ assert.match(adminHtml,/createSvgTag/);
 });
 test('QR da mesa é gerado localmente e nunca envia o token a um serviço externo',()=>{
  assert.doesNotMatch(app,/api\.qrserver\.com/);
