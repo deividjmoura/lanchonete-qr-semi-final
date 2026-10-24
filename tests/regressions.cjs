@@ -12,6 +12,7 @@ const { eventAccess } = require('../db/event-access');
 const { subscribe, broadcast, clientCount } = require('../db/events');
 const { validarDestinoRemoto } = require('../db/foto');
 const { verificarOrigemRequisicao } = require('../db/auth');
+const { sanitizarCaminhoParaLog } = require('../db/log-sanitize');
 const { ErroValidacao, numeroFinito, numeroInteiroPositivo } = require('../db/validacao');
 const { getOuAbrirSessao, getProdutoComRegras } = require('../db/queries');
 const { ErroGarcom, removerGarcom, setGarcomAtivo, entregarComoGarcom } = require('../db/garcons');
@@ -559,6 +560,15 @@ test('caixa/pedidos rejeitam ids e corpos inválidos antes de abrir conexão', a
     () => pedidosModulo.criarPedido('00000000-0000-4000-8000-000000000000', { items: [{}], idempotencyKey: 'x' }),
     /idempotência inválida/
   );
+});
+
+test('logger sanitiza tokens UUID de caminho e remove query string', () => {
+  const token = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+  const safe = sanitizarCaminhoParaLog(`/api/garcom/${token}/mesas?token=${token}&debug=1`);
+  assert.equal(safe, '/api/garcom/[redacted]/mesas');
+  assert.equal(safe.includes(token), false);
+  assert.equal(safe.includes('debug'), false);
+  assert.equal(sanitizarCaminhoParaLog('/api/cardapio?secret=abc'), '/api/cardapio');
 });
 
 test('SSE público é coalescido (1 aviso/janela); staff recebe tudo na hora', async () => {
