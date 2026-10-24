@@ -77,7 +77,7 @@ test('rate limit atual compartilha a chave IP/mesa dentro do mesmo processo', ()
 
 test('rate limit atual é independente entre processos e recomeça após reinício', () => {
   const key = `issue50-restart-${Date.now()}`;
-  const script = `const {golpePermitido}=require('./db/rateLimit'); process.stdout.write(String(golpePermitido(process.argv[1], {janelaMs:60000,max:1}));`;
+  const script = `const {golpePermitido}=require('./db/rateLimit'); process.stdout.write(String(golpePermitido(process.argv[1], {janelaMs:60000,max:1})));`;
   const run = () => spawnSync(process.execPath, ['-e', script, key], { cwd: process.cwd(), encoding: 'utf8', timeout: 5_000 });
   const first = run();
   const secondProcess = run();
