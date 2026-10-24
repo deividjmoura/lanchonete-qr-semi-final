@@ -479,3 +479,59 @@ Cada tarefa deve ter branch própria e PR para `main`; revisar checks e diff e n
 - **Não confirmados dinamicamente:** bypass explorável no deployment, duplicação real de pedido, deadlock, pagamento duplicado, perda de dados por falha parcial, falha de migration em produção, configuração TLS insegura, exposição de segredo em logs ou capacidade para 50 mesas.
 - **Sem nova conclusão de IDOR cross-tenant:** o produto continua explicitamente single-tenant; não há evidência suficiente para classificar uma vulnerabilidade cross-tenant num deployment multi-loja que não foi demonstrado.
 - **Conclusão de release:** não declarar pronto para produção antes de validar autorização do garçom, testar cancelamento e transações financeiras em PostgreSQL descartável, provar idempotência sob falha de rede/restart, verificar comando de start/schema no ambiente operacional e medir carga em ambiente isolado.
+
+
+---
+
+## 13. Auditoria focalizada — consistência financeira, concorrência e dia operacional (2026-10-24)
+
+**Registro relacionado:** issue #39 — https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/39. Esta seção não implementa mudanças na regra de cobrança. PR #33 continua sendo a suíte unitária/contratual com mocks; PR #38 verifica migrations em PostgreSQL descartável. Nenhum dos dois, sozinho, prova o comportamento concorrente das funções financeiras reais.
+
+### Matriz de cenários e evidência
+
+| Área/cenário | Evidência disponível | Resultado desta auditoria | Próxima prova exigida |
+|---|---|---|---|
+| Chave estável no pedido | `db/conta.js` aceita `idempotencyKey`/aliases; `db/pedidos.js` consulta a coluna; migration 0018 cria índice único parcial por sessão/chave | Implementação parcial confirmada por leitura; chave opcional, portanto clientes sem chave não recebem garantia server-side | PostgreSQL descartável: chave igual concorrente, perda de resposta pós-commit, reinício do processo e contagem real de pedidos/itens/estoque |
+| Duplo toque/retry na PWA | `public/garcom-pwa/app.js` mantém `idempotencyKey`, mas `syncOne` é disparado por vários caminhos sem lock local atômico | Condição de corrida nos disparadores confirmada estaticamente; duplicação real não comprovada | Duas chamadas sincronizadas para o mesmo rascunho e validação da resposta com mesmo ID |
+| Pagamentos parciais/repetidos | `db/caixa.js` usa transação, bloqueio de sessão e valida o saldo; migration 0018 define unicidade opcional por sessão/chave | Controles de aplicação presentes; chave de pagamento não é obrigatória e não houve teste concorrente real | Duas sessões HTTP concorrentes com chave igual/diferente; reconciliar lançamentos, saldo e total pago |
+| Pagamento vs fechamento | `registrarPagamento` e `fecharSessao` usam transação/lock da sessão segundo leitura estática | Atomicidade pretendida pelo código, não demonstrada sob corrida/falha | Barreira concorrente real e injeção de falha entre insert/update/commit; verificar sessão, mesa, pagamentos e saldo após rollback |
+| PIX manual repetido | Migration 0018 cria índice único parcial em `sessao_pagamentos.pix_aviso_id`; `db/caixa.js` associa aviso ao pagamento | Restrição presente no código da migration; aplicação no ambiente operacional não foi verificada. PIX não é liquidação bancária automática | Aplicar migrations em PG efêmero; confirmar o mesmo aviso duas vezes em paralelo e contar exatamente um pagamento |
+| Estoque em pedidos concorrentes | `db/pedidos.js` bloqueia produtos em ordem crescente e atualiza estoque com condição de disponibilidade; migration 0018 inclui CHECK não negativo NOT VALID | Estratégia de lock/rollback presente estaticamente; o mock de regressão não representa lock PostgreSQL | Duas compras da última unidade; verificar uma confirmação, uma rejeição, estoque >= 0 e ausência de pedido parcial |
+| Cancelamento/retorno de estoque | Fluxo de cancelamento e restauração estático; relatório anterior aponta referência a variável não declarada em `cancelarPedidoCliente` | Defeito potencialmente bloqueante confirmado por inspeção estática, não por chamada dinâmica | Teste de regressão com pedido sintético e PG descartável; confirmar erro corrigido em PR separado e estoque restaurado uma vez |
+| Status/entrega parcial | Cálculo autoritativo do caixa soma itens `entregue`; status por item é separado | Distinção entregue vs concluído está presente; consistência entre transições concorrentes ainda sem prova de banco | Cozinha/bar/garçom concorrentes, entrega parcial e rollback; conferir status de item/pedido e total |
+| Valores monetários | `db/conta.js` usa `SUM(...)::float`, depois `Number(...)`/`toFixed(2)`; `db/pedidos.js` calcula totais em JS com `Number` | Risco de representação/arredondamento IEEE-754 confirmado estaticamente; não foi demonstrado centavo incorreto em produção. Tipos reais das colunas devem ser conferidos em schema efêmero | Casos 0,01/0,10/10,25, descontos/taxas e muitas linhas; comparar centavos esperados com valores persistidos e respostas |
+| Rateio de centavos | Não foi localizado contrato de divisão de conta nesta passada | Regra não definida; não inventar comportamento | Se divisão existir, decidir método (ex.: maiores restos) e critério de desempate; caso contrário, marcar fora do escopo |
+| Totais de cliente/caixa | Comentários e funções em `db/conta.js` indicam total devido calculado dos itens entregues e `valor_total` como espelho | A regra atual não deve ser alterada nesta auditoria. O total bruto de pedidos, o total entregue e o saldo são conceitos diferentes e precisam de nomes explícitos no contrato | Contrato proposto: `totalPedido` (itens aceitos, incluindo pendentes), `totalEntregue` (itens entregues), `totalPago` (pagamentos confirmados), `saldoDevido=max(0,totalEntregue-totalPago)`; validar cliente e caixa com mesma origem |
+| `APP_TIMEZONE` | `db/relatorio.js` sanitiza timezone; `db/dashboard.js` usa variável; `db/atendimento.js` deriva data local com Intl | Fuso local aparece em múltiplos pontos, com risco de divergência se consultas/formatadores diferirem; não houve teste em limites de data | Eventos sintéticos antes/depois da meia-noite local, UTC e mudança de horário sazonal quando aplicável; comparar dashboard, relatório e métricas |
+| Dia operacional às 05:00 | Não foi identificada uma configuração de hora de virada nesta inspeção | Requisito de negócio ainda aberto; não alterar relatórios para 05:00 sem decisão explícita | Definir se o dia é civil (00:00) ou operacional (ex. 05:00), e como tratar eventos 00:00–04:59; depois criar testes e uma issue de implementação |
+
+### Observação sobre idempotência e constraints
+
+A migration 0018 cria chaves únicas apenas quando a chave não é NULL. Isso é correto como constraint de proteção para clientes que enviam chave, mas não protege clientes que a omitem. Além disso, `colunaExiste()` em `db/conta.js` transforma falha de introspecção em `false`, permitindo que a operação continue sem idempotência. O comentário documenta essa escolha como degradação graciosa, mas para operação financeira o modo fail-open precisa de decisão explícita: readiness/alerta pode ser mais seguro do que anunciar proteção que não está ativa. Não se conclui que a migration esteja ausente no deployment; isso não foi verificado.
+
+A mesma chave reaproveitada com payload diferente também precisa de semântica definida. O índice único evita segunda linha, mas não demonstra por si só que o servidor rejeita payload divergente ou compara hash do conteúdo; isso será incluído nos testes do issue #39.
+
+### Contrato de totais sugerido (proposta, não mudança implementada)
+
+- `totalPedido`: soma dos itens aceitos no pedido, independentemente de ainda estarem em preparo.
+- `totalEntregue`: soma dos itens cujo estado efetivo é `entregue`, com adicionais, segundo a regra atual.
+- `totalPago`: soma dos lançamentos de pagamento confirmados.
+- `saldoDevido`: `max(0, totalEntregue - totalPago)`.
+- `saldoPotencial`: opcional para UI, calculado com itens ainda não entregues, sempre rotulado como estimativa e sem usá-lo como valor cobrável.
+
+Não alterar a regra atual de cobrança nesta auditoria. Cliente e caixa devem exibir rótulos inequívocos e nunca somar `totalPedido` ao `totalEntregue`.
+
+### Resultado de CI observado durante esta continuação
+
+- PR #33 / workflow run #162: **FAILURE** — 111 passaram, 1 falhou de 112. O caso que falhou foi `criação rejeita produto inexistente e produto indisponível sem confirmar pedido`. O motivo observado foi `Missing expected rejection`: o cliente falso devolvia o produto 8 existente/disponível mesmo nos cenários configurados como inexistente/indisponível. Isso é um defeito no fixture do teste, não evidência de defeito da aplicação. A fixture foi corrigida na branch do PR #33 para refletir os dois estados; a correção precisa de novo CI antes de declarar o teste aprovado.
+- PR #38 / workflow run #164: **SUCCESS** — a cadeia de migrations e a segunda execução do runner passaram em PostgreSQL 16 descartável. Esse job não exercita pedidos/pagamentos concorrentes e não é evidência de idempotência de operações financeiras.
+- PR #34 / workflow run #163: **SUCCESS** — 94/94 regressões existentes passaram para o commit de documentação; o relatório foi o único arquivo do PR. Não executou testes de integração financeira.
+- Nenhuma contagem de requisições concorrentes, linhas financeiras reais, rollback de pagamento ou restart de aplicação foi obtida nesta auditoria.
+
+### Limitações e próximos passos
+
+1. Usar o issue #39 para estender o job PostgreSQL já existente no PR #38 e os contratos do PR #33, não duplicar a suíte.
+2. Executar os cenários com PostgreSQL descartável e apresentar contagens persistidas, versão, comando, commit e workflow.
+3. Separar defeitos estáticos confirmados de hipóteses que dependem de transação concorrente.
+4. Decidir política de dia operacional antes de modificar consultas e relatórios.
+5. Não fazer merge/deploy, não tocar em produção e não aplicar correções financeiras amplas nesta etapa.
