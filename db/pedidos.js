@@ -424,7 +424,8 @@ async function cancelarPedidoCliente(token, pedidoId) {
        WHERE p.id = $1 AND s.mesa_id = $2 AND s.status = 'aberta'
          AND ($3::int IS NULL OR s.garcom_responsavel_id = $3)
        FOR UPDATE OF p`,
-      [Number(pedidoId), mesa.id, garcomResponsavelId]
+      // Cancelamento público é autorizado pelo token da mesa, não por identidade de garçom.
+      [pedidoNumerico, mesa.id, null]
     );
     const pedido = rows[0];
     if (!pedido) throw new ErroPedido(404, 'Pedido não encontrado nesta mesa');
