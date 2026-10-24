@@ -55,3 +55,13 @@ Este documento registra ações e limites de validação por sessão. Acrescenta
 - Registrado comentário no PR #71 (issue comment ID `6389003917`) pedindo ampliação do escopo ou achado irmão para QR administrativo. Relatório F01–F05 atualizado no commit `13e1fa29fa9bea909e27b3f8b35d3e9ecb85cc5d`.
 - `public/js/pix.js` também usa `api.qrserver.com` para payload PIX; registrei como revisão de privacidade separada, sem presumir que o payload seja token de mesa.
 - Nenhum código de runtime da área administrativa foi alterado nesta etapa; sem merge/deploy/produção/banco/migrations.
+
+
+## 2026-10-24 — correção ampliada F01 no QR administrativo
+
+- Corrigido `public/admin.html` nesta branch para carregar `/garcom-pwa/qrcode-generator.js` e gerar o QR da mesa como SVG local; removida a construção de URL para `api.qrserver.com` contendo `m.token`.
+- Adicionado teste de regressão em `tests/pwa-garcom-integracao.test.cjs` cobrindo ausência do domínio externo no HTML administrativo e presença da geração SVG local.
+- Commit da alteração de runtime: `f8427f0d4da15605f12ebbf429cd767080b97ee7`; commit do teste: `a34c57af5d91af84d3b889d6cd8a92552dcb4279`. Relatório atualizado em commit `c3022f9ae7808b3e3c4615a4dc590ada69f4b01e`.
+- CI para o commit de teste apareceu inicialmente como queued na run #244 (`40128855029`); a consulta ao commit mais recente ainda não retornou run, então não afirmar CI verde para esta ampliação até confirmar conclusão.
+- Validação em navegador/câmera e modo offline permanece pendente. `public/js/pix.js` ainda usa QR externo para payload PIX; tratar como revisão de privacidade separada, sem confundir com token de mesa.
+- Sem merge, deploy, alteração de banco, segredo ou infraestrutura.
