@@ -80,6 +80,7 @@ const { resumoDia, topProdutosHoje } = require('./db/dashboard');
 const { relatorioVendas } = require('./db/relatorio');
 const { purgeHistorico, ErroPurge } = require('./db/purge');
 const { processarUploadFoto, ErroFoto } = require('./db/foto');
+const { sanitizarCaminhoParaLog } = require('./db/log-sanitize');
 
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
@@ -1011,7 +1012,7 @@ const server = http.createServer(async (req, res) => {
        ATENÇÃO: `p` (u.pathname) é declarado DENTRO do try; aqui só existe
        req.url, e usá-lo sem esse cuidado derruba o processo. */
     if (e && e.status && e.status >= 400 && e.status < 500) {
-      console.warn(`[http ${e.status}] ${req.method} ${req.url} — ${e.message || 'rejeitado'}`);
+      console.warn(`[http ${e.status}] ${req.method} ${sanitizarCaminhoParaLog(req.url)} — ${e.message || 'rejeitado'}`);
       return json(res, e.status, { error: e.message || 'Erro' });
     }
     console.error(e);
