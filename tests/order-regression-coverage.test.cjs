@@ -204,13 +204,13 @@ function clientePedidoFake({ estoqueDisponivel = true, falharNoInsertAdicional =
       if (sql.includes('INSERT INTO mesa_sessoes (mesa_id)')) return { rows: [{ id: 55 }] };
       if (sql.includes('UPDATE mesas SET status')) return { rows: [], rowCount: 1 };
       if (sql.includes('SELECT id FROM produtos WHERE id = ANY($1::int[]) ORDER BY id FOR UPDATE')) {
-        return { rows: [{ id: 8 }] };
+        return { rows: produtoExiste ? [{ id: 8 }] : [] };
       }
       if (sql.includes('SELECT id, nome, preco, disponivel, pede_ponto_carne, controla_estoque, estoque FROM produtos')) {
-        return { rows: [{
-          id: 8, nome: 'Hambúrguer teste', preco: '10.25', disponivel: true,
+        return { rows: produtoExiste ? [{
+          id: 8, nome: 'Hambúrguer teste', preco: '10.25', disponivel: produtoDisponivel,
           pede_ponto_carne: true, controla_estoque: true, estoque: 5,
-        }] };
+        }] : [] };
       }
       if (sql.includes('SELECT id, produto_id, nome, preco FROM adicionais')) {
         return { rows: [{ id: 3, produto_id: 8, nome: 'Queijo extra', preco: '2.50' }] };
