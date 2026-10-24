@@ -3,15 +3,25 @@
  * Redefine a senha de admin / cozinha / caixa para o valor de STAFF_SEED_PASSWORD.
  *
  * Uso:
- *   node scripts/reset-senha.js
- *   STAFF_SEED_PASSWORD=minha-senha node scripts/reset-senha.js
+ *   STAFF_SEED_PASSWORD='senha-forte' node scripts/reset-senha.js
+ *   ADMIN_PASSWORD='senha-forte' node scripts/reset-senha.js
+ *
+ * Por segurança, o script nunca imprime a senha nem gera um comando curl contendo-a.
  */
 require('dotenv').config();
 const { hashSenha, garantirStaffSeed } = require('../db/auth');
 const pool = require('../db/pool');
 
+function resolveResetPassword(env = process.env) {
+  const senha = env.STAFF_SEED_PASSWORD || env.ADMIN_PASSWORD;
+  if (!senha || senha === 'troque-esta-senha') {
+    throw new Error('Defina STAFF_SEED_PASSWORD (preferencial) ou ADMIN_PASSWORD com uma senha forte antes de executar este script.');
+  }
+  return senha;
+}
+
 async function main() {
-  const senha = process.env.STAFF_SEED_PASSWORD || process.env.ADMIN_PASSWORD || 'troque-esta-senha';
+  const senha = resolveResetPassword();
 
   // Garante que os 3 usuários existam (idempotente)
   const seed = await garantirStaffSeed();
@@ -29,20 +39,23 @@ async function main() {
   );
 
   if (!rows.length) {
-    console.error('Nenhum usuário admin/cozinha/caixa encontrado na tabela staff.');
-    process.exit(1);
+    throw new Error('Nenhum usuário admin/cozinha/caixa encontrado na tabela staff.');
   }
 
-  console.log('Senha atualizada para:', JSON.stringify(senha));
+  console.log('Senha atualizada para as contas de staff solicitadas. O segredo não será exibido.');
   for (const u of rows) {
     console.log(`  · ${u.login} (${u.papel}) ativo=${u.ativo}`);
   }
-  console.log('\nTeste: curl -s -X POST http://127.0.0.1:3000/api/login -H "Content-Type: application/json" -d \'{"usuario":"admin","senha":"' + senha + '"}\'');
+  console.log('\nPara validar, use o fluxo normal de login local sem colocar a senha em argumentos de terminal ou logs.');
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(() => pool.end().catch(() => {}));
+if (require.main === module) {
+  main()
+    .catch((e) => {
+      console.error(e.message || 'Falha ao redefinir senha.');
+      process.exitCode = 1;
+    })
+    .finally(() => pool.end().catch(() => {}));
+}
+
+module.exports = { resolveResetPassword };
