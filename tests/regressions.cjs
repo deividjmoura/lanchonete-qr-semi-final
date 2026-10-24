@@ -585,12 +585,12 @@ test('seed de garçom não imprime nem retorna token bearer', () => {
   const seed = fs.readFileSync('db/seed.js', 'utf8');
   assert.doesNotMatch(
     seed,
-    /console\\.log\\([^;]*token[^;]*ins\\[0\\]\\.token/i,
+    /console\.log\([^;]*token[^;]*ins\[0\]\.token/i,
     'o seed não deve imprimir o token de garçom'
   );
   assert.doesNotMatch(
     seed,
-    /return\\s*\\{\\s*created:\\s*true,\\s*count:\\s*1,\\s*token:\\s*ins\\[0\\]\\.token\\s*\\}/,
+    /return\s*\{\s*created:\s*true,\s*count:\s*1,\s*token:\s*ins\[0\]\.token\s*\}/,
     'o seed não deve propagar o token em seu resultado'
   );
 });
