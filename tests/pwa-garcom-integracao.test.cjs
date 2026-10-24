@@ -37,7 +37,7 @@ test('QR da tela administrativa é gerado localmente sem enviar token a serviço
  assert.doesNotMatch(adminHtml,/api\.qrserver\.com/);
  assert.match(adminHtml,/qrcode-generator\.js/);
  assert.match(adminHtml,/window\.qrcode\(0,'M'\)/);
- assert.match(adminHtml,/qr\\.addData\\(host\\+'\\/mesa\\/'\\+mesa\\.token\\)/);
+ assert.match(adminHtml,/qr\.addData\(host\+'\/mesa\/'\+mesa\.token\)/);
  assert.match(adminHtml,/createSvgTag/);
 });
 test('QR da mesa é gerado localmente e nunca envia o token a um serviço externo',()=>{
