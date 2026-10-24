@@ -88,3 +88,10 @@ Este documento registra ações e limites de validação por sessão. Acrescenta
 - Adicionada regressão em `tests/pwa-garcom-integracao.test.cjs` para proibir endpoint externo no módulo PIX e confirmar geração local/ordem do script.
 - CI da ampliação PIX está na run #256 (`40129073552`), `in_progress` na última consulta; não declarar verde antes da conclusão.
 - Relatório técnico atualizado no commit `03ee453f02bdc3148e42ec21b4f13973cbee09b4`. Sem deploy, banco, migration ou mudança de infraestrutura.
+
+
+### CI final da ampliação PIX
+
+- Run #256 (`40129073552`) terminou **SUCCESS** após a inclusão do gerador local no fluxo PIX: typecheck, build, integridade de `dist/`, regressões e sintaxe passaram; **99 testes passaram, 0 falharam**.
+- As duas regressões novas passaram: QR PIX não envia payload financeiro a serviço externo; QR administrativo gera localmente sem enviar token a serviço externo.
+- O PR #71 foi atualizado para refletir o escopo ampliado. Validação real em navegador/câmera e instalação/offline continua pendente; nenhuma validação em produção foi feita.
