@@ -48,11 +48,12 @@
       "result": {
         "commit": "dcba41db00d2dc49d2b1682fffb837a223563d7e",
         "ci_run": "https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40123691045",
-        "ci_status": "in_progress",
+        "ci_status": "passed",
         "merged": false,
-        "deployed": false
+        "deployed": false,
+        "mergeable": true
       },
-      "next_action": "Acompanhar CI do PR #69, corrigir falhas e registrar medições de payload em teste isolado."
+      "next_action": "Concluir medição comparativa de bytes via HTTP em ambiente isolado e responder revisão; não fazer merge/deploy."
     },
     {
       "id": "agent-2",
