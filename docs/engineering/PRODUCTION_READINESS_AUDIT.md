@@ -744,3 +744,11 @@ A presença do pre-deploy `db:migrate` sugere que falha nessa etapa deve impedir
 - O contrato preservado é: o token válido da mesa identifica a mesa; a consulta exige pedido dessa mesa e sessão aberta; o cancelamento continua permitido somente no status `recebido`. O filtro de atribuição a garçom não se aplica ao fluxo público do cliente.
 - Foi adicionada regressão estática em `tests/regressions.cjs` para detectar a referência fora do escopo e garantir o parâmetro `null`. A regressão não substitui integração com PostgreSQL descartável para comprovar commit/rollback e restauração de estoque uma única vez.
 - CI do head final `738cb3e14ade05aa0948568b79eff14fa1996f76` concluiu **SUCCESS** no run [40129357081](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40129357081), job `verify`. Isso cobre as verificações automatizadas, inclusive a regressão estática; não substitui integração com PostgreSQL descartável para commit/rollback e restauração de estoque. Sem merge/deploy ou operação de banco.
+
+
+### 14.9 Achado de consistência — itens inválidos são omitidos silenciosamente do pedido (2026-10-24)
+
+- Em `db/pedidos.js`, `gravarItensPedido()` usa `continue` quando o ID de produto enviado é inválido e também quando o produto não existe ou está indisponível. Se o carrinho contém outros itens válidos, esses podem ser gravados e o pedido pode ser confirmado sem os itens omitidos.
+- Isso cria risco de divergência entre o carrinho enviado e o pedido persistido. A consequência na interface (por exemplo, se limpa o carrinho após sucesso) ainda precisa ser confirmada por E2E; o comportamento de omissão é confirmado estaticamente no backend.
+- Criada [issue #78 — rejeitar carrinho parcialmente inválido](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/78). Critério principal: rejeitar o carrinho inteiro e fazer rollback se qualquer item explicitamente enviado for inválido/indisponível, salvo se a API implementar confirmação explícita de pedido parcial.
+- A issue foi encaminhada à PR #64 para avaliar cobertura com PostgreSQL descartável, sem executar testes em produção.
