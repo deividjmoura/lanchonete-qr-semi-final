@@ -54,7 +54,7 @@ test('normalização de idempotência aceita chave válida não-UUID e rejeita f
 const { totalEntregueDaSessao, sincronizarValorTotalSessao } = require('../db/conta');
 const { comRetryConcorrencia } = require('../db/retry');
 const { registrarPagamento, fecharSessao, ErroCaixa } = require('../db/caixa');
-const { sincronizarStatusPedido } = require('../db/pedidos');
+const { sincronizarStatusPedido, setStatusPedido } = require('../db/pedidos');
 
 test('status agregado acompanha itens mistos e entrega parcial sem marcar pedido como entregue cedo', async () => {
   const cases = [
@@ -327,4 +327,87 @@ test('falha ao gravar adicional aciona rollback e não confirma pedido parcial',
   assert.ok(fake.calls.some((c) => c.sql === 'ROLLBACK'));
   assert.equal(fake.calls.some((c) => c.sql === 'COMMIT'), false);
   assert.equal(fake.client.released, true);
+});
+
+
+// Preflight transition checks must reject invalid/unauthorized transitions
+// before acquiring a pool connection; no PostgreSQL is involved.
+test('status de pedido inválido e entrega solicitada por cozinha/bar são rejeitados antes do banco', async () => {
+  const originalConnect = poolPedidos.connect;
+  let connections = 0;
+  poolPedidos.connect = async () => { connections += 1; throw new Error('não deveria conectar'); };
+  try {
+    await assert.rejects(
+      () => setStatusPedido(90, 'status-inexistente'),
+      (error) => error instanceof ErroPedido && error.status === 400
+    );
+    await assert.rejects(
+      () => setStatusPedido(90, 'entregue', 'cozinha'),
+      (error) => error instanceof ErroPedido && error.status === 403
+    );
+    await assert.rejects(
+      () => setStatusPedido(90, 'entregue', 'bar'),
+      (error) => error instanceof ErroPedido && error.status === 403
+    );
+    assert.equal(connections, 0);
+  } finally {
+    poolPedidos.connect = originalConnect;
+  }
+});
+
+test('pedido entregue não pode regredir para produção e a transação termina em rollback', async () => {
+  const calls = [];
+  const originalConnect = poolPedidos.connect;
+  const client = {
+    released: false,
+    async query(sql, params = []) {
+      calls.push({ sql, params });
+      if (sql === 'BEGIN' || sql === 'ROLLBACK') return { rows: [], rowCount: 0 };
+      if (sql.includes('SELECT id, status, sessao_id FROM pedidos WHERE id = $1 FOR UPDATE')) {
+        return { rows: [{ id: 90, status: 'entregue', sessao_id: 55 }] };
+      }
+      throw new Error('consulta inesperada: ' + sql);
+    },
+    release() { this.released = true; },
+  };
+  poolPedidos.connect = async () => client;
+  try {
+    await assert.rejects(
+      () => setStatusPedido(90, 'em_producao'),
+      (error) => error instanceof ErroPedido && error.status === 409
+    );
+    assert.ok(calls.some((c) => c.sql === 'BEGIN'));
+    assert.ok(calls.some((c) => c.sql === 'ROLLBACK'));
+    assert.equal(calls.some((c) => c.sql === 'COMMIT'), false);
+    assert.equal(client.released, true);
+  } finally {
+    poolPedidos.connect = originalConnect;
+  }
+});
+
+test('pedido inexistente não avança status e libera conexão após rollback', async () => {
+  const calls = [];
+  const originalConnect = poolPedidos.connect;
+  const client = {
+    released: false,
+    async query(sql, params = []) {
+      calls.push({ sql, params });
+      if (sql === 'BEGIN' || sql === 'ROLLBACK') return { rows: [], rowCount: 0 };
+      if (sql.includes('SELECT id, status, sessao_id FROM pedidos WHERE id = $1 FOR UPDATE')) return { rows: [] };
+      throw new Error('consulta inesperada: ' + sql);
+    },
+    release() { this.released = true; },
+  };
+  poolPedidos.connect = async () => client;
+  try {
+    await assert.rejects(
+      () => setStatusPedido(987654, 'em_producao'),
+      (error) => error instanceof ErroPedido && error.status === 404
+    );
+    assert.ok(calls.some((c) => c.sql === 'ROLLBACK'));
+    assert.equal(calls.some((c) => c.sql === 'COMMIT'), false);
+    assert.equal(client.released, true);
+  } finally {
+    poolPedidos.connect = originalConnect;
+  }
 });
