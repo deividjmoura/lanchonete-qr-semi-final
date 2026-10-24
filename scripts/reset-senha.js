@@ -9,9 +9,6 @@
  * Por segurança, o script nunca imprime a senha nem gera um comando curl contendo-a.
  */
 require('dotenv').config();
-const { hashSenha, garantirStaffSeed } = require('../db/auth');
-const pool = require('../db/pool');
-
 function resolveResetPassword(env = process.env) {
   const senha = env.STAFF_SEED_PASSWORD || env.ADMIN_PASSWORD;
   if (!senha || senha === 'troque-esta-senha') {
@@ -21,6 +18,8 @@ function resolveResetPassword(env = process.env) {
 }
 
 async function main() {
+  const { hashSenha, garantirStaffSeed } = require('../db/auth');
+  const pool = require('../db/pool');
   const senha = resolveResetPassword();
 
   // Garante que os 3 usuários existam (idempotente)
@@ -55,7 +54,13 @@ if (require.main === module) {
       console.error(e.message || 'Falha ao redefinir senha.');
       process.exitCode = 1;
     })
-    .finally(() => pool.end().catch(() => {}));
+    .finally(() => {
+      try {
+        require('../db/pool').end().catch(() => {});
+      } catch (_) {
+        // Se a configuração do banco falhar antes da criação do pool, não há pool para encerrar.
+      }
+    });
 }
 
 module.exports = { resolveResetPassword };
