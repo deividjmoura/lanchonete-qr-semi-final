@@ -14,10 +14,12 @@ A conclusão arquitetural principal é que **o sistema é explicitamente single-
 Achados confirmados nesta revisão estática:
 
 1. **Alto, condicional ao objetivo multi-loja:** não há garantia de isolamento por tenant; o produto declara suportar somente um estabelecimento.
-2. **Médio:** o rate limit é local ao processo e, na criação pública de pedidos, a chave inclui o token da mesa. Tokens distintos geram buckets distintos; réplicas não compartilham limites.
-3. **Médio:** o bootstrap cria quatro contas de staff com a mesma senha configurada e não exige rotação neste fluxo.
-4. **Médio:** o servidor pode começar a aceitar tráfego mesmo quando migrations falham, deixando potencial incompatibilidade entre código e schema.
-5. **Médio:** os testes versionados não comprovam integração real com PostgreSQL nem fluxo ponta a ponta no navegador.
+2. **Alto, autorização/privacidade:** a listagem de mesas do garçom retorna tokens bearer de todas as mesas; esses tokens autorizam leitura e mutações públicas da sessão.
+3. **Médio:** a edição de pedido pelo garçom verifica a atribuição antes da transação de edição, mas o método chamado não revalida o responsável sob lock; há uma janela TOCTOU em caso de transferência concorrente.
+4. **Médio:** o rate limit é local ao processo e, na criação pública de pedidos, a chave inclui o token da mesa. Tokens distintos geram buckets distintos; réplicas não compartilham limites.
+5. **Médio:** o bootstrap cria quatro contas de staff com a mesma senha configurada e não exige rotação neste fluxo.
+6. **Médio:** o servidor pode começar a aceitar tráfego mesmo quando migrations falham, deixando potencial incompatibilidade entre código e schema.
+7. **Médio:** os testes versionados não comprovam integração real com PostgreSQL nem fluxo ponta a ponta no navegador.
 
 Não foi confirmado, apenas pela leitura estática, um bypass específico que permita a uma mesa consultar/modificar pedidos de outra: os caminhos examinados filtram por token de mesa e/ou associam o pedido à sessão da mesa. Não foi possível auditar exaustivamente todas as rotas e queries. Não há base para declarar o sistema seguro.
 
@@ -274,6 +276,34 @@ Cada tarefa deve ter branch própria e PR para `main`; revisar checks e diff e n
 
 **Impacto/recomendação:** se surgir XSS em campo que aceite conteúdo não confiável, scripts inline ficam menos contidos. Inventariar os usos inline, migrar para nonce/hash ou scripts externos quando viável e testar CSP/XSS em ambiente isolado. Não classificar como XSS comprovado sem payload e caminho explorável demonstrados.
 
+### A-10 — Alto, autorização/privacidade: a API do garçom expõe tokens bearer de todas as mesas
+
+**Status:** exposição confirmada no código; não foi feita chamada ao endpoint em produção. O impacto é alto porque o token de mesa funciona como credencial de acesso às rotas públicas daquela mesa.
+
+**Evidência**
+- `server.js`, rota `GET /api/garcom/:token/mesas`, chama `listarMesasGarcom(m[1])` após verificar apenas que o token identifica um garçom ativo.
+- `db/atendimento.js:listarMesasGarcom(token)` consulta todas as mesas habilitadas e inclui `m.token` no SELECT e no objeto devolvido, sem limitar tokens às mesas atribuídas ao garçom.
+- `db/queries.js:getMesaPorToken(client, token)` aceita o token de mesa para resolver a mesa.
+- `server.js` expõe rotas públicas baseadas nesse token: `GET /api/mesas/:token/sessao`, `POST /api/mesas/:token/pedidos`, `PUT /api/mesas/:token/pedidos/:id`, `DELETE /api/mesas/:token/pedidos/:id`, além de check-in e aviso PIX. `db/pedidos.js:lerSessao` devolve nome do cliente, pedidos, itens, observações e totais da sessão aberta.
+
+**Impacto/cenário:** qualquer portador de um link válido de garçom pode obter tokens de todas as mesas e reutilizá-los para ler dados de outras sessões e tentar criar, editar ou cancelar pedidos sob a identidade da mesa. Isso contorna a separação que `listarAtendimentosGarcom` aplica por `garcom_responsavel_id` e amplia o impacto de um token de garçom comprometido. A autorização exige apenas garçom ativo, não atribuição por mesa.
+
+**Recomendação:** não retornar tokens de mesa na listagem global. Retornar somente os dados necessários para mostrar as mesas; disponibilizar o token apenas após uma operação autorizada de assumir/atribuir a mesa, e rever se transferências devem exigir aprovação do responsável atual. Adicionar testes negativos que provem que um token de garçom não permite ler nem modificar mesas não atribuídas. Tratar tokens como segredos bearer e não registrá-los em logs.
+
+### A-11 — Médio, concorrência/autorização: edição de pedido do garçom tem janela TOCTOU na atribuição da mesa
+
+**Status:** lacuna de revalidação confirmada por leitura estática; a corrida não foi reproduzida dinamicamente.
+
+**Evidência**
+- `db/atendimento.js:editarPedidoGarcom(token, pedidoId, body)` consulta pedido/sessão e exige `s.garcom_responsavel_id=$2`, mas essa consulta ocorre fora da transação que efetivamente edita o pedido.
+- Em seguida chama `editarPedidoCliente(rows[0].token,id,body,garcom.id)`.
+- `db/pedidos.js:editarPedidoCliente(token, pedidoId, body, garcomResponsavelId = null)` aceita o parâmetro `garcomResponsavelId`, porém o SELECT com `FOR UPDATE OF p` verifica apenas ID do pedido, mesa e sessão aberta; o parâmetro não é usado para revalidar `s.garcom_responsavel_id` dentro da transação.
+- O caminho de criação é mais forte: `db/pedidos.js:criarPedido(..., atendimento)` verifica o responsável após obter o lock da sessão.
+
+**Impacto/cenário:** se a mesa for transferida depois da consulta inicial e antes da edição, a operação pode prosseguir usando o token da mesa e editar um pedido recebido mesmo sem o garçom continuar responsável. A janela é curta, mas afeta autorização sob concorrência.
+
+**Recomendação:** passar a identidade do garçom como contexto obrigatório no caminho de edição e revalidar a atribuição dentro da mesma transação, sob lock e na ordem global documentada; não confiar apenas na consulta preliminar. Criar teste concorrente determinístico em PostgreSQL descartável que pause entre validação e edição, transfira a mesa e confirme que a edição é rejeitada.
+
 ## 9. Controles positivos e interpretação cuidadosa
 
 - `db/caixa.js: registrarPagamento` trava a sessão antes de calcular o restante e inserir o pagamento; há validação server-side do valor e da forma de pagamento. Isso reduz concorrência de pagamentos na sessão, mas não substitui a garantia de idempotência se a coluna estiver ausente.
@@ -288,5 +318,7 @@ Cada tarefa deve ter branch própria e PR para `main`; revisar checks e diff e n
 2. Repetir um pagamento com a mesma chave e com timeout simulado; provar que só há um lançamento, inclusive sob concorrência.
 3. Com dois tokens de garçom e mesas distintas, validar a política pretendida da rota `/api/garcom/:token/pedidos` e o mínimo de dados pessoais necessário.
 4. Verificar em ambiente de staging o valor de `X-Forwarded-For` observado pela aplicação para requisições com header forjado; não inferir a política do proxy apenas pelo código.
-5. Fazer varredura XSS/CSP de rotas e campos que aceitam texto de cliente, observação, nome, descrição e dados de produtos.
-6. Executar CI, testes PostgreSQL e E2E de navegador somente em ambiente isolado. Esta auditoria não executou esses comandos nem os considera aprovados.
+5. Testar em staging/banco descartável se um token de garçom permite listar tokens de mesa e acessar sessão/pedidos de mesa não atribuída.
+6. Criar teste concorrente determinístico para transferência de mesa durante edição de pedido por garçom; a edição deve falhar se a atribuição mudar.
+7. Fazer varredura XSS/CSP de rotas e campos que aceitam texto de cliente, observação, nome, descrição e dados de produtos.
+8. Executar CI, testes PostgreSQL e E2E de navegador somente em ambiente isolado. Esta auditoria não executou esses comandos nem os considera aprovados.
