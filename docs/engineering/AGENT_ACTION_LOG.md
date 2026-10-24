@@ -95,3 +95,14 @@ Este documento registra ações e limites de validação por sessão. Acrescenta
 - Run #256 (`40129073552`) terminou **SUCCESS** após a inclusão do gerador local no fluxo PIX: typecheck, build, integridade de `dist/`, regressões e sintaxe passaram; **99 testes passaram, 0 falharam**.
 - As duas regressões novas passaram: QR PIX não envia payload financeiro a serviço externo; QR administrativo gera localmente sem enviar token a serviço externo.
 - O PR #71 foi atualizado para refletir o escopo ampliado. Validação real em navegador/câmera e instalação/offline continua pendente; nenhuma validação em produção foi feita.
+
+
+## 2026-10-24 — retomada da auditoria F02–F05
+
+- Releitura de `AGENTS.md` e do quadro de coordenação no PR #68: não editar trabalho atribuído a outra frente, registrar handoff e não executar produção, migrations ou deploy sem autorização.
+- Estado verificado: PR #71 aberto em draft, head `2a1ff3524589ba62c2bd68dfa8752e7e19f050e4`, sem merge. CI #256 para o código/testes QR concluiu SUCCESS (99 testes, 0 falhas); o head atual do PR inclui atualização documental posterior. Ainda faltam browser real, leitura por câmera e validação offline após instalação do Service Worker.
+- F02: PR #65 continua test-first e não integra `security/client-ip` com `clientIp(req)`. O quadro de coordenação indica que a issue #50 pertence à frente responsável pelo PR #65; não alterei essa branch nem inventei número de proxies confiáveis.
+- F03: o teste `tests/receipt-route-regression.test.cjs` é estático. A regex de comprovante observada no snapshot é numérica e a alegação original de escape duplicado não foi reproduzida. Não foi possível comprovar comportamento HTTP real com autenticação e PostgreSQL isolado nesta rodada; não alegar teste end-to-end.
+- F04: o head do PR #69 (`954c5ac9881ff8649fbe1d93bb9c80a8c88d0adf`) ainda usa padrão de hash que aceita `app-production.js`. A revisão já publicada (#5639718197) permanece pertinente; não editei a branch da compressão/cache.
+- F05: publicados comentários de coordenação nos PRs #57 e #58 (comentários #6389191825 e #6389192170). Ambos alteram `scripts/start-production.js`, mas `server.js` ainda executa `spawnSync` de `db/migrate.js` no callback de `server.listen`; falta uma única solução coordenada que cubra `npm start` e `start:prod` sem execução duplicada.
+- Nenhum teste HTTP contra produção, migration, alteração de dados, segredo, configuração Railway, merge ou deploy foi executado. PRs #35–#37 preservados.
