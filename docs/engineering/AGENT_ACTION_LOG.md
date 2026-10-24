@@ -106,3 +106,11 @@ Este documento registra ações e limites de validação por sessão. Acrescenta
 - F04: o head do PR #69 (`954c5ac9881ff8649fbe1d93bb9c80a8c88d0adf`) ainda usa padrão de hash que aceita `app-production.js`. A revisão já publicada (#5639718197) permanece pertinente; não editei a branch da compressão/cache.
 - F05: publicados comentários de coordenação nos PRs #57 e #58 (comentários #6389191825 e #6389192170). Ambos alteram `scripts/start-production.js`, mas `server.js` ainda executa `spawnSync` de `db/migrate.js` no callback de `server.listen`; falta uma única solução coordenada que cubra `npm start` e `start:prod` sem execução duplicada.
 - Nenhum teste HTTP contra produção, migration, alteração de dados, segredo, configuração Railway, merge ou deploy foi executado. PRs #35–#37 preservados.
+
+
+## 2026-10-24 — atualização de CI e revisão dos PRs paralelos
+
+- PR #65 head `f231d560d384b33da6814de3dbc337bbc2190adb`: workflow CI run [40122125148](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40122125148) concluído SUCCESS. Isso confirma que os testes do helper de IP passam; **não** prova integração no servidor nem a configuração real do proxy. O PR segue aberto/draft e com mergeable=false.
+- PR #69 head `954c5ac9881ff8649fbe1d93bb9c80a8c88d0adf`: workflow CI run [40123884598](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40123884598) concluído SUCCESS. Inspeção do helper e dos testes confirma que a regressão para `/assets/app-production.js` ainda está ausente e o regex ainda classifica `production` como hash. CI verde não cobre esse falso positivo.
+- PR #71 agora reporta `mergeable=true`, mas continua aberto em draft e sem merge. Nenhuma mudança de runtime foi feita nesta atualização; apenas evidência/coordenação.
+- F03 permanece sem teste HTTP real; não criei um teste que dependa de banco/autorização sem harness isolado demonstrado. Sem deploy, produção, migrations ou mutações de banco.
