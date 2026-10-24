@@ -752,3 +752,11 @@ A presença do pre-deploy `db:migrate` sugere que falha nessa etapa deve impedir
 - Isso cria risco de divergência entre o carrinho enviado e o pedido persistido. A consequência na interface (por exemplo, se limpa o carrinho após sucesso) ainda precisa ser confirmada por E2E; o comportamento de omissão é confirmado estaticamente no backend.
 - Criada [issue #78 — rejeitar carrinho parcialmente inválido](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/78). Critério principal: rejeitar o carrinho inteiro e fazer rollback se qualquer item explicitamente enviado for inválido/indisponível, salvo se a API implementar confirmação explícita de pedido parcial.
 - A issue foi encaminhada à PR #64 para avaliar cobertura com PostgreSQL descartável, sem executar testes em produção.
+
+
+### 14.10 Atualização de F01 após ampliação da PR #71 (2026-10-24)
+
+- O head atual consultado da PR #71 (`2a1ff3524589ba62c2bd68dfa8752e7e19f050e4`) agora inclui geração local do QR administrativo em `public/admin.html` e geração local do QR PIX em `public/js/pix.js`; os testes foram ampliados para verificar os caminhos administrativo e PIX, além da PWA do garçom.
+- CI [run 40129148921](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40129148921) concluiu **SUCCESS** no head atual, com typecheck, build, integridade de `dist/`, regressões e sintaxe de servidor/banco aprovados.
+- A PR #71 permanece aberta em draft e ainda não está incorporada à `main`; portanto, a exposição encontrada em `public/admin.html` continua existindo na `main` até merge/release aprovado. A validação manual de QR com câmera e offline da PWA continua pendente.
+- A issue #76 agora tem uma implementação proposta na PR #71; manter o item rastreável até que a correção seja revisada e integrada, sem criar implementação concorrente.
