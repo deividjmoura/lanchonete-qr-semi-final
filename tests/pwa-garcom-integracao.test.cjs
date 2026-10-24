@@ -34,7 +34,7 @@ test('Fila de sincronização preserva uma chave por operação e isola garçom'
 });
 test('QR da mesa é gerado localmente e nunca envia o token a um serviço externo',()=>{
  assert.doesNotMatch(app,/api\.qrserver\.com/);
- assert.match(app,/qrcode\(0,'M'\)/);
+ assert.match(app,/window\.qrcode\(0,'M'\)/);
  assert.match(html,/qrcode-generator\.js/);
  assert.match(sw,/qrcode-generator\.js/);
  const qr=qrGenerator(0,'M');
