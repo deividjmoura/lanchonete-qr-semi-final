@@ -567,8 +567,8 @@ test('cancelamento público não referencia identidade de garçom fora do escopo
   const fim = source.indexOf('/** Cliente edita itens', inicio);
   assert.ok(inicio >= 0 && fim > inicio, 'função de cancelamento encontrada');
   const cancelar = source.slice(inicio, fim);
-  assert.doesNotMatch(cancelar, /\\bgarcomResponsavelId\\b/);
-  assert.match(cancelar, /\\[pedidoNumerico,\\s*mesa\\.id,\\s*null\\]/);
+  assert.doesNotMatch(cancelar, /\bgarcomResponsavelId\b/);
+  assert.match(cancelar, /\[pedidoNumerico,\s*mesa\.id,\s*null\]/);
 });
 
 test('SSE público é coalescido (1 aviso/janela); staff recebe tudo na hora', async () => {
