@@ -40,20 +40,19 @@
       "id": "agent-1",
       "identity": "Este assistente / sessão atual",
       "role": "Coordenador de segurança, performance e validação",
-      "issue": 52,
-      "branch": "perf/issue-52-compression-cache",
-      "pull_request": 69,
-      "status": "review",
-      "objective": "Implementar compressão HTTP para respostas textuais e cache immutable apenas em assets SPA com hash; validar negociação de encoding, Vary, cache e testes.",
+      "issue": 42,
+      "branch": "test/postgres-integration-issue-42",
+      "pull_request": 64,
+      "status": "in_progress",
+      "objective": "Completar e validar a suíte de integração real com PostgreSQL descartável para criação concorrente de pedidos, entrega parcial, pagamentos, fechamento e invariantes de estoque/total; inspecionar logs sem dados sensíveis.",
       "result": {
-        "commit": "dcba41db00d2dc49d2b1682fffb837a223563d7e",
-        "ci_run": "https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40123691045",
-        "ci_status": "passed",
+        "commit": "d384472132468c2624ec7850683640e9f5d7306c",
+        "ci_status": "passed_initial_workflow",
         "merged": false,
         "deployed": false,
-        "mergeable": true
+        "notes": "PR #64 já existe; a execução inicial passou, mas os critérios de entrega parcial e invariável de estoque ainda estão pendentes."
       },
-      "next_action": "Concluir medição comparativa de bytes via HTTP em ambiente isolado e responder revisão; não fazer merge/deploy."
+      "next_action": "Inspecionar as rotas de transição de itens e estoque; completar os cenários faltantes no PR #64 e validar novamente no CI PostgreSQL descartável."
     },
     {
       "id": "agent-2",
@@ -100,6 +99,13 @@
       "status": "queued",
       "owner": null,
       "rule": "Aguardar confirmação de disponibilidade; requer plano de compatibilidade/rollback, sem migrar imagens de produção."
+    },
+    {
+      "issue": 52,
+      "title": "Compressão HTTP e cache de assets com hash",
+      "status": "review",
+      "owner": null,
+      "rule": "PR #69 está aberto e CI passou; falta medição comparativa HTTP em ambiente isolado e revisão/handoff. Não alterar os arquivos da branch perf/issue-52-compression-cache sem nova atribuição."
     }
   ],
   "current_production_safety": {
