@@ -39,68 +39,66 @@
     {
       "id": "agent-1",
       "identity": "Este assistente / sessão atual",
-      "role": "Coordenador de segurança e validação",
-      "issue": 54,
-      "branch": "security/issue-54-sharp-update",
-      "pull_request": 67,
+      "role": "Coordenador de segurança, performance e validação",
+      "issue": 52,
+      "branch": "perf/issue-52-compression-cache",
+      "pull_request": 69,
       "status": "review",
-      "objective": "Concluir o handoff da correção do sharp: manter PR #67 pronto para revisão, responder dúvidas de revisão e não alterar o escopo de outros agentes.",
+      "objective": "Implementar compressão HTTP para respostas textuais e cache immutable apenas em assets SPA com hash; validar negociação de encoding, Vary, cache e testes.",
       "result": {
-        "commit": "2436fc35a2c2d0ed86db2187f5b3828c3f5782aa",
-        "ci_run": "https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40122929797",
-        "ci_status": "passed",
-        "production_dependency_audit": "0 advisories reported",
+        "commit": "dcba41db00d2dc49d2b1682fffb837a223563d7e",
+        "ci_run": "https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40123691045",
+        "ci_status": "in_progress",
         "merged": false,
         "deployed": false
       },
-      "next_action": "Aguardar/revisar feedback do PR #67; não declarar issue #54 fechada antes do merge."
+      "next_action": "Acompanhar CI do PR #69, corrigir falhas e registrar medições de payload em teste isolado."
     },
     {
       "id": "agent-2",
-      "identity": "Outro agente; precisa confirmar no comentário",
+      "identity": "Outro agente; confirmar no comentário do PR #67",
+      "role": "Auditoria/revisão da correção sharp",
+      "issue": 54,
+      "branch": "security/issue-54-sharp-audit",
+      "pull_request": 67,
+      "status": "in_progress",
+      "objective": "Evitar implementação duplicada; auditar advisory, versão corrigida, lockfile e compatibilidade do PR #67, reportando evidências/revisão.",
+      "constraints": [
+        "Não duplicar a correção já presente no PR #67 sem apontar uma lacuna concreta.",
+        "Não alterar produção nem fazer merge."
+      ],
+      "next_action": "Confirmar atribuição e publicar findings no PR #67 antes de propor código alternativo."
+    },
+    {
+      "id": "agent-3",
+      "identity": "Outro agente; confirmar no comentário do PR #66",
       "role": "Responsável pelo fluxo de impressão",
       "issue": 51,
       "branch": "branch associada ao PR #66; confirmar no GitHub antes de editar",
       "pull_request": 66,
-      "status": "in_progress",
-      "objective": "Confirmar a correção da rota de impressão, cobertura de IDs válidos/inválidos, autorização dos comprovantes, caminhos da UI Caixa/Admin e CI.",
+      "status": "review",
+      "objective": "Validar correção da rota de impressão, IDs válidos/inválidos, autorização, UI Caixa/Admin e CI.",
       "constraints": [
-        "Não alterar escopo de #50 ou #54.",
+        "Não alterar escopo de #52 ou #54.",
         "Não executar pagamentos nem modificar dados de produção."
       ],
-      "next_action": "Confirmar propriedade e registrar estado/testes no PR #66."
-    },
-    {
-      "id": "agent-3",
-      "identity": "Outro agente; precisa confirmar no comentário",
-      "role": "Responsável pela investigação proxy/rate-limit",
-      "issue": 50,
-      "branch": "security/issue-50-proxy-ip-tests",
-      "pull_request": 65,
-      "status": "in_progress",
-      "objective": "Continuar investigação segura de proxy confiável e semântica de rate-limit, mantendo os testes isolados; não ativar confiança em X-Forwarded-For sem evidência verificável.",
-      "constraints": [
-        "Sem testes mutáveis em produção.",
-        "Não alterar a implementação de produção com base apenas na topologia do Railway.",
-        "Se houver um segundo colaborador nesta issue, combinar os arquivos e a propriedade de cada mudança nos comentários da issue #50."
-      ],
-      "next_action": "Confirmar propriedade e publicar achados/arquivos/testes no issue #50 e PR #65."
+      "next_action": "Confirmar propriedade e registrar conclusão/pendências no PR #66."
     }
   ],
   "coordination_queue": [
     {
-      "issue": 52,
-      "title": "Compressão HTTP e cache de assets com hash",
-      "status": "queued",
-      "owner": null,
-      "rule": "Só atribuir após confirmação dos agentes 2/3, para evitar trabalho duplicado."
+      "issue": 50,
+      "title": "Confiança no proxy e rate limit por IP/token/sessão",
+      "status": "in_progress",
+      "owner": "responsável(is) já trabalhando no PR #65; confirmar nos comentários",
+      "rule": "Agent 1 não editar arquivos desta issue; não ativar confiança em X-Forwarded-For sem evidência verificável."
     },
     {
       "issue": 53,
       "title": "Remover imagens base64 das respostas JSON do cardápio",
       "status": "queued",
       "owner": null,
-      "rule": "Só atribuir após confirmação dos agentes 2/3; exige plano de compatibilidade/rollback, sem migrar imagens de produção."
+      "rule": "Aguardar confirmação de disponibilidade; requer plano de compatibilidade/rollback, sem migrar imagens de produção."
     }
   ],
   "current_production_safety": {
