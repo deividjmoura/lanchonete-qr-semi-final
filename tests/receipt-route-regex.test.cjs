@@ -15,7 +15,7 @@ test('rotas de comprovante aceitam IDs numéricos e rejeitam IDs inválidos', ()
     const literal = line.slice(start, end).trim();
     assert.ok(literal.startsWith('/') && literal.endsWith('/'), 'esperava uma regex literal');
     const regex = new RegExp(literal.slice(1, -1).replace(/\\\//g, '/'));
-    const prefix = line.includes('/api/caixa/')
+    const prefix = line.includes('caixa')
       ? '/api/caixa/sessoes/'
       : '/api/admin/sessoes/';
 
