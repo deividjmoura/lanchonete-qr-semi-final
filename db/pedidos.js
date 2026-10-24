@@ -143,21 +143,19 @@ async function gravarItensPedido(client, pedidoId, itensInput) {
   // (antes: 3 consultas POR ITEM, segurando o lock da mesa e a conexão). A
   // trava prévia em ordem global é também o que impede deadlock entre
   // carrinhos simultâneos de mesas diferentes com itens em ordens opostas.
-  const idsSolicitados = [];
-  for (const item of itensInput) {
-    if (!item || typeof item !== 'object') continue;
-    const produtoId = Number(item.productId ?? item.id);
-    if (Number.isInteger(produtoId) && produtoId >= 1) idsSolicitados.push(produtoId);
-  }
+  // O payload inteiro já foi validado antes de abrir a transação. Mantemos
+  // IDs estritos aqui como defesa em profundidade: nenhum item enviado pode
+  // desaparecer silenciosamente do pedido.
+  const idsSolicitados = itensInput.map((item) => Number(item.productId ?? item.id));
   await travarProdutosEmOrdem(client, idsSolicitados);
   const produtosPorId = await getProdutosComRegras(client, idsSolicitados);
 
   for (const item of itensInput) {
-    if (!item || typeof item !== 'object') continue;
     const produtoId = Number(item.productId ?? item.id);
-    if (!Number.isInteger(produtoId) || produtoId < 1) continue;
     const produto = produtosPorId.get(produtoId);
-    if (!produto || !produto.disponivel) continue;
+    if (!produto || !produto.disponivel) {
+      throw new ErroPedido(409, `Produto ${produtoId} inexistente ou indisponível; nenhum item foi pedido`);
+    }
 
     // Fora de 1–99 é rejeitado explicitamente; antes era clamp silencioso
     // (Math.max/Math.min), que escondia cliente quebrado e teste abusivo.
@@ -292,6 +290,18 @@ async function criarPedido(token, body, atendimento = null) {
   if (chaveIdempotencia === false) throw new ErroPedido(400, 'Chave de idempotência inválida');
   const itensInput = Array.isArray(body.items) ? body.items : [];
   if (!itensInput.length) throw new ErroPedido(400, 'O pedido está vazio');
+
+  // Rejeita o carrinho completo antes de reservar conexão ou criar o pedido.
+  // Ignorar um item malformado faria a API confirmar um subconjunto do carrinho.
+  for (const [index, item] of itensInput.entries()) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      throw new ErroPedido(400, `Item ${index + 1} inválido no pedido`);
+    }
+    const produtoId = Number(item.productId ?? item.id);
+    if (!Number.isInteger(produtoId) || produtoId < 1) {
+      throw new ErroPedido(400, `Produto inválido no item ${index + 1}`);
+    }
+  }
 
   const client = await pool.connect();
   try {
