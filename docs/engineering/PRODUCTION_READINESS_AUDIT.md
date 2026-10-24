@@ -663,3 +663,54 @@ Não alterar a regra atual de cobrança nesta auditoria. Cliente e caixa devem e
 O código indica que o QR da mesa é permanente e que um pedido público pode abrir sessão sem ação prévia de funcionário; confirmar o comportamento por teste isolado ainda é pendente. A trilha de autoria financeira/operacional é incompleta na camada de banco examinada; o script de redefinição expõe a senha se executado; o desconto integral não exige aprovação adicional; e a segurança do rate limit depende da confiança real no proxy e do compartilhamento de IP.
 
 **Nada foi corrigido nesta entrega.** A branch contém apenas documentação; as quatro issues são tarefas abertas, não implementação. Não fazer merge/deploy nem testar mutações em produção. Decisões pendentes do responsável: política do QR/sessão, contas individuais/PIN para dispositivos compartilhados, retenção e acesso à auditoria, limite e aprovação de descontos, e topologia confiável do proxy.
+
+
+## 14. Verificação somente leitura do Railway de produção — 2026-10-24
+
+**Escopo e limites:** consulta read-only ao estado do projeto/ambiente, configuração do serviço, domínios, deployments, métricas agregadas e amostra de logs HTTP. Não foram feitos login, chamadas de API mutáveis, pedidos, pagamentos, migrations, testes de carga, alteração de variáveis, deploy ou rollback. Valores de credenciais observados em caminhos de log foram deliberadamente omitidos deste relatório.
+
+### 14.1 Estado observado
+
+- Projeto Railway: `exquisite-nurturing`; ambiente `production`.
+- Serviço `lanchonete-qr-semi-final`: `online`, 1 réplica ativa, deployment atual `SUCCESS`, sem falhas/alertas reportados na janela de sete dias e sem mudanças staged.
+- PostgreSQL do mesmo projeto: `online`, 1 réplica ativa, volume persistente montado, deployment `SUCCESS`.
+- O último deployment do app foi criado em `2026-10-19T23:24:37Z` e usa o commit `e0f2571bc8c6e19b67c137d93c1653e8d50f9ba6`.
+- No momento da consulta, `main` apontava para `a7e7fcd154845aeae30f1b72cae196ac399839d5`, que inclui a correção das rotas de comprovante mesclada em 2026-10-24. Logo, a produção observada estava atrás do HEAD atual de `main`; a correção de comprovantes ainda não estava demonstrada no deployment live.
+- O domínio de serviço listado no Railway é `qradminn.up.railway.app`. O README ainda documenta `qradmin.up.railway.app`. Logs recentes registram tráfego no domínio com dois `n`; não foi possível verificar por esta inspeção se o domínio antigo responde ou para onde aponta. Não renomear nem adicionar domínio automaticamente: confirmar primeiro qual URL deve ser oficial.
+
+### 14.2 Métricas observadas (últimas 24 horas)
+
+- 36 requisições HTTP agregadas: 28 respostas 2xx, 8 respostas 4xx e 0 respostas 5xx.
+- Taxa observada de 5xx: 0% (36 requisições nesta janela, amostra pequena; não é garantia de disponibilidade).
+- Latência agregada: p50 5 ms, p90 12 ms, p95 27 ms, p99 41 ms.
+- Amostra de logs inclui respostas 401 para endpoints de cozinha/eventos sem sessão autenticada; isso é compatível com a proteção de acesso esperada, mas os 8 resultados 4xx não foram todos classificados individualmente.
+- O tráfego e as métricas demonstram resposta HTTP e latência baixa na amostra, não demonstram a correção de fluxos de negócio, consistência transacional, autorização entre mesas, integridade de pagamentos nem prontidão comercial.
+
+### 14.3 Achado de segurança operacional: tokens bearer nos caminhos registrados
+
+Os logs HTTP do Railway incluem caminhos de endpoints de garçom com o token bearer inserido na própria URL. O valor não é reproduzido aqui. Como o caminho completo aparece nos logs do proxy, a credencial pode ficar acessível a leitores de logs durante a retenção configurada. Isso não pode ser sanado apenas com sanitização do logger da aplicação se o registro é produzido pelo proxy antes da aplicação.
+
+Além disso, a inspeção estática de `db/seed.js` encontrou uma mensagem de log que imprime o token do garçom quando o seed cria o primeiro garçom. Esse caminho só é executado se a tabela não tiver garçom; a inspeção não prova que isso ocorreu no ambiente atual. O risco é, portanto, confirmado no código e a ocorrência específica no deploy depende do estado do banco.
+
+- Issue criada: #72 — impedir exposição de tokens bearer nos logs HTTP do Railway.
+- Mitigação operacional recomendada: revisar a exposição, retenção e acesso aos logs e rotacionar/desativar tokens potencialmente expostos, sem publicar seus valores. Planejar a rotação para evitar interromper atendimento ativo.
+- Correção: evitar tokens bearer em URLs sempre que possível; remover a impressão de tokens no seed; adicionar testes de regressão e documentar o limite dos logs do proxy gerenciado.
+- Nenhuma credencial foi utilizada para autenticar ou executar ações durante esta inspeção.
+
+### 14.4 Configuração de deploy e seed
+
+A configuração observada do serviço contém `preDeployCommand: npm run db:migrate && npm run db:seed`, `buildCommand: npm run build` e `startCommand: npm run start:prod`.
+
+O `db/seed.js` atual aborta a substituição do cardápio quando já existem categorias e `FORCE_SEED` não está habilitado; portanto, o comando configurado não equivale por si só a executar o seed destrutivo com `FORCE_SEED=1`. Mesmo sem force, o seed garante a existência das mesas configuradas, pode criar um garçom quando a tabela está vazia e chama o bootstrap de staff. Antes de um deploy, deve-se confirmar o valor efetivo de `FORCE_SEED` (se definido), o estado das tabelas e a política de bootstrap de contas; valores de variáveis secretas não foram consultados.
+
+A presença do pre-deploy `db:migrate` sugere que falha nessa etapa deve impedir a sequência do pre-deploy, mas não foi realizado um deploy para provar o comportamento do Railway. `scripts/start-production.js` também mantém comportamento fail-open para migrations: se o start for alcançado sem que o pre-deploy tenha garantido o schema, o servidor pode iniciar mesmo após erro de migration. A configuração real e o script precisam ser tratados como controles distintos.
+
+### 14.5 Próximos passos seguros
+
+1. Tratar #72 com prioridade: revisar acesso/retensão de logs e planejar rotação dos links de garçom potencialmente expostos; não compartilhar valores dos tokens.
+2. Confirmar o domínio oficial e corrigir a documentação apenas após validação do proprietário do endereço.
+3. Revisar os PRs ativos de fail-closed migration/startup (#56–#58) para evitar soluções concorrentes e definir um único comportamento fail-closed consistente.
+4. Antes de qualquer deploy, confirmar se `main` atual está aprovado para release e revisar o diff entre o commit live e o HEAD; o deployment atual não inclui a correção de comprovantes de `a7e7fcd`.
+5. Executar testes de pedidos/pagamentos e integração somente em PostgreSQL descartável. Nenhum teste mutável deve apontar para o banco de produção.
+
+**Conclusão desta verificação:** infraestrutura online e sem 5xx observados na pequena janela; produção não está no HEAD atual de `main`; foi encontrada exposição de tokens bearer em caminhos de logs e um caminho de código que imprime token no seed. Esta verificação read-only não certifica o sistema como pronto para produção e não efetuou alterações no Railway.
