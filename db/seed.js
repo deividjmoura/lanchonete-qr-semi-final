@@ -139,8 +139,9 @@ async function garantirGarcons(client) {
     `INSERT INTO garcons (nome, ativo) VALUES ('Garçom 1', true)
      RETURNING id, nome, token`
   );
-  console.log('🧑 Garçom seed criado:', ins[0].nome, '· token', ins[0].token);
-  return { created: true, count: 1, token: ins[0].token };
+  // Nunca registrar o token bearer em stdout: logs de deploy podem ser retidos/exportados.
+  console.log('🧑 Garçom seed criado:', ins[0].nome);
+  return { created: true, count: 1 };
 }
 
 async function run() {
