@@ -725,3 +725,12 @@ A presença do pre-deploy `db:migrate` sugere que falha nessa etapa deve impedir
 - A validação automatizada não substitui a verificação manual de leitura do QR com câmera/dispositivo e do comportamento offline depois da ativação do Service Worker. Não houve merge ou deploy.
 - A PR draft #74 foi fechada como duplicata da #71, sem merge, para manter uma única implementação de F01.
 - A PR draft #73 para remover a impressão/consulta desnecessária do token no seed também passou CI: run [40126399071](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40126399071), head `b7a22b0e57fd2967b1626f1fd1ce3a6e6d55e05b`. A busca no repositório não encontrou chamadores de `garantirGarcons` que dependam do campo `token` retornado; a alteração reduz esse risco de compatibilidade, embora o teste novo seja estático e não execute o seed contra PostgreSQL. Isso não corrige tokens já capturados em logs HTTP do proxy Railway; a issue #72 continua aberta para mitigação operacional e correção arquitetural.
+
+
+### 14.7 Achado adicional — QR administrativo envia token de mesa a serviço externo (2026-10-24)
+
+- A revisão do `public/admin.html` na branch `main` encontrou, por volta da linha 223, a construção de QR por `https://api.qrserver.com/v1/create-qr-code/` usando `encodeURIComponent(url)`. O URL de mesa é construído com `m.token`, que atua como credencial de acesso.
+- Portanto, a correção F01 da PR #71 na PWA do garçom não cobre ainda o QR administrativo. A exposição é distinta da issue #72 (tokens bearer em caminhos de log do proxy Railway).
+- Criada [issue #76 — gerar QR de mesa administrativo localmente](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/76). O responsável pela PR #71 foi notificado para avaliar ampliar a mesma implementação local, sem criar uma segunda correção concorrente.
+- **Evidência:** inspeção estática de `public/admin.html` na `main`; nenhuma URL/token foi enviado manualmente ao serviço e nenhum QR real foi escaneado. Não houve alteração de runtime nem deploy.
+- **Critério para encerrar:** teste de regressão cobrindo o QR administrativo e confirmação de que nenhuma URL contendo `m.token` é enviada a serviço externo, seguida de verificação manual com dispositivo real.
