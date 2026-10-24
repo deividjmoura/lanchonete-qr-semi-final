@@ -19,7 +19,8 @@ Achados confirmados nesta revisão estática:
 4. **Médio:** o rate limit é local ao processo e, na criação pública de pedidos, a chave inclui o token da mesa. Tokens distintos geram buckets distintos; réplicas não compartilham limites.
 5. **Médio:** o bootstrap cria quatro contas de staff com a mesma senha configurada e não exige rotação neste fluxo.
 6. **Médio:** o servidor pode começar a aceitar tráfego mesmo quando migrations falham, deixando potencial incompatibilidade entre código e schema.
-7. **Médio:** os testes versionados não comprovam integração real com PostgreSQL nem fluxo ponta a ponta no navegador.
+7. **Médio, defeito funcional confirmado estaticamente:** o cancelamento público referencia `garcomResponsavelId`, variável não declarada no escopo da função; a rota cai em erro 500 antes de executar a query.
+8. **Médio:** os testes versionados não comprovam integração real com PostgreSQL nem fluxo ponta a ponta no navegador.
 
 Não foi confirmado, apenas pela leitura estática, um bypass específico que permita a uma mesa consultar/modificar pedidos de outra: os caminhos examinados filtram por token de mesa e/ou associam o pedido à sessão da mesa. Não foi possível auditar exaustivamente todas as rotas e queries. Não há base para declarar o sistema seguro.
 
@@ -304,6 +305,19 @@ Cada tarefa deve ter branch própria e PR para `main`; revisar checks e diff e n
 
 **Recomendação:** passar a identidade do garçom como contexto obrigatório no caminho de edição e revalidar a atribuição dentro da mesma transação, sob lock e na ordem global documentada; não confiar apenas na consulta preliminar. Criar teste concorrente determinístico em PostgreSQL descartável que pause entre validação e edição, transfira a mesa e confirme que a edição é rejeitada.
 
+### A-12 — Médio, fluxo de pedidos: cancelamento público referencia variável não declarada e termina em 500
+
+**Status:** defeito confirmado por inspeção estática; não foi executado teste dinâmico.
+
+**Evidência**
+- `db/pedidos.js:cancelarPedidoCliente(token, pedidoId)` declara somente os parâmetros `token` e `pedidoId`.
+- Na query de validação do pedido, o array de parâmetros inclui `garcomResponsavelId` (linha aproximada 427 na versão auditada), mas esse identificador não está declarado no escopo da função. A única ocorrência adicional no módulo é o parâmetro padrão de outra função, `editarPedidoCliente(..., garcomResponsavelId = null)`, que não cria variável compartilhada.
+- A rota `DELETE /api/mesas/:token/pedidos/:id` em `server.js` chama `cancelarPedidoCliente(m[1], Number(m[2])` com dois argumentos e trata `ErroPedido`; um `ReferenceError` não é convertido em erro de negócio e cai no handler genérico 500.
+
+**Impacto/cenário:** a execução da função lança `ReferenceError` ao montar os parâmetros, antes da consulta de autorização/status. O cliente não consegue cancelar pedido por esse endpoint; o pedido e o estoque permanecem como estavam. O problema pode afetar todos os cancelamentos públicos, independentemente do estado do pedido.
+
+**Recomendação:** corrigir a condição para expressar explicitamente a política desejada (cancelamento do cliente restrito à própria mesa e sessão aberta) sem referência implícita a variável inexistente. Adicionar regressão que execute o caminho real de cancelamento com mocks herméticos e teste PostgreSQL isolado para provar cancelamento/restauração de estoque e rollback em caso de conflito. Não executar contra banco operacional.
+
 ## 9. Controles positivos e interpretação cuidadosa
 
 - `db/caixa.js: registrarPagamento` trava a sessão antes de calcular o restante e inserir o pagamento; há validação server-side do valor e da forma de pagamento. Isso reduz concorrência de pagamentos na sessão, mas não substitui a garantia de idempotência se a coluna estiver ausente.
@@ -318,7 +332,8 @@ Cada tarefa deve ter branch própria e PR para `main`; revisar checks e diff e n
 2. Repetir um pagamento com a mesma chave e com timeout simulado; provar que só há um lançamento, inclusive sob concorrência.
 3. Com dois tokens de garçom e mesas distintas, validar a política pretendida da rota `/api/garcom/:token/pedidos` e o mínimo de dados pessoais necessário.
 4. Verificar em ambiente de staging o valor de `X-Forwarded-For` observado pela aplicação para requisições com header forjado; não inferir a política do proxy apenas pelo código.
-5. Testar em staging/banco descartável se um token de garçom permite listar tokens de mesa e acessar sessão/pedidos de mesa não atribuída.
-6. Criar teste concorrente determinístico para transferência de mesa durante edição de pedido por garçom; a edição deve falhar se a atribuição mudar.
-7. Fazer varredura XSS/CSP de rotas e campos que aceitam texto de cliente, observação, nome, descrição e dados de produtos.
-8. Executar CI, testes PostgreSQL e E2E de navegador somente em ambiente isolado. Esta auditoria não executou esses comandos nem os considera aprovados.
+5. Adicionar regressão hermética para `DELETE /api/mesas/:token/pedidos/:id` e validar cancelamento/restauração de estoque em PostgreSQL descartável.
+6. Testar em staging/banco descartável se um token de garçom permite listar tokens de mesa e acessar sessão/pedidos de mesa não atribuída.
+7. Criar teste concorrente determinístico para transferência de mesa durante edição de pedido por garçom; a edição deve falhar se a atribuição mudar.
+8. Fazer varredura XSS/CSP de rotas e campos que aceitam texto de cliente, observação, nome, descrição e dados de produtos.
+9. Executar CI, testes PostgreSQL e E2E de navegador somente em ambiente isolado. Esta auditoria não executou esses comandos nem os considera aprovados.
