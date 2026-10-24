@@ -40,3 +40,12 @@ test('criação de pedido rejeita chave de idempotência malformada antes do ban
     items: [{ productId: 1, qty: 1 }],
   }));
 });
+
+test('normalização de idempotência aceita chave válida não-UUID e rejeita formatos inválidos', () => {
+  const { idempotencyKeyDoCorpo } = require('../db/conta');
+
+  assert.equal(idempotencyKeyDoCorpo({ idempotencyKey: 'order-key-123' }), 'order-key-123');
+  assert.equal(idempotencyKeyDoCorpo({ idempotencyKey: 'bad key!' }), false);
+  assert.equal(idempotencyKeyDoCorpo({ idempotency_key: 42 }), false);
+  assert.equal(idempotencyKeyDoCorpo({}), null);
+});
