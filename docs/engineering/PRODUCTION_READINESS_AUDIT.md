@@ -734,3 +734,11 @@ A presença do pre-deploy `db:migrate` sugere que falha nessa etapa deve impedir
 - Criada [issue #76 — gerar QR de mesa administrativo localmente](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/76). O responsável pela PR #71 foi notificado para avaliar ampliar a mesma implementação local, sem criar uma segunda correção concorrente.
 - **Evidência:** inspeção estática de `public/admin.html` na `main`; nenhuma URL/token foi enviado manualmente ao serviço e nenhum QR real foi escaneado. Não houve alteração de runtime nem deploy.
 - **Critério para encerrar:** teste de regressão cobrindo o QR administrativo e confirmação de que nenhuma URL contendo `m.token` é enviada a serviço externo, seguida de verificação manual com dispositivo real.
+
+
+### 14.8 Correção proposta para o cancelamento público — PR #77 (2026-10-24)
+
+- Abri a draft [PR #77](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/77) a partir da issue #75. A alteração troca a referência indefinida `garcomResponsavelId` por `null` no terceiro parâmetro do filtro opcional e reutiliza `pedidoNumerico`, já validado.
+- O contrato preservado é: o token válido da mesa identifica a mesa; a consulta exige pedido dessa mesa e sessão aberta; o cancelamento continua permitido somente no status `recebido`. O filtro de atribuição a garçom não se aplica ao fluxo público do cliente.
+- Foi adicionada regressão estática em `tests/regressions.cjs` para detectar a referência fora do escopo e garantir o parâmetro `null`. A regressão não substitui integração com PostgreSQL descartável para comprovar commit/rollback e restauração de estoque uma única vez.
+- O CI para o head final consultado ainda não apareceu na consulta de runs; portanto, **não afirmar testes aprovados** até o GitHub Actions concluir. Sem merge/deploy ou operação de banco.
