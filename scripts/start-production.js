@@ -34,7 +34,6 @@ function runProductionStartup({
         ? 'não foi possível executar o runner'
         : `runner terminou com status ${result.status ?? 'indisponível'}`;
     logger.error(`Falha no gate de migrations: ${reason}. Servidor não será iniciado.`);
-    process.exitCode = 1;
     return false;
   }
 
@@ -43,8 +42,8 @@ function runProductionStartup({
   return true;
 }
 
-if (require.main === module) {
-  runProductionStartup();
+if (require.main === module && !runProductionStartup()) {
+  process.exitCode = 1;
 }
 
 module.exports = { runProductionStartup, MIGRATION_TIMEOUT_MS };
