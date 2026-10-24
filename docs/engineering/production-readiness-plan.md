@@ -109,6 +109,19 @@ Esforço é estimativa de engenharia, não compromisso de prazo; pressupõe um d
 
 Nenhum PR acima foi marcado como resolvido por existir documentação.
 
+## 5A. Issues abertas por lacunas confirmadas
+
+Estas issues foram criadas após buscas por duplicatas abertas com termos específicos. Elas transformam lacunas de implementação/decisão em tarefas verificáveis; não afirmam que a correção já foi feita.
+
+- [#40 — Gate seguro de migrations antes de iniciar tráfego (P0)](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/40)
+- [#41 — Comprovar backup e restauração PostgreSQL (P0)](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/41)
+- [#42 — Testes integrados de pedidos/caixa com PostgreSQL descartável (P1)](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/42)
+- [#43 — Health check read-only, smoke seguro e alertas (P1)](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/43)
+- [#44 — Política de dados pessoais, retenção e purge (P1)](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/44)
+- [#45 — Licença, repositório canônico e proveniência dos ativos (P1)](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/45)
+
+As issues #40 e #41 bloqueiam a decisão de prontidão operacional; #42 e #43 criam evidência técnica automatizável; #44 e #45 exigem decisões do responsável e, quando necessário, validação jurídica. Não foram abertas issues específicas para NFC-e/PDV, PSP PIX, Redis/LISTEN/NOTIFY, object storage, Fastify, TypeScript ou SaaS multi-tenant: são decisões/roadmap condicionais, e não devem virar implementação antes de confirmar necessidade e arquitetura.
+
 ## 6. Bloqueios externos e decisões do responsável
 
 1. **Railway correto e comando real:** não foi possível verificar nesta auditoria o projeto/serviço/ambiente exato, comando de start/pre-deploy, número de réplicas, limites ou logs. O endpoint documentado no README não basta para provar a identidade do serviço. Bloqueio: fornecer acesso autorizado ao projeto correto ou exportar as configurações não secretas. Não modificar outro projeto por aproximação.
