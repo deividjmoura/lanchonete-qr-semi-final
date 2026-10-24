@@ -79,3 +79,12 @@ Este documento registra ações e limites de validação por sessão. Acrescenta
 - CI #249 (`40128952453`) concluiu **SUCCESS**: typecheck, build, integridade de `dist/`, sintaxe do servidor/banco e regressões passaram; total da suíte: **98 pass / 0 fail**.
 - O novo teste `QR da tela administrativa é gerado localmente sem enviar token a serviço externo` passou. A falha anterior da run #244 era sintaxe de teste e foi corrigida antes da run #249.
 - O relatório foi atualizado no commit `caeeead8c6b0c038b3d941192c683517186878ce`. Ainda falta validar QR em navegador/câmera e PWA offline após cache do Service Worker.
+
+
+## 2026-10-24 — QR PIX também passou a ser local
+
+- A inspeção mostrou que `public/js/pix.js` enviava o payload PIX completo a `api.qrserver.com`, incluindo chave PIX, nome do recebedor, cidade e valor. Isso não era o vazamento de token de mesa do F01, mas era uma exposição de dados financeiros a terceiro desnecessária.
+- Alterado `LQRPix.qrUrl()` para gerar SVG local com a biblioteca `qrcode-generator`; agora retorna data URI SVG em vez de URL externa. `public/caixa.html` carrega a biblioteca local antes de `pix.js`.
+- Adicionada regressão em `tests/pwa-garcom-integracao.test.cjs` para proibir endpoint externo no módulo PIX e confirmar geração local/ordem do script.
+- CI da ampliação PIX está na run #256 (`40129073552`), `in_progress` na última consulta; não declarar verde antes da conclusão.
+- Relatório técnico atualizado no commit `03ee453f02bdc3148e42ec21b4f13973cbee09b4`. Sem deploy, banco, migration ou mudança de infraestrutura.
