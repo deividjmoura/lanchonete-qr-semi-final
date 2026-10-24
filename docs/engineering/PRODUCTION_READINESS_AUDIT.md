@@ -337,3 +337,74 @@ Cada tarefa deve ter branch própria e PR para `main`; revisar checks e diff e n
 7. Criar teste concorrente determinístico para transferência de mesa durante edição de pedido por garçom; a edição deve falhar se a atribuição mudar.
 8. Fazer varredura XSS/CSP de rotas e campos que aceitam texto de cliente, observação, nome, descrição e dados de produtos.
 9. Executar CI, testes PostgreSQL e E2E de navegador somente em ambiente isolado. Esta auditoria não executou esses comandos nem os considera aprovados.
+
+
+---
+
+## 11. Continuação da auditoria — 2026-10-24
+
+**Escopo desta passada:** revisão estática complementar dos handlers de garçom/entrega, sessão pública de mesa, sincronização da PWA e endpoints financeiros. Nenhuma rota foi chamada; nenhum banco, Railway, dado ou variável de produção foi acessado. Não foi possível executar comandos locais neste ambiente.
+
+### A-13 — P1 condicional à política de atendimento: token ativo de garçom pode marcar como entregue pedido de qualquer mesa
+
+**Status:** ausência de verificação de atribuição confirmada no código; exploração dinâmica não executada. A severidade P1 se a regra operacional pretendida for que um garçom só possa entregar pedidos de mesas atribuídas a ele. Se a operação deliberadamente usa uma fila global compartilhada, isso é uma decisão de autorização que precisa ser documentada e mitigada por escopo de dados.
+
+**Evidência concreta**
+- `server.js`, handler `POST /api/garcom/:token/pedidos/:id/entregar`, chama `entregarComoGarcom(Number(m[2]), m[1], itemIds || null)` após validar apenas o token.
+- `db/garcons.js:entregarComoGarcom(pedidoId, garcomToken, itemIds)` valida que o token pertence a um garçom ativo e carrega `pedidos WHERE id = $1 FOR UPDATE`.
+- Essa função não verifica `mesa_sessoes.garcom_responsavel_id`, nem compara o pedido com uma mesa atribuída ao garçom. Em seguida atualiza itens concluídos para `entregue`, sincroniza o total da sessão e recalcula o status.
+- A existência de `db/atendimento.js:listarAtendimentosGarcom`, que filtra explicitamente por `s.garcom_responsavel_id = $1`, demonstra que o projeto também possui um conceito de atendimentos limitados por responsável.
+
+**Cenário de falha/abuso:** um portador de token ativo que conheça ou obtenha um ID de pedido pode chamar a rota de entrega para um pedido não atribuído a ele; se houver itens em `concluido`, eles podem ser marcados como entregues e entrar no total devido da comanda.
+
+**Impacto:** entrega registrada incorretamente, cobrança antecipada ou indevida, divergência entre operação física e caixa e perda de rastreabilidade sobre quem realizou a entrega.
+
+**Recomendação:** definir explicitamente se entrega é global ou restrita por atribuição. Se restrita, validar a atribuição da sessão dentro da mesma transação e sob lock, não só no handler. Se global, restringir dados retornados, registrar motivo/ator e assegurar que a interface exija confirmação clara da mesa e dos itens.
+
+**Teste para encerrar:** em PostgreSQL descartável, criar duas mesas/sessões e dois garçons sintéticos; tentar entregar com o token do garçom A um item pronto da mesa atribuída ao garçom B. Esperado: 403/409 e nenhuma alteração de status/total se a política for restrita. Para política global, teste deve confirmar a regra documentada, log/auditoria e confirmação de mesa.
+
+### A-14 — P2: token bearer do garçom persiste no navegador e pode ficar na URL
+
+**Status:** comportamento confirmado no código; não foi comprovado vazamento em logs, histórico compartilhado ou cabeçalhos do deployment.
+
+**Evidência concreta**
+- `public/garcom-pwa/app.js` lê o token de `location.search` (`?token=...`) ou de `localStorage` e grava o token de URL novamente em `localStorage`.
+- O mesmo token é usado em URLs de API para identificar e autorizar o garçom.
+- O service worker evita cache de URLs `/api/`, o que é um controle positivo; isso não remove o token do histórico do navegador nem do armazenamento persistente local.
+- `db/garcons.js:getGarcomPorToken` trata o token como credencial bearer e só exige que o garçom exista e esteja ativo.
+
+**Cenário de falha:** aparelho compartilhado, sessão do navegador não encerrada, perfil do navegador sincronizado ou URL encaminhada a terceiros permite reutilizar o token enquanto ele continuar ativo. XSS no mesmo origin também pode ler o token em `localStorage`.
+
+**Impacto:** acesso às rotas de garçom com o nível de permissão associado ao token; o impacto cresce devido aos achados A-07/A-10 e A-13.
+
+**Recomendação:** evitar token de longa duração em query string; trocar por sessão curta revogável e armazenamento menos acessível a scripts quando a arquitetura permitir; remover token da URL após capturá-lo com `history.replaceState`; estabelecer procedimento de revogação/rotação e política de uso em dispositivos compartilhados. A migração de mecanismo de autenticação exige projeto próprio, não incluído nesta auditoria.
+
+**Teste para encerrar:** teste de navegador em staging, com token sintético, verificando remoção da query string, persistência após reload, logout/revogação e impossibilidade de reutilização depois de desativar o garçom. Inspecionar logs/proxy apenas em ambiente autorizado sem registrar o token.
+
+### A-15 — P2: política de retry da PWA exige validação ponta a ponta para confirmar idempotência em falhas de rede
+
+**Status:** mecanismo de proteção visível no código; falha de duplicação não confirmada. É uma lacuna de validação, não um bug provado.
+
+**Evidência concreta**
+- `public/garcom-pwa/app.js` cria `localId` e `idempotencyKey` ao guardar o pedido offline no IndexedDB.
+- `syncOne(localId)` persiste estado `sync`, chama primeiro `/api/garcom/:token/mesas/:mesa/assumir` e depois envia o pedido com a mesma `idempotencyKey`.
+- `recoverInterruptedSync()` converte registros deixados em `sync` para `offline`, para tentar novamente após reinício.
+- `db/pedidos.js:criarPedido` tenta reproduzir o pedido original por sessão/chave e a migration `0018_transacional_idempotencia.sql` fornece a proteção de unicidade quando aplicada. A própria auditoria A-06 registra que a introspecção pode desabilitar silenciosamente o uso da chave se a coluna não existir ou a consulta de schema falhar.
+
+**Cenário de falha:** pedido chega ao servidor, mas a resposta se perde; a PWA reinicia e reenvia. O desenho tenta evitar duplicação pela mesma chave, mas isso depende da migration presente, da estabilidade da chave no IndexedDB e do caminho de retry completo.
+
+**Impacto:** se qualquer pré-condição de idempotência não estiver satisfeita, o cliente pode ver estado incerto ou pedidos duplicados; a equipe pode preparar/cobrar duas vezes.
+
+**Recomendação:** não classificar o fluxo como validado só por testes estáticos. Fazer a suíte de integração com PostgreSQL descartável, incluindo perda simulada da resposta depois do commit, reinício do navegador e duas sincronizações concorrentes com a mesma chave. Falha na introspecção de schema deve ser visível em readiness/telemetria quando a idempotência for requisito financeiro.
+
+**Teste para encerrar:** comprovar que 2+ POSTs simultâneos com mesma mesa e chave geram exatamente um pedido e uma baixa de estoque; reiniciar a PWA entre commit e resposta e confirmar que o mesmo ID de pedido é recuperado. Repetir após migration de banco vazio e upgrade a partir de schema anterior.
+
+### Validação desta passada — resultados reais
+
+- Inspeção por GitHub Contents API dos arquivos existentes na branch `audit/production-readiness`: `server.js`, `db/atendimento.js`, `db/garcons.js`, `db/pedidos.js`, `db/caixa.js`, `db/pix-cliente.js`, `db/auth.js`, `db/queries.js`, `db/event-access.js`, `db/migrate.js`, `db/pool.js`, `scripts/start-production.js`, `public/garcom-pwa/app.js`, `public/garcom-pwa/sw.js`, `public/garcom-pwa/index.html`, `package.json`, `README.md`, `AGENTS.md`, `COORDENACAO.md` e este relatório.
+- Comandos de terminal, `npm ci`, `npm test`, `npm run test:regression`, typecheck, build e testes de PostgreSQL: **não executados nesta passada**. O conector utilizado permite inspecionar o conteúdo do repositório, mas não fornece aqui um terminal de checkout para executar os comandos.
+- Testes HTTP, exploração, carga, navegador real, Railway e PostgreSQL: **não executados**.
+- Nenhum teste mutável foi apontado para produção; nenhum banco ou variável de produção foi acessado.
+- PRs #35, #36 e #37 não foram alterados.
+
+**Conclusão:** a revisão estática encontrou lacunas reais de escopo de autorização no fluxo de garçom, além de riscos já descritos no relatório. A auditoria não demonstra que o deployment atual esteja explorável nem comprova a configuração real de produção. Não declarar o QRAdmin pronto para produção até concluir os testes de autorização, integração com PostgreSQL isolado, recuperação da PWA e verificação de migrations/readiness.
