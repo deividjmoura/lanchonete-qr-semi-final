@@ -123,6 +123,8 @@ function applySecurityHeaders(res) {
   }
 }
 
+const { compressResponse, cacheControlForStaticAsset } = require('./server/http-response');
+
 function send(res, status, type, body, extraHeaders) {
   applySecurityHeaders(res);
   const headers = { 'Content-Type': type, 'Cache-Control': 'no-store' };
@@ -135,8 +137,15 @@ function send(res, status, type, body, extraHeaders) {
       if (prev) headers['Cache-Control'] = prev;
     } catch (_) {}
   }
-  res.writeHead(status, headers);
-  res.end(body);
+  const compressed = compressResponse({
+    requestHeaders: res.req ? res.req.headers : {},
+    status,
+    contentType: type,
+    body,
+    headers,
+  });
+  res.writeHead(status, compressed.headers);
+  res.end(compressed.body);
 }
 function json(res, status, obj, extraHeaders) {
   send(res, status, 'application/json; charset=utf-8', JSON.stringify(obj), extraHeaders);
@@ -959,7 +968,9 @@ const server = http.createServer(async (req, res) => {
       if (fp.startsWith(distRoot + path.sep) || fp === path.join(distRoot, 'index.html')) {
         try {
           const data = await fs.promises.readFile(fp);
-          return send(res, 200, mime[path.extname(fp)] || 'application/octet-stream', data);
+          return send(res, 200, mime[path.extname(fp)] || 'application/octet-stream', data, {
+            'Cache-Control': cacheControlForStaticAsset(p),
+          });
         } catch (_) {}
       }
     }
