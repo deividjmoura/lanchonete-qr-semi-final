@@ -33,6 +33,10 @@ test('QR usa token da mesa e não o número no endereço do cliente',()=>{
  assert.match(app,/mesa\.token/);
  assert.match(app,/#\/mesa\//);
  assert.doesNotMatch(app,/new URL\('\/mesa\/'\+n/);
+ assert.doesNotMatch(app,/api\.qrserver\.com|create-qr-code/,'token da mesa não pode ser enviado a gerador externo');
+ assert.match(app,/new QRCode\(root/,'QR é gerado localmente');
+ assert.match(fs.readFileSync(path.join(root,'index.html'),'utf8'),/qrcode\.min\.js/,'biblioteca local carregada antes da PWA');
+ assert.match(sw,/qrcode\.min\.js/,'biblioteca QR disponível offline');
 });
 test('Manifesto instalável com icones PNG e Service Worker sem cache de API',()=>{
  assert.equal(manifest.display,'standalone');
