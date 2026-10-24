@@ -72,3 +72,10 @@ Este documento registra ações e limites de validação por sessão. Acrescenta
 - A run #244 (`40128855029`) falhou em `tests/pwa-garcom-integracao.test.cjs` por sintaxe inválida na regex recém-adicionada; typecheck, build e integridade de `dist/` passaram antes da etapa de regressões.
 - Corrigida a regex no commit `0d341259dd7e5a4c04d59e0f3ea50a045ec7b572` e atualizada a descrição do PR #71 para não apresentar a validação antiga como se cobrisse o novo código.
 - Nova run #249 (`40128952453`) está `in_progress`; aguardando resultado. A falha anterior foi registrada e não ocultada.
+
+
+### Resultado final da regressão QR administrativo
+
+- CI #249 (`40128952453`) concluiu **SUCCESS**: typecheck, build, integridade de `dist/`, sintaxe do servidor/banco e regressões passaram; total da suíte: **98 pass / 0 fail**.
+- O novo teste `QR da tela administrativa é gerado localmente sem enviar token a serviço externo` passou. A falha anterior da run #244 era sintaxe de teste e foi corrigida antes da run #249.
+- O relatório foi atualizado no commit `caeeead8c6b0c038b3d941192c683517186878ce`. Ainda falta validar QR em navegador/câmera e PWA offline após cache do Service Worker.
