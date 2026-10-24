@@ -313,6 +313,7 @@ Cada tarefa deve ter branch própria e PR para `main`; revisar checks e diff e n
 - `db/pedidos.js:cancelarPedidoCliente(token, pedidoId)` declara somente os parâmetros `token` e `pedidoId`.
 - Na query de validação do pedido, o array de parâmetros inclui `garcomResponsavelId` (linha aproximada 427 na versão auditada), mas esse identificador não está declarado no escopo da função. A única ocorrência adicional no módulo é o parâmetro padrão de outra função, `editarPedidoCliente(..., garcomResponsavelId = null)`, que não cria variável compartilhada.
 - A rota `DELETE /api/mesas/:token/pedidos/:id` em `server.js` chama `cancelarPedidoCliente(m[1], Number(m[2])` com dois argumentos e trata `ErroPedido`; um `ReferenceError` não é convertido em erro de negócio e cai no handler genérico 500.
+- Tarefa rastreável criada: [#75 — corrigir referência indefinida no cancelamento público](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/75). A correção deve definir explicitamente o contrato do filtro por responsável e adicionar regressão + integração com PostgreSQL descartável.
 
 **Impacto/cenário:** a execução da função lança `ReferenceError` ao montar os parâmetros, antes da consulta de autorização/status. O cliente não consegue cancelar pedido por esse endpoint; o pedido e o estoque permanecem como estavam. O problema pode afetar todos os cancelamentos públicos, independentemente do estado do pedido.
 
