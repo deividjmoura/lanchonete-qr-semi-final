@@ -34,9 +34,9 @@ test('Fila de sincronização preserva uma chave por operação e isola garçom'
  assert.match(app,/err\.status&&err\.status<500\?'conflict'/);
 });
 test('QR da tela administrativa é gerado localmente sem enviar token a serviço externo',()=>{
- assert.doesNotMatch(adminHtml,/api\\.qrserver\\.com/);
- assert.match(adminHtml,/qrcode-generator\\.js/);
- assert.match(adminHtml,/window\\.qrcode\\(0,'M'\\)/);
+ assert.doesNotMatch(adminHtml,/api\.qrserver\.com/);
+ assert.match(adminHtml,/qrcode-generator\.js/);
+ assert.match(adminHtml,/window\.qrcode\(0,'M'\)/);
  assert.match(adminHtml,/qr\\.addData\\(host\\+'\\/mesa\\/'\\+mesa\\.token\\)/);
  assert.match(adminHtml,/createSvgTag/);
 });
