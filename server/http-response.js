@@ -5,17 +5,30 @@ const zlib = require('node:zlib');
 const MIN_COMPRESS_BYTES = 1024;
 const COMPRESSIBLE_TYPE = /^(?:text\/|application\/(?:json|javascript|xml|manifest\+json)|image\/svg\+xml)/i;
 
-function acceptsEncoding(header, encoding) {
+function parseQuality(value) {
+  const q = Number(value);
+  return Number.isFinite(q) && q >= 0 && q <= 1 ? q : 0;
+}
+
+function qualityForEncoding(entries, encoding) {
+  const exact = entries.find((entry) => entry.name === encoding);
+  if (exact) return exact.q;
+  const wildcard = entries.find((entry) => entry.name === '*');
+  return wildcard ? wildcard.q : 0;
+}
+
+function selectEncoding(header) {
   const entries = String(header || '').split(',').map((entry) => {
     const [name, ...params] = entry.trim().toLowerCase().split(';');
     const qParam = params.map((p) => p.trim()).find((p) => p.startsWith('q='));
-    const q = qParam ? Number(qParam.slice(2)) : 1;
-    return { name, q: Number.isFinite(q) ? q : 0 };
-  });
-  const exact = entries.find((entry) => entry.name === encoding);
-  if (exact) return exact.q > 0;
-  const wildcard = entries.find((entry) => entry.name === '*');
-  return Boolean(wildcard && wildcard.q > 0);
+    const q = qParam ? parseQuality(qParam.slice(2)) : 1;
+    return { name, q };
+  }).filter((entry) => entry.name);
+
+  const brQ = qualityForEncoding(entries, 'br');
+  const gzipQ = qualityForEncoding(entries, 'gzip');
+  if (brQ <= 0 && gzipQ <= 0) return null;
+  return brQ >= gzipQ && brQ > 0 ? 'br' : 'gzip';
 }
 
 function appendVary(headers, value) {
@@ -38,10 +51,11 @@ function compressResponse({ requestHeaders = {}, status = 200, contentType = '',
   if (!eligible) return { body: payload, headers: responseHeaders, encoding: null };
 
   appendVary(responseHeaders, 'Accept-Encoding');
-  if (acceptsEncoding(requestHeaders['accept-encoding'], 'br')) {
+  const encoding = selectEncoding(requestHeaders['accept-encoding']);
+  if (encoding === 'br') {
     return { body: zlib.brotliCompressSync(payload), headers: { ...responseHeaders, 'Content-Encoding': 'br' }, encoding: 'br' };
   }
-  if (acceptsEncoding(requestHeaders['accept-encoding'], 'gzip')) {
+  if (encoding === 'gzip') {
     return { body: zlib.gzipSync(payload), headers: { ...responseHeaders, 'Content-Encoding': 'gzip' }, encoding: 'gzip' };
   }
   return { body: payload, headers: responseHeaders, encoding: null };
