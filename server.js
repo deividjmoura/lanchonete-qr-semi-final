@@ -2,6 +2,7 @@ require('dotenv').config();
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { sanitizarAlvoRequisicao, sanitizarDetalheErro } = require('./db/log-sanitizer');
 
 const { getCardapio, invalidarCardapio } = require('./db/cardapio');
 const {
@@ -1011,10 +1012,10 @@ const server = http.createServer(async (req, res) => {
        ATENÇÃO: `p` (u.pathname) é declarado DENTRO do try; aqui só existe
        req.url, e usá-lo sem esse cuidado derruba o processo. */
     if (e && e.status && e.status >= 400 && e.status < 500) {
-      console.warn(`[http ${e.status}] ${req.method} ${req.url} — ${e.message || 'rejeitado'}`);
+      console.warn(`[http ${e.status}] ${req.method} ${sanitizarAlvoRequisicao(req.url)} — ${sanitizarDetalheErro(e.message || 'rejeitado')}`);
       return json(res, e.status, { error: e.message || 'Erro' });
     }
-    console.error(e);
+    console.error('[http interno]', sanitizarDetalheErro(e));
     if (e && e.status) {
       return json(res, e.status, { error: e.message || 'Erro' });
     }
