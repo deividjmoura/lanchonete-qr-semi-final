@@ -714,3 +714,13 @@ A presença do pre-deploy `db:migrate` sugere que falha nessa etapa deve impedir
 5. Executar testes de pedidos/pagamentos e integração somente em PostgreSQL descartável. Nenhum teste mutável deve apontar para o banco de produção.
 
 **Conclusão desta verificação:** infraestrutura online e sem 5xx observados na pequena janela; produção não está no HEAD atual de `main`; foi encontrada exposição de tokens bearer em caminhos de logs e um caminho de código que imprime token no seed. Esta verificação read-only não certifica o sistema como pronto para produção e não efetuou alterações no Railway.
+
+
+### 14.6 Atualização posterior — correção F01 do QR local (2026-10-24)
+
+- A PR #71 passou a incluir a correção F01: o QR da mesa é gerado como SVG no navegador com `qrcode-generator.js`; a URL com o token não é mais enviada ao serviço externo `api.qrserver.com`.
+- A biblioteca local foi incluída no shell do Service Worker e o cache foi incrementado para permitir geração offline após atualização/armazenamento do shell.
+- A regressão gera um SVG usando URL de teste e verifica que o endpoint externo não aparece no fluxo. GitHub Actions run [40126835090](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40126835090) concluiu **SUCCESS** no head `592a722eea1c99ab30b0fc53ec0d473e3406d611`.
+- A validação automatizada não substitui a verificação manual de leitura do QR com câmera/dispositivo e do comportamento offline depois da ativação do Service Worker. Não houve merge ou deploy.
+- A PR draft #74 foi fechada como duplicata da #71, sem merge, para manter uma única implementação de F01.
+- A PR draft #73 para remover a impressão/consulta desnecessária do token no seed também passou CI: run [40126399071](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40126399071), head `b7a22b0e57fd2967b1626f1fd1ce3a6e6d55e05b`. Isso não corrige tokens já capturados em logs HTTP do proxy Railway; a issue #72 continua aberta para mitigação operacional e correção arquitetural.
