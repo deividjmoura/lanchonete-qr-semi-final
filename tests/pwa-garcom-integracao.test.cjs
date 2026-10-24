@@ -32,7 +32,18 @@ test('Fila de sincronização preserva uma chave por operação e isola garçom'
  assert.match(app,/o\.ownerToken===waiterToken/);
  assert.match(app,/err\.status&&err\.status<500\?'conflict'/);
 });
-test('QR da mesa é gerado localmente e nunca envia o token a um serviço externo',()=>{\n assert.doesNotMatch(app,/api\\.qrserver\\.com/);\n assert.match(app,/qrcode\\(0,'M'\\)/);\n assert.match(html,/qrcode-generator\\.js/);\n assert.match(sw,/qrcode-generator\\.js/);\n const qr=qrGenerator(0,'M');\n qr.addData('https://example.test/#/mesa/token-de-teste');\n qr.make();\n assert.ok(qr.getModuleCount()>0);\n assert.match(qr.createSvgTag({cellSize:4,margin:2,scalable:true}),/<svg/);\n});\ntest('QR usa token da mesa e não o número no endereço do cliente',()=>{
+test('QR da mesa é gerado localmente e nunca envia o token a um serviço externo',()=>{
+ assert.doesNotMatch(app,/api\.qrserver\.com/);
+ assert.match(app,/qrcode\(0,'M'\)/);
+ assert.match(html,/qrcode-generator\.js/);
+ assert.match(sw,/qrcode-generator\.js/);
+ const qr=qrGenerator(0,'M');
+ qr.addData('https://example.test/#/mesa/token-de-teste');
+ qr.make();
+ assert.ok(qr.getModuleCount()>0);
+ assert.match(qr.createSvgTag({cellSize:4,margin:2,scalable:true}),/<svg/);
+});
+test('QR usa token da mesa e não o número no endereço do cliente',()=>{
  assert.match(app,/mesa\.token/);
  assert.match(app,/#\/mesa\//);
  assert.doesNotMatch(app,/new URL\('\/mesa\/'\+n/);
