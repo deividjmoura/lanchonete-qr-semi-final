@@ -2,12 +2,15 @@ const test=require('node:test');const assert=require('node:assert/strict');
 const fs=require('node:fs');const path=require('node:path');const cp=require('node:child_process');
 const root=path.join(__dirname,'..','public','garcom-pwa');
 const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const qrGenerator=require(path.join(root,'qrcode-generator.js'));
 const server=fs.readFileSync(path.join(__dirname,'..','server.js'),'utf8');
 const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
 const manifest=JSON.parse(fs.readFileSync(path.join(root,'manifest.webmanifest'),'utf8'));
 test('PWA JavaScript e Service Worker têm sintaxe válida',()=>{
  cp.execFileSync(process.execPath,['--check',path.join(root,'app.js')]);
  cp.execFileSync(process.execPath,['--check',path.join(root,'sw.js')]);
+ cp.execFileSync(process.execPath,['--check',path.join(root,'qrcode-generator.js')]);
 });
 test('Rotas de assumir mesa e criar pedido aceitam números reais de mesa',()=>{
  assert.ok(server.includes('mesas\\/(\\d+)\\/assumir'),'rota assumir usa \\d+, não barra invertida literal');
@@ -29,7 +32,7 @@ test('Fila de sincronização preserva uma chave por operação e isola garçom'
  assert.match(app,/o\.ownerToken===waiterToken/);
  assert.match(app,/err\.status&&err\.status<500\?'conflict'/);
 });
-test('QR usa token da mesa e não o número no endereço do cliente',()=>{
+test('QR da mesa é gerado localmente e nunca envia o token a um serviço externo',()=>{\n assert.doesNotMatch(app,/api\\.qrserver\\.com/);\n assert.match(app,/qrcode\\(0,'M'\\)/);\n assert.match(html,/qrcode-generator\\.js/);\n assert.match(sw,/qrcode-generator\\.js/);\n const qr=qrGenerator(0,'M');\n qr.addData('https://example.test/#/mesa/token-de-teste');\n qr.make();\n assert.ok(qr.getModuleCount()>0);\n assert.match(qr.createSvgTag({cellSize:4,margin:2,scalable:true}),/<svg/);\n});\ntest('QR usa token da mesa e não o número no endereço do cliente',()=>{
  assert.match(app,/mesa\.token/);
  assert.match(app,/#\/mesa\//);
  assert.doesNotMatch(app,/new URL\('\/mesa\/'\+n/);
