@@ -15,6 +15,7 @@ test('comprime respostas textuais grandes com Brotli quando o cliente aceita', (
     headers: { 'Cache-Control': 'no-store' },
   });
   assert.equal(result.encoding, 'br');
+  assert.ok(result.body.length < payload.length, `Brotli: ${result.body.length} < ${payload.length} bytes`);
   assert.equal(result.headers['Content-Encoding'], 'br');
   assert.match(result.headers.Vary, /Accept-Encoding/i);
   assert.deepEqual(zlib.brotliDecompressSync(result.body), payload);
@@ -28,6 +29,7 @@ test('usa gzip quando Brotli não é aceito e preserva Vary existente', () => {
     headers: { Vary: 'Origin' },
   });
   assert.equal(result.encoding, 'gzip');
+  assert.ok(result.body.length < payload.length, `gzip: ${result.body.length} < ${payload.length} bytes`);
   assert.match(result.headers.Vary, /Origin/i);
   assert.match(result.headers.Vary, /Accept-Encoding/i);
   assert.deepEqual(zlib.gunzipSync(result.body), payload);
