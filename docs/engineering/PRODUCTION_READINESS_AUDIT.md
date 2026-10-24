@@ -691,11 +691,13 @@ O código indica que o QR da mesa é permanente e que um pedido público pode ab
 
 Os logs HTTP do Railway incluem caminhos de endpoints de garçom com o token bearer inserido na própria URL. O valor não é reproduzido aqui. Como o caminho completo aparece nos logs do proxy, a credencial pode ficar acessível a leitores de logs durante a retenção configurada. Isso não pode ser sanado apenas com sanitização do logger da aplicação se o registro é produzido pelo proxy antes da aplicação.
 
+A revisão estática encontrou também uma fonte na aplicação: o handler genérico de 4xx em `server.js` registra `req.url` sem sanitização em `console.warn`. Se uma rota tokenizada terminar em 4xx, o token pode aparecer também nos logs da aplicação. Corrigir esse logger não elimina registros já capturados pelo proxy Railway; os dois fluxos exigem tratamento separado.
+
 Além disso, a inspeção estática de `db/seed.js` encontrou uma mensagem de log que imprime o token do garçom quando o seed cria o primeiro garçom. Esse caminho só é executado se a tabela não tiver garçom; a inspeção não prova que isso ocorreu no ambiente atual. O risco é, portanto, confirmado no código e a ocorrência específica no deploy depende do estado do banco.
 
 - Issue criada: #72 — impedir exposição de tokens bearer nos logs HTTP do Railway.
 - Mitigação operacional recomendada: revisar a exposição, retenção e acesso aos logs e rotacionar/desativar tokens potencialmente expostos, sem publicar seus valores. Planejar a rotação para evitar interromper atendimento ativo.
-- Correção: evitar tokens bearer em URLs sempre que possível; remover a impressão de tokens no seed; adicionar testes de regressão e documentar o limite dos logs do proxy gerenciado.
+- Correção: evitar tokens bearer em URLs sempre que possível; remover a impressão de tokens no seed; sanitizar `req.url` no logger da aplicação e adicionar regressão com token-canário; documentar o limite dos logs do proxy gerenciado.
 - Nenhuma credencial foi utilizada para autenticar ou executar ações durante esta inspeção.
 
 ### 14.4 Configuração de deploy e seed
