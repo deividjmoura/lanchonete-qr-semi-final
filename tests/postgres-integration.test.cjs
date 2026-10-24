@@ -16,6 +16,14 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
     'Integração bloqueada: database deve ser qradmin_test; produção nunca é permitida');
   assert.equal(process.env.NODE_ENV, 'test', 'Integração exige NODE_ENV=test');
 
+  // Confirma a versão do servidor real, não apenas a tag configurada no workflow.
+  const versionResult = await pool.query('SHOW server_version');
+  const serverVersion = String(versionResult.rows[0]?.server_version || '');
+  assert.match(serverVersion, /^16(?:\.|$)/,
+    'Integração exige PostgreSQL major 16 no servidor conectado');
+  // Log de diagnóstico deliberadamente limitado a campos não secretos.
+  console.log(`[postgres-integration] host=${databaseUrl.hostname} database=${databaseUrl.pathname.slice(1)} server_major=16`);
+
   const token = randomUUID();
   const suffix = randomUUID().slice(0, 8);
   let mesaId;
