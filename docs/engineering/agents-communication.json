@@ -43,7 +43,7 @@
       "issue": 42,
       "branch": "test/postgres-integration-issue-42",
       "pull_request": 64,
-      "status": "in_progress",
+      "status": "blocked",
       "objective": "Concluir a validação de segurança do harness PostgreSQL descartável da issue #42, incluindo confirmação explícita da versão real do servidor e relatório sem URL/credenciais; preservar os limites de escopo e revisar CI.",
       "result": {
         "commit": "4ae9ee126f62daefca0110f12e96c5925c4bb9ba",
@@ -52,9 +52,9 @@
         "postgres_integration_run": "https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40126274185",
         "merged": false,
         "deployed": false,
-        "notes": "No commit 4ae9ee126f62daefca0110f12e96c5925c4bb9ba removido o job postgres-integration duplicado de .github/workflows/ci.yml; o workflow dedicado .github/workflows/postgres-integration.yml continua responsável pelas migrations + integração real. CI #216 e PostgreSQL integration #10 passaram. CI: typecheck, build, dist integrity, regressions (96 passed, 0 failed), syntax. PostgreSQL: migrations aplicadas, 1 teste integrado passou (pedido concorrente/idempotência, estoque, entrega parcial/final, total entregue, pagamento parcial idempotente, fechamento e consultas persistidas); containers descartáveis parados. Logs revisados; DATABASE_URL mascarada, sem strings completas ou tokens. Sem produção, merge ou deploy. Revisão posterior identificou melhoria pontual no critério de segurança/evidência: confirmar via SHOW server_version que o servidor conectado é PostgreSQL 16 e emitir apenas host/database/major version (nunca URL ou credenciais)."
+        "notes": "No commit 4ae9ee126f62daefca0110f12e96c5925c4bb9ba removido o job postgres-integration duplicado de .github/workflows/ci.yml; o workflow dedicado .github/workflows/postgres-integration.yml continua responsável pelas migrations + integração real. CI #216 e PostgreSQL integration #10 passaram. CI: typecheck, build, dist integrity, regressions (96 passed, 0 failed), syntax. PostgreSQL: migrations aplicadas, 1 teste integrado passou (pedido concorrente/idempotência, estoque, entrega parcial/final, total entregue, pagamento parcial idempotente, fechamento e consultas persistidas); containers descartáveis parados. Logs revisados; DATABASE_URL mascarada, sem strings completas ou tokens. Sem produção, merge ou deploy. Revisão posterior identificou melhoria pontual no critério de segurança/evidência: confirmar via SHOW server_version que o servidor conectado é PostgreSQL 16 e emitir apenas host/database/major version (nunca URL ou credenciais). Retomada 2026-10-24: atualização de coordenação registrada; comentário #6388824287 explica intenção. Leitura do arquivo tests/postgres-integration.test.cjs pela Contents API retorna 404 apesar de o PR listar o caminho; nenhum código foi alterado nesta tentativa. Bloqueado até recuperar conteúdo atual com segurança."
       },
-      "next_action": "Adicionar assertion para versão major 16 obtida do servidor real e log seguro de host/database/versão; executar CI e registrar evidência, sem tocar produção."
+      "next_action": "Retomar a assertion SHOW server_version (major 16) e log seguro quando a leitura confiável do arquivo tests/postgres-integration.test.cjs voltar a funcionar; não substituir o arquivo sem conteúdo atual verificado."
     },
     {
       "id": "agent-2",
