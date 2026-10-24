@@ -561,6 +561,16 @@ test('caixa/pedidos rejeitam ids e corpos inválidos antes de abrir conexão', a
   );
 });
 
+test('cancelamento público não referencia identidade de garçom fora do escopo', () => {
+  const source = fs.readFileSync('db/pedidos.js', 'utf8');
+  const inicio = source.indexOf('async function cancelarPedidoCliente(');
+  const fim = source.indexOf('/** Cliente edita itens', inicio);
+  assert.ok(inicio >= 0 && fim > inicio, 'função de cancelamento encontrada');
+  const cancelar = source.slice(inicio, fim);
+  assert.doesNotMatch(cancelar, /\\bgarcomResponsavelId\\b/);
+  assert.match(cancelar, /\\[pedidoNumerico,\\s*mesa\\.id,\\s*null\\]/);
+});
+
 test('SSE público é coalescido (1 aviso/janela); staff recebe tudo na hora', async () => {
   const staff = new EventEmitter();
   const publico = new EventEmitter();
