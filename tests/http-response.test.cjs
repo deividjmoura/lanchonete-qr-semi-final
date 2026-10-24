@@ -21,6 +21,16 @@ test('comprime respostas textuais grandes com Brotli quando o cliente aceita', (
   assert.deepEqual(zlib.brotliDecompressSync(result.body), payload);
 });
 
+test('respeita o q-value ao escolher entre Brotli e gzip', () => {
+  const result = compressResponse({
+    requestHeaders: { 'accept-encoding': 'gzip;q=1, br;q=0.1' },
+    contentType: 'application/json',
+    body: payload,
+  });
+  assert.equal(result.encoding, 'gzip');
+  assert.deepEqual(zlib.gunzipSync(result.body), payload);
+});
+
 test('usa gzip quando Brotli não é aceito e preserva Vary existente', () => {
   const result = compressResponse({
     requestHeaders: { 'accept-encoding': 'gzip' },
@@ -40,6 +50,7 @@ test('não comprime payload pequeno, binário ou quando encoding tem q=0', () =>
     { requestHeaders: { 'accept-encoding': 'gzip' }, contentType: 'application/json', body: 'small' },
     { requestHeaders: { 'accept-encoding': 'gzip' }, contentType: 'image/png', body: payload },
     { requestHeaders: { 'accept-encoding': 'gzip;q=0, br;q=0' }, contentType: 'text/plain', body: payload },
+    { requestHeaders: { 'accept-encoding': 'gzip;q=1.5, br;q=0' }, contentType: 'text/plain', body: payload },
   ]) {
     const result = compressResponse(options);
     assert.equal(result.encoding, null);
