@@ -43,7 +43,7 @@
       "issue": 42,
       "branch": "test/postgres-integration-issue-42",
       "pull_request": 64,
-      "status": "review",
+      "status": "in_progress",
       "objective": "Completar e validar a suíte de integração real com PostgreSQL descartável para criação concorrente de pedidos, entrega parcial, pagamentos, fechamento e invariantes de estoque/total; inspecionar logs sem dados sensíveis.",
       "result": {
         "commit": "b48eff706029cdbb702d16a813fbe03a7a90d63e",
@@ -52,9 +52,9 @@
         "postgres_integration_run": "https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40124004802",
         "merged": false,
         "deployed": false,
-        "notes": "Testes reais cobrem pedido idempotente concorrente, baixa e limite de estoque, entrega parcial por item, total autoritativo, pagamento parcial e fechamento. Logs revisados; DATABASE_URL mascarada, sem strings completas ou tokens."
+        "notes": "CI verify #208 e PostgreSQL integration #8 passaram no commit b48eff706029cdbb702d16a813fbe03a7a90d63e. Em retomada, identifiquei duplicação do mesmo teste PostgreSQL: job postgres-integration em ci.yml e workflow postgres-integration.yml. Vou remover o job duplicado de ci.yml na branch própria do PR #64, preservando o workflow dedicado e o gate de migrations do PR #38. Sem produção, merge ou deploy."
       },
-      "next_action": "Aguardar revisão do PR #64; não fazer merge/deploy até autorização explícita do responsável."
+      "next_action": "Remover job PostgreSQL duplicado em ci.yml na branch test/postgres-integration-issue-42, validar novo CI e registrar handoff; aguardar revisão/autorização para merge."
     },
     {
       "id": "agent-2",
