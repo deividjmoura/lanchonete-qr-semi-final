@@ -222,3 +222,71 @@ Cada tarefa deve ter branch própria e PR para `main`; revisar checks e diff e n
 - Nenhuma migration, seed, teste mutável, configuração, deploy ou operação de banco executada.
 
 **Resultados:** conclusões baseadas em inspeção estática. `npm ci`, `npm run typecheck`, `npm run build`, `npm run test:regression`, verificações de sintaxe, testes PostgreSQL, navegador real e checks atuais do GitHub permanecem **não executados/não verificados nesta sessão**.
+
+
+## 8. Segunda passada — autorização, PIX e degradabilidade transacional
+
+**Base de código verificada nesta passada:** `main` = `e0f2571bc8c6e19b67c137d93c1653e8d50f9ba6` (o mesmo SHA usado na primeira passada). A branch de auditoria mantém esse ponto-base; os PRs #35 e #36 não foram alterados. Esta seção acrescenta análise de fluxos e não representa teste dinâmico.
+
+### A-06 — Médio/alto, condicional: idempotência financeira desliga silenciosamente se migration 0018 estiver ausente ou a introspecção falhar
+
+**Classificação:** risco concreto condicionado ao schema/estado de conexão; probabilidade em produção desconhecida; impacto financeiro/contábil alto se ocorrer.
+
+**Evidência**
+- `db/conta.js`, função `colunaExiste(tabela, coluna)`: se a coluna não existe, registra aviso e devolve `false`; se a consulta ao `information_schema.columns` falha por qualquer motivo, captura a exceção e também define `cache = false`. O comentário documenta explicitamente que operações seguem sem idempotência quando a migration 0018 ainda não está aplicada.
+- `db/caixa.js`, função `registrarPagamento(sessaoIdBruto, body)`: só consulta e reaproveita o lançamento anterior quando `usarChave` é verdadeiro. Caso contrário, insere um novo registro sem `idempotency_key`, mesmo que o cliente tenha enviado uma chave.
+- `scripts/start-production.js` e a inicialização de `server.js` permitem que o servidor suba apesar de falha de migration (detalhado em A-04).
+- `db/migrations/0018_transacional_idempotencia.sql` adiciona a coluna e o índice único que completam a proteção no banco.
+
+**Cenário e impacto:** após timeout/retry de uma requisição de pagamento, com código novo e schema antigo (ou erro temporário de introspecção cacheado como falso), a mesma chave pode produzir dois lançamentos. O limite do valor restante reduz alguns casos, mas não impede duplicação quando a conta ainda comporta ambos os valores. O fallback pode persistir durante toda a vida do processo porque o resultado é cacheado.
+
+**Recomendação:** tornar a ausência da coluna/erro de introspecção um estado explícito de readiness ou falhar de forma fechada para operações que exigem idempotência; alternativamente, garantir migration antes de receber tráfego. Adicionar teste de integração PostgreSQL que simule schema pré-0018 e erro de introspecção, incluindo retry de pagamento com a mesma chave. Não testar contra banco operacional.
+
+### A-07 — Médio, autorização/privacidade: token individual de garçom habilita listagem global da fila
+
+**Classificação:** comportamento confirmado; a severidade depende da política operacional esperada para garçons.
+
+**Evidência**
+- Em `server.js`, rota `GET /api/garcom/:token/pedidos`, o handler valida que o token identifica um garçom ativo e depois retorna `getFilaGarcom()` sem passar o ID do garçom nem filtrar por mesas atribuídas.
+- A função `getFilaGarcom()` em `db/pedidos.js` busca pedidos com itens prontos aguardando entrega em âmbito global, não limitado às mesas assumidas pelo portador do token.
+- Em contraste, `db/atendimento.js:listarAtendimentosGarcom(token)` filtra explicitamente por `s.garcom_responsavel_id = $1`.
+
+**Impacto/cenário:** qualquer pessoa com um link de garçom ativo pode consultar detalhes da fila de entrega de outras mesas (incluindo nome do cliente, observações e itens), ainda que não estejam atribuídas a esse garçom. Isto pode ser uma escolha intencional para uma fila compartilhada; a documentação não é suficiente para afirmar que é um bypass contra a política desejada.
+
+**Recomendação:** decidir e documentar se a fila de entrega é global ou limitada à atribuição. Se for por atribuição, aplicar o mesmo escopo da listagem de atendimentos e testar token do garçom A contra mesa atribuída ao garçom B. Se a fila for deliberadamente global, minimizar os dados pessoais expostos e registrar essa decisão como requisito.
+
+### A-08 — Médio, probabilidade desconhecida: rate limit de login confia no primeiro valor de X-Forwarded-For
+
+**Evidência**
+- `server.js: clientIp(req)` usa o primeiro elemento de `X-Forwarded-For` em produção quando o header existe; a rota `POST /api/login` aplica `golpePermitido(login:<ip>)`.
+- O rate limit está em memória (`db/rateLimit.js`) e não é compartilhado entre instâncias.
+- Não foi possível verificar se o proxy/edge atual sobrescreve, limpa ou acrescenta ao header recebido do cliente, nem a topologia efetiva no Railway.
+
+**Impacto/cenário:** se a infraestrutura aceitar um `X-Forwarded-For` controlado pelo cliente como primeiro elemento, um atacante pode variar o valor para criar buckets de login distintos. Se o proxy reescrever o header de forma confiável, esse cenário não se aplica; isso permanece não verificado.
+
+**Recomendação:** validar a semântica real do header no ambiente isolado/proxy utilizado; confiar somente em IP estabelecido por proxy confiável e limitar tentativas também por conta/login, com armazenamento compartilhado quando houver réplicas.
+
+### A-09 — Baixo/médio, hardening: política CSP permite scripts inline
+
+**Evidência**
+- `server.js: applySecurityHeaders(res)` define `script-src 'self' 'unsafe-inline'` e `style-src 'self' 'unsafe-inline'` quando a resposta ainda não tem CSP.
+- A revisão estática não identificou, nesta passada, um exploit XSS confirmado associado a essa política; a presença de `unsafe-inline` reduz a capacidade da CSP de conter uma injeção futura.
+
+**Impacto/recomendação:** se surgir XSS em campo que aceite conteúdo não confiável, scripts inline ficam menos contidos. Inventariar os usos inline, migrar para nonce/hash ou scripts externos quando viável e testar CSP/XSS em ambiente isolado. Não classificar como XSS comprovado sem payload e caminho explorável demonstrados.
+
+## 9. Controles positivos e interpretação cuidadosa
+
+- `db/caixa.js: registrarPagamento` trava a sessão antes de calcular o restante e inserir o pagamento; há validação server-side do valor e da forma de pagamento. Isso reduz concorrência de pagamentos na sessão, mas não substitui a garantia de idempotência se a coluna estiver ausente.
+- `db/pix-cliente.js: informarPixPago` registra um aviso de PIX, não um pagamento liquidado. O README descreve corretamente que a equipe deve confirmar o recebimento no aplicativo bancário; não foi identificado gateway bancário ou confirmação automática.
+- `db/events.js` envia payload vazio aos clientes públicos de SSE, mitigando vazamento de payload de eventos; isso não limita, por si só, os dados retornados por endpoints HTTP.
+- `db/auth.js` usa cookie HttpOnly e Secure em produção e scrypt para senhas; a validação de origem não substitui autenticação/autorização por rota nem prova que todas as rotas estão cobertas.
+- Não foi feita tentativa de exploração, alteração de dados, consulta a banco, execução de testes, carga ou chamada a endpoint de produção.
+
+## 10. Validações obrigatórias antes de fechar os riscos
+
+1. Em PostgreSQL descartável, aplicar migrations do zero e simular schema sem 0018; verificar se readiness impede operações financeiras sem idempotência.
+2. Repetir um pagamento com a mesma chave e com timeout simulado; provar que só há um lançamento, inclusive sob concorrência.
+3. Com dois tokens de garçom e mesas distintas, validar a política pretendida da rota `/api/garcom/:token/pedidos` e o mínimo de dados pessoais necessário.
+4. Verificar em ambiente de staging o valor de `X-Forwarded-For` observado pela aplicação para requisições com header forjado; não inferir a política do proxy apenas pelo código.
+5. Fazer varredura XSS/CSP de rotas e campos que aceitam texto de cliente, observação, nome, descrição e dados de produtos.
+6. Executar CI, testes PostgreSQL e E2E de navegador somente em ambiente isolado. Esta auditoria não executou esses comandos nem os considera aprovados.
