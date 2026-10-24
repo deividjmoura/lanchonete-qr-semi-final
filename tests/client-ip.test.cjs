@@ -1,0 +1,64 @@
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const {
+  normalizeIp,
+  resolveClientIp,
+  loginRateLimitKey,
+  orderRateLimitKey,
+} = require('../security/client-ip');
+
+function request(remoteAddress, xff) {
+  return {
+    socket: { remoteAddress },
+    headers: xff === undefined ? {} : { 'x-forwarded-for': xff },
+  };
+}
+
+test('ignores client-supplied XFF when trusted proxy hops are not configured', () => {
+  assert.equal(resolveClientIp(request('10.0.0.8', '203.0.113.66')), '10.0.0.8');
+});
+
+test('uses the only forwarded address when exactly one trusted proxy is configured', () => {
+  assert.equal(resolveClientIp(request('10.0.0.8', '198.51.100.7'), { trustedProxyHops: 1 }), '198.51.100.7');
+});
+
+test('does not trust a forged leftmost XFF value when trusted proxy appends observed client IP', () => {
+  assert.equal(
+    resolveClientIp(request('10.0.0.8', '203.0.113.66, 198.51.100.7'), { trustedProxyHops: 1 }),
+    '198.51.100.7'
+  );
+});
+
+test('selects the client address before two trusted appended proxy hops', () => {
+  assert.equal(
+    resolveClientIp(request('10.0.0.8', '198.51.100.7, 10.0.0.7'), { trustedProxyHops: 2 }),
+    '198.51.100.7'
+  );
+});
+
+test('falls back to socket peer when XFF is absent, malformed, or shorter than configured chain', () => {
+  assert.equal(resolveClientIp(request('10.0.0.8'), { trustedProxyHops: 1 }), '10.0.0.8');
+  assert.equal(resolveClientIp(request('10.0.0.8', 'attacker-value'), { trustedProxyHops: 1 }), '10.0.0.8');
+  assert.equal(resolveClientIp(request('10.0.0.8', '198.51.100.7'), { trustedProxyHops: 2 }), '10.0.0.8');
+  assert.equal(resolveClientIp(request('10.0.0.8', '198.51.100.7, not-an-ip'), { trustedProxyHops: 1 }), '10.0.0.8');
+});
+
+test('normalizes IPv4-mapped IPv6 and accepts valid IPv6 addresses', () => {
+  assert.equal(normalizeIp('::ffff:192.0.2.4'), '192.0.2.4');
+  assert.equal(normalizeIp('2001:DB8::1'), '2001:db8::1');
+  assert.equal(resolveClientIp(request('::ffff:192.0.2.4')), '192.0.2.4');
+});
+
+test('login limits share a key for one IP; order limits scope by IP and mesa token', () => {
+  assert.equal(loginRateLimitKey('198.51.100.7'), loginRateLimitKey('198.51.100.7'));
+  assert.equal(orderRateLimitKey('198.51.100.7', 'mesa-a'), orderRateLimitKey('198.51.100.7', 'mesa-a'));
+  assert.notEqual(orderRateLimitKey('198.51.100.7', 'mesa-a'), orderRateLimitKey('198.51.100.7', 'mesa-b'));
+  assert.notEqual(orderRateLimitKey('198.51.100.7', 'mesa-a'), orderRateLimitKey('198.51.100.8', 'mesa-a'));
+});
+
+test('invalid client IP never becomes an attacker-controlled rate-limit identity', () => {
+  assert.equal(loginRateLimitKey('not-an-ip'), 'login:unknown');
+  assert.equal(orderRateLimitKey('not-an-ip', 'mesa-a'), 'pedido:unknown:mesa-a');
+});
