@@ -32,3 +32,7 @@ Este documento registra ações e limites de validação por sessão. Acrescenta
 - Commits desta sequência: biblioteca `d1e646572542ef06eeb133defe1866c01f5be5b7`, licença `16648fd33b7d8d9f7aea68c3d7c75953ea62a230`, app `c99da836edf26a75fe6d93056069aeaaf85fc74e`, HTML `778ebb9447b776a0ca897ec91dd686ceccfd2951`, Service Worker `6fad7046da37c33e4a8254cd25e8f42a3c4fd931`, CSS `bf79cc63f0087b9dac104d628b2ffd7c3ef10bd3`, teste inicial `86e1dcf4c236f505872616996fdbae9d78720e09`, correção do teste `4e24666ce22684527fcb53c0d1d025ee8decee26`.
 - **Validação desta correção ainda pendente:** CI precisa executar após estes commits. Não foi possível executar localmente devido à falha de DNS para `github.com`. Nenhum browser real, produção, Railway, banco ou migration foi usado.
 - F02–F05 permanecem sem correção nesta rodada; PRs #65/#69/#57/#58 não foram alterados. PRs #35/#36/#37 preservados; sem merge/deploy.
+
+- CI da correção F01 no head `592a722eea1c99ab30b0fc53ec0d473e3406d611`: [run 40126835090](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40126835090) **SUCCESS**. Passaram instalação, typecheck, build, integridade de `dist/`, regressões e sintaxe.
+- Commits finais de código/teste após o primeiro CI: app `5e7c80bd6ce20cb1680eeec9299532dabc565437`; teste `592a722eea1c99ab30b0fc53ec0d473e3406d611`.
+- Ainda pendente: teste de navegador real/escaneamento do SVG e confirmação do modo offline com Service Worker instalado. Sem produção, Railway, banco, migrations ou deploy.
