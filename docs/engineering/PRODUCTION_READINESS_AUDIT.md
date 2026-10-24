@@ -760,3 +760,11 @@ A presença do pre-deploy `db:migrate` sugere que falha nessa etapa deve impedir
 - CI [run 40129148921](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40129148921) concluiu **SUCCESS** no head atual, com typecheck, build, integridade de `dist/`, regressões e sintaxe de servidor/banco aprovados.
 - A PR #71 permanece aberta em draft e ainda não está incorporada à `main`; portanto, a exposição encontrada em `public/admin.html` continua existindo na `main` até merge/release aprovado. A validação manual de QR com câmera e offline da PWA continua pendente.
 - A issue #76 agora tem uma implementação proposta na PR #71; manter o item rastreável até que a correção seja revisada e integrada, sem criar implementação concorrente.
+
+
+### 14.11 Mitigação proposta para o logger da aplicação — PR #79 (2026-10-24)
+
+- A draft [PR #79](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/79) adiciona `db/log-sanitize.js` e altera o handler de 4xx para registrar pathname sanitizado, sem query string e com segmentos UUID substituídos por `[redacted]`.
+- A regressão usa um UUID-canário e confirma que o token e a query string não aparecem no caminho sanitizado.
+- CI [run 40130030105](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40130030105) concluiu **SUCCESS** no head `f9b29f37de422d8805d1406d51cb5783d431ed5b`, incluindo typecheck, build, integridade de `dist/`, regressões e sintaxe.
+- Limite importante: isso só mitiga o log de 4xx da aplicação. A issue #72 permanece aberta porque os logs do proxy Railway, retenção/acesso e eventual rotação de tokens potencialmente expostos exigem ação separada. PR #79 ainda não foi mesclada.
