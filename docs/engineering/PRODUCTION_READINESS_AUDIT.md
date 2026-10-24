@@ -408,3 +408,74 @@ Cada tarefa deve ter branch própria e PR para `main`; revisar checks e diff e n
 - PRs #35, #36 e #37 não foram alterados.
 
 **Conclusão:** a revisão estática encontrou lacunas reais de escopo de autorização no fluxo de garçom, além de riscos já descritos no relatório. A auditoria não demonstra que o deployment atual esteja explorável nem comprova a configuração real de produção. Não declarar o QRAdmin pronto para produção até concluir os testes de autorização, integração com PostgreSQL isolado, recuperação da PWA e verificação de migrations/readiness.
+
+---
+
+## 12. Continuação da auditoria — 2026-10-24 (passada complementar)
+
+**Escopo:** revisão estática focalizada em concorrência da sincronização offline da PWA, consistência financeira, configuração de pool/timeouts, migrations e capacidade de 50 mesas. A branch e o PR existentes foram preservados. Nenhum código da aplicação foi alterado nesta auditoria.
+
+### A-16 — P2, PWA: disparadores concorrentes podem tentar sincronizar o mesmo rascunho
+
+**Status:** condição de corrida confirmada por leitura estática; duplicação efetiva não demonstrada. A proteção server-side reduz o risco apenas quando a migration de idempotência e a chave estável estão disponíveis.
+
+**Evidência concreta**
+- Em public/garcom-pwa/app.js, syncPending filtra registros offline e chama syncOne; syncOne lê o registro, verifica o status, depois grava status sync. A leitura/verificação/gravação não é aquisição atômica de lock.
+- saveOrder chama syncOne diretamente; o botão chama syncPending; o evento online chama syncPending; e a inicialização também chama syncPending. Não há mutex compartilhado por localId entre esses disparadores.
+- O mesmo rascunho preserva idempotencyKey e db/pedidos.js tenta reconhecer replay. db/conta.js, porém, permite continuar sem idempotência se a coluna não for encontrada ou a introspecção falhar; a migration 0018 é necessária para a garantia no banco.
+
+**Cenário e impacto:** dois disparadores podem ler o mesmo rascunho como offline antes de qualquer gravação do estado sync e enviar duas requisições. Com schema atualizado e chave preservada, espera-se recuperar o mesmo pedido. Se a proteção do banco estiver ausente, pode haver pedido/baixa de estoque duplicados.
+
+**Recomendação:** manter a idempotência no PostgreSQL como controle autoritativo, tornar a ausência da proteção visível em readiness/telemetria e adicionar mutex local por localId como defesa complementar.
+
+**Teste necessário:** em navegador de teste e PostgreSQL descartável, disparar simultaneamente syncOne, botão e evento online para o mesmo localId; simular perda da resposta depois do commit, reiniciar a PWA e confirmar um único pedido e uma única baixa de estoque. Repetir com migration aplicada e sem a coluna, confirmando comportamento seguro.
+
+### Consistência financeira — controles e limites
+
+**Controles positivos confirmados estaticamente:** db/caixa.js bloqueia mesa e sessão na ordem documentada; registrarPagamento e fecharSessao usam transações e rollback; pagamento parcial recalcula o total de itens entregues e impede valor acima do saldo; fechamento impede pedidos pendentes, valida desconto e taxa, rejeita pagamentos anteriores acima do valor cobrado e registra o restante antes de fechar sessão/mesa. db/pix-cliente.js registra um aviso, não uma liquidação bancária; a confirmação pelo caixa é uma ação separada. A migration 0018 define índices únicos parciais para chaves de pedido, pagamento, fechamento e vínculo aviso PIX→pagamento.
+
+**Risco residual:** db/conta.js:colunaExiste() guarda em cache a detecção e retorna false quando a introspecção falha; as operações podem continuar sem idempotência. Isso confirma degradação de proteção no código, não que o schema de produção esteja incompleto. A auditoria não executou corridas de pagamento/fechamento, falhas parciais, rollback após erro de escrita ou reconciliação bancária. O replay retorna a operação existente para a mesma chave sem comparar payload; o cliente deve reutilizar a chave somente para a mesma operação lógica e isso deve ser testado.
+
+### Inicialização, migrations e timeouts
+
+- package.json declara start como node server.js e start:prod como node scripts/start-production.js; o comando efetivamente configurado no Railway não foi verificado.
+- server.js começa a escutar e tenta migrations com timeout de 30 segundos; em falha registra aviso e mantém o processo vivo. scripts/start-production.js também documenta continuar após falha. O comportamento fail-open está confirmado no código, mas não há evidência de que tenha ocorrido no deployment.
+- db/pool.js exige DATABASE_URL ao carregar o módulo. Os defaults observados são PG_POOL_MAX=10, timeout de conexão 10 s, statement/query 30 s, lock 15 s e transação ociosa 30 s. DATABASE_SSL_REJECT_UNAUTHORIZED=false desativa validação de certificado TLS; o valor efetivo de produção não foi acessado.
+- Erros inesperados são registrados pelo servidor; logs reais não foram inspecionados, portanto exposição de token/dados pessoais em logs não foi confirmada nem descartada. Reinício abrupto, falha de migration, indisponibilidade transitória, backup/restore e compatibilidade entre versões não foram testados.
+
+### Capacidade para 50 mesas — estimativa versus medição
+
+- db/atendimento.js:assumirMesa aceita mesas até 70 e verifica a quantidade habilitada. db/pool.js usa pool padrão de 10 conexões.
+- scripts/carga-70-mesas.js descreve 70 mesas simultâneas, SSE aberto, check-in, dois pedidos por mesa, preparo, entrega, pagamentos parciais em metade e fechamento. scripts/teste-carga.js descreve burst, concorrência de estoque, pagamentos e fechamento duplo.
+- Um comentário em db/pool.js menciona 431 versus 428 req/s numa comparação anterior de pool 10/20. Esta passada não reproduziu nem validou esse resultado com logs/artefatos; não o considera medição própria.
+- **Resultado medido nesta passada: nenhum.** Não foi executado teste de carga nem conectado servidor/banco. A capacidade de 50 mesas não está validada por esta entrega. Os scripts de carga alteram pedidos, estoque, entregas, pagamentos e sessões; só devem rodar em ambiente descartável confirmado.
+- Para medir: usar ambiente isolado com configuração representativa, dados sintéticos, scripts de carga, e registrar sucesso, p50/p95/p99, 4xx/5xx, deadlocks/locks, espera e uso do pool, CPU/memória, conexões PostgreSQL e reconciliação item a item.
+
+### Arquivos e funções efetivamente examinados nesta passada
+
+- server.js: rotas de pedido/cancelamento, garçom, caixa, autorização por papel, handler global de erros e inicialização.
+- db/pedidos.js: criarPedido, cancelarPedidoCliente, editarPedidoCliente e idempotência.
+- db/atendimento.js: listarMesasGarcom, assumirMesa, deixarMesa, criarPedidoGarcom e listagem de atendimentos.
+- db/garcons.js: getGarcomPorToken e entregarComoGarcom.
+- db/caixa.js: travarSessao, listSessoesAbertas, registrarPagamento e fecharSessao.
+- db/conta.js: cálculo do total entregue, total pago, sincronização e colunaExiste.
+- db/pix-cliente.js, db/auth.js, db/pool.js, db/migrate.js, scripts/start-production.js, package.json.
+- db/migrations/0016_pix_avisos.sql, db/migrations/0018_transacional_idempotencia.sql.
+- public/garcom-pwa/app.js: saveOrder, syncOne, syncPending, recoverInterruptedSync e disparadores de sincronização.
+- public/garcom-pwa/sw.js: cache do shell e bypass de cache para /api/.
+- scripts/carga-70-mesas.js e scripts/teste-carga.js.
+
+### Comandos e resultados reais desta passada
+
+- Terminal, npm ci, npm test, npm run test:regression, npm run typecheck, npm run build, testes HTTP, PostgreSQL, navegador e carga: **não executados**. O acesso disponível permitiu leitura de arquivos e metadados via GitHub, não checkout executável local.
+- Leitura dos arquivos listados acima na branch audit/production-readiness: concluída.
+- CI do commit anterior 5cd300aaee9463d74e851cc888b498772a79733e: run #156, conclusão success (https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40118121079). Esse resultado não é teste desta passada e não valida os novos apontamentos.
+- Nenhum teste mutável foi executado; nenhuma migration foi aplicada; nenhum dado, variável ou log de produção foi acessado.
+
+### Situação dos achados após a revisão complementar
+
+- **Confirmados por inspeção estática:** tokens de mesa expostos pela listagem global do garçom (A-10); cancelamento público referenciando variável não declarada (A-12); ausência de revalidação transacional da atribuição na edição (A-11); ausência de verificação de atribuição na entrega, condicionada à política operacional pretendida (A-13); token de garçom persistido em URL/localStorage (A-14); concorrência potencial entre disparadores de sincronização da PWA (A-16).
+- **Riscos de arquitetura/configuração confirmados, mas não como exploração no deployment atual:** rate limit local/chaveado por token (A-02), migrations best-effort (A-04), degradação de idempotência se schema/introspecção falhar e opção de TLS sem validação (A-06).
+- **Não confirmados dinamicamente:** bypass explorável no deployment, duplicação real de pedido, deadlock, pagamento duplicado, perda de dados por falha parcial, falha de migration em produção, configuração TLS insegura, exposição de segredo em logs ou capacidade para 50 mesas.
+- **Sem nova conclusão de IDOR cross-tenant:** o produto continua explicitamente single-tenant; não há evidência suficiente para classificar uma vulnerabilidade cross-tenant num deployment multi-loja que não foi demonstrado.
+- **Conclusão de release:** não declarar pronto para produção antes de validar autorização do garçom, testar cancelamento e transações financeiras em PostgreSQL descartável, provar idempotência sob falha de rede/restart, verificar comando de start/schema no ambiente operacional e medir carga em ambiente isolado.
