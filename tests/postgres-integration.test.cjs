@@ -25,8 +25,10 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
   console.log(`[postgres-integration] host=${databaseUrl.hostname} database=${databaseUrl.pathname.slice(1)} server_major=16`);
 
   const token = randomUUID();
+  const tokenSecundario = randomUUID();
   const suffix = randomUUID().slice(0, 8);
   let mesaId;
+  let mesaSecundariaId;
   let categoriaId;
   let produtoId;
   let produtoExtraId;
@@ -39,6 +41,11 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
       [900000 + Math.floor(Math.random() * 90000), token]
     );
     mesaId = mesa.rows[0].id;
+    const mesaSecundaria = await pool.query(
+      'INSERT INTO mesas (numero, token) VALUES ($1, $2) RETURNING id',
+      [990000 + Math.floor(Math.random() * 9000), tokenSecundario]
+    );
+    mesaSecundariaId = mesaSecundaria.rows[0].id;
     categoriaId = (await pool.query(
       'INSERT INTO categorias (nome, ordem) VALUES ($1, 0) RETURNING id',
       ['CI integração ' + suffix]
@@ -123,6 +130,35 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
     });
     stock = await pool.query('SELECT estoque FROM produtos WHERE id = $1', [produtoId]);
     assert.equal(stock.rows[0].estoque, 2, 'pedido de cancelamento deve baixar uma unidade');
+
+    // Rejeita token inválido, pedido pertencente a outra mesa, pedido em preparo
+    // e sessão fechada sem remover pedido nem devolver estoque.
+    await assert.rejects(
+      () => pedidos.cancelarPedidoCliente('token-invalido', pedidoParaCancelar.id),
+      /Mesa não encontrada/
+    );
+    await assert.rejects(
+      () => pedidos.cancelarPedidoCliente(tokenSecundario, pedidoParaCancelar.id),
+      /Pedido não encontrado nesta mesa/
+    );
+
+    await pool.query("UPDATE pedidos SET status = 'em_producao' WHERE id = $1", [pedidoParaCancelar.id]);
+    await assert.rejects(
+      () => pedidos.cancelarPedidoCliente(token, pedidoParaCancelar.id),
+      /Só é possível cancelar enquanto o pedido ainda não entrou em preparo/
+    );
+    stock = await pool.query('SELECT estoque FROM produtos WHERE id = $1', [produtoId]);
+    assert.equal(stock.rows[0].estoque, 2, 'pedido em preparo não pode restaurar estoque');
+    await pool.query("UPDATE pedidos SET status = 'recebido' WHERE id = $1", [pedidoParaCancelar.id]);
+
+    await pool.query("UPDATE mesa_sessoes SET status = 'fechada' WHERE id = $1", [sessaoId]);
+    await assert.rejects(
+      () => pedidos.cancelarPedidoCliente(token, pedidoParaCancelar.id),
+      /Pedido não encontrado nesta mesa/
+    );
+    stock = await pool.query('SELECT estoque FROM produtos WHERE id = $1', [produtoId]);
+    assert.equal(stock.rows[0].estoque, 2, 'sessão fechada não pode permitir cancelamento nem alterar estoque');
+    await pool.query("UPDATE mesa_sessoes SET status = 'aberta' WHERE id = $1", [sessaoId]);
 
     const cancelamento = await pedidos.cancelarPedidoCliente(token, pedidoParaCancelar.id);
     assert.equal(cancelamento.cancelado, true);
@@ -242,6 +278,7 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
     }
     if (garcomId) await pool.query('DELETE FROM garcons WHERE id = $1', [garcomId]);
     if (mesaId) await pool.query('DELETE FROM mesas WHERE id = $1', [mesaId]);
+    if (mesaSecundariaId) await pool.query('DELETE FROM mesas WHERE id = $1', [mesaSecundariaId]);
     if (produtoId) await pool.query('DELETE FROM produtos WHERE id = $1', [produtoId]);
     if (produtoExtraId) await pool.query('DELETE FROM produtos WHERE id = $1', [produtoExtraId]);
     if (categoriaId) await pool.query('DELETE FROM categorias WHERE id = $1', [categoriaId]);
