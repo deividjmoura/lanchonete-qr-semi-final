@@ -65,3 +65,10 @@ Este documento registra ações e limites de validação por sessão. Acrescenta
 - CI para o commit de teste apareceu inicialmente como queued na run #244 (`40128855029`); a consulta ao commit mais recente ainda não retornou run, então não afirmar CI verde para esta ampliação até confirmar conclusão.
 - Validação em navegador/câmera e modo offline permanece pendente. `public/js/pix.js` ainda usa QR externo para payload PIX; tratar como revisão de privacidade separada, sem confundir com token de mesa.
 - Sem merge, deploy, alteração de banco, segredo ou infraestrutura.
+
+
+### Atualização de CI da correção administrativa
+
+- A run #244 (`40128855029`) falhou em `tests/pwa-garcom-integracao.test.cjs` por sintaxe inválida na regex recém-adicionada; typecheck, build e integridade de `dist/` passaram antes da etapa de regressões.
+- Corrigida a regex no commit `0d341259dd7e5a4c04d59e0f3ea50a045ec7b572` e atualizada a descrição do PR #71 para não apresentar a validação antiga como se cobrisse o novo código.
+- Nova run #249 (`40128952453`) está `in_progress`; aguardando resultado. A falha anterior foi registrada e não ocultada.
