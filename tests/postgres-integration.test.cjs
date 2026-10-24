@@ -116,6 +116,35 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
     );
     assert.equal(orderCount.rows[0].n, 1, 'pedido recusado não pode deixar pedido parcial');
 
+    // Cancelamento público restaura o estoque dentro da transação e remove o pedido.
+    const pedidoParaCancelar = await pedidos.criarPedido(token, {
+      idempotencyKey: 'ci-cancel-' + randomUUID(),
+      items: [{ productId: produtoId, qty: 1 }],
+    });
+    stock = await pool.query('SELECT estoque FROM produtos WHERE id = $1', [produtoId]);
+    assert.equal(stock.rows[0].estoque, 2, 'pedido de cancelamento deve baixar uma unidade');
+
+    const cancelamento = await pedidos.cancelarPedidoCliente(token, pedidoParaCancelar.id);
+    assert.equal(cancelamento.cancelado, true);
+    assert.equal(cancelamento.id, pedidoParaCancelar.id);
+    const canceladoPersistido = await pool.query(
+      'SELECT COUNT(*)::int AS n FROM pedidos WHERE id = $1', [pedidoParaCancelar.id]
+    );
+    assert.equal(canceladoPersistido.rows[0].n, 0, 'pedido cancelado deve ser removido');
+    const itensCancelados = await pool.query(
+      'SELECT COUNT(*)::int AS n FROM itens_pedido WHERE pedido_id = $1', [pedidoParaCancelar.id]
+    );
+    assert.equal(itensCancelados.rows[0].n, 0, 'itens do pedido cancelado devem ser removidos');
+    stock = await pool.query('SELECT estoque FROM produtos WHERE id = $1', [produtoId]);
+    assert.equal(stock.rows[0].estoque, 3, 'cancelamento deve restaurar exatamente uma unidade');
+
+    await assert.rejects(
+      () => pedidos.cancelarPedidoCliente(token, pedidoParaCancelar.id),
+      /Pedido não encontrado nesta mesa/
+    );
+    stock = await pool.query('SELECT estoque FROM produtos WHERE id = $1', [produtoId]);
+    assert.equal(stock.rows[0].estoque, 3, 'retry de cancelamento não pode restaurar estoque novamente');
+
     // Ambos ficam prontos, mas o garçom entrega somente um item de cada vez.
     await pedidos.setStatusItem(itemRows.rows[0].id, 'concluido');
     await pedidos.setStatusItem(itemRows.rows[1].id, 'concluido');
