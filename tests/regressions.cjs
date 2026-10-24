@@ -588,6 +588,7 @@ test('seed de garçom não imprime nem retorna token bearer', () => {
     /console\.log\([^;]*token[^;]*ins\[0\]\.token/i,
     'o seed não deve imprimir o token de garçom'
   );
+  assert.doesNotMatch(seed, /RETURNING id, nome, token/i, 'o seed não deve buscar o token sem necessidade');
   assert.doesNotMatch(
     seed,
     /return\s*\{\s*created:\s*true,\s*count:\s*1,\s*token:\s*ins\[0\]\.token\s*\}/,
