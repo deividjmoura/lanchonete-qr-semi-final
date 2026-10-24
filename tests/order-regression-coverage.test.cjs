@@ -177,3 +177,153 @@ test('retry não repete erro de negócio e respeita limite de tentativas de conc
   );
   assert.equal(deadlockAttempts, 3);
 });
+
+
+// Transaction-level order tests use a scripted fake client. They exercise the
+// real service function while ensuring no PostgreSQL connection is opened.
+const poolPedidos = require('../db/pool');
+const TOKEN_MESA_TESTE = '123e4567-e89b-42d3-a456-426614174000';
+
+function clientePedidoFake({ estoqueDisponivel = true, falharNoInsertAdicional = false } = {}) {
+  const calls = [];
+  let nextItemId = 700;
+  const client = {
+    released: false,
+    async query(sql, params = []) {
+      calls.push({ sql, params });
+      if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') return { rows: [], rowCount: 0 };
+      if (sql.includes('SELECT id, numero, status FROM mesas WHERE token = $1')) {
+        return { rows: [{ id: 10, numero: 4, status: 'livre' }] };
+      }
+      if (sql.includes('SELECT id FROM mesas WHERE id = $1 FOR UPDATE')) {
+        return { rows: [{ id: 10 }] };
+      }
+      if (sql.includes("SELECT id FROM mesa_sessoes WHERE mesa_id = $1 AND status = 'aberta'")) {
+        return { rows: [] };
+      }
+      if (sql.includes('INSERT INTO mesa_sessoes (mesa_id)')) return { rows: [{ id: 55 }] };
+      if (sql.includes('UPDATE mesas SET status')) return { rows: [], rowCount: 1 };
+      if (sql.includes('SELECT id FROM produtos WHERE id = ANY($1::int[]) ORDER BY id FOR UPDATE')) {
+        return { rows: [{ id: 8 }] };
+      }
+      if (sql.includes('SELECT id, nome, preco, disponivel, pede_ponto_carne, controla_estoque, estoque FROM produtos')) {
+        return { rows: [{
+          id: 8, nome: 'Hambúrguer teste', preco: '10.25', disponivel: true,
+          pede_ponto_carne: true, controla_estoque: true, estoque: 5,
+        }] };
+      }
+      if (sql.includes('SELECT id, produto_id, nome, preco FROM adicionais')) {
+        return { rows: [{ id: 3, produto_id: 8, nome: 'Queijo extra', preco: '2.50' }] };
+      }
+      if (sql.includes('SELECT produto_id, ingrediente FROM produtos_ingredientes_removiveis')) {
+        return { rows: [{ produto_id: 8, ingrediente: 'cebola' }] };
+      }
+      if (sql.includes('INSERT INTO pedidos (sessao_id, observacao_geral, cliente_nome)')) {
+        return { rows: [{ id: 90, status: 'recebido', criado_em: '2026-01-01T12:00:00Z', cliente_nome: params[2], editado_em: null }] };
+      }
+      if (sql.includes('UPDATE mesa_sessoes SET pix_informado_em = NULL')) return { rows: [], rowCount: 1 };
+      if (sql.includes('INSERT INTO itens_pedido (pedido_id, produto_id, quantidade, preco_unitario, ponto_carne, observacao)')) {
+        return { rows: [{ id: nextItemId++ }] };
+      }
+      if (sql.includes('INSERT INTO itens_pedido_adicionais')) {
+        if (falharNoInsertAdicional) throw new Error('falha sintética ao gravar adicional');
+        return { rows: [], rowCount: 1 };
+      }
+      if (sql.includes('INSERT INTO itens_pedido_remocoes')) return { rows: [], rowCount: 1 };
+      if (sql.includes('UPDATE produtos') && sql.includes('SET estoque = estoque - $1')) {
+        return estoqueDisponivel
+          ? { rows: [{ estoque: 3, disponivel: true }], rowCount: 1 }
+          : { rows: [], rowCount: 0 };
+      }
+      throw new Error('Consulta inesperada no teste de criação: ' + sql);
+    },
+    release() { this.released = true; },
+  };
+  return { client, calls };
+}
+
+async function comPoolDePedidoFake(fake, fn) {
+  const originalConnect = poolPedidos.connect;
+  poolPedidos.connect = async () => fake.client;
+  try {
+    return await fn();
+  } finally {
+    poolPedidos.connect = originalConnect;
+  }
+}
+
+test('criação transacional usa preço do servidor, deduplica adicional e calcula total com quantidade', async () => {
+  const fake = clientePedidoFake();
+  const result = await comPoolDePedidoFake(fake, () => criarPedido(TOKEN_MESA_TESTE, {
+    clienteNome: '  Cliente teste  ',
+    note: ' sem cebola ',
+    items: [{
+      productId: 8,
+      qty: 2,
+      price: 0.01,
+      additions: [{ id: 3 }, { id: 3 }, { id: 999 }],
+      removals: ['cebola', 'cebola', 'ingrediente-nao-permitido'],
+      meatPoint: 'AO_PONTO',
+      note: '  sem picles  ',
+    }],
+  }));
+
+  assert.equal(result.id, 90);
+  assert.equal(result.sessaoId, 55);
+  assert.equal(result.mesa, 4);
+  assert.equal(result.total, 25.5);
+  assert.equal(result.idempotentReplay, false);
+  assert.equal(result.clienteNome, 'Cliente teste');
+  assert.equal(result.itens[0].quantidade, 2);
+  assert.equal(result.itens[0].precoUnitario, 10.25);
+  assert.equal(result.itens[0].unitTotal, 12.75);
+  assert.deepEqual(result.itens[0].adicionais, [{ id: 3, nome: 'Queijo extra', preco: 2.5 }]);
+  assert.deepEqual(result.itens[0].removals, ['cebola']);
+  assert.equal(result.itens[0].pontoCarne, 'AO_PONTO');
+  assert.equal(result.itens[0].observacao, 'sem picles');
+  assert.ok(fake.calls.some((c) => c.sql.includes('UPDATE produtos') && c.sql.includes('SET estoque = estoque - $1') && c.params[0] === 2));
+  assert.ok(fake.calls.some((c) => c.sql === 'COMMIT'));
+  assert.equal(fake.calls.some((c) => c.sql === 'ROLLBACK'), false);
+  assert.equal(fake.client.released, true);
+});
+
+test('criação rejeita quantidade fracionária e desfaz a transação sem commit', async () => {
+  const fake = clientePedidoFake();
+  await comPoolDePedidoFake(fake, () => assert.rejects(
+    criarPedido(TOKEN_MESA_TESTE, { items: [{ productId: 8, qty: 1.5 }] }),
+    (error) => error instanceof ErroPedido && error.status === 400
+  ));
+
+  assert.ok(fake.calls.some((c) => c.sql === 'ROLLBACK'));
+  assert.equal(fake.calls.some((c) => c.sql === 'COMMIT'), false);
+  assert.equal(fake.client.released, true);
+  assert.equal(fake.calls.some((c) => c.sql.includes('INSERT INTO itens_pedido (')), false);
+});
+
+test('criação detecta corrida de estoque esgotado e reverte o pedido inteiro', async () => {
+  const fake = clientePedidoFake({ estoqueDisponivel: false });
+  await comPoolDePedidoFake(fake, () => assert.rejects(
+    criarPedido(TOKEN_MESA_TESTE, { items: [{ productId: 8, qty: 2 }] }),
+    (error) => error instanceof ErroPedido && error.status === 409 && /esgotou durante o pedido/.test(error.message)
+  ));
+
+  assert.ok(fake.calls.some((c) => c.sql.includes('INSERT INTO pedidos')));
+  assert.ok(fake.calls.some((c) => c.sql === 'ROLLBACK'));
+  assert.equal(fake.calls.some((c) => c.sql === 'COMMIT'), false);
+  assert.equal(fake.client.released, true);
+});
+
+test('falha ao gravar adicional aciona rollback e não confirma pedido parcial', async () => {
+  const fake = clientePedidoFake({ falharNoInsertAdicional: true });
+  await comPoolDePedidoFake(fake, () => assert.rejects(
+    criarPedido(TOKEN_MESA_TESTE, {
+      items: [{ productId: 8, qty: 1, additions: [{ id: 3 }] }],
+    }),
+    /falha sintética ao gravar adicional/
+  ));
+
+  assert.ok(fake.calls.some((c) => c.sql.includes('INSERT INTO itens_pedido_adicionais')));
+  assert.ok(fake.calls.some((c) => c.sql === 'ROLLBACK'));
+  assert.equal(fake.calls.some((c) => c.sql === 'COMMIT'), false);
+  assert.equal(fake.client.released, true);
+});
