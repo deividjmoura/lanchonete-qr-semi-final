@@ -8,6 +8,7 @@ const manifest=JSON.parse(fs.readFileSync(path.join(root,'manifest.webmanifest')
 test('PWA JavaScript e Service Worker têm sintaxe válida',()=>{
  cp.execFileSync(process.execPath,['--check',path.join(root,'app.js')]);
  cp.execFileSync(process.execPath,['--check',path.join(root,'sw.js')]);
+ cp.execFileSync(process.execPath,['--check',path.join(root,'qrcode.min.js')]);
 });
 test('Rotas de assumir mesa e criar pedido aceitam números reais de mesa',()=>{
  assert.ok(server.includes('mesas\\/(\\d+)\\/assumir'),'rota assumir usa \\d+, não barra invertida literal');
