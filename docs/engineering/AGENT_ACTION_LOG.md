@@ -46,3 +46,12 @@ Este documento registra ações e limites de validação por sessão. Acrescenta
 - Não alterei o código nem a branch do PR #69. O achado foi registrado no relatório F01–F05 nesta branch; aguardando resposta/correção do agente responsável.
 - F02 continua bloqueado pela confirmação da topologia de proxy; F03 continua sem prova de falha na regex, e um teste HTTP real exigiria ambiente isolado com autenticação/DB; F05 continua exigindo coordenação entre #57 e #58.
 - Sem merge, deploy, acesso/mutação de produção, banco, segredo ou migration. PRs #35/#36/#37 preservados.
+
+
+## 2026-10-24 — ampliação do escopo F01: QR administrativo
+
+- Busca de código no `main` encontrou outro envio de token de mesa a serviço externo em `public/admin.html`: URL `https://api.qrserver.com/v1/create-qr-code/` recebe `host + '/mesa/' + m.token` no parâmetro `data` (aprox. linha 223).
+- A correção existente no PR #71 só cobre a PWA do garçom; portanto, F01 está **parcial**, não resolvido no repositório todo.
+- Registrado comentário no PR #71 (issue comment ID `6389003917`) pedindo ampliação do escopo ou achado irmão para QR administrativo. Relatório F01–F05 atualizado no commit `13e1fa29fa9bea909e27b3f8b35d3e9ecb85cc5d`.
+- `public/js/pix.js` também usa `api.qrserver.com` para payload PIX; registrei como revisão de privacidade separada, sem presumir que o payload seja token de mesa.
+- Nenhum código de runtime da área administrativa foi alterado nesta etapa; sem merge/deploy/produção/banco/migrations.
