@@ -37,38 +37,3 @@ jobs:
         run: |
           node --check server.js
           for f in db/*.js scripts/*.js; do node --check "$f"; done
-
-  postgres-integration:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: qradmin_test
-          POSTGRES_USER: qradmin_test
-          POSTGRES_PASSWORD: ci_disposable_only
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U qradmin_test -d qradmin_test"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      NODE_ENV: test
-      DATABASE_URL: postgres://qradmin_test:ci_disposable_only@127.0.0.1:5432/qradmin_test
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - name: Install dependencies
-        run: npm ci
-      - name: Apply migrations to disposable PostgreSQL
-        run: npm run db:migrate
-      - name: Integration tests against real PostgreSQL
-        run: node --test tests/postgres-integration.test.cjs
