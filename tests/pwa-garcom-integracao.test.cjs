@@ -2,6 +2,8 @@ const test=require('node:test');const assert=require('node:assert/strict');
 const fs=require('node:fs');const path=require('node:path');const cp=require('node:child_process');
 const root=path.join(__dirname,'..','public','garcom-pwa');
 const adminHtml=fs.readFileSync(path.join(__dirname,'..','public','admin.html'),'utf8');
+const pixJs=fs.readFileSync(path.join(__dirname,'..','public','js','pix.js'),'utf8');
+const caixaHtml=fs.readFileSync(path.join(__dirname,'..','public','caixa.html'),'utf8');
 const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const qrGenerator=require(path.join(root,'qrcode-generator.js'));
@@ -32,6 +34,12 @@ test('Fila de sincronização preserva uma chave por operação e isola garçom'
  assert.match(app,/ownerToken:waiterToken/);
  assert.match(app,/o\.ownerToken===waiterToken/);
  assert.match(app,/err\.status&&err\.status<500\?'conflict'/);
+});
+test('QR PIX não envia payload financeiro a serviço externo',()=>{
+ assert.doesNotMatch(pixJs,/api\.qrserver\.com/);
+ assert.match(pixJs,/global\.qrcode/);
+ assert.match(pixJs,/data:image\/svg\+xml/);
+ assert.match(caixaHtml,/garcom-pwa\/qrcode-generator\.js/);
 });
 test('QR da tela administrativa é gerado localmente sem enviar token a serviço externo',()=>{
  assert.doesNotMatch(adminHtml,/api\.qrserver\.com/);
