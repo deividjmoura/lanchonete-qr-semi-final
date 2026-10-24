@@ -28,8 +28,8 @@
     "postbuild": "node -e \"console.log('SPA em dist/ — npm start serve o design React se dist/ existir')\"",
     "setup": "node scripts/setup-local.js",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/regressions.cjs tests/garcom-operacao-integrada.test.cjs tests/pwa-garcom-integracao.test.cjs tests/pwa-garcom-ux.test.cjs tests/garcom-situacoes.test.cjs tests/pwa-status-notificacoes.test.cjs tests/garcom-modal-liberar-mesa.test.cjs tests/pwa-popups-centrais.test.cjs tests/setores-https.test.cjs",
-    "test:regression": "node --test tests/regressions.cjs tests/garcom-operacao-integrada.test.cjs tests/pwa-garcom-integracao.test.cjs tests/pwa-garcom-ux.test.cjs tests/garcom-situacoes.test.cjs tests/pwa-status-notificacoes.test.cjs tests/garcom-modal-liberar-mesa.test.cjs tests/pwa-popups-centrais.test.cjs tests/setores-https.test.cjs"
+    "test": "node --test tests/regressions.cjs tests/garcom-operacao-integrada.test.cjs tests/pwa-garcom-integracao.test.cjs tests/pwa-garcom-ux.test.cjs tests/garcom-situacoes.test.cjs tests/pwa-status-notificacoes.test.cjs tests/garcom-modal-liberar-mesa.test.cjs tests/pwa-popups-centrais.test.cjs tests/setores-https.test.cjs tests/start-production-gate.test.cjs",
+    "test:regression": "node --test tests/regressions.cjs tests/garcom-operacao-integrada.test.cjs tests/pwa-garcom-integracao.test.cjs tests/pwa-garcom-ux.test.cjs tests/garcom-situacoes.test.cjs tests/pwa-status-notificacoes.test.cjs tests/garcom-modal-liberar-mesa.test.cjs tests/pwa-popups-centrais.test.cjs tests/setores-https.test.cjs tests/start-production-gate.test.cjs"
   },
   "dependencies": {
     "clsx": "2.1.1",
