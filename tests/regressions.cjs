@@ -15,7 +15,8 @@ const { verificarOrigemRequisicao } = require('../db/auth');
 const { ErroValidacao, numeroFinito, numeroInteiroPositivo } = require('../db/validacao');
 const { getOuAbrirSessao, getProdutoComRegras } = require('../db/queries');
 const { ErroGarcom, removerGarcom, setGarcomAtivo, entregarComoGarcom } = require('../db/garcons');
-const { ErroPedido, setStatusPedido, setStatusItem } = require('../db/pedidos');
+const { ErroPedido, criarPedido, setStatusPedido, setStatusItem } = require('../db/pedidos');
+const { sanitizarAlvoRequisicao, sanitizarDetalheErro } = require('../db/log-sanitizer');
 
 /* Mock mínimo de <html> que espelha o DOM real:
    dataset ↔ data-theme ficam sincronizados com getAttribute/setAttribute. */
@@ -143,6 +144,23 @@ test('cliente SSE envia token e encerra conexão no cleanup', () => {
   context.exports.connectEvents(() => {})(); assert.equal(url, '/api/events');
 });
 
+test('logs HTTP omitem tokens bearer de caminho, query e mensagens de erro', () => {
+  const token = '12345678-1234-4234-8234-123456789abc';
+  assert.equal(
+    sanitizarAlvoRequisicao(`/api/garcom/${token}/pedidos?token=${token}`),
+    '/api/garcom/[REDACTED]/pedidos'
+  );
+  assert.equal(
+    sanitizarAlvoRequisicao(`/mesa/${token}?mesa=${token}`),
+    '/mesa/[REDACTED]'
+  );
+  assert.equal(
+    sanitizarAlvoRequisicao(`/api/events?garcom=${token}&mesa=${token}`),
+    '/api/events'
+  );
+  assert.doesNotMatch(sanitizarDetalheErro(new Error(`Falha para token ${token}`)), new RegExp(token));
+});
+
 test('upload de foto rejeita destinos SSRF locais', async () => {
   await assert.rejects(() => validarDestinoRemoto('http://127.0.0.1/segredo'), /Destino de rede não permitido/);
   await assert.rejects(() => validarDestinoRemoto('http://10.0.0.1/segredo'), /Destino de rede não permitido/);
@@ -241,6 +259,73 @@ test('produto com id inválido não dispara consulta ao PostgreSQL', async () =>
   assert.equal(await getProdutoComRegras(client, Infinity), null);
   assert.equal(await getProdutoComRegras(client, 0), null);
   assert.equal(called, false);
+});
+
+test('criação de pedido rejeita carrinho malformado antes de abrir conexão', async () => {
+  const pool = require('../db/pool');
+  const originalConnect = pool.connect;
+  let connections = 0;
+  pool.connect = async () => { connections += 1; throw new Error('não deveria conectar'); };
+  try {
+    for (const items of [
+      [{ id: 1, qty: 1 }, null],
+      [{ id: 1, qty: 1 }, { id: 'abc', qty: 1 }],
+      [{ id: 1, qty: 1 }, []],
+    ]) {
+      await assert.rejects(
+        () => criarPedido('12345678-1234-4234-8234-123456789abc', { items }),
+        (e) => e instanceof ErroPedido && e.status === 400
+      );
+    }
+    assert.equal(connections, 0);
+  } finally {
+    pool.connect = originalConnect;
+  }
+});
+
+test('criação de pedido rejeita produto inexistente sem persistir subconjunto do carrinho', async () => {
+  const pool = require('../db/pool');
+  const originalConnect = pool.connect;
+  const calls = [];
+  let released = false;
+  const client = {
+    async query(sql, params = []) {
+      calls.push({ sql, params });
+      if (sql.includes('SELECT id, numero, status FROM mesas WHERE token')) {
+        return { rows: [{ id: 7, numero: 3, status: 'ocupada' }] };
+      }
+      if (sql.includes('SELECT id FROM mesas WHERE id = $1 FOR UPDATE')) {
+        return { rows: [{ id: 7 }] };
+      }
+      if (sql.includes("SELECT id FROM mesa_sessoes WHERE mesa_id = $1 AND status = 'aberta'")) {
+        return { rows: [{ id: 42 }] };
+      }
+      if (sql.includes('INSERT INTO pedidos')) {
+        return { rows: [{ id: 99, status: 'recebido', criado_em: new Date(), cliente_nome: null, editado_em: null }] };
+      }
+      if (sql.includes('SELECT id, nome, preco, disponivel, pede_ponto_carne, controla_estoque, estoque FROM produtos')) {
+        return { rows: [] };
+      }
+      return { rows: [], rowCount: 1 };
+    },
+    release() { released = true; },
+  };
+  pool.connect = async () => client;
+  try {
+    await assert.rejects(
+      () => criarPedido('12345678-1234-4234-8234-123456789abc', {
+        items: [{ id: 1, qty: 1 }, { id: 999999, qty: 1 }],
+      }),
+      (e) => e instanceof ErroPedido && e.status === 409
+    );
+    assert.ok(calls.some((c) => c.sql === 'ROLLBACK'), 'a transação inteira deve ser desfeita');
+    assert.equal(calls.some((c) => c.sql.includes('INSERT INTO itens_pedido ')), false);
+    assert.equal(calls.some((c) => c.sql.includes('UPDATE produtos')), false);
+    assert.equal(calls.some((c) => c.sql === 'COMMIT'), false);
+    assert.equal(released, true);
+  } finally {
+    pool.connect = originalConnect;
+  }
 });
 
 test('admin de garçom rejeita IDs não inteiros antes do banco', async () => {
@@ -578,4 +663,36 @@ test('SSE público é coalescido (1 aviso/janela); staff recebe tudo na hora', a
   staff.emit('close');
   publico.emit('close');
   assert.equal(clientCount(), 0);
+});
+
+
+test('sharp usa versão corrigida e continua convertendo uploads para WebP', async () => {
+  const sharpPackage = require('../node_modules/sharp/package.json');
+  const semver = require('semver');
+  assert.ok(
+    semver.gte(sharpPackage.version, '0.35.5'),
+    `sharp vulnerável: ${sharpPackage.version}; esperado >= 0.35.5`
+  );
+
+  const { processarUploadFoto } = require('../db/foto');
+  // PNG 1x1 sintético: sem arquivos externos, rede ou banco de dados.
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
+  const result = await processarUploadFoto({ data: `data:image/png;base64,${png}` });
+  assert.match(result.fotoUrl, /^data:image\/webp;base64,/);
+  assert.ok(result.bytes > 0);
+});
+
+test('seed de garçom não imprime nem retorna token bearer', () => {
+  const seed = fs.readFileSync('db/seed.js', 'utf8');
+  assert.doesNotMatch(
+    seed,
+    /console\.log\([^;]*token[^;]*ins\[0\]\.token/i,
+    'o seed não deve imprimir o token de garçom'
+  );
+  assert.doesNotMatch(seed, /RETURNING id, nome, token/i, 'o seed não deve buscar o token sem necessidade');
+  assert.doesNotMatch(
+    seed,
+    /return\s*\{\s*created:\s*true,\s*count:\s*1,\s*token:\s*ins\[0\]\.token\s*\}/,
+    'o seed não deve propagar o token em seu resultado'
+  );
 });

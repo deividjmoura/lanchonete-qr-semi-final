@@ -2,6 +2,7 @@ require('dotenv').config();
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { sanitizarAlvoRequisicao, sanitizarDetalheErro } = require('./db/log-sanitizer');
 
 const { getCardapio, invalidarCardapio } = require('./db/cardapio');
 const {
@@ -216,6 +217,12 @@ const server = http.createServer(async (req, res) => {
     }
     const u = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
     const p = u.pathname;
+
+    // Liveness check: confirma apenas que o processo HTTP está respondendo.
+    // Intencionalmente não consulta o banco nem expõe versão/configuração.
+    if (p === '/healthz' && req.method === 'GET') {
+      return json(res, 200, { status: 'ok' });
+    }
 
     if (p === '/api/cardapio' && req.method === 'GET') {
       return json(res, 200, await getCardapio(), {
@@ -1015,10 +1022,10 @@ const server = http.createServer(async (req, res) => {
        ATENÇÃO: `p` (u.pathname) é declarado DENTRO do try; aqui só existe
        req.url, e usá-lo sem esse cuidado derruba o processo. */
     if (e && e.status && e.status >= 400 && e.status < 500) {
-      console.warn(`[http ${e.status}] ${req.method} ${req.url} — ${e.message || 'rejeitado'}`);
+      console.warn(`[http ${e.status}] ${req.method} ${sanitizarAlvoRequisicao(req.url)} — ${sanitizarDetalheErro(e.message || 'rejeitado')}`);
       return json(res, e.status, { error: e.message || 'Erro' });
     }
-    console.error(e);
+    console.error('[http interno]', sanitizarDetalheErro(e));
     if (e && e.status) {
       return json(res, e.status, { error: e.message || 'Erro' });
     }

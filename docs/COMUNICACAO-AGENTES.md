@@ -331,3 +331,283 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 - **Testes de aceite necessários:** autorização e isolamento entre garçons; payload inválido; subscrição duplicada/renovada/removida; limpeza de endpoint expirado; deduplicação de eventos; transferência sem notificar responsável anterior indevidamente; pedido criado por garçom diferente do responsável; validação em Android/Chrome e iOS/Safari com app encerrado.
 - **Limite:** esta rodada foi revisão estática e coordenação, não execução da suíte nem teste real de dispositivos. Não declarar Web Push concluído.
 - **Próximo passo:** manter a Frente 3 no contrato/testes isolados enquanto #85/#89 resolvem os contratos compartilhados. Integrar backend de push somente depois de definir destinatários e evitar alterações concorrentes em `server.js`. Nenhuma configuração de Railway/secrets, migration ou dado de produção foi alterado.
+
+## Frente 3 — handlers de Web Push em PR isolada (2026-10-25)
+
+- **PR:** [#91 — handlers do Service Worker para Web Push](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/91).
+- **Branch/HEAD:** `work/frente-3-web-push-sw`, `d2d5a07ed72bd3068c6f58cab348a7caf88ecc02`.
+- **Escopo:** adicionados handlers `push` e `notificationclick` em `public/garcom-pwa/sw.js`; payload limitado a título/corpo/tag/URL, destino restrito à mesma origem e ao caminho `/garcom-pwa/`, clique reabre/foca a PWA. Adicionada cobertura estática em `tests/pwa-garcom-consent.test.cjs`.
+- **CI:** GitHub Actions run [#407](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40207982331) terminou `SUCCESS` no HEAD exato `d2d5a07ed72bd3068c6f58cab348a7caf88ecc02`; typecheck, build, integridade de `dist/`, regressões e sintaxe passaram.
+- **Limite importante:** esta PR prepara apenas o Service Worker. Não implementa `PushManager.subscribe()`, persistência de subscrições, endpoints autenticados nem envio server-side. Não foi validada em dispositivos Android/iOS com o app encerrado.
+- **Coordenação:** nenhuma alteração em `server.js`, `package.json`, migrations, Railway, secrets ou dados de produção. A PR #91 não deve ser considerada Web Push completo; o backend depende do contrato de destinatários e autorização da Frente 2 e deve ser integrado depois de reduzir a concorrência com #85/#89.
+- **Próximo passo:** revisão do diff e CI na PR #91; depois, fechar contrato de destinatário com a Frente 2 e implementar subscrição/envio backend numa etapa separada, com testes de autorização, endpoint expirado, deduplicação, transferência e testes reais em dispositivos.
+
+
+## Frente 4 — desempenho e armazenamento de imagens do cardápio (2026-10-25)
+
+- **Issue:** [#53 — tirar fotos em Base64 das respostas JSON](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/53).
+- **PR documental:** [#93 — RFC de armazenamento de imagens](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/93), branch `work/frente-4-cardapio-imagens-rfc`, commit `0a6c68d7b589e2aa6b1bd5f23b063644477c85fc`. Draft, não integrado.
+- **Diagnóstico confirmado na main:** `db/foto.js` otimiza para WebP até 960 px e 320 KiB, mas converte o resultado em data-URL Base64 para gravar em `produtos.foto_url`; `db/cardapio.js` devolve o valor completo no campo `fotoUrl`. O overhead estimado de Base64 é aproximadamente 4/3 do arquivo; não houve medição de payload de produção.
+- **Entrega:** RFC em `docs/engineering/cardapio-image-storage-rfc.md` define opções de armazenamento durável, migração compatível, backfill idempotente/dry-run, medição por fixtures, rollback e critérios de aceite.
+- **Bloqueio de implementação:** falta decisão/autorização do responsável sobre o destino de armazenamento durável. Não presumir fornecedor, não mover imagens para disco efêmero, não alterar secrets/Railway e não executar backfill em produção.
+- **Validação:** mudança documental apenas; nenhum teste de aplicação foi executado e nenhuma medição real foi feita.
+- **Próximo passo:** revisar a RFC e decidir o destino de armazenamento; após isso, implementar em branch separada com fixtures sintéticas, medição comparativa e compatibilidade com data-URLs/URLs/caminhos legados.
+- **Nota operacional:** commits na `main`, inclusive documentação, podem disparar deploy automático. A Frente 1 / Agente 1 deve verificar e registrar o resultado do deploy deste commit; esta atualização não altera intencionalmente runtime, banco, secrets ou configuração.
+
+
+## PR #90 — reconciliação final do tema da PWA do garçom (2026-10-25)
+
+- A PR aplica o tema QR Admin à PWA `/garcom-pwa/` online/offline, preserva suporte offline, protege o contador de pedidos e incrementa o cache do Service Worker para `v12`.
+- A branch foi reconstruída sobre a `main` mais recente para preservar os registros de coordenação posteriores e evitar ficar atrás de commits documentais concorrentes. As alterações funcionais continuam limitadas aos arquivos do PWA e ao teste de UX.
+- **CI final:** GitHub Actions run [#414](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40208631293) terminou `SUCCESS` no HEAD reconciliado `206346ee15ee29387eed6cc4e311c5e150dea642`; typecheck, build, integridade de `dist/`, testes de regressão e sintaxe passaram. No HEAD anterior, a suíte ampliada reportou 48 testes aprovados.
+- **Merge:** PR #90 integrada por squash em `main`, commit `b92daa9277e238c399664cf6569f9d4f3c0aa0c1` (2026-10-25 15:48:45Z).
+- **Deploy inicial:** Railway deployment `9b7a5e0a-acb8-4ff3-a0cf-fe91cbdc0451` para o merge commit terminou `SUCCESS` em produção; serviço `lanchonete-qr-semi-final` reportado `Online`, uma réplica ativa e sem alertas/falhas recentes. Esta atualização documental também pode disparar novo deploy automático, que será verificado separadamente.
+- Sem validação em navegador/dispositivo real, PostgreSQL ou Android/iOS nesta frente. Nenhuma alteração em banco de produção, secrets ou configuração manual do Railway.
+- Web Push server-side, QR local e fluxos de caixa/cobrança das frentes #85/#89 continuam fora de escopo.
+
+
+## Frente 5 — regressão de autorização de tokens de mesa (2026-10-25)
+
+- **Issue:** [#1 — GET /api/mesas expõe tokens sem autenticação](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/1).
+- **Achado atualizado na `main`:** a rota `GET /api/mesas` já executa `await exigirAcesso(req, 'admin')` antes de chamar `listMesas()` e serializar `token`. A issue parece estar desatualizada quanto à correção de runtime; ainda é útil garantir regressão automatizada para impedir remoção acidental da autorização.
+- **PR:** [#94 — teste de autorização da rota de tokens](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/94), branch `work/frente-5-mesa-token-auth-regression`, HEAD `1dc18a1f876d0494c69e44ab0509fbee56a79977`. Draft, não integrado.
+- **Mudanças:** novo `tests/security-mesa-token-route.test.cjs` verifica que a autorização precede a consulta/serialização dos tokens e que a rota administrativa fica depois do gate `/api/admin`; incluído em `test` e `test:regression`.
+- **CI:** workflow [#416](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40208748752): typecheck, build, integridade de `dist/`, regressões e sintaxe do servidor/banco concluíram success nos passos observados; o job ainda estava finalizando limpeza na última consulta, portanto confirmar conclusão final antes de declarar CI completo.
+- **Limitação:** teste estrutural estático; não substitui teste HTTP real com sessão sintética nem demonstra por si só 401 anônimo em runtime. Não foram usados dados/credenciais de produção; nenhum código de runtime, banco, Railway ou secret foi alterado.
+- **Próxima ação:** confirmar conclusão final do CI e revisar se já existe cobertura dinâmica equivalente. Só então decidir se a issue #1 pode ser fechada.
+- **Nota operacional:** este registro na `main` pode disparar deploy automático. Frente 1 / Agente 1 deve verificar e registrar o resultado do deploy associado a este commit documental; nenhuma alteração de produção foi solicitada por esta frente.
+
+
+### Atualização de CI — Frente 5 (2026-10-25)
+- GitHub Actions run [#416](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40208748752) terminou **SUCCESS** no HEAD exato da PR #94 `1dc18a1f876d0494c69e44ab0509fbee56a79977`; typecheck, build, integridade de `dist/`, regressões e sintaxe do servidor/banco passaram.
+- A PR continua draft e não integrada. O teste é estrutural; não há evidência de teste HTTP anônimo real nem de teste com dados de produção.
+
+
+## Frente 6 — health check read-only (2026-10-25)
+
+- **Issue relacionada:** [#43 — health check read-only, smoke seguro e alertas operacionais](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/43).
+- **PR #95 integrada:** [feat(health): add read-only process health check and smoke test](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/95), squash merge `09e52c6f1c5563eed0168f3ddd88eb555cd3da27`.
+- **CI no HEAD exato da PR:** run [#417](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40208792045) terminou **SUCCESS**; typecheck, build, integridade de `dist/`, regressões e sintaxe do servidor/banco passaram.
+- **Escopo entregue:** `GET /healthz` devolve somente `{ status: 'ok' }` e verifica liveness do processo HTTP; `npm run health:smoke` faz um único GET para uma URL explicitamente informada, restrita a caminho terminado em `/healthz`, com timeout e sem seguir redirects.
+- **Limites:** endpoint não testa conexão/prontidão do PostgreSQL; smoke não foi executado contra produção e não há automação pós-deploy, alertas, canal/owner, nem correlação/redação de logs nesta PR. A issue #43 **permanece aberta** para as partes restantes. Nenhuma configuração Railway, secret, migration ou dado de produção foi alterado por esta frente.
+- **Coordenação:** mensagens de handoff enviadas nas PRs #85 e #89 para confirmar estado e preservar a ordem de integração pagamentos/0022 antes da Frente 2/0023. Não inferir resposta dos agentes até confirmar nos comentários.
+- **Deploy:** merge na `main` pode disparar deploy automático. Aguardar/verificar o estado associado ao commit antes de declarar disponibilidade do endpoint em produção.
+
+
+## Sprint de destravamento — priorizar entregas pequenas e verificáveis (2026-10-25)
+
+**Diretriz temporária para todos os agentes:** antes de avançar em frentes grandes ou com dependências cruzadas, fazer uma rodada curta de fechamento de itens simples. Objetivo: reduzir PRs/issues paradas, entregar melhorias pequenas com risco baixo e devolver capacidade à integração principal. Esta diretriz não autoriza merge automático nem flexibiliza os critérios de qualidade.
+
+### Como escolher o próximo item
+1. Consulte o estado atual no GitHub e este documento na `main`; não confie em snapshots antigos.
+2. Priorize, nesta ordem:
+   - PR pequena, isolada, sem conflito e com CI verde no HEAD atual, pronta para revisão/merge;
+   - issue pequena cujo comportamento já esteja implementado e só falte evidência de teste ou documentação objetiva;
+   - melhoria de teste/documentação com benefício claro e sem criar um segundo canal de coordenação;
+   - só depois, tarefas novas de implementação.
+3. Evite assumir tarefas que alterem os mesmos arquivos/contratos de outra frente ativa, sobretudo `server.js`, migrations, `package.json`, workflow de CI e PWA compartilhada, sem combinar antes com os responsáveis.
+4. Não feche issue apenas porque existe uma PR relacionada: confirme que a PR foi integrada e que todos os critérios da issue foram atendidos. Quando uma PR corrigir uma issue, inclua `Closes #N` no corpo se for apropriado e só considere concluída após merge e validação.
+5. Não transforme um teste estático em alegação de teste de runtime; diferencie teste unitário/estrutural, HTTP integrado, PostgreSQL descartável, CI, teste manual e dispositivo real.
+
+### Critérios mínimos para concluir PR simples
+- Diff pequeno, escopo único, sem segredo/dado sensível ou mudança operacional desnecessária.
+- Branch atualizada com a base relevante; conflitos resolvidos sem descartar trabalho de outros agentes.
+- CI concluído com sucesso no HEAD exato que será revisado/mesclado.
+- Revisão rápida de segurança, autorização, acessibilidade e regressões aplicáveis.
+- Descrição da PR e checklist de testes atualizados; riscos/limitações explícitos.
+- Merge somente quando o agente responsável/revisor autorizado confirmar que está pronta. Após merge, verificar o estado da `main` e registrar SHA/CI; se o merge disparar deploy, a Frente 1 / Agente 1 verifica o deploy conforme as regras existentes.
+- Fechar issue somente com evidência de que todos os critérios de aceite estão cumpridos; caso contrário, manter aberta e registrar o item residual.
+
+### Divisão de trabalho e comunicação
+- Cada agente deve responder no PR/issue que já está sob sua responsabilidade com: **(a)** estado atual verificado, **(b)** uma tarefa pequena que consegue fechar primeiro, **(c)** arquivos que tocará, **(d)** teste/evidência necessária, **(e)** dependências ou sobreposição com outra frente.
+- Antes de editar, anunciar no canal canônico a tarefa escolhida e verificar se outro agente já está trabalhando nela. Não iniciar duas mudanças concorrentes no mesmo arquivo/issue.
+- Ao terminar, publicar o SHA e o link do CI, informar se foi mergeado e o que ainda falta. Se bloqueado por requisito externo, escrever a pergunta objetiva e mudar para outro item independente, sem ficar aguardando indefinidamente.
+- Trabalhar em lotes curtos: **um item pequeno concluído de ponta a ponta por vez**, depois escolher o próximo. Não abrir várias PRs de baixa qualidade só para aumentar a contagem.
+- Não editar ou apagar PRs/branches de outro agente sem coordenação explícita.
+
+### Guardrails que continuam obrigatórios
+- A sequência financeira continua prioritária quando retomada: PR #85 / migration `0022` antes da Frente 2 / migration `0023`; exigir os testes integrados de ambas as migrations e de ambas as frentes no mesmo PostgreSQL descartável antes de considerar a integração concluída.
+- Nenhuma alteração em Railway, secrets, migrations/dados de produção ou deploy manual sem autorização explícita. Mudanças em `main`, inclusive documentação, podem disparar deploy automático.
+- Não fechar questões de segurança com base apenas em inspeção textual quando o critério exige comportamento HTTP real. Não declarar Web Push completo sem subscrição, persistência, envio e validação real necessários.
+- Se o item for apenas documental ou de teste estrutural, registrar exatamente esse alcance, sem alegar correção funcional não demonstrada.
+
+### Modelo de resposta para iniciar esta rodada
+- **Item pequeno escolhido (PR/issue):**
+- **Por que é seguro/independente:**
+- **Arquivos e escopo:**
+- **Critérios de aceite e testes:**
+- **Sobreposição/dependências verificadas:**
+- **Próxima atualização prevista:**
+
+## Rodada de destravamento — GPT-6 (2026-10-25)
+
+### Item revisado: proteção CSRF — issue #3 / PR #100
+- **Estado atual verificado:** PR [#100](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/100) continua aberto em draft e não integrado. O CI #433 passou no commit de código `950f3123217bb88eb220539889e8aef171d20bba`; o CI #434 passou no HEAD documental anterior `033a2ecf9bfbc5b7ae4f5cd982d933bdae98aabd`. A branch recebeu uma atualização documental adicional, commit `9195b9c9270eb91d049a90c95f35935a66571663`; ainda não há CI confirmado para esse SHA.
+- **Revisão:** a comparação atual indica branch divergente (12 commits à frente, 1 atrás) e o GitHub informa `mergeable=false`. O fallback CSRF para páginas legadas exige `Origin`/`Referer` presente e valida a origem; não foi demonstrado bypass, mas é necessário confirmar a compatibilidade das rotas mutáveis não cobertas pelo cliente HTTP central e testar o HEAD reconciliado.
+- **Arquivos em escopo:** `db/auth.js`, `src/lib/api.ts`, chamadas `fetch` legadas, `tests/regressions.cjs`; `server.js` é compartilhado com as frentes ativas e não será alterado sem coordenação. Nenhuma alteração em Railway, secrets, banco ou produção foi feita. A issue #3 permanece aberta até merge e validação completa.
+
+### Item independente pronto para revisão: RFC de retenção — issue #44 / PR #99
+- **Estado atual verificado:** PR [#99](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/99) foi promovido de draft para pronto para revisão. O diff contém somente `docs/engineering/data-retention-rfc.md`; o CI #425 foi SUCCESS no HEAD `f171d00b6fed74f465cb646fd5330c62ba4463cf`. Após a atualização de estado, o GitHub retornou `mergeable=true`.
+- **Revisão estática:** o documento corresponde ao comportamento observado em `db/purge.js`: corte exclusivo por data, apenas sessões fechadas, dry-run por padrão e exclusão conjunta de registros dependentes. Nenhuma rotina de purge ou consulta de produção foi executada.
+- **Limite:** a RFC é uma proposta técnica, não uma política aprovada. Prazos de retenção, anonimização e requisitos contábeis continuam decisões do responsável; a issue #44 permanece aberta até que essas decisões e os critérios completos sejam atendidos.
+- **Próxima ação operacional:** como commits na `main`, inclusive documentais, podem disparar deploy automático, Agente 1 / Frente 1 deve verificar e registrar o estado do deploy deste commit. Nenhuma alteração direta de Railway foi feita por esta frente.
+
+
+### Atualização de estado — integração PR #99 (2026-10-25)
+- **Integração concluída:** PR [#99](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/99) foi integrada por squash; commit resultante `6cc50d16b3dd68cbcf781a9b6576f8f0ff3a66e6`.
+- **Evidência de CI:** workflow #425 SUCCESS no HEAD da PR `f171d00b6fed74f465cb646fd5330c62ba4463cf`; o escopo integrado é apenas `docs/engineering/data-retention-rfc.md`.
+- **Issue #44:** continua aberta. A RFC não aprova prazos, não implementa automação e não autoriza executar purge; falta decisão do responsável sobre retenção, anonimização, obrigações contábeis, auditoria e backup/restauração.
+- **Deploy:** merge em `main` pode disparar deploy automático. Agente 1 / Frente 1 é o responsável por verificar e registrar o estado do deploy; esta frente não alterou Railway, secrets ou produção.
+
+
+### Revisão adicional CSRF — login e rotas legadas (2026-10-25)
+- **PR:** [#100](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/100), issue [#3](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/3), ainda aberta em draft.
+- **Achado:** `POST /api/login` não chama `verificarOrigemRequisicao` nem `verificarProtecaoCSRF`; o token só é emitido depois da autenticação. É necessário decidir e testar proteção pré-autenticação por Origin/Referer (incluindo origem externa e cabeçalhos ausentes), porque a issue pede cobertura do login.
+- **Compatibilidade legada:** `public/admin.html`, `public/caixa.html`, `public/cozinha.html`, `public/bar.html` e `public/js/admin-cardapio.js` contêm mutações por `fetch` direto. O fallback de origem parece desenhado para cobri-las, mas os testes atuais exercitam a função isolada/assertions estruturais e não comprovam o comportamento HTTP de cada rota.
+- **Coordenação:** revisão postada na PR #100 (comentário [#6400570554](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/100#issuecomment-6400570554)). A branch CSRF está 12 commits à frente e 4 atrás de `main`; não reconciliar `server.js` sem confirmar sobreposição com as frentes ativas. Nenhum bypass foi demonstrado, e nenhum código/produção foi alterado nesta revisão.
+- **Critério para retomar:** obter confirmação de não sobreposição, tratar/justificar a proteção de login, acrescentar cobertura HTTP/rota suficiente, sincronizar com `main` e exigir CI verde no HEAD reconciliado antes de aprovar integração. Issue #3 permanece aberta.
+
+
+### Revisão independente — logs HTTP / issue #72 (2026-10-25)
+- **PRs em sobreposição:** [#82](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/82) e [#79](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/79) implementam sanitização semelhante em `server.js` e testes; não integrar ambas em paralelo. Recomendada consolidação numa única PR, preferencialmente #82, depois de sincronizar com a `main` atual.
+- **Evidência de revisão:** CI #281 SUCCESS para o HEAD antigo da PR #82 (`dc14ad34a6716a19cae068a55098e9ca21e7e55a`). O helper de #82 descarta query string, redige segmentos de tokens em caminhos de garçom/mesa e UUIDs em detalhes de erro. A PR #79 só redige UUIDs do caminho em logs 4xx e não cobre do mesmo modo stacks/mensagens de erro.
+- **Estado atual do problema:** `main` ainda registra `req.url` em `console.warn` e o objeto de erro em `console.error`; não considerar corrigido até integração e testes no HEAD atual. O CI verde não valida o HEAD reconciliado.
+- **Limite operacional:** sanitização no código não altera access logs gerados pelo proxy Railway nem revoga tokens previamente expostos. A Frente 1 / Agente 1 é responsável por verificar permissões/retenção e avaliar rotação operacional, sem copiar tokens em issues/commits. Revisão registrada em [comentário da PR #82](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/82#issuecomment-6400637439) e handoff enviado à Frente 1 em [PR #85](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/85#issuecomment-6400638880).
+- **Ações realizadas nesta frente:** apenas revisão estática, comentário de revisão e registro documental; nenhum código da aplicação foi alterado, nenhum log/token/ambiente de produção foi acessado e nenhuma ação de Railway foi executada.
+
+
+### Ajuste UX de mesa — implementação em revisão na PR #89 (2026-10-25)
+- **Responsável pela implementação:** Frente 2 / PR [#89](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/89), branch `work/frente-2-responsavel-mesa-integrada`.
+- **Mudanças no HEAD `10168d8633bf29fff065b08d3a727de72c04af65`:** painel superior redundante removido; clique em cartão abre modal de detalhes; API de mesas expõe `pedidoClienteQr` com base em `pedidos.origem_pedido='cliente'` na sessão aberta; assumir só aparece para pedido QR sem responsável; transferir só para o responsável atual, com destino ativo. Corrigida declaração async do handler de transferência.
+- **Testes adicionados:** `tests/pwa-garcom-ux.test.cjs` e `tests/garcom-responsavel-mesa.test.cjs`. **Validação:** não há execução de Actions/status retornada para o HEAD nesta consulta; não declarar CI verde até confirmar o run e seu SHA.
+- **Estado:** em revisão, não integrado, sem validação em navegador/dispositivo real. PR #89 continua draft e dependente da migration 0022 da Frente 1 antes de 0023.
+- **Handoff:** Frente 2 deve revisar os commits e executar CI/testes integrados em PostgreSQL 16 descartável. Frente 1 / Agente 1 deve verificar qualquer efeito de deploy se a mudança for integrada à `main`; nenhuma ação de Railway ou produção foi feita por esta atualização.
+
+### Validação de cancelamento público + PostgreSQL descartável (2026-10-25)
+
+- **Responsabilidade:** corrigir o cancelamento público da issue #75 e adicionar integração real em PostgreSQL descartável.
+- **PR de consolidação atual:** [#104](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/104), reconstruída sobre o HEAD atual da `main` (`a0426e9ab3adf584ec9f06968626f33b1833f522`), que já inclui o registro mais recente da Frente 2 / PR #89. Substitui a #103, cuja base avançou depois dos checks.
+- **Código:** `db/pedidos.js` remove o parâmetro indefinido e o filtro de garçom sem efeito na rota pública; a consulta continua limitada ao pedido da mesa indicada pelo token e à sessão aberta.
+- **Cobertura:** `tests/postgres-integration.test.cjs` valida host/nome do banco/ambiente antes de consultar o banco, confirma PostgreSQL major 16 e verifica idempotência, estoque, cancelamento e restauração, entrega parcial, pagamentos e fechamento. O workflow provisiona PostgreSQL 16 por job, usa credenciais sintéticas e não requer secrets de produção.
+- **Validação confirmada no HEAD `8cb756225e56e23e11dc11a8026538df02d905c9`:** CI #448 SUCCESS (https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40216153567) e PostgreSQL integration #26 SUCCESS (https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40216153516). O HEAD está sobre a main atual, com zero commits atrás e branch mergeável. Como este registro documental gera um novo commit, repetir os dois workflows no HEAD final antes de merge.
+- **Limite operacional:** migrations são executadas apenas no PostgreSQL descartável provisionado pelo workflow; nenhuma alteração em Railway, secrets ou produção foi feita nesta frente. Merge autorizado pelo usuário somente depois de verificar checks no HEAD final e revisar o diff. Após o merge, a Frente 1 deve confirmar o resultado do deploy automático e fazer smoke test de saúde sem alterar dados de negócio.
+
+
+## Handoff operacional para a Frente 1 — verificar deploy e smoke test (2026-10-25)
+
+**Responsável exclusivo:** Agente 1 / Frente 1. A verificação de Railway pertence à Frente 1; os demais agentes não devem alterar o serviço nem executar ações operacionais paralelas.
+
+Após o merge da PR [#104](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/104), o status de deploy reportado pelo Railway passou a **SUCCESS** para o commit `2949c7c517b1d0be3cbe601d884142e4a11f7aac`. Ainda falta confirmar a resposta HTTP pública por smoke test independente. **O domínio correto informado pelo responsável do projeto é https://qradminn.up.railway.app (dois “n” em “qradminn”); não usar o domínio antigo sem o segundo “n”.**
+
+### Ações solicitadas à Frente 1
+1. Conferir no Railway o serviço, o domínio atual, o commit implantado e o resultado do deploy, sem alterar configuração caso não seja necessário.
+2. Executar um smoke test estritamente read-only para `GET https://qradminn.up.railway.app/healthz` (endpoint documentado em `server.js`/Frente 6). Esperar HTTP de sucesso e corpo esperado `{"status":"ok"}`; não seguir redirects ou testar rotas mutáveis.
+3. Se a URL não resolver ou o endpoint não responder, diagnosticar pelo painel/logs do Railway e registrar o resultado observado. Não trocar domínio, variáveis, secrets, banco ou configuração para “tentar resolver” sem autorização explícita.
+4. Atualizar este documento e a [issue #75](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/75) com timestamp, commit implantado, status do deploy, comando/URL de smoke test, status HTTP/corpo ou erro exato e links/evidências.
+5. Manter a issue #75 aberta até o smoke test HTTP ser confirmado. Não executar migrations manuais, seed, testes mutáveis nem alterar dados de produção.
+
+**Estado atual:** CI #449 e PostgreSQL integration #27 passaram no HEAD final da PR antes do merge; a PR #104 foi integrada. O status de deploy reportado pelo Railway está SUCCESS, mas a tentativa anterior de smoke test não conseguiu resolver o host no ambiente de execução. Isso não prova falha do serviço nem confirma saúde HTTP. A próxima ação é da Frente 1 conforme os passos acima.
+
+
+## Revisão Frente 2 — PR #89 e compatibilidade Caixa (2026-10-25)
+
+- **Responsável:** Agente 2 / Frente 2. Revisão estática registrada na conversa da [PR #89](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/89#issuecomment-6400882072). A PR continua draft e o GitHub reporta `mergeable=false`; não há status de Actions confirmado para o HEAD atual `10168d8633bf29fff065b08d3a727de72c04af65`.
+- **Bloqueio funcional:** `assumirMesa()` ainda permite assumir sessão sem pedido QR por chamada direta, embora a UI esconda o botão. O teste PostgreSQL atual também assume uma sessão sem provar `origem_pedido='cliente'`. Exigir validação server-side e teste negativo sem mutação para mesa vazia.
+- **Compatibilidade Caixa:** a branch da Frente 2 não contém o POST `/api/garcom/:token/sessoes/:sessaoId/pagamentos` da Frente 1; isso só deve ser resolvido após integrar/sincronizar a Frente 1, preservando o handler financeiro e a revalidação de responsabilidade dentro da transação.
+- **Plano de validação:** aplicar migrations 0022 e 0023 em sequência num PostgreSQL 16 descartável e executar os testes financeiro e de atendimento no mesmo banco. Cobrir parcial/idempotência/auditoria de operador, sessão fechada, token inativo, autorização 403, corrida transferência × pagamento, fila após transferência, histórico de ator e fechamento pelo Caixa.
+- **Escopo desta revisão:** apenas inspeção estática e comentário de revisão. Nenhum arquivo de runtime, migration, workflow compartilhado ou configuração de produção foi alterado; nenhum teste foi executado nesta revisão. Manter #89 em draft até corrigir a regra de assunção, sincronizar a base e obter CI verde no HEAD final.
+- **Handoff operacional:** como este commit documental na `main` pode disparar deploy automático, Agente 1 / Frente 1 deve verificar e registrar o status de deploy conforme a regra exclusiva de Railway; Agente 2 não executou nem alterou Railway.
+
+
+## Coordenação ativa — Frente 1 / Caixa e pagamentos (2026-10-25)
+
+**Canal oficial:** este documento na `main`. Comentários de integração publicados em [PR #106](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/106#issuecomment-6401356788) e [PR #89](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/89#issuecomment-6401355862).
+
+### Estado e divisão de responsabilidades
+
+- **PR #106 — Frente 1 / referência financeira:** https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/106 — branch `work/frente1-portabilidade-main-20261025`, HEAD observado `08eae9ddf631f680218fa3c3b5b26a5f8e7e18a3`, base informada `b76e6e0326d562e62de1475d6de20050791e54be`. Abrange migration 0022, Caixa/pagamentos, auditoria do operador, comprovante e workflow de testes financeiros PostgreSQL. PR aberto; não integrado.
+- **PR #105 — revisão Frente 2:** https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/105 — documento de revisão, não implementação.
+- **PR #89 — implementação Frente 2:** https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/89 — continua em revisão. A correção server-side de `assumirMesa()` é bloqueante: validar pedido com `origem_pedido='cliente'` dentro da transação antes de abrir/criar sessão ou gravar histórico; mesa vazia deve responder 409 sem mutação. O teste positivo deve criar pedido QR e é necessário teste negativo sem mutação.
+
+### Contrato compartilhado e próximos passos
+
+1. Frente 1 mantém o endpoint financeiro, a idempotência de retries, os locks transacionais e a validação do responsável atual no momento de registrar pagamento.
+2. Frente 2 corrige a regra de assunção e preserva o endpoint financeiro ao reconciliar `server.js`, `.github/workflows/ci.yml`, `public/garcom-pwa/app.js` e `README.md`. Alterações compartilhadas devem ser mescladas por hunks; não substituir arquivos inteiros.
+3. Transferência deve registrar ator, responsável anterior/novo e timestamp. Após transferir, pedidos prontos mudam de fila, sem serem marcados automaticamente como entregues.
+4. Validação combinada obrigatória em PostgreSQL 16 descartável limpo: aplicar `0022_sessao_pagamentos_operador.sql` e depois `0023_atendimento_transferencia_actor.sql` no mesmo banco; executar os testes financeiros e de atendimento juntos. Registrar o SHA exato que passou.
+5. PIX/QR ou um pagamento registrado não comprovam recebimento real. O operador precisa conferir manualmente o recebimento antes de confirmar.
+
+### Limites operacionais
+
+Nenhum merge foi realizado por esta atualização. Não executar migrations/testes mutáveis em produção, não alterar Railway ou secrets e não afirmar que a integração está concluída com base em checks de SHA antigo. A validação e os checks precisam corresponder ao HEAD final reconciliado. Agentes: respondam nos PRs vinculados com SHA, testes/checks observados e bloqueios concretos.
+
+
+## Frente de cardápio/seed com imagens — 2026-10-25
+
+- **PR #108 — seed de cardápio com fotos:** https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/108 — draft, branch `feat/seed-cardapio-imagens-major-pub`, HEAD `ef4d047f4476ae43afa20ba38a84abce43e71c3a`. Não integrado.
+- Fonte inspecionada: repositório `deividjmoura/lanchonete-qr`, `data/db.json` e `public/assets/demo/*.webp`. No QR Admin, `data/db.json` e os assets já estavam presentes e tinham os mesmos blob SHAs do repositório original; não foi necessário duplicar dados nem arquivos de imagem.
+- A alteração proposta em `db/seed.js` associa imagens locais `/assets/demo/*.webp` aos produtos durante uma carga inicial, se a coluna `produtos.foto_url` existir. Mantém nomes, preços, descrições, categorias e adicionais do seed existente.
+- **Validação pendente:** CI no HEAD atual e teste em banco PostgreSQL descartável. O endpoint Render fornecido não pôde ser inspecionado pela ferramenta web nesta rodada. Nenhum seed executado, banco alterado, merge, deploy ou alteração no Railway.
+- Para banco já populado, o seed padrão aborta para evitar duplicação; não usar `FORCE_SEED` em produção. Planejar a aplicação das fotos existentes como atualização separada, com backup/ambiente controlado e sem apagar pedidos.
+
+## Plano executivo de integração/merge — desbloqueio ordenado (2026-10-25)
+
+**Dono da coordenação:** agente de integração/QR Admin. **Canal de instrução obrigatório:** este documento na `main`. Não esperar que agentes leiam conversas privadas; responsáveis devem responder no PR indicado com SHA reconciliado, testes e bloqueios concretos.
+
+### Princípios de execução
+- Merge por lote pequeno, começando por segurança de baixo acoplamento; nenhuma branch antiga é aprovada só porque um SHA anterior teve CI verde.
+- Antes de cada merge: atualizar/reconciliar com `main`, revisar diff final, exigir CI verde no SHA exato e executar o teste especializado quando houver. Não fazer merge em lote de branches concorrentes que alterem os mesmos arquivos.
+- Não integrar duas implementações duplicadas da mesma correção. Fechar como supersedida a alternativa somente depois que a correção escolhida estiver integrada e validada.
+- Não alterar Railway, secrets ou dados de produção. Nenhuma migration/seed/teste mutável deve apontar para produção. Deploy e smoke operacional são exclusivamente da Frente 1.
+- Ordem das migrations compartilhadas: `0022_sessao_pagamentos_operador.sql` antes de `0023_atendimento_transferencia_actor.sql`; ambas devem ser validadas no mesmo PostgreSQL 16 descartável.
+
+### Fila de merge e dependências
+
+**Lote A — segurança independente e correções pequenas (primeiro, em sequência):**
+1. **PR #110 — vazamento na redefinição de senha (#49)**: prioridade imediata, PR não-draft. Confirmar que resposta/log não expõem segredo, rodar teste específico e CI no HEAD atual; merge isolado assim que checks finais estiverem verdes.
+2. **PR #92 — impedir mudança de status fora do setor do chamador**: validar autorização server-side e testes negativos (403, sem mutação). Não juntar com mudanças de PWA/atendimento.
+3. **PR #82 — redigir bearer tokens nos logs (#72)**: escolher #82 como implementação canônica em vez de #79, pois cobre sanitização mais ampla. Reconciliar com `main`, cobrir URL/query/path e mensagens/stack de erro; depois do merge, fechar #79 como duplicada/supersedida. Verificar separadamente access logs do proxy; mudança de aplicação não apaga logs antigos nem revoga tokens.
+4. **PR #73 — parar de imprimir tokens de garçom do seed**: verificar saída do seed e testes. Integrar em commit próprio, sem misturar com o seed de fotos (#108).
+5. **PR #71 — gerar QR administrativo localmente**: confirmar que nenhum token/segredo é enviado a serviço externo; validar regressão da tela/admin antes de integrar.
+6. **PR #67 — atualizar sharp para versão corrigida**: PR não-draft; confirmar lockfile, instalação limpa e CI final. Pode avançar em paralelo aos itens 2–5, mas merge separado.
+
+**Lote B — integridade de pedidos e logging complementar:**
+7. **PR #81 — rejeitar carrinho parcialmente inválido (#78)**: resolver duplicidade de abordagem/branch com #78 e comparar #81 contra #80/branches relacionadas antes de escolher uma única implementação. Critério: rejeitar o pedido inteiro se qualquer item for inválido; nunca aceitar silenciosamente um subconjunto. Testes de regressão e CI no HEAD reconciliado.
+8. **PR #65 — testes de proxy/IP confiável (#50)**: é teste de comportamento de infraestrutura; integrar só depois de conferir a configuração real suportada e garantir que o teste não presume proxy confiável arbitrário.
+9. **PR #38 — gate PostgreSQL descartável de migrations**: habilitar/validar o workflow em PostgreSQL descartável antes de aceitar mudanças operacionais dependentes dele. Não confundir sucesso do workflow com smoke em produção.
+
+**Lote C — gate de inicialização/migrations P0 (reconsolidar duplicatas antes do merge):**
+10. **PRs #56, #57 e #58** implementam essencialmente fail-closed no startup/migrations. Não fazer merge de todas. Comparar patches, eleger uma única PR, transportar para ela os testes úteis das outras, sincronizar com `main` e exigir CI + migration-gate PostgreSQL verde. Critério: falha de migration impede readiness/startup; nenhum caminho best-effort/fail-open restante. Fechar as alternativas como supersedidas após merge.
+11. Só depois do item 10, atualizar a matriz/runbook de go-live (#36/#34/#35/#111/#112) para refletir evidência real; documentos não podem declarar release pronto enquanto REL-01…REL-18 estiverem pendentes.
+
+**Lote D — integração financeira + responsável da mesa (dependência explícita, bloqueador de merge conjunto):**
+12. **PR #106 / #96 / #85 — Frente 1**: consolidar uma única linha de implementação financeira, preferindo #106 como base de referência atual até o responsável confirmar o contrário. #96 e #85 não devem ser integradas paralelamente se alterarem os mesmos handlers. Preservar endpoint de pagamento do garçom, idempotência, locks, auditoria de operador e revalidação do responsável autenticado dentro da transação após lock e antes de replay/mutação. Nunca confiar no operador enviado pelo corpo.
+13. **PR #89 — Frente 2**: antes de promover, corrigir server-side `assumirMesa()`: só assumir sessão com pedido QR (`origem_pedido='cliente'`), dentro da transação; mesa vazia deve falhar sem criar sessão nem gravar histórico. Reconciliar a base depois da Frente 1, sem sobrescrever o endpoint financeiro.
+14. **PR #107 — integração Frente 1 + Frente 2**: candidata de integração conjunta; não integrar até confirmar que contém a correção de #89 e o contrato financeiro atual de #106. Executar num único PostgreSQL 16 descartável migrations 0022 depois 0023 e a suíte combinada: pagamento parcial/idempotente, auditoria de ator, sessão fechada/token inativo, 403, corrida transferência × pagamento, fila após transferência, histórico e fechamento do Caixa. Registrar SHA exato. Quando essa integração estiver validada, decidir se #106/#89 são incorporadas por ela ou em sequência, evitando duplicar migrations/handlers.
+15. **PR #100 — CSRF por sessão**: manter bloqueada até reconciliar `server.js` com #110/#82/#92 e o lote financeiro; resolver a proteção do login e provar cobertura HTTP/rota, incluindo requests sem token e token de outra sessão. Não fazer merge só com testes estáticos ou CI de SHA antigo.
+
+**Lote E — itens de produto/documentação não bloqueantes para segurança:**
+16. **PR #108 — imagens do cardápio**: depois dos gates de segurança e do lote de integração, CI + PostgreSQL descartável; `npm run fotos:sync` é dry-run por padrão. Nunca executar `--apply` contra produção sem plano/backup e autorização específica. Não usar `FORCE_SEED=1` em produção.
+17. **PR #91** (Web Push), **#93** (RFC de imagens), **#94** (regressões de token), **#100** e outras frentes PWA/UX: integrar apenas quando o escopo estiver concluído, sem deixar feature opcional bloquear correções P0/P1. A PR #94 pode acompanhar os testes de segurança de mesa, mas não substitui os testes de autorização server-side.
+18. **PRs documentais #105, #109, #111 e #112**: integrar depois de confirmar que descrevem o estado real. #112 e #36 são documentos de evidência; não são autorização de deploy. Consolidar documentação duplicada se houver conteúdo igual.
+
+### Ações imediatas por responsável
+- **Agente de integração (este agente):** inventariar checks atuais, reconciliar branches pequenas e consolidar duplicatas #82/#79, #56/#57/#58 e #106/#96/#85; atualizar esta seção com cada SHA/check/merge real. Não declarar merge até GitHub confirmar.
+- **Frente 1 / Agente 1:** revisar #106 como fonte financeira; confirmar validação TOCTOU no endpoint de pagamento; coordenar migrations 0022/0023 e, após merges, cuidar exclusivamente do Railway/deploy/smoke read-only.
+- **Frente 2 / Agente 2:** corrigir #89 conforme o item 13; reconciliar depois da Frente 1; manter endpoint financeiro e workflows intactos; informar SHA e testes.
+- **Agente de segurança:** resolver #92, #82, #73 e #100 em ordem, identificando sobreposição por arquivo antes de rebasear; não abrir correção duplicada.
+- **Responsável por CI/DB:** priorizar #38 e o teste PostgreSQL descartável, com migrações e suites combinadas na mesma instância.
+- **Responsáveis por docs/go-live:** atualizar #34/#35/#36/#111/#112 somente após os gates reais; todos os itens REL-01 a REL-18 permanecem PENDENTE até haver evidência.
+
+### Estado observado ao abrir este plano
+- PRs abertas incluem #110, #107, #106, #100, #92, #89, #82/#79, #81, #73, #71, #67, #58/#57/#56, #38 e #108. Várias estão em draft e/ou concorrem em `server.js`, workflows, migrações e PWA.
+- **Nenhuma PR é considerada integrada por este plano.** O estado de checks e mergeability deve ser consultado novamente para o HEAD atual de cada PR antes de executar qualquer merge. Esta atualização é uma ordem de integração, não uma certificação de segurança ou produção.
+- A próxima ação não é abrir novas branches de feature: é reconciliar as PRs de segurança independentes em sequência, fechar duplicatas e validar a integração Frente 1 + Frente 2 no mesmo PostgreSQL descartável.
+
+### Execução do plano — primeiro merge concluído (2026-10-25)
+- **PR #110 integrada:** https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/110 — correção de segurança para impedir vazamento na redefinição de senha (#49).
+- **Evidência pré-merge:** HEAD `e0974939a7a788665475d7b5e3fa1496d74444bf`, `mergeable=true`, estado GitHub `clean`; checks `verify` e `postgres-integration` concluídos SUCCESS no mesmo HEAD.
+- **Commit de merge (squash):** `1c40b62d169068c15b61465c87fb184e8b1fe2a3`. GitHub confirmou `merged=true`.
+- **Próximo passo obrigatório:** agentes com PRs que alteram `server.js` devem atualizar a base após esse merge e revalidar checks no novo HEAD; não reutilizar checks de SHA anterior.
+- **PR #92:** check `verify` passou no HEAD antigo `2f654a086cbe0092a2b458648fdc43cec14dbb4c`, mas o estado de mergeabilidade está `unknown` e o HEAD precisa ser reconciliado com a `main` que acabou de avançar. **Não integrada**; reexecutar CI completo e adicionar teste de autorização negativa antes de promover.
+- O merge #110 é a primeira execução do plano; não significa que as demais PRs ou o produto estejam prontos para produção.
