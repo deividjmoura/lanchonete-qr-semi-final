@@ -612,3 +612,14 @@ test('token CSRF varia por sessão e métodos somente de leitura não o exigem',
   assert.doesNotThrow(() => verificarProtecaoCSRF({ method: 'GET', headers: {} }));
   assert.doesNotThrow(() => verificarProtecaoCSRF({ method: 'OPTIONS', headers: {} }));
 });
+
+
+test('CSRF integra emissao de token, validacao de rotas staff e cliente HTTP', () => {
+  const serverSource = fs.readFileSync('server.js', 'utf8');
+  const apiSource = fs.readFileSync('src/lib/api.ts', 'utf8');
+  assert.match(serverSource, /csrfToken: csrfTokenParaSessao\(token\)/);
+  assert.match(serverSource, /csrfToken: csrfTokenParaSessao\(sessionToken\)/);
+  assert.match(serverSource, /verificarProtecaoCSRF\(req\);/);
+  assert.match(apiSource, /headers\["X-CSRF-Token"\] = csrfToken/);
+  assert.match(apiSource, /await apiGet\("\/api\/me"\)/);
+});
