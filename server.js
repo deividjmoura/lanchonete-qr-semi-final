@@ -58,7 +58,7 @@ const {
   garantirStaffSeed,
 } = require('./db/auth');
 const { golpePermitido } = require('./db/rateLimit');
-const { ErroAtendimento, listarMesasGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, deixarMesa, criarPedidoGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
+const { ErroAtendimento, listarMesasGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
 const { normalizarChavePix, inspecionarChavePix } = require('./db/pix-normaliza');
 const { subscribe, broadcast } = require('./db/events');
 const pool = require('./db/pool');
@@ -406,6 +406,10 @@ const server = http.createServer(async (req, res) => {
         if (e && (e.status === 400 || e.status === 413)) return json(res, e.status, { error: e.message });
         throw e;
       }
+    }
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/sessoes\/(\\d+)\/resumo-pagamento$/)) && req.method === 'GET') {
+      try { return json(res, 200, await resumoPagamentoSessao(m[1], m[2])); }
+      catch (e) { if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message }); throw e; }
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas$/)) && req.method === 'GET') {
       try { return json(res, 200, await listarMesasGarcom(m[1])); }
