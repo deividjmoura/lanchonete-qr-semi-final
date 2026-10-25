@@ -113,7 +113,7 @@ function renderTableGrid(){
  }
 }
 document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.dataset.tab)));
-for(const id of ['newOrderHome','newOrderTables','newOrderOrders'])$('#'+id).addEventListener('click',()=>openOrder());
+for(const id of ['newOrderTables','newOrderOrders'])$('#'+id).addEventListener('click',()=>openOrder());
 $('#closeOrder').addEventListener('click',()=>$('#orderModal').close());
 $('#closeQr').addEventListener('click',()=>$('#qrModal').close());
 $('#showQr').addEventListener('click',()=>openQr($('#tableSelect').value));
