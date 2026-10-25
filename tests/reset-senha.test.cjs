@@ -38,33 +38,27 @@ test('senha curta é rejeitada antes de carregar módulos de banco', () => {
   assert.doesNotMatch(r.stdout + r.stderr, /curta/);
 });
 
-test('senha fictícia nunca aparece na saída durante um reset stubado', (t) => {
+test('senha fictícia nunca aparece na saída durante um reset stubado', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'qradmin-reset-senha-'));
   const preloadPath = path.join(dir, 'stub-db.cjs');
   const secret = 'teste-ficticio-unico-7a91';
-
-  fs.writeFileSync(preloadPath, String.raw\`
-    const Module = require('node:module');
-    const originalLoad = Module._load;
-    Module._load = function(request, parent, isMain) {
-      if (parent && parent.filename === process.env.RESET_SCRIPT_PATH && request === '../db/auth') {
-        return {
-          hashSenha: async () => 'hash-ficticio',
-          garantirStaffSeed: async () => ({ created: false }),
-        };
-      }
-      if (parent && parent.filename === process.env.RESET_SCRIPT_PATH && request === '../db/pool') {
-        return {
-          query: async () => ({ rows: [{ login: 'admin', papel: 'admin', ativo: true }] }),
-          end: async () => {},
-        };
-      }
-      return originalLoad.call(this, request, parent, isMain);
-    };
-  \`);
+  const preloadSource = [
+    "const Module = require('node:module');",
+    'const originalLoad = Module._load;',
+    'Module._load = function(request, parent, isMain) {',
+    "  if (parent && parent.filename === process.env.RESET_SCRIPT_PATH && request === '../db/auth') {",
+    "    return { hashSenha: async () => 'hash-ficticio', garantirStaffSeed: async () => ({ created: false }) };",
+    '  }',
+    "  if (parent && parent.filename === process.env.RESET_SCRIPT_PATH && request === '../db/pool') {",
+    "    return { query: async () => ({ rows: [{ login: 'admin', papel: 'admin', ativo: true }] }), end: async () => {} };",
+    '  }',
+    '  return originalLoad.call(this, request, parent, isMain);',
+    '};',
+  ].join('\n');
+  fs.writeFileSync(preloadPath, preloadSource);
 
   try {
-    const nodeOptions = [process.env.NODE_OPTIONS, \`--require=\${preloadPath}\`].filter(Boolean).join(' ');
+    const nodeOptions = [process.env.NODE_OPTIONS, '--require=' + preloadPath].filter(Boolean).join(' ');
     const r = spawnSync(process.execPath, [scriptPath], {
       encoding: 'utf8',
       timeout: 5000,
