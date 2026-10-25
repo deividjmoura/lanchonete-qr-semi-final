@@ -40,4 +40,6 @@ test('QR PIX acompanha o valor digitado e gera TXID por lançamento', () => {
   const caixaSource = fs.readFileSync('src/screens/Caixa.tsx', 'utf8');
   assert.ok(caixaSource.includes('valor: Number(valor) > 0.005 ? Number(valor)'));
   assert.ok(caixaSource.includes('txid: `S${sessao.id}P${sessao.pagamentos.length + 1}`'));
+  assert.ok(caixaSource.includes('forma === "pix"'));
+  assert.ok(caixaSource.includes('Confira o recebimento no banco antes de registrar'));
 });
