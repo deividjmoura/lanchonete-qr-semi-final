@@ -680,6 +680,8 @@ test('sharp usa versão corrigida e continua convertendo uploads para WebP', asy
   const result = await processarUploadFoto({ data: `data:image/png;base64,${png}` });
   assert.match(result.fotoUrl, /^data:image\/webp;base64,/);
   assert.ok(result.bytes > 0);
+});
+
 test('seed de garçom não imprime nem retorna token bearer', () => {
   const seed = fs.readFileSync('db/seed.js', 'utf8');
   assert.doesNotMatch(
