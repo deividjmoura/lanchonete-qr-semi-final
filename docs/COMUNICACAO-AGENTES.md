@@ -84,3 +84,20 @@ Use este formato ao registrar progresso:
 - **Próxima ação e responsável:**
 
 > Regra de honestidade: “CI verde” significa apenas que os jobs daquele commit passaram. Não significa que o código foi mesclado, implantado, validado em PostgreSQL real ou testado em dispositivos físicos.
+
+
+## Registro de leitura e auditoria documental — Frente 3 (2026-10-25)
+
+- **Leitura confirmada diretamente na `main`:** este documento (blob `4dc24f2a164a9cfdbaf031510aad0c8ddfca05f9` antes deste registro), `COORDENACAO.md`, `AGENTS.md` e `README.md`. Não foram usadas cópias de branches como fonte oficial.
+- **Frente:** 3 — PWA do garçom / consentimento de notificações.
+- **Estado conforme a coordenação canônica lida:** PR #88, branch `work/frente-3-pwa-notificacoes`, aberto em draft e não integrado; head registrado `3aefd704273eead3ab551d5dfc905440ecb2e31d`; CI #330 foi registrado como sucesso nesse head. PR #84 está integrado no merge commit `daf1b2aab6df6c656b18d27059cf03f766f80237`. Esses dados foram lidos no documento canônico; não foi feita nesta ação uma nova consulta independente ao estado atual do PR ou dos runs.
+- **Bloqueios/limites:** validação real em Android/iOS e implementação/verificação de push em segundo plano continuam pendentes segundo o registro canônico. Nenhuma alteração de Railway, secrets, banco, migrations ou produção foi realizada.
+- **Próxima ação:** verificar novamente o head/estado do PR #88 e o CI associado ao commit exato; revisar as mudanças e validar em dispositivos reais antes de declarar a frente concluída. Registrar os resultados com links/evidências neste documento.
+
+### Auditoria de documentos de coordenação adjacentes
+
+- `AGENTS.md`: manter. É o protocolo permanente exigido pelo projeto, não um canal paralelo para atualizações operacionais. Ele ainda contém histórico técnico e tabelas antigas explicitamente marcadas como históricas; não usar esses trechos como estado atual.
+- `COORDENACAO.md`: manter por enquanto como resumo operacional vinculado ao canal canônico, mas corrigir sua tabela de frentes. Há divergência verificável: sua tabela diz que o estado atual da Frente 1/PR #85 não foi confirmado e não lista PR #89; já este documento registra PR #85 e PR #89 abertos em draft, ambos com `mergeable=false`, e cabeças específicas. A tabela de `COORDENACAO.md` também é menos atual que a seção coordenadora deste arquivo. Não excluir sem primeiro atualizar seus links e garantir que nenhuma instrução permanente dependa dele.
+- `README.md`: a seção de desenvolvimento local já não contém passos de clone; pressupõe o repositório disponível. Não requer essa remoção novamente.
+- **Limite da auditoria:** foram revisados os quatro arquivos acima. A listagem completa da árvore do repositório não foi obtida nesta ação; portanto, não afirmo que todos os possíveis arquivos de comunicação tenham sido identificados nem recomendo exclusões às cegas.
+- **Critério para limpeza adicional:** localizar candidatos com `find . -type f` e pesquisar referências antes de apagar. Preservar `AGENTS.md`, `COORDENACAO.md` e este documento canônico; consolidar arquivos realmente redundantes só depois de migrar conteúdo útil e corrigir links.
