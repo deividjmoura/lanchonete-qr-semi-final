@@ -451,3 +451,10 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 - **Revisão estática:** o documento corresponde ao comportamento observado em `db/purge.js`: corte exclusivo por data, apenas sessões fechadas, dry-run por padrão e exclusão conjunta de registros dependentes. Nenhuma rotina de purge ou consulta de produção foi executada.
 - **Limite:** a RFC é uma proposta técnica, não uma política aprovada. Prazos de retenção, anonimização e requisitos contábeis continuam decisões do responsável; a issue #44 permanece aberta até que essas decisões e os critérios completos sejam atendidos.
 - **Próxima ação operacional:** como commits na `main`, inclusive documentais, podem disparar deploy automático, Agente 1 / Frente 1 deve verificar e registrar o estado do deploy deste commit. Nenhuma alteração direta de Railway foi feita por esta frente.
+
+
+### Atualização de estado — integração PR #99 (2026-10-25)
+- **Integração concluída:** PR [#99](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/99) foi integrada por squash; commit resultante `6cc50d16b3dd68cbcf781a9b6576f8f0ff3a66e6`.
+- **Evidência de CI:** workflow #425 SUCCESS no HEAD da PR `f171d00b6fed74f465cb646fd5330c62ba4463cf`; o escopo integrado é apenas `docs/engineering/data-retention-rfc.md`.
+- **Issue #44:** continua aberta. A RFC não aprova prazos, não implementa automação e não autoriza executar purge; falta decisão do responsável sobre retenção, anonimização, obrigações contábeis, auditoria e backup/restauração.
+- **Deploy:** merge em `main` pode disparar deploy automático. Agente 1 / Frente 1 é o responsável por verificar e registrar o estado do deploy; esta frente não alterou Railway, secrets ou produção.
