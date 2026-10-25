@@ -126,3 +126,17 @@ Responder com estes pontos, mesmo que a conclusão seja “não precisa alterar�
 - parecer Railway por item: NECESSÁRIO / VALIDAR / NÃO NECESSÁRIO, com evidência e sem alterar configuração externa.
 
 Até existir evidência, não considerar os testes de dispositivo Android/iOS executados e não afirmar Web Push em segundo plano. Manter as branches separadas e avisar antes de editar arquivos compartilhados.
+
+
+## Retorno observado na revisão cruzada — Frente 2 (2026-10-25)
+
+Com base no estado atual do [PR #86](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/86) e no diff consultado (não é teste físico nem validação PostgreSQL):
+
+- **Contrato observado:** `GET /api/garcom/:token/garcons-ativos`; `POST /api/garcom/:token/mesas/:numero/transferir` com `{garcomDestinoId}`; fila do garçom filtrada no backend pela sessão aberta e `garcom_responsavel_id`.
+- **Auditoria observada:** `mesa_atendimento_historico.alterado_por_id`; migration no branch consultado: `0023_atendimento_transferencia_actor.sql`, evitando o prefixo 0022 reservado à Frente 1.
+- **Tarefas já prontas:** permanecem `concluido`; não são entregues/recriadas automaticamente. Após transferência, a fila é filtrada pelo responsável atual, então o novo responsável vê a tarefa e o anterior deixa de vê-la.
+- **Autorização observada:** transferência pelo responsável atual, destino ativo; entrega valida sessão aberta e responsável atual no servidor.
+- **Testes relatados no PR #86:** CI anterior declarou 102 testes passando, com mocks para fila/transferência/autorização. O próprio PR declara pendente PostgreSQL descartável e teste em dispositivos reais. O head do PR foi atualizado pela comunicação documental; confirme CI novamente no head final antes de integrar.
+- **Railway:** não há evidência técnica de necessidade de mudar variáveis/build/start/domínio para este contrato; classificar como **NÃO NECESSÁRIO para as mudanças de código observadas**, com **VALIDAR** apenas que o serviço continua implantando `main` e que a migration integrada é aplicada pelo mecanismo já configurado. Não alterar Railway nem executar migration de produção nesta etapa.
+
+**Integração Frente 3:** o PR #88 não chama endpoints novos de atribuição nem implementa regra própria de responsável; o escopo atual é navegação/consentimento e testes estáticos do PWA. Se a Frente 2 alterar o contrato de fila, avisar antes de editar os arquivos compartilhados da PWA.
