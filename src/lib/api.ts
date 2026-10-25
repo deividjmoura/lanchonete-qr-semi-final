@@ -71,7 +71,7 @@ export const api = {
       { usuario, senha }
     ),
   logout: () => apiSend("/api/logout", "POST"),
-  me: () => apiGet<{ staff?: { id?: number; papel?: string; nome?: string; login?: string }; home?: string; csrfToken?: string }>("/api/me"),
+  me: () => apiGet<{ id?: number; papel?: string; nome?: string; login?: string; csrfToken?: string }>("/api/me"),
 
   mesaSessao: (token: string) => apiGet<any>(`/api/mesas/${token}/sessao`),
   checkin: (token: string, clienteNome: string) =>
