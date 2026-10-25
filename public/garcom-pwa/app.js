@@ -263,6 +263,7 @@ function openNotificationSetup(){
 }
 $('#enableAlerts').addEventListener('click',openNotificationSetup);
 $('#closeNotificationConsent').addEventListener('click',()=>consentDialog.close());
+consentDialog.addEventListener('close',()=>localStorage.setItem(CONSENT_SEEN,'1'));
 $('#dismissNotificationConsent').addEventListener('click',()=>{localStorage.setItem(CONSENT_SEEN,'1');consentDialog.close()});
 $('#requestNotificationPermission').addEventListener('click',async()=>{
  if(!('Notification'in window)){updateNotificationStatus();return}
