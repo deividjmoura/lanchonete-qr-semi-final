@@ -255,10 +255,11 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
       chave: pixCfg.chave,
       nome: pixCfg.nome || "RECEBEDOR",
       cidade: pixCfg.cidade || "BRASIL",
-      valor: restante > 0.005 ? restante : total,
-      txid: `SESSAO${sessao.id}`,
+      // QR PIX acompanha o valor informado para permitir pagamentos parciais.
+      valor: Number(valor) > 0.005 ? Number(valor) : restante > 0.005 ? restante : total,
+      txid: `S${sessao.id}P${sessao.pagamentos.length + 1}`,
     });
-  }, [pixCfg, restante, total, sessao.id]);
+  }, [pixCfg, valor, restante, total, sessao.id, sessao.pagamentos.length]);
 
   const usarPorPessoa = () => {
     if (pessoas > 0) setValor((restante / pessoas).toFixed(2));
@@ -430,44 +431,52 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                     animate={{ opacity: 1, height: "auto" }}
                     className="flex items-center justify-between rounded-xl bg-teal-500/10 border border-teal-500/25 px-3.5 py-2"
                   >
-                    <span className="flex items-center gap-1.5 text-xs font-semibold text-teal-700 uppercase tracking-wide">
-                      <Check className="size-3.5 text-teal-600" /> {FORMAS.find((f) => f.id === pg.forma)?.label}
+                    <span className="flex min-w-0 flex-col gap-0.5 text-xs font-semibold text-teal-700 uppercase tracking-wide">
+                      <span className="flex items-center gap-1.5">
+                        <Check className="size-3.5 text-teal-600 shrink-0" /> {FORMAS.find((f) => f.id === pg.forma)?.label}
+                      </span>
+                      {pg.operadorNome && <span className="pl-5 text-[10px] font-medium normal-case tracking-normal text-slate-500">registrado por {pg.operadorNome}</span>}
                     </span>
-                    <span className="font-mono text-sm text-teal-700">{BRL(pg.valor)}</span>
+                    <span className="font-mono text-sm text-teal-700 shrink-0">{BRL(pg.valor)}</span>
                   </motion.div>
                 ))}
               </AnimatePresence>
             </div>
           </div>
 
-          {/* PIX + fechar */}
-          <div className="mt-4 rounded-2xl border border-brand-500/30 bg-gradient-to-br from-brand-500/10 to-transparent p-4">
-            <div className="flex items-center gap-4">
-              <div className="rounded-xl qr-paper p-2.5 shadow-lg shrink-0">
-                {pixCodigo ? (
-                  <QRCodeSVG value={pixCodigo} size={86} fgColor="#0a2540" level="M" />
-                ) : (
-                  <div className="size-[86px] rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-[9px] text-slate-500 text-center px-1">
-                    Configure PIX_CHAVE no servidor
-                  </div>
-                )}
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-navy-900">PIX do restante · {BRL(restante)}</p>
-                {pixAviso ? (
-                  <p className="text-[11px] font-semibold text-amber-700 leading-snug mt-0.5">
-                    {pixAviso}
-                  </p>
-                ) : (
-                  <p className="text-[11px] text-slate-500 leading-snug mt-0.5">Mostre pro cliente ou copie o código.</p>
-                )}
-                <button onClick={copiarPix} className="btn-press mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold text-brand-600 hover:text-brand-700 cursor-pointer">
-                  {copiado ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-                  {copiado ? "copiado!" : "copiar código PIX"}
-                </button>
+          {/* Instruções da forma escolhida; PIX mostra QR com o valor da cobrança. */}
+          {forma === "pix" ? (
+            <div className="mt-4 rounded-2xl border border-brand-500/30 bg-gradient-to-br from-brand-500/10 to-transparent p-4">
+              <div className="flex items-center gap-4">
+                <div className="rounded-xl qr-paper p-2.5 shadow-lg shrink-0">
+                  {pixCodigo ? (
+                    <QRCodeSVG value={pixCodigo} size={96} fgColor="#0a2540" level="M" />
+                  ) : (
+                    <div className="size-[96px] rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-[9px] text-slate-500 text-center px-1">
+                      Configure PIX_CHAVE no servidor
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-navy-900">PIX · {BRL(Number(valor) > 0.005 ? Number(valor) : restante)}</p>
+                  {pixAviso ? (
+                    <p className="text-[11px] font-semibold text-amber-700 leading-snug mt-0.5">{pixAviso}</p>
+                  ) : (
+                    <p className="text-[11px] text-slate-500 leading-snug mt-0.5">O QR acompanha o valor informado. Confira o recebimento no banco antes de registrar.</p>
+                  )}
+                  <button onClick={copiarPix} disabled={!pixCodigo} className="btn-press mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold text-brand-600 hover:text-brand-700 cursor-pointer disabled:opacity-40">
+                    {copiado ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+                    {copiado ? "copiado!" : "copiar código PIX"}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-100/50 p-3 text-sm text-slate-600">
+              Forma selecionada: <b>{FORMAS.find((f) => f.id === forma)?.label}</b>.
+              Confirme o recebimento na maquininha ou no caixa antes de registrar {BRL(Number(valor) || 0)}.
+            </div>
+          )}
 
           <div className="mt-4">
             {(sessao.pedidosPendentes != null && sessao.pedidosPendentes > 0) && (

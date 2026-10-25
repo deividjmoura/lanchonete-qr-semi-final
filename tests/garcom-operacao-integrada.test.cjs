@@ -119,10 +119,11 @@ describe('1. Fluxo do Cliente — Sem Pagamento e com Recursos Essenciais', () =
       /QR Code fixo da sua mesa/i,
       'Landing instrui cliente a iniciar pelo QR fixo'
     );
+    const routerSrc = fs.readFileSync('src/router.tsx', 'utf8');
     assert.match(
-      landingSrc,
-      /#\/mesa\/|\/mesa\//,
-      'Permite navegação direta para a rota da mesa via token do QR'
+      routerSrc,
+      /mesa\//,
+      'O roteador mantém a navegação direta para a mesa via token do QR'
     );
   });
 

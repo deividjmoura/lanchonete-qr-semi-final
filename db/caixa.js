@@ -13,6 +13,7 @@ const { comRetryConcorrencia } = require('./retry');
 
 const pagamentosTemIdempotencyKey = colunaExiste('sessao_pagamentos', 'idempotency_key');
 const pagamentosTemPixAviso = colunaExiste('sessao_pagamentos', 'pix_aviso_id');
+const pagamentosTemOperadorNome = colunaExiste('sessao_pagamentos', 'operador_nome');
 const sessoesTemFechamentoKey = colunaExiste('mesa_sessoes', 'fechamento_idempotency_key');
 
 const FORMAS = new Set(['dinheiro', 'pix', 'cartao_debito', 'cartao_credito']);
@@ -124,11 +125,13 @@ async function lerSessoesAbertas(client) {
 
   const totaisEntregues = await totaisEntreguesPorSessao(client, sessaoIds);
 
+  const temOperadorPagamento = await pagamentosTemOperadorNome(client).catch(() => false);
   const { rows: pagRows } = await client.query(
-    `SELECT id, sessao_id, valor, forma_pagamento, criado_em
+    `SELECT id, sessao_id, valor, forma_pagamento, criado_em,
+            ${temOperadorPagamento ? 'operador_nome' : 'NULL::text AS operador_nome'}
      FROM sessao_pagamentos
      WHERE sessao_id = ANY($1::int[])
-     ORDER BY criado_em`,
+     ORDER BY criado_em, id`,
     [sessaoIds]
   ).catch(() => ({ rows: [] }));
 
@@ -140,6 +143,7 @@ async function lerSessoesAbertas(client) {
       valor: Number(p.valor),
       formaPagamento: p.forma_pagamento,
       criadoEm: p.criado_em,
+      operadorNome: p.operador_nome || null,
     });
   }
 
@@ -274,7 +278,7 @@ async function lerSessoesAbertas(client) {
 }
 
 /** Registra pagamento parcial (divisão de conta). A quitação simples pode fechar a sessão. */
-async function registrarPagamento(sessaoIdBruto, body) {
+async function registrarPagamento(sessaoIdBruto, body, operadorNome = null) {
   const sessaoId = validarSessaoId(sessaoIdBruto);
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new ErroCaixa(400, 'Dados de pagamento inválidos');
@@ -358,6 +362,11 @@ async function registrarPagamento(sessaoIdBruto, body) {
            RETURNING id, valor, forma_pagamento, criado_em`,
           [sessaoId, valor, forma]
         );
+    const temOperadorNoLancamento = await pagamentosTemOperadorNome(client).catch(() => false);
+    if (temOperadorNoLancamento && operadorNome) {
+      await client.query('UPDATE sessao_pagamentos SET operador_nome = $2 WHERE id = $1', [ins[0].id, operadorNome]);
+      ins[0].operador_nome = operadorNome;
+    }
     const valorPago = Number((jaPago + valor).toFixed(2));
     let sessaoFechada = false;
     if (Math.abs(total - valorPago) <= 0.009) {
@@ -394,6 +403,7 @@ async function registrarPagamento(sessaoIdBruto, body) {
         valor: Number(ins[0].valor),
         formaPagamento: ins[0].forma_pagamento,
         criadoEm: ins[0].criado_em,
+        operadorNome: ins[0].operador_nome || null,
       },
       valorTotal: total,
       valorPago,
@@ -410,7 +420,7 @@ async function registrarPagamento(sessaoIdBruto, body) {
   }
 }
 
-async function fecharSessao(sessaoIdBruto, body) {
+async function fecharSessao(sessaoIdBruto, body, operadorNome = null) {
   const sessaoId = validarSessaoId(sessaoIdBruto);
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new ErroCaixa(400, 'Dados de fechamento inválidos');
@@ -501,11 +511,21 @@ async function fecharSessao(sessaoIdBruto, body) {
     }
     const falta = Number((valorCobrado - valorPago).toFixed(2));
     if (falta > 0.009) {
-      await client.query(
-        `INSERT INTO sessao_pagamentos (sessao_id, valor, forma_pagamento)
-         VALUES ($1, $2, $3)`,
-        [sessaoId, falta, forma]
-      );
+      const temOperadorNoFechamento = await pagamentosTemOperadorNome(client).catch(() => false);
+      const operador = typeof operadorNome === 'string' ? operadorNome.trim().slice(0, 120) || null : null;
+      if (temOperadorNoFechamento) {
+        await client.query(
+          `INSERT INTO sessao_pagamentos (sessao_id, valor, forma_pagamento, operador_nome)
+           VALUES ($1, $2, $3, $4)`,
+          [sessaoId, falta, forma, operador]
+        );
+      } else {
+        await client.query(
+          `INSERT INTO sessao_pagamentos (sessao_id, valor, forma_pagamento)
+           VALUES ($1, $2, $3)`,
+          [sessaoId, falta, forma]
+        );
+      }
       valorPago = Number((valorPago + falta).toFixed(2));
     }
 

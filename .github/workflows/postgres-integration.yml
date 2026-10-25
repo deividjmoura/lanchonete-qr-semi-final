@@ -45,3 +45,5 @@ jobs:
         run: npm run db:migrate
       - name: Run real PostgreSQL integration tests
         run: node --test tests/postgres-integration.test.cjs
+      - name: Run financial PostgreSQL integration tests
+        run: node --test tests/postgres-financial-integration.test.cjs
