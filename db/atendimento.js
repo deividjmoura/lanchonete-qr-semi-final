@@ -1,6 +1,5 @@
 const pool = require('./pool');
 const { getGarcomPorToken } = require('./garcons');
-const { getOuAbrirSessao } = require('./queries');
 const { totalEntregueDaSessao, totalPagoDaSessao } = require('./conta');
 
 class ErroAtendimento extends Error {
@@ -55,10 +54,35 @@ async function assumirMesa(token, numeroBruto, body = {}) {
       'SELECT id, numero, token FROM mesas WHERE numero=$1 FOR UPDATE', [numero]);
     const mesa = mesaRows[0];
     if (!mesa) throw new ErroAtendimento(404, 'Mesa não encontrada');
-    const sessaoId = await getOuAbrirSessao(client, mesa.id);
-    const { rows } = await client.query(
-      'SELECT garcom_responsavel_id, cliente_nome FROM mesa_sessoes WHERE id=$1 FOR UPDATE', [sessaoId]);
-    const anterior = rows[0].garcom_responsavel_id;
+    // Só uma sessão aberta criada pelo fluxo do cliente pode ser assumida.
+    // Não use getOuAbrirSessao aqui: isso criaria sessão para mesa vazia antes
+    // de validar a origem do pedido e deixaria um registro sem atendimento QR.
+    const { rows: sessoes } = await client.query(
+      `SELECT id, garcom_responsavel_id, cliente_nome
+         FROM mesa_sessoes
+        WHERE mesa_id=$1 AND status='aberta'
+        ORDER BY id DESC LIMIT 1
+        FOR UPDATE`,
+      [mesa.id]
+    );
+    const sessao = sessoes[0];
+    if (!sessao) {
+      throw new ErroAtendimento(409, 'Não existe pedido QR de cliente aguardando atendimento nesta mesa');
+    }
+
+    const { rows: pedidosCliente } = await client.query(
+      `SELECT id FROM pedidos
+        WHERE sessao_id=$1 AND origem_pedido='cliente'
+        ORDER BY id
+        LIMIT 1`,
+      [sessao.id]
+    );
+    if (!pedidosCliente[0]) {
+      throw new ErroAtendimento(409, 'Não existe pedido QR de cliente aguardando atendimento nesta mesa');
+    }
+
+    const sessaoId = sessao.id;
+    const anterior = sessao.garcom_responsavel_id;
     // Iniciar atendimento nunca é uma transferência implícita. Só o responsável
     // atual pode transferir, usando o endpoint explícito e auditado.
     if (anterior && Number(anterior) !== Number(garcom.id)) {
