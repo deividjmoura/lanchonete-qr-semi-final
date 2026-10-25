@@ -424,6 +424,32 @@ const server = http.createServer(async (req, res) => {
         throw e;
       }
     }
+    // Pagamento pelo PWA do garçom: token identifica o garçom; autorização
+    // financeira revalida o responsável atual dentro da transação (TOCTOU).
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/sessoes\/(\d+)\/pagamentos$/)) && req.method === 'POST') {
+      try {
+        const garcom = await getGarcomPorToken(m[1]);
+        if (!garcom || !garcom.ativo) {
+          return json(res, 401, { error: 'Link do garçom inválido ou desativado' });
+        }
+        const sessaoId = Number(m[2]);
+        if (!Number.isInteger(sessaoId) || sessaoId < 1) {
+          return json(res, 400, { error: 'Sessão inválida' });
+        }
+        const out = await registrarPagamento(
+          sessaoId,
+          await body(req),
+          garcom.nome,
+          garcom.id
+        );
+        broadcast('update', { type: 'pagamento_parcial', sessaoId });
+        return json(res, 201, out);
+      } catch (e) {
+        if (e instanceof ErroCaixa) return json(res, e.status, { error: e.message });
+        throw e;
+      }
+    }
+
     if (p === '/api/login' && req.method === 'POST') {
       const ip = clientIp(req);
       if (!golpePermitido(`login:${ip}`, { janelaMs: 5 * 60 * 1000, max: 8 })) {
@@ -587,7 +613,12 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/caixa\/sessoes\/(\d+)\/pagamentos$/)) && req.method === 'POST') {
       try {
-        const out = await registrarPagamento(Number(m[1]), await body(req));
+        const operador = await getStaffDaRequisicao(req);
+        const out = await registrarPagamento(
+          Number(m[1]),
+          await body(req),
+          operador?.nome || null
+        );
         broadcast('update', { type: 'pagamento_parcial', sessaoId: Number(m[1]) });
         return json(res, 201, out);
       } catch (e) {
@@ -611,7 +642,12 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/caixa\/sessoes\/(\d+)\/fechar$/)) && req.method === 'POST') {
       try {
-        const out = await fecharSessao(Number(m[1]), await body(req));
+        const operador = await getStaffDaRequisicao(req);
+        const out = await fecharSessao(
+          Number(m[1]),
+          await body(req),
+          operador?.nome || null
+        );
         broadcast('update', { type: 'sessao_fechada', sessaoId: Number(m[1]) });
         return json(res, 200, out);
       } catch (e) {

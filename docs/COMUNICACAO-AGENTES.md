@@ -374,3 +374,33 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 - **Limitação:** teste estrutural estático; não substitui teste HTTP real com sessão sintética nem demonstra por si só 401 anônimo em runtime. Não foram usados dados/credenciais de produção; nenhum código de runtime, banco, Railway ou secret foi alterado.
 - **Próxima ação:** confirmar conclusão final do CI e revisar se já existe cobertura dinâmica equivalente. Só então decidir se a issue #1 pode ser fechada.
 - **Nota operacional:** este registro na `main` pode disparar deploy automático. Frente 1 / Agente 1 deve verificar e registrar o resultado do deploy associado a este commit documental; nenhuma alteração de produção foi solicitada por esta frente.
+
+## Entrada e trabalho — novo agente (integração Frente 1) — 2026-10-25
+
+- **Agente / frente:** Novo agente de integração (coordenação + portabilidade segura da Frente 1 sobre a main atual).
+- **Estado:** em andamento (branch local `work/integracao-frente1-caixa-pagamentos`; ainda sem push/PR no remoto).
+- **Branch / SHA local de referência:** `work/integracao-frente1-caixa-pagamentos` sobre `main` em `b2ecc5e9e902cb3ac15fcbadc283c60e28e2910d`.
+- **Mudanças concretas (locais, ainda não publicadas):**
+  1. Migration aditiva `db/migrations/0022_sessao_pagamentos_operador.sql` (`operador_nome TEXT` em `sessao_pagamentos`).
+  2. `db/caixa.js`: assinatura de `registrarPagamento(sessaoId, body, operadorNome?, garcomResponsavelId?)` e `fecharSessao(..., operadorNome?)`; revalidação transacional do responsável (TOCTOU) quando `garcomResponsavelId` é informado; INSERT/SELECT passam a gravar e devolver `operador_nome` quando a coluna existir; listagem de sessões abertas inclui `operadorNome`.
+  3. `server.js`: rotas de caixa passam o nome do staff autenticado; novo `POST /api/garcom/:token/sessoes/:sessaoId/pagamentos` que autentica pelo token do garçom e revalida responsabilidade dentro da transação via `registrarPagamento(..., garcom.nome, garcom.id)`.
+- **Contratos preservados / alinhados:**
+  - Autoria do pedido ≠ responsabilidade da mesa ≠ autorização financeira.
+  - Pagamento pelo garçom só pelo responsável atual; 403 se transferido no meio da operação.
+  - Idempotência de pagamento mantida.
+  - Auto-fechamento de sessão na quitação simples (comportamento já presente na main) foi preservado.
+- **Arquivos tocados:** `db/migrations/0022_sessao_pagamentos_operador.sql`, `db/caixa.js`, `server.js`, `docs/COMUNICACAO-AGENTES.md`.
+- **Testes executados neste ambiente:**
+  - `node --check server.js` → OK
+  - `node --check db/caixa.js` → OK
+  - **Não executados:** migrations em PostgreSQL, testes de integração financeira, smoke, typecheck completo, build, validação visual. Ambiente local sem PostgreSQL configurado e sem push ao remoto.
+- **Bloqueios / limitações:**
+  - Sem credenciais de escrita no GitHub: branch e commits ficam locais até o responsável publicar ou autorizar push.
+  - PR #85 original continua divergente e com commits documentais; esta branch reconstrói o contrato essencial sobre a main atual em vez de force-push na branch antiga.
+  - Falta portar testes de `tests/postgres-financial-integration.test.cjs` e regressões estáticas do PR #85; falta UI de comprovante/operador se ainda não estiver na main.
+  - CI conjunto 0022+0023 e validação visual com Frente 2 continuam pendentes.
+- **Próxima ação e responsável:**
+  1. Responsável/agente com write: criar PR a partir desta branch (ou aplicar o diff) e rodar CI + teste PostgreSQL descartável.
+  2. Após CI verde no SHA publicado: coordenar merge de #85-equivalente primeiro, depois atualizar #89.
+  3. Não executar migrations manuais nem deploy de produção sem autorização explícita.
+- **Regra respeitada:** nenhum merge, force-push, alteração de Railway/secrets/banco de produção.
