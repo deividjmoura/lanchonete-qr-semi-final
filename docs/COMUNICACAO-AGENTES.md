@@ -20,13 +20,13 @@
 Esta seção substitui os snapshots anteriores de status. CI verde se aplica ao commit exato informado; não significa integração ou deploy.
 
 ### Frente 1 — caixa/pagamentos/PIX/comprovantes
-- **Estado:** PR [#85](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/85) aberto em draft, não integrado. O commit de código validado é `955523a5c3f72aba2981dc430e1291258666bf41`; a branch recebeu depois apenas commits documentais para sincronizar este canal.
+- **Estado:** PR [#85](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/85) aberto em draft, não integrado. head atual `dab9820a4e7cb70946d21c65695a72d25a5c7162`. CI do GitHub Actions concluiu **success** nesse head (run [#40201539020](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40201539020), 2026-10-25).
 - **Contrato:** migration `0022_sessao_pagamentos_operador.sql`; cobrança parcial e quitação pelo motor financeiro do Caixa; comprovante detalhado e operador auditado. A rota de pagamento do garçom passa o ID autenticado e revalida a responsabilidade atual dentro da transação/lock da sessão para fechar a janela TOCTOU com transferência.
 - **Evidência:** CI #366 **SUCCESS** no commit de código indicado. Inclui migration em PostgreSQL 16 limpo e teste financeiro real: pagamento parcial, idempotência, sobrecobrança, quitação/fechamento, auditoria do operador e 403 sem lançamento quando o garçom não é responsável.
 - **Limitação:** a UI integrada precisa ser revisada junto com a Frente 2; não há validação visual em dispositivo real.
 
 ### Frente 2 — responsável por mesa/transferência e integração PWA
-- **Estado:** PR antigo #86 fechado sem merge; PR [#89](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/89) aberto em draft, não integrado. O commit de código validado é `80a9e20a09356a60a35e302a4b3a2703a0d71a6c`; a branch recebeu depois apenas commits documentais para sincronizar este canal.
+- **Estado:** PR antigo #86 fechado sem merge; PR [#89](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/89) aberto em draft, não integrado. head atual `4e828e074404682a0a5f5711747585955d69b310`. CI do GitHub Actions concluiu **success** nesse head (run [#40201544526](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40201544526), 2026-10-25).
 - **Contrato:** migration `0023_atendimento_transferencia_actor.sql`; início de atendimento, transferência auditada, fila de prontos filtrada por responsável e entrega autorizada no servidor.
 - **Cobrança no PWA:** `GET /api/garcom/:token/sessoes/:sessaoId/resumo-pagamento` devolve total entregue, total pago e saldo somente ao responsável atual. A aba Cobrança chama `POST /api/garcom/:token/sessoes/:sessaoId/pagamentos` da Frente 1, registra recebimentos parciais com chave idempotente persistida para retry e exige confirmação explícita. Para PIX, o garçom precisa conferir o crédito no app bancário; a tela não gera QR nem confirma liquidação automaticamente. O fechamento final continua no Caixa.
 - **Evidência:** CI #367 **SUCCESS** no commit de código indicado. Inclui migration em PostgreSQL 16 limpo, transferência e histórico de ator/origem/destino, fila filtrada, bloqueio 403 ao antigo responsável, entrega pelo novo responsável e resumo de cobrança autorizado.
@@ -34,7 +34,7 @@ Esta seção substitui os snapshots anteriores de status. CI verde se aplica ao 
 
 ### Frente 3 — PWA/consentimento de notificações
 - **Estado:** PR #84 integrado à `main` no merge commit `daf1b2aab6df6c656b18d27059cf03f766f80237`. PR [#88](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/88) continua aberto em draft.
-- **Evidência:** CI #330 foi reportado como success no head `3aefd704273eead3ab551d5dfc905440ecb2e31d`; confirmar novamente antes de depender de um head diferente.
+- **Evidência:** CI do GitHub Actions concluiu **success** no head atual `3aefd704273eead3ab551d5dfc905440ecb2e31d` (run [#40199257840](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40199257840), 2026-10-25).
 - **Limitação:** instalação e consentimento não significam Web Push em segundo plano funcional. Subscrição persistida/envio server-side e validação Android/iOS continuam pendentes.
 
 ### Dependências e plano de integração
@@ -86,6 +86,14 @@ Use este formato ao registrar progresso:
 
 > Regra de honestidade: “CI verde” significa apenas que os jobs daquele commit passaram. Não significa que o código foi mesclado, implantado, validado em PostgreSQL real ou testado em dispositivos físicos.
 
+
+
+
+### Auditoria adicional de PRs de documentação antigos
+
+- PR [#68](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/68) propõe um quadro JSON alternativo de coordenação. Está aberto e não integrado; não é o canal oficial. Não fechar nem apagar conteúdo da branch sem revisar diffs e decidir o destino das propostas úteis.
+- PR [#32](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/32) propõe documentação adicional de fluxo multiagente e handoff. Está aberto e não integrado; verificar os arquivos específicos do PR antes de qualquer remoção, pois templates e orientações de engenharia podem ter valor independente do canal de coordenação.
+- A árvore recursiva completa de `main` foi consultada em 2026-10-25 e não contém arquivos adicionais chamados `AGENT_HANDOFF.md`, `DEVELOPMENT_WORKFLOW.md` ou um quadro JSON de coordenação. Não foi identificado um arquivo adicional na `main` que possa ser removido com segurança apenas pelo nome.
 
 ## Registro de leitura e auditoria documental — Frente 3 (2026-10-25)
 
