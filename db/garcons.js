@@ -91,11 +91,12 @@ async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null) {
     await client.query('BEGIN');
 
     const { rows } = await client.query(
-      `SELECT id, status, sessao_id, garcom_id FROM pedidos WHERE id = $1 FOR UPDATE`,
+      `SELECT p.id, p.status, p.sessao_id, p.garcom_id, s.garcom_responsavel_id FROM pedidos p JOIN mesa_sessoes s ON s.id=p.sessao_id WHERE p.id = $1 FOR UPDATE OF p,s`,
       [pid]
     );
     const pedido = rows[0];
     if (!pedido) throw new ErroGarcom(404, 'Pedido não encontrado');
+    if (Number(pedido.garcom_responsavel_id) !== Number(garcom.id) && Number(pedido.garcom_id) !== Number(garcom.id)) throw new ErroGarcom(403, 'Este pedido está atribuído a outro garçom');
     if (pedido.status === 'entregue') {
       throw new ErroGarcom(409, 'Pedido já foi totalmente entregue');
     }

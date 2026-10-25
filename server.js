@@ -60,7 +60,7 @@ const {
   garantirStaffSeed,
 } = require('./db/auth');
 const { golpePermitido } = require('./db/rateLimit');
-const { ErroAtendimento, listarMesasGarcom, assumirMesa, deixarMesa, criarPedidoGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
+const { ErroAtendimento, listarMesasGarcom, assumirMesa, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesaGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
 const { normalizarChavePix, inspecionarChavePix } = require('./db/pix-normaliza');
 const { subscribe, broadcast } = require('./db/events');
 const pool = require('./db/pool');
@@ -218,6 +218,12 @@ const server = http.createServer(async (req, res) => {
     const u = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
     const p = u.pathname;
 
+    // Liveness check: confirma apenas que o processo HTTP está respondendo.
+    // Intencionalmente não consulta o banco nem expõe versão/configuração.
+    if (p === '/healthz' && req.method === 'GET') {
+      return json(res, 200, { status: 'ok' });
+    }
+
     if (p === '/api/cardapio' && req.method === 'GET') {
       return json(res, 200, await getCardapio(), {
         'Cache-Control': 'public, max-age=15, stale-while-revalidate=60',
@@ -350,7 +356,7 @@ const server = http.createServer(async (req, res) => {
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/pedidos$/)) && req.method === 'GET') {
       const g = await getGarcomPorToken(m[1]);
       if (!g || !g.ativo) return json(res, 401, { error: 'Link inválido ou desativado' });
-      return json(res, 200, await getFilaGarcom());
+      return json(res, 200, await getFilaGarcom(g.id));
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/pedidos\/(\d+)\/entregar$/)) && req.method === 'POST') {
       try {
@@ -410,6 +416,10 @@ const server = http.createServer(async (req, res) => {
         if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message });
         throw e;
       }
+    }
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/pedidos-ativos$/)) && req.method === 'GET') {
+      try { return json(res, 200, await listarPedidosAtivosMesaGarcom(m[1], m[2])); }
+      catch (e) { if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message }); throw e; }
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/pedidos$/)) && req.method === 'POST') {
       try {

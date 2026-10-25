@@ -364,13 +364,13 @@ input, textarea, select, button {
   min-width: 0;
 }
 
-/* Delicia's São Miguel · praia rústica, pub artesanal e tropical acolhedor */
-:root { --delicias-coral:#f05e4a; --delicias-plum:#493641; --delicias-sand:#f6eddf; --delicias-wood:#8b5e3c; --delicias-leaf:#4f8a6b; --delicias-ocean:#2d6f7a; }
+
+:root { --qradmin-brand:#f05e4a; --qradmin-ink:#493641; --qradmin-surface:#f6eddf; --qradmin-muted:#8b5e3c; --qradmin-success:#4f8a6b; --qradmin-blue:#2d6f7a; }
 body { background-image: radial-gradient(circle at 10% 0%,rgba(240,94,74,.065),transparent 29%),radial-gradient(circle at 100% 75%,rgba(79,138,107,.06),transparent 36%); }
 .glass,.glass-deep { border-radius: 20px; }
 .brand-hero { position:relative; isolation:isolate; overflow:hidden; background:linear-gradient(112deg,rgba(240,94,74,.12),rgba(246,237,223,.8) 48%,rgba(79,138,107,.09)); border:1px solid rgba(139,94,60,.19); border-radius:24px; }
-.brand-hero::after { content:""; position:absolute; inset:0 0 0 auto; width:34%; pointer-events:none; opacity:.065; background-image:url('/branding/delicias/totem.svg'); background-position:right center; background-repeat:no-repeat; background-size:contain; z-index:-1; }
-.brand-kicker { color:var(--delicias-wood); letter-spacing:.22em; text-transform:uppercase; font-size:.7rem; font-weight:800; }
+.brand-hero::after { content:""; position:absolute; inset:0 0 0 auto; width:34%; pointer-events:none; opacity:.065; background-image:url('/logo/qradmin-mark.png'); background-position:right center; background-repeat:no-repeat; background-size:contain; z-index:-1; }
+.brand-kicker { color:var(--qradmin-muted); letter-spacing:.22em; text-transform:uppercase; font-size:.7rem; font-weight:800; }
 .brand-logo { filter:drop-shadow(0 4px 8px rgba(73,54,65,.12)); }
 
 .font-brand { font-family: Georgia, "Times New Roman", serif; }
