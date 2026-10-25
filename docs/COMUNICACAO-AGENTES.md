@@ -353,3 +353,12 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 - **Validação:** mudança documental apenas; nenhum teste de aplicação foi executado e nenhuma medição real foi feita.
 - **Próximo passo:** revisar a RFC e decidir o destino de armazenamento; após isso, implementar em branch separada com fixtures sintéticas, medição comparativa e compatibilidade com data-URLs/URLs/caminhos legados.
 - **Nota operacional:** commits na `main`, inclusive documentação, podem disparar deploy automático. A Frente 1 / Agente 1 deve verificar e registrar o resultado do deploy deste commit; esta atualização não altera intencionalmente runtime, banco, secrets ou configuração.
+
+
+## PR #90 — reconciliação final do tema da PWA do garçom (2026-10-25)
+
+- A PR aplica o tema QR Admin à PWA `/garcom-pwa/` online/offline, preserva suporte offline, protege o contador de pedidos e incrementa o cache do Service Worker para `v12`.
+- A branch foi reconstruída sobre a `main` mais recente para preservar os registros de coordenação posteriores e evitar ficar atrás de commits documentais concorrentes. As alterações funcionais continuam limitadas aos arquivos do PWA e ao teste de UX.
+- Validação reportada no HEAD anterior: `node --check` e 48 testes relevantes passaram; `npm run typecheck`, `npm run build` e CI GitHub Actions run `40208399800` passaram no SHA `2c1d89907283ffe557d135aa39c5eda9ff20ba3b`. Esta reconstrução exige CI novamente no SHA final antes do merge.
+- Sem validação em navegador/dispositivo real, PostgreSQL ou Android/iOS nesta frente. Nenhuma alteração em banco de produção, secrets ou configuração manual do Railway.
+- Web Push server-side, QR local e fluxos de caixa/cobrança das frentes #85/#89 continuam fora de escopo.
