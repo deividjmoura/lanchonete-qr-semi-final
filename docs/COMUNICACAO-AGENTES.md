@@ -341,3 +341,11 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 - **Limite importante:** esta PR prepara apenas o Service Worker. Não implementa `PushManager.subscribe()`, persistência de subscrições, endpoints autenticados nem envio server-side. Não foi validada em dispositivos Android/iOS com o app encerrado.
 - **Coordenação:** nenhuma alteração em `server.js`, `package.json`, migrations, Railway, secrets ou dados de produção. A PR #91 não deve ser considerada Web Push completo; o backend depende do contrato de destinatários e autorização da Frente 2 e deve ser integrado depois de reduzir a concorrência com #85/#89.
 - **Próximo passo:** revisão do diff e CI na PR #91; depois, fechar contrato de destinatário com a Frente 2 e implementar subscrição/envio backend numa etapa separada, com testes de autorização, endpoint expirado, deduplicação, transferência e testes reais em dispositivos.
+
+
+## PR #90 — reconciliação do tema da PWA do garçom (2026-10-25)
+
+- **Escopo:** aplicar o tema QR Admin à PWA `/garcom-pwa/` online/offline, preservar suporte offline, corrigir o contador de pedidos para não interromper a inicialização se o elemento não existir e incrementar o cache do Service Worker para `v12`.
+- **Reconciliação:** a branch de trabalho foi refeita sobre a `main` atual para manter os registros recentes de coordenação e as correções de pedidos/entrega já integradas. Em `app.js`, foram aplicadas as mudanças visuais e a proteção do contador; os outros arquivos do PWA e o teste de UX foram portados da PR.
+- **Validação:** CI e testes do SHA reconciliado precisam terminar antes de aprovar merge. Sem PostgreSQL ou validação em dispositivo físico nesta frente. Nenhuma alteração em banco de produção, secrets ou configuração manual do Railway.
+- **Pendências fora de escopo:** Web Push server-side, QR local e fluxos de caixa/cobrança das frentes #85/#89 continuam separados.
