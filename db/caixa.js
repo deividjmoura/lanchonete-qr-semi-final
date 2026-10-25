@@ -271,7 +271,7 @@ async function lerSessoesAbertas(client) {
 }
 
 /** Registra pagamento parcial (divisão de conta). Não fecha a sessão. */
-async function registrarPagamento(sessaoIdBruto, body, operadorNome = null) {
+async function registrarPagamento(sessaoIdBruto, body, operadorNome = null, garcomResponsavelId = null) {
   const sessaoId = validarSessaoId(sessaoIdBruto);
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new ErroCaixa(400, 'Dados de pagamento inválidos');
@@ -298,6 +298,12 @@ async function registrarPagamento(sessaoIdBruto, body, operadorNome = null) {
     await client.query('BEGIN');
     const sessao = await travarSessao(client, sessaoId);
     if (sessao.status !== 'aberta') throw new ErroCaixa(409, 'Sessão já está fechada');
+    // A autorização do garçom precisa estar dentro da mesma transação/lock
+    // que registra o pagamento; a checagem na rota sozinha teria TOCTOU com transferência.
+    if (garcomResponsavelId != null &&
+        Number(sessao.garcom_responsavel_id) !== Number(garcomResponsavelId)) {
+      throw new ErroCaixa(403, 'Somente o garçom responsável atual pode registrar pagamentos desta mesa');
+    }
 
     // Replay idempotente: toque duplo no caixa / retry de rede com a mesma
     // chave devolve o lançamento original em vez de baixar o valor 2x.
