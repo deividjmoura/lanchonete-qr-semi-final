@@ -491,3 +491,19 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 - **Cobertura:** `tests/postgres-integration.test.cjs` valida host/nome do banco/ambiente antes de consultar o banco, confirma PostgreSQL major 16 e verifica idempotência, estoque, cancelamento e restauração, entrega parcial, pagamentos e fechamento. O workflow provisiona PostgreSQL 16 por job, usa credenciais sintéticas e não requer secrets de produção.
 - **Validação confirmada no HEAD `8cb756225e56e23e11dc11a8026538df02d905c9`:** CI #448 SUCCESS (https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40216153567) e PostgreSQL integration #26 SUCCESS (https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40216153516). O HEAD está sobre a main atual, com zero commits atrás e branch mergeável. Como este registro documental gera um novo commit, repetir os dois workflows no HEAD final antes de merge.
 - **Limite operacional:** migrations são executadas apenas no PostgreSQL descartável provisionado pelo workflow; nenhuma alteração em Railway, secrets ou produção foi feita nesta frente. Merge autorizado pelo usuário somente depois de verificar checks no HEAD final e revisar o diff. Após o merge, a Frente 1 deve confirmar o resultado do deploy automático e fazer smoke test de saúde sem alterar dados de negócio.
+
+
+## Handoff operacional para a Frente 1 — verificar deploy e smoke test (2026-10-25)
+
+**Responsável exclusivo:** Agente 1 / Frente 1. A verificação de Railway pertence à Frente 1; os demais agentes não devem alterar o serviço nem executar ações operacionais paralelas.
+
+Após o merge da PR [#104](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/104), o status de deploy reportado pelo Railway passou a **SUCCESS** para o commit `2949c7c517b1d0be3cbe601d884142e4a11f7aac`. Ainda falta confirmar a resposta HTTP pública por smoke test independente. **O domínio correto informado pelo responsável do projeto é https://qradminn.up.railway.app (dois “n” em “qradminn”); não usar o domínio antigo sem o segundo “n”.**
+
+### Ações solicitadas à Frente 1
+1. Conferir no Railway o serviço, o domínio atual, o commit implantado e o resultado do deploy, sem alterar configuração caso não seja necessário.
+2. Executar um smoke test estritamente read-only para `GET https://qradminn.up.railway.app/healthz` (endpoint documentado em `server.js`/Frente 6). Esperar HTTP de sucesso e corpo esperado `{"status":"ok"}`; não seguir redirects ou testar rotas mutáveis.
+3. Se a URL não resolver ou o endpoint não responder, diagnosticar pelo painel/logs do Railway e registrar o resultado observado. Não trocar domínio, variáveis, secrets, banco ou configuração para “tentar resolver” sem autorização explícita.
+4. Atualizar este documento e a [issue #75](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/75) com timestamp, commit implantado, status do deploy, comando/URL de smoke test, status HTTP/corpo ou erro exato e links/evidências.
+5. Manter a issue #75 aberta até o smoke test HTTP ser confirmado. Não executar migrations manuais, seed, testes mutáveis nem alterar dados de produção.
+
+**Estado atual:** CI #449 e PostgreSQL integration #27 passaram no HEAD final da PR antes do merge; a PR #104 foi integrada. O status de deploy reportado pelo Railway está SUCCESS, mas a tentativa anterior de smoke test não conseguiu resolver o host no ambiente de execução. Isso não prova falha do serviço nem confirma saúde HTTP. A próxima ação é da Frente 1 conforme os passos acima.
