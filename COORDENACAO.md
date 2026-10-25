@@ -18,8 +18,8 @@
 
 | Frente | Estado registrado no canal canônico | Próxima ação |
 |---|---|---|
-| Frente 1 — caixa/pagamentos/PIX | PR #85 aberto em draft, não integrado; head atual `3e456138936f05b1da49af8ea095882aac7caaa4` (documentação sincronizada após o código). CI #366 **success** no head de código `955523a5c3f72aba2981dc430e1291258666bf41`; `mergeable=true` na última consulta. | Validação visual conjunta; depois integrar #85 primeiro e conferir CI na `main`. |
-| Frente 2 — responsável por mesa | PR #86 fechado sem merge; PR #89 aberto em draft, não integrado; head atual `37cbe9f76dd7c82b7d208de1fd9d8c285fb74167` (documentação sincronizada após o código). CI #367 **success** no head de código `80a9e20a09356a60a35e302a4b3a2703a0d71a6c`; `mergeable=true`/`clean` na última consulta. | Validar visualmente cobrança parcial e, após merge de #85, atualizar #89 para a base resultante e confirmar CI conjunto. |
+| Frente 1 — caixa/pagamentos/PIX | PR #85 aberto em draft, não integrado; head atual `dab9820a4e7cb70946d21c65695a72d25a5c7162` (documentação sincronizada após o código). CI #366 **success** no head de código `955523a5c3f72aba2981dc430e1291258666bf41`; `mergeable=true` na última consulta. | Validação visual conjunta; depois integrar #85 primeiro e conferir CI na `main`. |
+| Frente 2 — responsável por mesa | PR #86 fechado sem merge; PR #89 aberto em draft, não integrado; head atual `4e828e074404682a0a5f5711747585955d69b310` (documentação sincronizada após o código). CI #367 **success** no head de código `80a9e20a09356a60a35e302a4b3a2703a0d71a6c`; `mergeable=true`/`clean` na última consulta. | Validar visualmente cobrança parcial e, após merge de #85, atualizar #89 para a base resultante e confirmar CI conjunto. |
 | Frente 3 — PWA do garçom | PR #84 integrado à `main`; PR #88 aberto em draft, não integrado; head registrado `3aefd704273eead3ab551d5dfc905440ecb2e31d`; CI #330 sucesso registrado nesse head. | Revisar PR #88 e validar em dispositivos reais. Push em segundo plano continua sem implementação/verificação server-side. |
 
 ### Evidências e limites
