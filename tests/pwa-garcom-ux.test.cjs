@@ -6,6 +6,18 @@ test('Nenhum controle de pagamento ativo em interface de garçom',()=>{assert.do
 
 test('CSS crítico impede exibir todas as abas e quebra dos atalhos',()=>{assert.match(html,/id="critical-pwa-layout"/);assert.match(html,/\.page\{display:none!important\}/);assert.match(html,/\.page\.active\{display:block!important\}/);assert.match(html,/\.quick-grid\{display:grid!important/);assert.doesNotMatch(html,/class="hero-mascot"/)});
 test('Service worker não responde HTML a requisições de CSS e usa network-first',()=>{const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');assert.match(sw,/fetch\(req\)\.then/);assert.match(sw,/req\.mode==='navigate'/);assert.match(sw,/Response\.error\(\)/)});
+test('Tela do garçom usa o mesmo tema do QR Admin e não quebra sem o contador',()=>{
+  const css=fs.readFileSync(path.join(root,'styles.css'),'utf8');
+  assert.match(html,/qradmin-tema/);
+  assert.match(html,/id="themeToggle"/);
+  assert.match(html,/id="queueCount"/);
+  assert.match(html,/qradmin-horizontal\.png/);
+  assert.match(js,/if\(qc\)qc\.textContent/);
+  assert.match(js,/localStorage\.setItem\('qradmin-tema'/);
+  assert.doesNotMatch(html,/theme-color" content="#3157a4"/);
+  assert.match(css,/--coral:#00b3a5/);
+  assert.match(css,/data-theme="escuro"/);
+});
 
 test('Consentimento explica requisitos e só solicita permissão por ação explícita',()=>{
  assert.match(html,/id="notificationConsent"/);
