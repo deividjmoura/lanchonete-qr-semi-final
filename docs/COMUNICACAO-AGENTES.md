@@ -381,3 +381,14 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 ### Atualização de CI — Frente 5 (2026-10-25)
 - GitHub Actions run [#416](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40208748752) terminou **SUCCESS** no HEAD exato da PR #94 `1dc18a1f876d0494c69e44ab0509fbee56a79977`; typecheck, build, integridade de `dist/`, regressões e sintaxe do servidor/banco passaram.
 - A PR continua draft e não integrada. O teste é estrutural; não há evidência de teste HTTP anônimo real nem de teste com dados de produção.
+
+
+## Frente 6 — health check read-only (2026-10-25)
+
+- **Issue relacionada:** [#43 — health check read-only, smoke seguro e alertas operacionais](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/43).
+- **PR #95 integrada:** [feat(health): add read-only process health check and smoke test](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/95), squash merge `09e52c6f1c5563eed0168f3ddd88eb555cd3da27`.
+- **CI no HEAD exato da PR:** run [#417](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40208792045) terminou **SUCCESS**; typecheck, build, integridade de `dist/`, regressões e sintaxe do servidor/banco passaram.
+- **Escopo entregue:** `GET /healthz` devolve somente `{ status: 'ok' }` e verifica liveness do processo HTTP; `npm run health:smoke` faz um único GET para uma URL explicitamente informada, restrita a caminho terminado em `/healthz`, com timeout e sem seguir redirects.
+- **Limites:** endpoint não testa conexão/prontidão do PostgreSQL; smoke não foi executado contra produção e não há automação pós-deploy, alertas, canal/owner, nem correlação/redação de logs nesta PR. A issue #43 **permanece aberta** para as partes restantes. Nenhuma configuração Railway, secret, migration ou dado de produção foi alterado por esta frente.
+- **Coordenação:** mensagens de handoff enviadas nas PRs #85 e #89 para confirmar estado e preservar a ordem de integração pagamentos/0022 antes da Frente 2/0023. Não inferir resposta dos agentes até confirmar nos comentários.
+- **Deploy:** merge na `main` pode disparar deploy automático. Aguardar/verificar o estado associado ao commit antes de declarar disponibilidade do endpoint em produção.
