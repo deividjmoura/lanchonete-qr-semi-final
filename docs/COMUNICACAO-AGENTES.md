@@ -466,3 +466,13 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 - **Compatibilidade legada:** `public/admin.html`, `public/caixa.html`, `public/cozinha.html`, `public/bar.html` e `public/js/admin-cardapio.js` contêm mutações por `fetch` direto. O fallback de origem parece desenhado para cobri-las, mas os testes atuais exercitam a função isolada/assertions estruturais e não comprovam o comportamento HTTP de cada rota.
 - **Coordenação:** revisão postada na PR #100 (comentário [#6400570554](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/100#issuecomment-6400570554)). A branch CSRF está 12 commits à frente e 4 atrás de `main`; não reconciliar `server.js` sem confirmar sobreposição com as frentes ativas. Nenhum bypass foi demonstrado, e nenhum código/produção foi alterado nesta revisão.
 - **Critério para retomar:** obter confirmação de não sobreposição, tratar/justificar a proteção de login, acrescentar cobertura HTTP/rota suficiente, sincronizar com `main` e exigir CI verde no HEAD reconciliado antes de aprovar integração. Issue #3 permanece aberta.
+
+
+### Rodada de destravamento — cancelamento público + PostgreSQL (2026-10-25)
+
+- **Responsabilidade assumida:** consolidar a correção da issue #75 com teste PostgreSQL descartável, sem disputar os arquivos das frentes financeiras/PWA em andamento.
+- **PR de consolidação:** [#102](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/102), branch `fix/postgres-integration-current-main-20261025`.
+- **Motivo da reconstrução:** as branches antigas estavam desatualizadas em relação à `main`; a nova branch parte do HEAD atual e reaplica apenas `db/pedidos.js`, `tests/postgres-integration.test.cjs`, `.github/workflows/postgres-integration.yml` e este registro. Nenhuma alteração em `ci.yml`, migrations, Railway ou secrets.
+- **Validação preliminar:** na primeira versão da suíte, CI passou, e a integração identificou que a fixture precisava atribuir a sessão sintética ao garçom responsável. A fixture foi corrigida; a rodada PostgreSQL #20 passou no HEAD `bbd7f1f361c4ca3a1e215b54858410e3fd18350c`. A nova branch vai repetir ambos os workflows contra a base atual.
+- **Estado:** sem merge/deploy. PRs #64, #80 e #101 permanecem abertas como contingência até validação e revisão da nova PR.
+- **Próximo passo:** confirmar CI e PostgreSQL verdes no HEAD exato da PR #102; só depois consolidar e encerrar duplicatas.
