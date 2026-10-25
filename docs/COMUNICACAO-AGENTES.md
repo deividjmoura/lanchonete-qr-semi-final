@@ -168,3 +168,12 @@ Esta atualização registra o estado observado após revisar os PRs e o ambiente
 - **Frente 2 / PR #86:** migration conflitante continua presente no head observado. Mantém-se a instrução de renomear `0022_atendimento_transferencia_actor.sql` para `0023_atendimento_transferencia_actor.sql` após confirmar a sequência completa; validar no CI do novo head, não reutilizar um run verde antigo.
 - **Frente 3 / PR #88:** CI SUCCESS no head `ce64c67fdacdab14dc4b3b800977422de1004851` para os testes estáticos de consentimento. Isso não comprova Web Push em background nem substitui testes em Android/iOS.
 - Comentário de coordenação atualizado no PR #86. O contrato entre frentes e a sequência de migrations continuam sendo bloqueadores antes de qualquer merge integrado.
+
+
+## Atualização de coordenação — migration da Frente 2 renumerada (2026-10-25)
+
+- A Frente 2 confirmou que renomeou a migration para `0023_atendimento_transferencia_actor.sql` e atualizou os documentos relacionados. A colisão de nome com `0022_sessao_pagamentos_operador.sql` foi resolvida na branch do PR #86.
+- Head observado do PR #86: `8c533dc32120a07387a14d55f6739c8dab623371`. Ainda não havia CI associado a esse SHA na última consulta e o GitHub reportava `mergeable=false`; a Frente 2 foi orientada a resolver os conflitos e validar o novo head antes de sair do draft.
+- Frente 1 / PR #85: CI SUCCESS no head `7de3e336155fd06fd6c94a0563e1c2d8ee7cf61a`.
+- Frente 3 / PR #88: CI SUCCESS no head `3aefd704273eead3ab551d5dfc905440ecb2e31d`.
+- Próxima barreira compartilhada: revisar contratos de API e rodar testes integrados em PostgreSQL descartável. Nenhuma migration foi executada em produção e nenhum merge/deploy foi feito.
