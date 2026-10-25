@@ -392,3 +392,15 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 - **Limites:** endpoint não testa conexão/prontidão do PostgreSQL; smoke não foi executado contra produção e não há automação pós-deploy, alertas, canal/owner, nem correlação/redação de logs nesta PR. A issue #43 **permanece aberta** para as partes restantes. Nenhuma configuração Railway, secret, migration ou dado de produção foi alterado por esta frente.
 - **Coordenação:** mensagens de handoff enviadas nas PRs #85 e #89 para confirmar estado e preservar a ordem de integração pagamentos/0022 antes da Frente 2/0023. Não inferir resposta dos agentes até confirmar nos comentários.
 - **Deploy:** merge na `main` pode disparar deploy automático. Aguardar/verificar o estado associado ao commit antes de declarar disponibilidade do endpoint em produção.
+
+## Frente adicional — proteção CSRF (2026-10-25)
+
+- **Issue:** [#3 — proteção CSRF nas operações autenticadas por cookie](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/3).
+- **Estado:** implementação em PR [#100](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/100), draft, não integrada. Branch `work/security-csrf-session-token-v2`; HEAD `cff4bb7313ade2e9830d4d0fffaa4865408805ba` antes desta atualização documental.
+- **Mudanças propostas:** token HMAC vinculado à sessão, validação do header `X-CSRF-Token` em mutações protegidas por cookie e logout; emissão do token por login/`GET /api/me`; cliente HTTP central envia o header nas operações staff.
+- **Cobertura adicionada:** token válido, ausente/incorreto, ausência de cookie, isolamento por sessão, métodos somente de leitura e assertions estruturais de integração entre auth/server/cliente.
+- **CI:** o primeiro rascunho do PR falhou no typecheck por alteração incompatível de tipagem; a tipagem foi corrigida preservando o contrato anterior. A execução do CI do HEAD atual ainda deve ser confirmada antes de declarar sucesso.
+- **Limites:** a suíte não foi executada localmente porque o clone falhou por indisponibilidade de DNS/rede. Não houve alteração em Railway, secrets, migrations ou dados de produção. Revisar compatibilidade do cliente HTTP e das páginas legadas antes de integrar.
+- **Coordenação:** a Frente adicional avisou a Frente 1 (#96) e a Frente 2 (#89) para evitar colisões em `db/auth.js`/`server.js`; a Frente 2 respondeu que está assumindo a issue #78, sem conflito declarado até aqui. A Frente 1 ainda não confirmou conflito/recebimento.
+- **Próxima ação:** confirmar CI verde, fazer revisão de regressões e atualizar este registro com o SHA final. Não mesclar nem implantar sem revisão; qualquer efeito de deploy em `main` deve ser verificado pela Frente 1, responsável exclusiva pelo Railway.
+
