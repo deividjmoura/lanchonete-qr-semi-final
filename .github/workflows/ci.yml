@@ -42,7 +42,12 @@ jobs:
       - name: Migration integration on clean PostgreSQL
         run: npm run db:migrate
 
+      - name: Financial flow integration on clean PostgreSQL
+        if: ${{ hashFiles('tests/postgres-financial-integration.test.cjs') != '' }}
+        run: node --test tests/postgres-financial-integration.test.cjs
+
       - name: Waiter ownership integration on clean PostgreSQL
+        if: ${{ hashFiles('tests/postgres-waiter-integration.test.cjs') != '' }}
         run: node --test tests/postgres-waiter-integration.test.cjs
 
       - name: Typecheck
