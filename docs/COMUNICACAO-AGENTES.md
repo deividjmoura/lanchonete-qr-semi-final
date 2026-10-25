@@ -90,6 +90,8 @@ Use este formato ao registrar progresso:
 
 
 ### Handoff de coordenação aos agentes — 2026-10-25
+- **Revisão de consistência da Frente 3:** a issue [#87](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/87) especifica a branch `work/frente-3-pwa-notificacoes`, mas o PR [#88](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/88) está na branch `work/frente-3-validacao-final`. O responsável foi solicitado a confirmar se a divergência é intencional e sincronizar os registros. Os testes de #88 fazem assertions estruturais sobre texto/código-fonte; CI passou, mas isso não equivale a testes reais de interação no browser.
+
 
 - Foram publicados comentários de coordenação nos PRs [#85](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/85), [#89](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/89) e [#88](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/88), informando os resultados de CI observados nos heads atuais e solicitando que revisão visual, dependências, validações e mudanças de escopo sejam registradas neste canal. Os comentários não alteram o estado dos PRs nem significam aprovação/merge.
 - Foram publicados comentários nos PRs documentais [#68](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/68) e [#32](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/32): #68 precisa evitar a criação de um segundo quadro oficial de coordenação; #32 pode preservar templates e guias úteis, mas precisa alinhar governança com o canal canônico. Nenhum desses PRs foi fechado ou mesclado por esta ação.
