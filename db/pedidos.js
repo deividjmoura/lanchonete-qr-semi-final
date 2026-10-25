@@ -426,9 +426,8 @@ async function cancelarPedidoCliente(token, pedidoId) {
        FROM pedidos p
        JOIN mesa_sessoes s ON s.id = p.sessao_id
        WHERE p.id = $1 AND s.mesa_id = $2 AND s.status = 'aberta'
-         AND ($3::int IS NULL OR s.garcom_responsavel_id = $3)
        FOR UPDATE OF p`,
-      [pedidoNumerico, mesa.id, null]
+      [pedidoNumerico, mesa.id]
     );
     const pedido = rows[0];
     if (!pedido) throw new ErroPedido(404, 'Pedido não encontrado nesta mesa');
