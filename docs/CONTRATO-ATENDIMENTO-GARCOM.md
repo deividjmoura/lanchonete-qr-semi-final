@@ -10,7 +10,7 @@ O token UUID individual do link do garçom é uma credencial bearer na URL. Toda
 - `POST /api/garcom/:garcomToken/mesas/:numero/assumir` é o endpoint legado que o PWA usa para **iniciar atendimento**; aceita `{clienteNome?:string}`. Abre uma sessão se necessário e grava `garcom_responsavel_id`. Se outra pessoa já for responsável, devolve 409; não permite transferência implícita, mesmo se o cliente enviar `transferir:true`.
 - `GET /api/garcom/:garcomToken/garcons-ativos` → `{garcons:[{id,nome}]}`. Só retorna IDs e nomes de garçons ativos, sem tokens.
 - `POST /api/garcom/:garcomToken/mesas/:numero/transferir` aceita `{garcomDestinoId:number}`. Somente o responsável atual pode transferir a sessão aberta; o destino deve existir e estar ativo. A transação atualiza a sessão e insere no histórico o responsável anterior, o novo, o ator (`alterado_por_id`) e o horário.
-- A migração `0022_atendimento_transferencia_actor.sql` adiciona o ator à tabela `mesa_atendimento_historico` sem remover registros anteriores.
+- A migração `0023_atendimento_transferencia_actor.sql` adiciona o ator à tabela `mesa_atendimento_historico` sem remover registros anteriores.
 - Pedidos/itens que já estavam prontos permanecem com status `concluido`: não são entregues nem recriados pela transferência. Como a fila é consultada por responsável atual da sessão, somem do PWA do antigo responsável e aparecem no PWA do novo. A API administrativa continua consultando o conjunto completo.
 
 ## Pedido do garçom
