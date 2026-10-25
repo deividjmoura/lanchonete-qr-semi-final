@@ -55,3 +55,7 @@ test('quitação integral simples tenta fechar a sessão e atualizar mesas', () 
   assert.ok(storeSource.includes('await get().hydrateMesas().catch(() => null)'));
   assert.ok(storeSource.includes('Pagamento registrado, mas a mesa continua aberta'));
 });
+
+test('hydrateCaixa não preserva pedidos operacionais de sessões já fechadas', () => {
+  assert.ok(storeSource.includes('idsVivos.has(p.sessaoId)'));
+});
