@@ -309,7 +309,7 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 
 ### Complemento da implementação de pedidos por garçom — autorização de entrega
 - A fila de prontos foi restringida ao responsável pela sessão ou ao garçom registrado no próprio pedido; o endpoint de entrega também valida essa regra no servidor sob lock. Isso permite que um garçom entregue os pedidos que ele registrou em mesa de outro responsável, sem abrir a fila de todos os pedidos a qualquer funcionário.
-- CI do primeiro commit de implementação: run [#40206750514](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40206750514) estava em execução na última consulta. Este complemento gera um novo commit e requer CI novamente no SHA final.
+- CI intermediário: run [#40206750514](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40206750514) success no commit `aef039d7923f8365a5bef2f17d9bc1fc908eecff`; run [#40206890432](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40206890432) falhou após a restrição de entrega por mocks de teste desatualizados. Os mocks foram corrigidos; CI final passou no commit `73e58fecd3606945200d36dff702a390dccaed8a` (run #40207170431).
 
 
 ### Ajuste de regressões após CI — 2026-10-25
