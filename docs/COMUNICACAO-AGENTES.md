@@ -404,3 +404,11 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 - **Coordenação:** a Frente adicional avisou a Frente 1 (#96) e a Frente 2 (#89) para evitar colisões em `db/auth.js`/`server.js`; a Frente 2 respondeu que está assumindo a issue #78, sem conflito declarado até aqui. A Frente 1 ainda não confirmou conflito/recebimento.
 - **Próxima ação:** confirmar CI verde, fazer revisão de regressões e atualizar este registro com o SHA final. Não mesclar nem implantar sem revisão; qualquer efeito de deploy em `main` deve ser verificado pela Frente 1, responsável exclusiva pelo Railway.
 
+### Rodada de destravamento — revisão CSRF (2026-10-25)
+
+- **Item:** PR [#100](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/100), issue [#3](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/3).
+- **Estado verificado:** PR continua aberto em draft, não integrado. CI #433 foi SUCCESS no commit de código `950f3123217bb88eb220539889e8aef171d20bba`; CI #434 foi SUCCESS no HEAD documental `033a2ecf9bfbc5b7ae4f5cd982d933bdae98aabd`. A comparação atual com `main` retorna `diverged` (11 commits à frente, 1 atrás), e o conector informa `mergeable=false`; isso precisa ser reavaliado antes de integrar.
+- **Revisão estática:** o cliente central envia `X-CSRF-Token` para os caminhos staff listados; outras mutações staff podem depender do fallback `Origin`/`Referer`. Esse fallback exige origem presente e chama `verificarOrigemRequisicao`; não foi demonstrado bypass, mas a compatibilidade dos caminhos legados deve ser confirmada e coberta por regressão.
+- **Arquivos para revisão coordenada:** `db/auth.js`, `src/lib/api.ts`, chamadas `fetch` legadas, `tests/regressions.cjs`; `server.js` é compartilhado com as frentes ativas e não deve ser alterado sem coordenação.
+- **Testes/evidências:** CI #433/#434 SUCCESS conforme os SHAs acima. Não foi executada suíte local nem teste de browser nesta etapa. Nenhuma alteração em Railway, secrets, banco ou produção.
+- **Próxima ação:** mapear mutações staff não cobertas pelo cliente central, decidir se o fallback de origem é intencional para cada rota legada, atualizar branch sem descartar alterações compartilhadas e exigir CI no HEAD reconciliado. A issue #3 permanece aberta até merge e validação dos critérios.
