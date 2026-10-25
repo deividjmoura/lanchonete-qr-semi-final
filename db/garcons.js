@@ -90,12 +90,31 @@ async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null) {
   try {
     await client.query('BEGIN');
 
-    const { rows } = await client.query(
-      `SELECT id, status, sessao_id, garcom_id FROM pedidos WHERE id = $1 FOR UPDATE`,
-      [pid]
+    // Ler a sessão sem lock primeiro, depois bloquear sempre na ordem sessão → pedido.
+    // Isso serializa com transferências/fechamento sem inverter a ordem dos locks.
+    const { rows: referencia } = await client.query(
+      'SELECT sessao_id FROM pedidos WHERE id = $1', [pid]);
+    if (!referencia[0]) throw new ErroGarcom(404, 'Pedido não encontrado');
+
+    const { rows: sessoes } = await client.query(
+      `SELECT id, status, garcom_responsavel_id
+         FROM mesa_sessoes WHERE id = $1 FOR UPDATE`,
+      [referencia[0].sessao_id]
     );
+    const sessao = sessoes[0];
+    if (!sessao || sessao.status !== 'aberta' ||
+        Number(sessao.garcom_responsavel_id) !== Number(garcom.id)) {
+      throw new ErroGarcom(403, 'Este pedido não pertence a uma mesa sob sua responsabilidade atual');
+    }
+
+    const { rows } = await client.query(
+      'SELECT id, status, sessao_id, garcom_id FROM pedidos WHERE id = $1 FOR UPDATE',
+      [pid]);
     const pedido = rows[0];
     if (!pedido) throw new ErroGarcom(404, 'Pedido não encontrado');
+    if (Number(pedido.sessao_id) !== Number(sessao.id)) {
+      throw new ErroGarcom(409, 'A sessão do pedido mudou; atualize a fila');
+    }
     if (pedido.status === 'entregue') {
       throw new ErroGarcom(409, 'Pedido já foi totalmente entregue');
     }

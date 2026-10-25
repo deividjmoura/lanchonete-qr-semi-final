@@ -28,6 +28,7 @@ async function listarMesasGarcom(token) {
   })) };
 }
 async function assumirMesa(token, numeroBruto, body = {}) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) throw new ErroAtendimento(400, 'Corpo de início de atendimento inválido');
   const garcom = await validarGarcom(token);
   const numero = Number(numeroBruto);
   if (!Number.isSafeInteger(numero) || numero < 1 || numero > 70) {
@@ -44,33 +45,113 @@ async function assumirMesa(token, numeroBruto, body = {}) {
     if (numero > Number(config[0]?.quantidade || 20)) {
       throw new ErroAtendimento(409, 'Mesa ainda não habilitada pelo administrador');
     }
-    const { rows: mesaRows } = await client.query('SELECT id, numero, token FROM mesas WHERE numero=$1 FOR UPDATE', [numero]);
+    const { rows: mesaRows } = await client.query(
+      'SELECT id, numero, token FROM mesas WHERE numero=$1 FOR UPDATE', [numero]);
     const mesa = mesaRows[0];
     if (!mesa) throw new ErroAtendimento(404, 'Mesa não encontrada');
     const sessaoId = await getOuAbrirSessao(client, mesa.id);
     const { rows } = await client.query(
-      "SELECT garcom_responsavel_id, cliente_nome FROM mesa_sessoes WHERE id=$1 FOR UPDATE", [sessaoId]);
+      'SELECT garcom_responsavel_id, cliente_nome FROM mesa_sessoes WHERE id=$1 FOR UPDATE', [sessaoId]);
     const anterior = rows[0].garcom_responsavel_id;
-    if (anterior && anterior !== garcom.id && body.transferir !== true) {
-      throw new ErroAtendimento(409, 'Mesa já atribuída a outro garçom; confirme a transferência');
+    // Iniciar atendimento nunca é uma transferência implícita. Só o responsável
+    // atual pode transferir, usando o endpoint explícito e auditado.
+    if (anterior && Number(anterior) !== Number(garcom.id)) {
+      throw new ErroAtendimento(409, 'Mesa já está sob responsabilidade de outro garçom. Peça ao responsável para transferir.');
     }
     await client.query(`
       UPDATE mesa_sessoes SET garcom_responsavel_id=$2,
         cliente_nome=COALESCE($3, cliente_nome)
       WHERE id=$1`, [sessaoId, garcom.id, clienteNome]);
-    if (anterior !== garcom.id) {
+    if (Number(anterior) !== Number(garcom.id)) {
       await client.query(`
-        INSERT INTO mesa_atendimento_historico(sessao_id,garcom_anterior_id,garcom_novo_id)
-        VALUES ($1,$2,$3)`, [sessaoId, anterior, garcom.id]);
+        INSERT INTO mesa_atendimento_historico
+          (sessao_id,garcom_anterior_id,garcom_novo_id,alterado_por_id)
+        VALUES ($1,$2,$3,$4)`, [sessaoId, anterior, garcom.id, garcom.id]);
     }
     await client.query('COMMIT');
     return { mesa: numero, mesaToken: mesa.token, sessaoId,
-      garcom: { id: garcom.id, nome: garcom.nome },
-      transferida: anterior != null && anterior !== garcom.id };
+      garcom: { id: garcom.id, nome: garcom.nome }, transferida: false };
   } catch (e) {
     try { await client.query('ROLLBACK'); } catch (_) {}
     throw e;
   } finally { client.release(); }
+}
+
+async function listarGarconsAtivos(token) {
+  await validarGarcom(token);
+  const { rows } = await pool.query(
+    'SELECT id, nome FROM garcons WHERE ativo=TRUE ORDER BY nome ASC, id ASC');
+  return rows;
+}
+
+async function transferirMesa(token, numeroBruto, garcomDestinoBruto) {
+  const origem = await validarGarcom(token);
+  const numero = Number(numeroBruto);
+  const destinoId = Number(garcomDestinoBruto);
+  if (!Number.isSafeInteger(numero) || numero < 1 || numero > 70) {
+    throw new ErroAtendimento(400, 'Número de mesa inválido');
+  }
+  if (!Number.isSafeInteger(destinoId) || destinoId < 1) {
+    throw new ErroAtendimento(400, 'Garçom de destino inválido');
+  }
+  if (destinoId === Number(origem.id)) {
+    throw new ErroAtendimento(400, 'Escolha outro garçom para transferir a mesa');
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Não bloqueamos a linha da mesa aqui: fechamento/início podem usar a ordem
+    // mesa → sessão. A transferência bloqueia somente a sessão para evitar deadlocks.
+    const { rows: mesaRows } = await client.query(
+      'SELECT id FROM mesas WHERE numero=$1', [numero]);
+    const mesa = mesaRows[0];
+    if (!mesa) throw new ErroAtendimento(404, 'Mesa não encontrada');
+
+    const { rows: sessoes } = await client.query(
+      `SELECT id, garcom_responsavel_id FROM mesa_sessoes
+        WHERE mesa_id=$1 AND status='aberta'
+        ORDER BY id DESC LIMIT 1 FOR UPDATE`, [mesa.id]);
+    const sessao = sessoes[0];
+    if (!sessao) throw new ErroAtendimento(409, 'Não há atendimento aberto para transferir');
+    if (Number(sessao.garcom_responsavel_id) !== Number(origem.id)) {
+      throw new ErroAtendimento(403, 'Somente o responsável atual pode transferir esta mesa');
+    }
+
+    const { rows: destinos } = await client.query(
+      'SELECT id, nome, ativo FROM garcons WHERE id=$1 FOR UPDATE', [destinoId]);
+    const destino = destinos[0];
+    if (!destino) throw new ErroAtendimento(404, 'Garçom de destino não encontrado');
+    if (!destino.ativo) throw new ErroAtendimento(409, 'O garçom de destino não está ativo');
+
+    await client.query(
+      'UPDATE mesa_sessoes SET garcom_responsavel_id=$2 WHERE id=$1',
+      [sessao.id, destino.id]);
+    await client.query(`
+      INSERT INTO mesa_atendimento_historico
+        (sessao_id,garcom_anterior_id,garcom_novo_id,alterado_por_id)
+      VALUES ($1,$2,$3,$4)`,
+      [sessao.id, origem.id, destino.id, origem.id]);
+
+    await client.query('COMMIT');
+    return {
+      mesa: numero,
+      sessaoId: sessao.id,
+      transferida: true,
+      de: { id: origem.id, nome: origem.nome },
+      para: { id: destino.id, nome: destino.nome },
+      pedidosProntosMantidos: true,
+    };
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    throw e;
+  } finally { client.release(); }
+}
+
+async function listarPedidosProntosGarcom(token) {
+  const garcom = await validarGarcom(token);
+  const { getFilaGarcom } = require('./pedidos');
+  return getFilaGarcom(Number(garcom.id));
 }
 async function deixarMesa(token, numeroBruto) {
   const garcom = await validarGarcom(token);
@@ -173,4 +254,4 @@ async function metricasGarcons({ data } = {}) {
     garcons: rows.map(x=>({ id:x.id, nome:x.nome, ativo:x.ativo, atendimentos:x.atendimentos,
       vendas:Number(x.vendas), ticketMedio:Number(x.ticket_medio) })) };
 }
-module.exports={ ErroAtendimento, listarMesasGarcom, assumirMesa, deixarMesa, criarPedidoGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons };
+module.exports={ ErroAtendimento, listarMesasGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, deixarMesa, criarPedidoGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons };

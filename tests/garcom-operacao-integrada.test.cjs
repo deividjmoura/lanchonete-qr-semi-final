@@ -236,6 +236,8 @@ describe('3. Ciclo de Vida — Mesa aberta pelo cliente e assumida pelo garçom'
       if (/FROM garcons WHERE token =/.test(sql)) {
         return { rows: [{ id: 5, nome: 'Roberto Garçom', token: params[0], ativo: true }] };
       }
+      if (/SELECT sessao_id FROM pedidos WHERE id = \$1/.test(sql)) return { rows: [{ sessao_id: 1 }] };
+      if (/FROM mesa_sessoes WHERE id = \$1 FOR UPDATE/.test(sql)) return { rows: [{ id: 1, status: 'aberta', garcom_responsavel_id: 5 }] };
       if (/FROM pedidos WHERE id = \$1 FOR UPDATE/.test(sql)) {
         return {
           rows: [
@@ -308,6 +310,8 @@ describe('4. Status, Entrega Parcial e Fechamento', () => {
       if (/FROM garcons WHERE token =/.test(sql)) {
         return { rows: [{ id: 2, nome: 'Ana Garçonete', token: params[0], ativo: true }] };
       }
+      if (/SELECT sessao_id FROM pedidos WHERE id = \$1/.test(sql)) return { rows: [{ sessao_id: 100 }] };
+      if (/FROM mesa_sessoes WHERE id = \$1 FOR UPDATE/.test(sql)) return { rows: [{ id: 100, status: 'aberta', garcom_responsavel_id: 2 }] };
       if (/FROM pedidos WHERE id = \$1 FOR UPDATE/.test(sql)) {
         return { rows: [{ id: 20, status: 'pronto', sessao_id: 100, garcom_id: null }] };
       }
