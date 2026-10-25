@@ -359,7 +359,9 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 
 - A PR aplica o tema QR Admin à PWA `/garcom-pwa/` online/offline, preserva suporte offline, protege o contador de pedidos e incrementa o cache do Service Worker para `v12`.
 - A branch foi reconstruída sobre a `main` mais recente para preservar os registros de coordenação posteriores e evitar ficar atrás de commits documentais concorrentes. As alterações funcionais continuam limitadas aos arquivos do PWA e ao teste de UX.
-- Validação reportada no HEAD anterior: `node --check` e 48 testes relevantes passaram; `npm run typecheck`, `npm run build` e CI GitHub Actions run `40208399800` passaram no SHA `2c1d89907283ffe557d135aa39c5eda9ff20ba3b`. Esta reconstrução exige CI novamente no SHA final antes do merge.
+- **CI final:** GitHub Actions run [#414](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40208631293) terminou `SUCCESS` no HEAD reconciliado `206346ee15ee29387eed6cc4e311c5e150dea642`; typecheck, build, integridade de `dist/`, testes de regressão e sintaxe passaram. No HEAD anterior, a suíte ampliada reportou 48 testes aprovados.
+- **Merge:** PR #90 integrada por squash em `main`, commit `b92daa9277e238c399664cf6569f9d4f3c0aa0c1` (2026-10-25 15:48:45Z).
+- **Deploy inicial:** Railway deployment `9b7a5e0a-acb8-4ff3-a0cf-fe91cbdc0451` para o merge commit terminou `SUCCESS` em produção; serviço `lanchonete-qr-semi-final` reportado `Online`, uma réplica ativa e sem alertas/falhas recentes. Esta atualização documental também pode disparar novo deploy automático, que será verificado separadamente.
 - Sem validação em navegador/dispositivo real, PostgreSQL ou Android/iOS nesta frente. Nenhuma alteração em banco de produção, secrets ou configuração manual do Railway.
 - Web Push server-side, QR local e fluxos de caixa/cobrança das frentes #85/#89 continuam fora de escopo.
 
