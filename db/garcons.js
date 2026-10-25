@@ -96,6 +96,19 @@ async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null) {
     );
     const pedido = rows[0];
     if (!pedido) throw new ErroGarcom(404, 'Pedido não encontrado');
+
+    // A sessão é a fonte de verdade para autorização. O lock serializa a entrega
+    // com uma transferência concorrente; o antigo responsável perde o acesso.
+    const { rows: sessoes } = await client.query(
+      `SELECT id, status, garcom_responsavel_id
+         FROM mesa_sessoes WHERE id=$1 FOR UPDATE`,
+      [pedido.sessao_id]
+    );
+    const sessao = sessoes[0];
+    if (!sessao || sessao.status !== 'aberta' ||
+        Number(sessao.garcom_responsavel_id) !== Number(garcom.id)) {
+      throw new ErroGarcom(403, 'Este pedido não pertence a uma mesa sob sua responsabilidade atual');
+    }
     if (pedido.status === 'entregue') {
       throw new ErroGarcom(409, 'Pedido já foi totalmente entregue');
     }
