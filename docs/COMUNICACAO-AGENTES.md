@@ -244,3 +244,15 @@ Foram publicados comentários de coordenação no GitHub para manter o handoff j
 - **Comunicação:** novas solicitações de status foram publicadas em [PR #85](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/85#issuecomment-6399345856) e [PR #89](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/89#issuecomment-6399346230). No momento da consulta, não havia resposta de confirmação dos responsáveis nem novo HEAD publicado.
 - **Decisão:** não fazer merge nem force push. Frente 1 deve reconciliar #85 primeiro, preservar autorização transacional/hardening e informar conflitos por arquivo; depois executar CI no SHA reconciliado. Só após revisão e autorização, integrar #85. Em seguida, sincronizar #89 e executar migrations 0022 e 0023, nessa ordem, mais os dois testes de integração no mesmo PostgreSQL descartável.
 - **Railway:** a responsabilidade continua exclusiva da Frente 1 / Agente 1. Como a atualização deste documento na `main` pode disparar deploy automático, o Agente 1 deve verificar e registrar o estado do deploy deste commit. Nenhuma alteração de configuração, secrets, banco ou produção foi feita nesta rechecagem.
+
+### Nova solicitação do proprietário — fluxo de pedidos pelo garçom (2026-10-25)
+
+O proprietário reportou uma melhoria na tela de mesas do atendimento PWA (captura enviada nesta conversa): ao tocar em qualquer mesa, apresentar imediatamente duas ações explícitas:
+- **Novo pedido**: iniciar um novo pedido na sessão aberta da mesa.
+- **Acrescentar itens ao pedido atual**: selecionar um pedido ativo da mesa e adicionar itens a ele, sem duplicar/criar uma comanda indevida.
+
+**Regra de negócio obrigatória:** qualquer garçom autenticado pode adicionar itens à comanda da mesa, mesmo que não seja o garçom originalmente responsável pela entrega. O pedido/itens adicionados devem ser atribuídos ao garçom que efetivamente registrou esse novo pedido, e a fila de entrega deve continuar respeitando o responsável correspondente. Não transferir automaticamente a responsabilidade da mesa, não reatribuir pedidos existentes e não contornar autorização no backend.
+
+Antes de implementar, revisar o contrato atual de criação/edição de pedido e a propriedade de sessão/garçom; definir se “acrescentar itens” cria um novo pedido associado à mesma sessão (preferível para preservar auditoria e atribuição individual) ou altera um pedido existente, documentando a escolha. Validar autorização do servidor para qualquer garçom ativo, histórico do autor, atualização de fila e compatibilidade com cozinha/bar. Incluir testes de API e UI para mesa sem pedido, mesa com um pedido e mesa com vários pedidos ativos, além de adicionar itens por garçom diferente do responsável atual.
+
+Isso é uma solicitação nova, ainda não implementada nem validada. Não alterar produção/Railway como parte desta tarefa.
