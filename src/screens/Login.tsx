@@ -74,7 +74,7 @@ export default function Login() {
             <Logo size="lg" />
           </div>
           <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.32em] text-slate-500">
-            gestão da casa · São Miguel
+            gestão · QR Admin
           </p>
         </div>
 
