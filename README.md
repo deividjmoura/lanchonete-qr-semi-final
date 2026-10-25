@@ -100,9 +100,9 @@ Os tokens presentes nos links de mesa e garçom funcionam como credenciais de ac
 
 O PostgreSQL é a fonte de verdade. `data/db.json` é um catálogo de demonstração usado pelo seed, não um banco operacional em produção.
 
-## Rodar localmente
+## Desenvolvimento local
 
-Requisitos: Node.js 20 ou superior e um PostgreSQL de desenvolvimento/teste.
+Esta seção pressupõe que você já tem o repositório disponível no ambiente de trabalho; não inclui passos de clone. Requisitos: Node.js 20 ou superior e um PostgreSQL de desenvolvimento/teste.
 
 1. Instale as dependências:
 
