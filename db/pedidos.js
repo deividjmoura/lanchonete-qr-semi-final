@@ -312,18 +312,14 @@ async function criarPedido(token, body, atendimento = null) {
 
     const sessaoId = await getOuAbrirSessao(client, mesa.id);
 
-    // A autoria do pedido é validada sob lock. Um garçom ativo pode registrar
-    // novo pedido na sessão de outro responsável sem transferir a mesa.
+    // Pedido lançado por garçom: o servidor valida autoria dentro da mesma
+    // transação, sob o lock da mesa, inclusive durante uma transferência.
     if (atendimento) {
-      if (atendimento.sessaoIdEsperada && Number(atendimento.sessaoIdEsperada) !== Number(sessaoId)) {
-        throw new ErroPedido(409, 'A sessão da mesa mudou. Atualize as mesas e tente novamente.');
-      }
       const { rows: atribuidos } = await client.query(
         'SELECT garcom_responsavel_id FROM mesa_sessoes WHERE id = $1 FOR UPDATE',
         [sessaoId]
       );
-      if (!atendimento.permitirResponsavelDiferente &&
-          atribuidos[0]?.garcom_responsavel_id !== atendimento.garcomId) {
+      if (atribuidos[0]?.garcom_responsavel_id !== atendimento.garcomId) {
         throw new ErroPedido(409, 'Assuma a mesa antes de enviar o pedido');
       }
     }
@@ -420,7 +416,7 @@ async function criarPedido(token, body, atendimento = null) {
 }
 
 /** Cliente cancela pedido só enquanto status = recebido (ainda não em preparo). */
-async function cancelarPedidoCliente(token, pedidoId) {
+async function cancelarPedidoCliente(token, pedidoId, garcomResponsavelId = null) {
   const pedidoNumerico = Number(pedidoId);
   if (!Number.isInteger(pedidoNumerico) || pedidoNumerico < 1) {
     throw new ErroPedido(400, 'Pedido inválido');
@@ -436,8 +432,9 @@ async function cancelarPedidoCliente(token, pedidoId) {
        FROM pedidos p
        JOIN mesa_sessoes s ON s.id = p.sessao_id
        WHERE p.id = $1 AND s.mesa_id = $2 AND s.status = 'aberta'
+         AND ($3::int IS NULL OR s.garcom_responsavel_id = $3)
        FOR UPDATE OF p`,
-      [pedidoNumerico, mesa.id]
+      [Number(pedidoId), mesa.id, garcomResponsavelId]
     );
     const pedido = rows[0];
     if (!pedido) throw new ErroPedido(404, 'Pedido não encontrado nesta mesa');
@@ -904,8 +901,12 @@ async function getFilaCozinha() {
   return listarPedidosPorStatus(['recebido', 'em_producao', 'concluido'], 'cozinha');
 }
 
-async function getFilaGarcom(garcomId = null) {
-  /* Pedidos prontos para o responsável da mesa ou o garçom atribuído ao pedido. */
+async function getFilaGarcom(garcomId) {
+  /* Fila privada por responsável atual. Sem identidade válida, nunca devolve fila global. */
+  const responsavelId = Number(garcomId);
+  if (!Number.isSafeInteger(responsavelId) || responsavelId < 1) {
+    throw new TypeError('É obrigatório informar um garçom válido para consultar a fila');
+  }
   const { rows: pedidos } = await pool.query(
     `SELECT DISTINCT p.id, p.status, p.criado_em, p.observacao_geral, p.cliente_nome, p.garcom_nome,
             p.editado_em, m.numero AS mesa
@@ -913,10 +914,12 @@ async function getFilaGarcom(garcomId = null) {
      JOIN mesa_sessoes s ON s.id = p.sessao_id
      JOIN mesas m ON m.id = s.mesa_id
      JOIN itens_pedido ip ON ip.pedido_id = p.id
-     WHERE p.status <> 'entregue'
+     WHERE s.status = 'aberta'
+       AND s.garcom_responsavel_id = $1
+       AND p.status <> 'entregue'
        AND COALESCE(ip.status, 'recebido') = 'concluido'
-       AND ($1::int IS NULL OR s.garcom_responsavel_id=$1 OR p.garcom_id=$1)
-     ORDER BY p.criado_em`, [garcomId]
+     ORDER BY p.criado_em`,
+    [responsavelId]
   );
   if (!pedidos.length) return [];
 

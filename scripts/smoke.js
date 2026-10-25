@@ -223,6 +223,11 @@ async function main() {
   });
   log('cozinha: em_producao → concluido');
 
+  // Contrato do atendimento: só o garçom responsável pela mesa pode entregar, e
+  // a mesa só pode ser assumida depois que existe um pedido QR do cliente.
+  await req('POST', `/api/garcom/${garcom.token}/mesas/${mesaA.numero}/assumir`, { body: {}, expectStatus: 200 });
+  log(`garçom assumiu a mesa ${mesaA.numero}`);
+
   const { data: entrega1 } = await req(
     'POST',
     `/api/garcom/${garcom.token}/pedidos/${pedido1.id}/entregar`,
@@ -334,6 +339,7 @@ async function main() {
     body: { status: 'concluido' },
     expectStatus: 200,
   });
+  await req('POST', `/api/garcom/${garcom.token}/mesas/${mesaB.numero}/assumir`, { body: {}, expectStatus: 200 });
   await req('POST', `/api/garcom/${garcom.token}/pedidos/${pedidoB.id}/entregar`, {
     expectStatus: 200,
   });

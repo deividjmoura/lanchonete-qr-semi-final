@@ -47,3 +47,5 @@ jobs:
         run: node --test tests/postgres-integration.test.cjs
       - name: Run financial PostgreSQL integration tests
         run: node --test tests/postgres-financial-integration.test.cjs
+      - name: Run waiter ownership PostgreSQL integration tests
+        run: node --test tests/postgres-waiter-integration.test.cjs

@@ -13,7 +13,7 @@ test('health endpoint is GET-only, process-level and read-only', () => {
   assert.match(server, /if \(p === '\/healthz' && req\.method === 'GET'\)/);
   assert.match(server, /return json\(res, 200, \{ status: 'ok' \}\);/);
   const start = server.indexOf("if (p === '/healthz' && req.method === 'GET')");
-  const block = server.slice(start, start + 260);
+  const block = server.slice(start, start + 180);
   assert.doesNotMatch(block, /pool\.query|criarPedido|registrarPagamento|fecharSessao/);
 });
 

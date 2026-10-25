@@ -10,7 +10,6 @@ const {
   getSessao,
   getFilaCozinha,
   getFilaBar,
-  getFilaGarcom,
   checkinCliente,
   cancelarPedidoCliente,
   editarPedidoCliente,
@@ -62,7 +61,7 @@ const {
   verificarProtecaoCSRF,
 } = require('./db/auth');
 const { golpePermitido } = require('./db/rateLimit');
-const { ErroAtendimento, listarMesasGarcom, assumirMesa, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesaGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
+const { ErroAtendimento, listarMesasGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
 const { normalizarChavePix, inspecionarChavePix } = require('./db/pix-normaliza');
 const { subscribe, broadcast } = require('./db/events');
 const pool = require('./db/pool');
@@ -235,6 +234,7 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { status: 'ok' });
     }
 
+
     if (p === '/api/cardapio' && req.method === 'GET') {
       return json(res, 200, await getCardapio(), {
         'Cache-Control': 'public, max-age=15, stale-while-revalidate=60',
@@ -367,7 +367,7 @@ const server = http.createServer(async (req, res) => {
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/pedidos$/)) && req.method === 'GET') {
       const g = await getGarcomPorToken(m[1]);
       if (!g || !g.ativo) return json(res, 401, { error: 'Link inválido ou desativado' });
-      return json(res, 200, await getFilaGarcom(g.id));
+      return json(res, 200, await listarPedidosProntosGarcom(m[1]));
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/pedidos\/(\d+)\/entregar$/)) && req.method === 'POST') {
       try {
@@ -407,6 +407,43 @@ const server = http.createServer(async (req, res) => {
         throw e;
       }
     }
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/garcons-ativos$/)) && req.method === 'GET') {
+      try { return json(res, 200, { garcons: await listarGarconsAtivos(m[1]) }); }
+      catch (e) { if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message }); throw e; }
+    }
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/transferir$/)) && req.method === 'POST') {
+      try {
+        const payload = await body(req);
+        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+          return json(res, 400, { error: 'Corpo de transferência inválido' });
+        }
+        const out = await transferirMesa(m[1], m[2], payload.garcomDestinoId);
+        broadcast('update', { type: 'mesa_transferida', mesa: out.mesa, de: out.de.id, para: out.para.id });
+        return json(res, 200, out);
+      } catch (e) {
+        if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message });
+        if (e && (e.status === 400 || e.status === 413)) return json(res, e.status, { error: e.message });
+        throw e;
+      }
+    }
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/sessoes\/(\d+)\/resumo-pagamento$/)) && req.method === 'GET') {
+      try { return json(res, 200, await resumoPagamentoSessao(m[1], m[2])); }
+      catch (e) { if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message }); throw e; }
+    }
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/sessoes\/(\d+)\/pagamentos$/)) && req.method === 'POST') {
+      try {
+        const garcom = await getGarcomPorToken(m[1]);
+        if (!garcom || !garcom.ativo) return json(res, 401, { error: 'Link do garçom inválido ou desativado' });
+        const payload = await body(req);
+        const out = await registrarPagamento(Number(m[2]), payload, garcom.nome, garcom.id);
+        if (!out.idempotentReplay) broadcast('update', { type: 'pagamento_parcial', sessaoId: Number(m[2]) });
+        return json(res, out.idempotentReplay ? 200 : 201, out);
+      } catch (e) {
+        if (e instanceof ErroCaixa || e instanceof ErroAtendimento) return json(res, e.status, { error: e.message });
+        if (e && (e.status === 400 || e.status === 413)) return json(res, e.status, { error: e.message });
+        throw e;
+      }
+    }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas$/)) && req.method === 'GET') {
       try { return json(res, 200, await listarMesasGarcom(m[1])); }
       catch (e) { if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message }); throw e; }
@@ -427,10 +464,6 @@ const server = http.createServer(async (req, res) => {
         if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message });
         throw e;
       }
-    }
-    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/pedidos-ativos$/)) && req.method === 'GET') {
-      try { return json(res, 200, await listarPedidosAtivosMesaGarcom(m[1], m[2])); }
-      catch (e) { if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message }); throw e; }
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/pedidos$/)) && req.method === 'POST') {
       try {
@@ -610,7 +643,7 @@ const server = http.createServer(async (req, res) => {
       try {
         const operador = await getStaffDaRequisicao(req);
         const out = await registrarPagamento(Number(m[1]), await body(req), operador?.nome || null);
-        broadcast('update', { type: 'pagamento_parcial', sessaoId: Number(m[1]) });
+        if (!out.idempotentReplay) broadcast('update', { type: 'pagamento_parcial', sessaoId: Number(m[1]) });
         return json(res, 201, out);
       } catch (e) {
         if (e instanceof ErroCaixa) return json(res, e.status, { error: e.message });
@@ -633,8 +666,7 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/caixa\/sessoes\/(\d+)\/fechar$/)) && req.method === 'POST') {
       try {
-        const operador = await getStaffDaRequisicao(req);
-        const out = await fecharSessao(Number(m[1]), await body(req), operador?.nome || null);
+        const out = await fecharSessao(Number(m[1]), await body(req));
         broadcast('update', { type: 'sessao_fechada', sessaoId: Number(m[1]) });
         return json(res, 200, out);
       } catch (e) {

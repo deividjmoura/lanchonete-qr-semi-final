@@ -5,9 +5,13 @@
 ## Autenticação
 O token UUID individual do link do garçom é uma credencial bearer na URL. Todas as rotas de garçom revalidam se o usuário está ativo; não enviar esse token a clientes. Em produção, preferir futuramente sessão autenticada de curta duração para reduzir exposição de tokens em URLs/logs.
 
-## Mesas do garçom
-- `GET /api/garcom/:garcomToken/mesas` → `{garcom:{id,nome},mesas:[{id,numero,token,sessaoId,clienteNome,garcomResponsavelId,garcomResponsavelNome}]}`. Retorna somente mesas habilitadas, tokens próprios de acesso ao cardápio (exclusivo para o garçom).
-- `POST /api/garcom/:garcomToken/mesas/:numero/assumir` → corpo `{clienteNome?:string,transferir?:boolean}`. Abre uma sessão, se necessário, e atribui o responsável. Se outro garçom possuir a sessão, devolve 409 até que `transferir:true` seja enviado (após confirmação explícita do operador). Retorno `{mesa,mesaToken,sessaoId,garcom,transferida}`.
+## Mesas do garçom e responsabilidade persistente
+- `GET /api/garcom/:garcomToken/mesas` → `{garcom:{id,nome},mesas:[{id,numero,token,sessaoId,clienteNome,garcomResponsavelId,garcomResponsavelNome}]}`. Retorna mesas habilitadas para uso operacional; a API administrativa continua sendo a fonte para a visão completa do administrador.
+- `POST /api/garcom/:garcomToken/mesas/:numero/assumir` é o endpoint legado que o PWA usa para **iniciar atendimento**; aceita `{clienteNome?:string}`. Abre uma sessão se necessário e grava `garcom_responsavel_id`. Se outra pessoa já for responsável, devolve 409; não permite transferência implícita, mesmo se o cliente enviar `transferir:true`.
+- `GET /api/garcom/:garcomToken/garcons-ativos` → `{garcons:[{id,nome}]}`. Só retorna IDs e nomes de garçons ativos, sem tokens.
+- `POST /api/garcom/:garcomToken/mesas/:numero/transferir` aceita `{garcomDestinoId:number}`. Somente o responsável atual pode transferir a sessão aberta; o destino deve existir e estar ativo. A transação atualiza a sessão e insere no histórico o responsável anterior, o novo, o ator (`alterado_por_id`) e o horário.
+- A migração `0023_atendimento_transferencia_actor.sql` adiciona o ator à tabela `mesa_atendimento_historico` sem remover registros anteriores.
+- Pedidos/itens que já estavam prontos permanecem com status `concluido`: não são entregues nem recriados pela transferência. Como a fila é consultada por responsável atual da sessão, somem do PWA do antigo responsável e aparecem no PWA do novo. A API administrativa continua consultando o conjunto completo.
 
 ## Pedido do garçom
 - `POST /api/garcom/:garcomToken/mesas/:numero/pedidos` → corpo equivalente ao cliente: `{clienteNome,items,note,idempotencyKey}`. Requer sessão da mesa atribuída ao próprio garçom; se não, 409.
@@ -17,16 +21,23 @@ O token UUID individual do link do garçom é uma credencial bearer na URL. Toda
 - `pedidos.origem_pedido='garcom'` e `pedidos.garcom_registrou_id` são gravados atomicamente. Pedidos do cliente mantêm `origem_pedido='cliente'`.
 
 ## Entregas
-O endpoint já existente `POST /api/garcom/:token/pedidos/:pedidoId/entregar` continua válido; registra `garcom_entregou_id` e preserva a autoria original. Para entrega parcial por diferentes garçons, `garcom_entregou_id` representa **a última entrega do pedido**, não histórico por item. Uma auditoria por item exigirá migration adicional.
+O endpoint já existente `POST /api/garcom/:token/pedidos/:pedidoId/entregar` continua válido; registra `garcom_entregou_id` e preserva a autoria original. Antes de alterar qualquer item, o backend bloqueia e valida a sessão aberta e exige que `garcom_responsavel_id` corresponda ao token autenticado; um ex-responsável recebe 403. Para entrega parcial por diferentes garçons, `garcom_entregou_id` representa **a última entrega do pedido**, não histórico por item. Uma auditoria por item exigirá migration adicional.
 
 ## Indicadores administrativos
 - `GET /api/admin/garcons/metricas?data=YYYY-MM-DD` exige autenticação admin. Retorna `{data,criterio,garcons:[{id,nome,ativo,atendimentos,vendas,ticketMedio}]}`.
 - Critério de vendas: **valor cobrado de contas fechadas** nessa data, atribuído ao responsável pela sessão no fechamento, não ao autor individual de cada pedido.
-- Transferências ficam registradas em `mesa_atendimento_historico`. Garçons desativados mantêm o histórico.
+- Transferências ficam registradas em `mesa_atendimento_historico`, com `alterado_por_id` e `alterado_em`. Garçons desativados mantêm o histórico.
 - Uma sessão atribuída pela primeira vez depois de pedidos do cliente passa a creditar a venda ao garçom responsável, conforme o modelo comercial definido para esta versão.
 
+## Cobrança parcial pelo garçom
+- `GET /api/garcom/:token/sessoes/:sessaoId/resumo-pagamento` devolve total dos itens entregues, valor já pago e saldo. Exige que a sessão esteja aberta e pertença ao garçom autenticado.
+- `POST /api/garcom/:token/sessoes/:sessaoId/pagamentos` é implementado pela Frente 1 no PR #85 e usa o mesmo motor financeiro do caixa. O servidor verifica a responsabilidade novamente dentro da transação que registra o pagamento; não confiar apenas na conferência feita pela interface/rota.
+- O PWA envia uma chave de idempotência estável e exige confirmação explícita do recebimento. Em caso de timeout, deve-se reenviar os mesmos dados para reutilizar a chave; não iniciar outra cobrança até resolver a tentativa anterior.
+- PIX exige confirmação manual do crédito no aplicativo bancário. O formulário do garçom não gera QR dinâmico nem confirma liquidação automaticamente.
+- O garçom pode registrar pagamentos parciais; não pode fechar a sessão nem liberar a mesa. O fechamento final continua no Caixa.
+
 ## Fora deste PR
-Não há neste trabalho confirmação de PIX, captura offline, service worker/PWA nem fechamento pelo garçom. Esses fluxos exigem API específica com validação de recebimento **online**, auditoria e controle de concorrência; não usar o endpoint público de cliente para registrar pagamento.
+Não há captura de pagamento offline nem Web Push funcional com o aplicativo fechado. A interface de cobrança exige conexão; o servidor valida o saldo, a sessão aberta e o responsável atual. Não usar o endpoint público de cliente para registrar pagamento.
 
 ## Testes necessários antes de produção
 Executar migrations 0019 em banco isolado; teste admin/garçom ativo/inativo, tentativa de atuar em mesa de outro garçom, transferência, idempotência, reconciliação de faturamento, data local e histórico depois de desativar funcionário. Testar frontend e endpoints das outras branches somente após integrar sem conflitos.

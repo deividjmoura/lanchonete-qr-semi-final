@@ -1,27 +1,28 @@
 const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const cp=require('node:child_process');
 const root=path.join(__dirname,'..');const read=p=>fs.readFileSync(path.join(root,p),'utf8');
-test('Qualquer garçom ativo pode criar pedido na sessão aberta sem transferir a mesa',()=>{
+test('Criar pedido exige o responsável atual da sessão e não oferece bypass de transferência',()=>{
  const api=read('db/atendimento.js'),ped=read('db/pedidos.js');
- assert.match(api,/permitirResponsavelDiferente:true/);
- assert.match(api,/sessaoIdEsperada/);
- assert.match(ped,/!atendimento\.permitirResponsavelDiferente/);
- assert.match(ped,/Number\(atendimento\.sessaoIdEsperada\)/);
+ assert.match(api,/s\.garcom_responsavel_id=\$2/);
+ assert.match(api,/Assuma a mesa antes de enviar o pedido/);
+ assert.doesNotMatch(api,/permitirResponsavelDiferente:true/);
+ assert.match(ped,/garcomId/);
 });
-test('Ao tocar numa mesa a PWA oferece novo pedido ou acréscimo sem assumir mesa alheia',()=>{
- const pwa=read('public/garcom-pwa/app.js'),html=read('public/garcom-pwa/index.html'),server=read('server.js');
- assert.match(pwa,/openTableActions\(m\.numero\)/);
- assert.match(html,/Novo pedido/);
- assert.match(html,/Acrescentar itens ao pedido atual/);
- assert.match(pwa,/pedidos-ativos/);
- assert.match(server,/listarPedidosAtivosMesaGarcom/);
- assert.match(pwa,/if\(!tableInfo\?\.sessaoId\|\|!tableInfo\.garcomResponsavelId\)/);
+test('Toque na mesa abre detalhes; assumir exige pedido QR e transferir exige responsável atual',()=>{
+ const pwa=read('public/garcom-pwa/app.js'),html=read('public/garcom-pwa/index.html'),api=read('db/atendimento.js');
+ assert.match(pwa,/openTableDetails\(m\.numero\)/);
+ assert.match(html,/id="tableDetailsModal"/);
+ assert.match(pwa,/if\(!m\.garcomResponsavelId&&m\.pedidoClienteQr\)/);
+ assert.match(pwa,/Number\(m\.garcomResponsavelId\)===Number\(currentWaiterId\)/);
+ assert.match(api,/async function assumirMesa/);
+ assert.match(api,/origem_pedido='cliente'/);
+ assert.match(api,/async function transferirMesa/);
 });
-test('Fila e entrega ficam restritas ao responsável da mesa ou ao garçom atribuído ao pedido',()=>{
+test('Fila e entrega ficam restritas ao responsável atual da mesa',()=>{
  const api=read('db/atendimento.js'),garcons=read('db/garcons.js'),pedidos=read('db/pedidos.js'),server=read('server.js');
- assert.match(api,/s\.garcom_responsavel_id=\$1 OR p\.garcom_id=\$1/);
- assert.match(garcons,/Este pedido está atribuído a outro garçom/);
- assert.match(pedidos,/s\.garcom_responsavel_id=\$1 OR p\.garcom_id=\$1/);
- assert.match(server,/getFilaGarcom\(g\.id\)/);
+ assert.match(api,/s\.garcom_responsavel_id=\$1/);
+ assert.match(garcons,/Este pedido não pertence a uma mesa sob sua responsabilidade atual/);
+ assert.match(pedidos,/garcomId/);
+ assert.match(server,/listarAtendimentosGarcom/);
 });
 test('Caixa fecha quitação simples só quando não há pedidos ou avisos PIX pendentes',()=>{
  const caixa=read('db/caixa.js');

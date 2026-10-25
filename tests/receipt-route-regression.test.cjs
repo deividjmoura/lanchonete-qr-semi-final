@@ -53,3 +53,17 @@ test('QR PIX acompanha o valor digitado e gera TXID por lançamento', () => {
   assert.ok(caixaSource.includes('forma === "pix"'));
   assert.ok(caixaSource.includes('Confira o recebimento no banco antes de registrar'));
 });
+
+
+test('pagamento PWA exige responsável atual dentro da transação e mantém retry idempotente', () => {
+  const serverSource = fs.readFileSync('server.js', 'utf8');
+  const caixaSource = fs.readFileSync('db/caixa.js', 'utf8');
+  const workflow = fs.readFileSync('.github/workflows/ci.yml', 'utf8');
+  assert.ok(serverSource.includes('registrarPagamento(Number(m[2]), payload, garcom.nome, garcom.id)'));
+  assert.ok(caixaSource.includes('SELECT id, ativo FROM garcons WHERE id = $1 FOR SHARE'));
+  assert.ok(caixaSource.includes('sessao.garcom_responsavel_id'));
+  assert.ok(caixaSource.includes('idempotencyKeyDoCorpo(body)'));
+  assert.match(workflow, /image: postgres:16/);
+  assert.ok(workflow.includes('tests/postgres-financial-integration.test.cjs'));
+  assert.ok(workflow.includes('tests/postgres-waiter-integration.test.cjs'));
+});
