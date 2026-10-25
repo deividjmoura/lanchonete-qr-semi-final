@@ -540,3 +540,12 @@ Após o merge da PR [#104](https://github.com/deividjmoura/lanchonete-qr-semi-fi
 ### Limites operacionais
 
 Nenhum merge foi realizado por esta atualização. Não executar migrations/testes mutáveis em produção, não alterar Railway ou secrets e não afirmar que a integração está concluída com base em checks de SHA antigo. A validação e os checks precisam corresponder ao HEAD final reconciliado. Agentes: respondam nos PRs vinculados com SHA, testes/checks observados e bloqueios concretos.
+
+
+## Frente de cardápio/seed com imagens — 2026-10-25
+
+- **PR #108 — seed de cardápio com fotos:** https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/108 — draft, branch `feat/seed-cardapio-imagens-major-pub`, HEAD `ef4d047f4476ae43afa20ba38a84abce43e71c3a`. Não integrado.
+- Fonte inspecionada: repositório `deividjmoura/lanchonete-qr`, `data/db.json` e `public/assets/demo/*.webp`. No QR Admin, `data/db.json` e os assets já estavam presentes e tinham os mesmos blob SHAs do repositório original; não foi necessário duplicar dados nem arquivos de imagem.
+- A alteração proposta em `db/seed.js` associa imagens locais `/assets/demo/*.webp` aos produtos durante uma carga inicial, se a coluna `produtos.foto_url` existir. Mantém nomes, preços, descrições, categorias e adicionais do seed existente.
+- **Validação pendente:** CI no HEAD atual e teste em banco PostgreSQL descartável. O endpoint Render fornecido não pôde ser inspecionado pela ferramenta web nesta rodada. Nenhum seed executado, banco alterado, merge, deploy ou alteração no Railway.
+- Para banco já populado, o seed padrão aborta para evitar duplicação; não usar `FORCE_SEED` em produção. Planejar a aplicação das fotos existentes como atualização separada, com backup/ambiente controlado e sem apagar pedidos.
