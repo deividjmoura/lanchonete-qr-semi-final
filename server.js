@@ -396,6 +396,9 @@ const server = http.createServer(async (req, res) => {
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/transferir$/)) && req.method === 'POST') {
       try {
         const payload = await body(req);
+        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+          return json(res, 400, { error: 'Corpo de transferência inválido' });
+        }
         const out = await transferirMesa(m[1], m[2], payload.garcomDestinoId);
         broadcast('update', { type: 'mesa_transferida', mesa: out.mesa, de: out.de.id, para: out.para.id });
         return json(res, 200, out);
