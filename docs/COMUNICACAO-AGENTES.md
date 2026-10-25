@@ -458,3 +458,11 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 - **Evidência de CI:** workflow #425 SUCCESS no HEAD da PR `f171d00b6fed74f465cb646fd5330c62ba4463cf`; o escopo integrado é apenas `docs/engineering/data-retention-rfc.md`.
 - **Issue #44:** continua aberta. A RFC não aprova prazos, não implementa automação e não autoriza executar purge; falta decisão do responsável sobre retenção, anonimização, obrigações contábeis, auditoria e backup/restauração.
 - **Deploy:** merge em `main` pode disparar deploy automático. Agente 1 / Frente 1 é o responsável por verificar e registrar o estado do deploy; esta frente não alterou Railway, secrets ou produção.
+
+
+### Revisão adicional CSRF — login e rotas legadas (2026-10-25)
+- **PR:** [#100](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/100), issue [#3](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/3), ainda aberta em draft.
+- **Achado:** `POST /api/login` não chama `verificarOrigemRequisicao` nem `verificarProtecaoCSRF`; o token só é emitido depois da autenticação. É necessário decidir e testar proteção pré-autenticação por Origin/Referer (incluindo origem externa e cabeçalhos ausentes), porque a issue pede cobertura do login.
+- **Compatibilidade legada:** `public/admin.html`, `public/caixa.html`, `public/cozinha.html`, `public/bar.html` e `public/js/admin-cardapio.js` contêm mutações por `fetch` direto. O fallback de origem parece desenhado para cobri-las, mas os testes atuais exercitam a função isolada/assertions estruturais e não comprovam o comportamento HTTP de cada rota.
+- **Coordenação:** revisão postada na PR #100 (comentário [#6400570554](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/100#issuecomment-6400570554)). A branch CSRF está 12 commits à frente e 4 atrás de `main`; não reconciliar `server.js` sem confirmar sobreposição com as frentes ativas. Nenhum bypass foi demonstrado, e nenhum código/produção foi alterado nesta revisão.
+- **Critério para retomar:** obter confirmação de não sobreposição, tratar/justificar a proteção de login, acrescentar cobertura HTTP/rota suficiente, sincronizar com `main` e exigir CI verde no HEAD reconciliado antes de aprovar integração. Issue #3 permanece aberta.
