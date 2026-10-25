@@ -39,3 +39,19 @@ test('landing pública não apresenta diretório de mesas', () => {
   assert.ok(!landingSource.includes('mesas.map('));
   assert.ok(!landingSource.includes('Iniciar pelo QR da mesa:'));
 });
+
+const caixaSource = fs.readFileSync('src/screens/Caixa.tsx', 'utf8');
+const storeSource = fs.readFileSync('src/store/usePub.ts', 'utf8');
+
+test('QR PIX acompanha o valor digitado na divisão da conta', () => {
+  assert.ok(caixaSource.includes('valor: Number(valor) > 0.005 ? Number(valor)'));
+  assert.ok(caixaSource.includes('forma === "pix"'));
+  assert.ok(caixaSource.includes('Confirme o recebimento no banco antes de registrar'));
+});
+
+test('quitação integral simples tenta fechar a sessão e atualizar mesas', () => {
+  assert.ok(storeSource.includes('pagamentoFinalSimples'));
+  assert.ok(storeSource.includes('await api.fecharSessao(sessaoId'));
+  assert.ok(storeSource.includes('await get().hydrateMesas().catch(() => null)'));
+  assert.ok(storeSource.includes('Pagamento registrado, mas a mesa continua aberta'));
+});
