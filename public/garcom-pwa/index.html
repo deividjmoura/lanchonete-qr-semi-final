@@ -66,7 +66,7 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
 <header class="app-header">
   <div class="header-inner">
     <div class="brand"><span class="brand-symbol" aria-hidden="true">✳</span><div><span class="eyebrow">QR ADMIN</span><h1>Atendimento <span class="brand-italic">QR Admin</span></h1></div></div>
-    <div class="header-actions"><span class="connection-pill" id="connection">Verificando rede…</span><button id="installBtn" class="icon-text secondary" type="button">↓ Instalar</button></div>
+    <div class="header-actions"><span class="connection-pill" id="connection">Verificando rede…</span></div>
   </div>
 </header>
 <div id="readyToast" role="status" aria-live="polite" hidden class="ready-toast"><strong id="readyToastTitle">Pedido pronto!</strong><span id="readyToastDescription"></span><button id="readyToastAction" type="button">Ver entregas →</button><button id="readyToastDismiss" type="button" aria-label="Dispensar aviso">×</button></div>
@@ -76,21 +76,7 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
     <button id="syncBtn" class="secondary sync-button" type="button">↻ Sincronizar</button>
   </div>
 
-  <section class="page active" id="page-home" data-page="home" aria-label="Início">
-    <div class="hero-panel">
-      <div class="hero-content"><span class="eyebrow light">ATENDIMENTO MAIS ÁGIL</span><h3>Um pedido de cada vez.<br><em>Todo mundo feliz.</em></h3><p>Abra uma mesa, anote o consumo ou deixe o cliente pedir pelo próprio QR.</p><button class="button-light" id="newOrderHome" type="button">＋ Novo pedido <span>→</span></button></div>
-      
-    </div>
-    <div class="quick-grid">
-      <button class="quick-card" id="openTablesHome" type="button"><span class="quick-icon">▦</span><strong>Mesas</strong><small>Assumir ou compartilhar QR</small><span class="quick-arrow">↗</span></button>
-      <button class="quick-card" id="openOrdersHome" type="button"><span class="quick-icon">▤</span><strong>Meus pedidos</strong><small>Offline, enviados e conflitos</small><span id="queueCount" class="count">0 pendentes</span></button>
-      <button class="quick-card" id="openDeliveriesHome" type="button"><span class="quick-icon">♨</span><strong>Entregas</strong><small>O que já saiu da cozinha</small><span class="quick-arrow">↗</span></button>
-      <button class="quick-card" id="openBillingHome" type="button"><span class="quick-icon">R$</span><strong>Cobrança</strong><small>Consumo e fechamento</small><span class="quick-arrow">↗</span></button>
-    </div>
-    <div class="notice"><span aria-hidden="true">◉</span><p><b>Sem internet?</b> Continue anotando. Pedidos salvos neste aparelho só chegam à cozinha após sincronização confirmada.</p></div>
-  </section>
-
-  <section class="page" id="page-tables" data-page="tables" aria-label="Mesas">
+  <section class="page active" id="page-tables" data-page="tables" aria-label="Mesas">
     <div class="section-heading"><div><span class="section-eyebrow">SEU SALÃO</span><h3>Mesas e atendimento</h3></div><button class="primary small" id="newOrderTables" type="button">＋ Novo pedido</button></div>
     <div class="panel compact"><label class="field">Escolha uma mesa<select id="tableSelect" aria-label="Mesa para atendimento"></select></label><label class="field">Nome do cliente<input id="customerName" maxlength="80" placeholder="Como podemos chamar o cliente?" autocomplete="off"></label><div class="action-row"><button class="primary" id="assumeTable" type="button">Assumir mesa</button><button class="secondary" id="showQr" type="button">Mostrar QR da mesa</button></div><p id="tableMessage" class="muted small-copy">Você pode assumir uma mesa mesmo quando o cliente já fez um pedido pelo QR.</p></div>
     <div class="panel"><div class="section-heading"><h4>Minhas mesas <span id="myTablesCount" class="status confirmed">0</span></h4><span class="muted small-copy">Você pode atender várias mesas ao mesmo tempo</span></div><div id="myTables" class="table-grid"></div></div>
@@ -105,7 +91,7 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
 
   <section class="page" id="page-deliveries" data-page="deliveries" aria-label="Entregas">
     <div class="section-heading"><div><span class="section-eyebrow">COZINHA E BAR</span><h3>Prontos para entregar</h3></div><button id="refreshDeliveries" class="secondary small" type="button">Atualizar ↻</button></div>
-    <button id="enableAlerts" class="secondary small" type="button" style="margin-bottom:12px">🔔 Ativar avisos de pedidos prontos</button><p id="alertMessage" class="muted small-copy"></p><div id="readyOrders" class="orders-list"><p class="muted">Conecte-se para consultar os pedidos prontos.</p></div>
+    <div class="panel compact" aria-labelledby="notificationSettingsTitle"><div class="section-heading"><div><h4 id="notificationSettingsTitle">Notificações e instalação</h4><p id="notificationStatus" class="muted small-copy" aria-live="polite">Verificando suporte do dispositivo…</p></div></div><p id="notificationExplanation" class="muted small-copy">Para receber avisos, pode ser necessário instalar o PWA e permitir notificações. O suporte depende do navegador e do dispositivo.</p><div class="action-row"><button id="enableAlerts" class="primary small" type="button">Configurar notificações</button><button id="installAppBtn" class="secondary small" type="button" hidden>Instalar aplicativo</button></div><p id="installHelp" class="muted small-copy" hidden></p><p id="alertMessage" class="muted small-copy" aria-live="polite"></p></div><div id="readyOrders" class="orders-list"><p class="muted">Conecte-se para consultar os pedidos prontos.</p></div>
   </section>
 
   <section class="page" id="page-billing" data-page="billing" aria-label="Cobrança">
@@ -115,12 +101,13 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
 </main>
 
 <nav class="bottom-nav" aria-label="Navegação do garçom">
-  <button type="button" data-tab="home" class="active" aria-current="page"><span class="nav-icon">⌂</span><span>Início</span></button>
   <button type="button" data-tab="tables"><span class="nav-icon">▦</span><span>Mesas</span></button>
   <button type="button" data-tab="orders"><span class="nav-icon">▤</span><span>Pedidos</span></button>
   <button type="button" data-tab="deliveries"><span class="nav-icon">♨</span><span>Entregas</span></button>
   <button type="button" data-tab="billing"><span class="nav-icon">R$</span><span>Cobrança</span></button>
 </nav>
+
+<dialog id="notificationConsent" class="sheet small-sheet" aria-labelledby="notificationConsentTitle"><div class="sheet-top"><div><span class="section-eyebrow">AVISOS DE ATENDIMENTO</span><h2 id="notificationConsentTitle">Configure seus avisos</h2></div><button type="button" id="closeNotificationConsent" class="close-button" aria-label="Fechar">×</button></div><div class="sheet-body"><p>Para receber notificações, o dispositivo precisa oferecer suporte técnico, o PWA deve estar instalado quando a plataforma exigir e você precisa permitir as notificações.</p><p id="consentPlatformNote" class="muted small-copy"></p><p>Importante: o servidor ainda não tem subscrição Web Push nem infraestrutura de envio em segundo plano. Conceder permissão, por si só, não garante avisos quando o aplicativo estiver fechado.</p><div class="action-row"><button id="requestNotificationPermission" class="primary" type="button">Permitir notificações</button><button id="dismissNotificationConsent" class="secondary" type="button">Agora não</button></div><p id="consentStatus" class="muted small-copy" aria-live="polite"></p></div></dialog>
 
 <dialog id="orderModal" class="sheet" aria-labelledby="modalTitle">
   <div class="sheet-top"><div><span class="section-eyebrow">NOVO ATENDIMENTO</span><h2 id="modalTitle">Montar pedido</h2></div><button type="button" class="close-button" id="closeOrder" aria-label="Fechar" autofocus>×</button></div>
