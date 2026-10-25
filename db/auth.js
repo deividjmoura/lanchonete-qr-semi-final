@@ -257,7 +257,19 @@ function verificarProtecaoCSRF(req) {
   const esperado = csrfTokenParaSessao(sessionToken);
   const recebido = req.headers['x-csrf-token'];
   if (!esperado || typeof recebido !== 'string') {
-    throw new ErroAuth(403, 'Token CSRF ausente ou inválido');
+    // Compatibilidade com páginas legadas que ainda usam fetch direto:
+    // só aceitamos o fallback quando há Origin/Referer válido e a validação
+    // existente confirma que a origem é a mesma da aplicação/allowlist.
+    const origin = typeof req.headers.origin === 'string' ? req.headers.origin.trim() : '';
+    let refererOrigin = '';
+    if (!origin && typeof req.headers.referer === 'string') {
+      try { refererOrigin = new URL(req.headers.referer).origin; } catch {}
+    }
+    if (!origin && !refererOrigin) {
+      throw new ErroAuth(403, 'Token CSRF ausente ou inválido');
+    }
+    verificarOrigemRequisicao(req);
+    return;
   }
 
   const a = Buffer.from(esperado, 'utf8');
