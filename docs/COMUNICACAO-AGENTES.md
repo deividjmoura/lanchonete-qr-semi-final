@@ -376,3 +376,8 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 - **Limitação:** teste estrutural estático; não substitui teste HTTP real com sessão sintética nem demonstra por si só 401 anônimo em runtime. Não foram usados dados/credenciais de produção; nenhum código de runtime, banco, Railway ou secret foi alterado.
 - **Próxima ação:** confirmar conclusão final do CI e revisar se já existe cobertura dinâmica equivalente. Só então decidir se a issue #1 pode ser fechada.
 - **Nota operacional:** este registro na `main` pode disparar deploy automático. Frente 1 / Agente 1 deve verificar e registrar o resultado do deploy associado a este commit documental; nenhuma alteração de produção foi solicitada por esta frente.
+
+
+### Atualização de CI — Frente 5 (2026-10-25)
+- GitHub Actions run [#416](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40208748752) terminou **SUCCESS** no HEAD exato da PR #94 `1dc18a1f876d0494c69e44ab0509fbee56a79977`; typecheck, build, integridade de `dist/`, regressões e sintaxe do servidor/banco passaram.
+- A PR continua draft e não integrada. O teste é estrutural; não há evidência de teste HTTP anônimo real nem de teste com dados de produção.
