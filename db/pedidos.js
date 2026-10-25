@@ -406,7 +406,7 @@ async function criarPedido(token, body, atendimento = null) {
 }
 
 /** Cliente cancela pedido só enquanto status = recebido (ainda não em preparo). */
-async function cancelarPedidoCliente(token, pedidoId) {
+async function cancelarPedidoCliente(token, pedidoId, garcomResponsavelId = null) {
   const pedidoNumerico = Number(pedidoId);
   if (!Number.isInteger(pedidoNumerico) || pedidoNumerico < 1) {
     throw new ErroPedido(400, 'Pedido inválido');
