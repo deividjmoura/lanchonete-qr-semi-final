@@ -20,6 +20,7 @@
     "test:carga70": "node scripts/carga-70-mesas.js",
     "test:seguranca": "node scripts/teste-seguranca.js",
     "fotos:fix": "node scripts/fix-fotos-cardapio.js",
+    "fotos:sync": "node scripts/sync-fotos-seed.js",
     "fotos:dry": "node scripts/fix-fotos-cardapio.js --dry-run",
     "dev:api": "node server.js",
     "dev:ui": "vite",
