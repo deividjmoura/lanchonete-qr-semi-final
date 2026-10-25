@@ -100,3 +100,36 @@ Responder com estes pontos, mesmo que a conclusão seja “não precisa alterar�
 **Contexto da Frente 3:** a auditoria do PWA não encontrou implementação de Web Push no servidor (subscrição/persistência/envio). Permissão de notificações no navegador, isoladamente, não ativa push em segundo plano. Não introduzir VAPID ou alterações de Railway como se fossem requisito da Frente 2 sem demonstrar a dependência técnica. A Frente 3 não alterou configuração, variáveis, secrets nem dados do Railway.
 
 **Formato de resposta:** marcar cada item como NECESSÁRIO, VALIDAR ou NÃO NECESSÁRIO, com justificativa e evidência (arquivo/endpoint/migration). Se a Frente 2 precisar de mudanças no Railway, pedir autorização com a lista exata antes de executar.
+
+
+## Plano de execução coordenado — objetivo de hoje (2026-10-25)
+
+A meta de hoje é fechar as três entregas em PRs revisáveis, com CI verde e contratos compatíveis; não é fazer deploy apressado.
+
+### Frente 1 — coordenador (PR #85)
+- Fechar CI e revisar as regressões de pagamento/comprovante.
+- Integrar com Frente 2 a autorização de cobrança pelo garçom, usando o responsável atual da sessão no servidor; não confiar em IDs/nome enviados livremente pelo cliente.
+- Corrigir/confirmar numeração única de migrations. A migration de operador de pagamento usa 0022_sessao_pagamentos_operador.sql; a Frente 2 deve escolher o próximo número livre e renomear a sua migration para evitar colisão.
+- Documentar o que depende de configuração privada PIX e manter Railway/produção intocados até aprovação explícita.
+- Sem merge/deploy antes de revisão integrada.
+
+### Frente 2 — responsável por mesa (PR #86)
+- Corrigir possível colisão de prefixo da migration 0022_atendimento_transferencia_actor.sql com a migration da Frente 1; verificar a sequência completa e renomear para o próximo número livre.
+- Confirmar contrato dos endpoints de garçons ativos e transferência, autorização por responsável, estado de sessão e histórico.
+- Cobrir por regressão: A inicia atendimento → pedido pronto → A transfere para B → só B vê a tarefa → B entrega → admin continua vendo todas.
+- Preservar isolamento dos arquivos financeiros da Frente 1 e do fluxo de instalação/notificações da Frente 3.
+- Reportar CI do head atual, limitações de teste real e contrato final de API/DB.
+
+### Frente 3 — PWA e notificações (issue #87)
+- Remover a aba Início redundante e cobrir a navegação por teste.
+- Implementar consentimento contextual no primeiro acesso, pedido de permissão somente após ação explícita, confirmação adicional após recusa e caminho para ativar depois sem insistência recorrente.
+- Distinguir permissão do navegador de push funcional: auditoria anterior não encontrou subscrição persistida nem envio Web Push no backend.
+- Não adicionar VAPID, secrets ou alterações de Railway sem comprovar necessidade e receber aprovação.
+- Consumir o contrato de tarefas da Frente 2 sem duplicar regras de atribuição; evitar editar arquivos compartilhados sem coordenação.
+- Abrir PR draft e reportar CI, cobertura e limitações por plataforma.
+
+### Gate de integração do trio
+1. Confirmar CI verde em cada head e resolver conflitos de migration.
+2. Revisar juntos endpoints/contratos e executar a suíte de regressão integrada, incluindo os testes de PostgreSQL descartável quando disponíveis.
+3. Conferir que pagamentos não fecham sessões com pendências, transferência muda o destinatário sem duplicar tarefas e o PWA não promete notificações de background que o servidor ainda não entrega.
+4. Só depois solicitar autorização para merge/deploy. Nenhuma frente altera Railway, secrets, dados de produção ou configuração externa sem autorização explícita.
