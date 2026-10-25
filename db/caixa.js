@@ -263,10 +263,17 @@ async function lerSessoesAbertas(client) {
       pedidosPendentes: pendentes,
       podeFechar: pendentes === 0,
     };
+  }).filter((sessao) => {
+    const semAvisos = sessao.pixAvisos.length === 0;
+    const semPedidos = sessao.pedidosEntregues.length === 0 && sessao.pedidosPendentes === 0;
+    const vazia = semPedidos && sessao.pagamentos.length === 0 && semAvisos;
+    const quitada = sessao.pedidosPendentes === 0 && sessao.valorRestante <= 0.009 && semAvisos;
+    // Não altera banco durante GET: apenas remove cards sem trabalho financeiro/operacional.
+    return !vazia && !quitada;
   });
 }
 
-/** Registra pagamento parcial (divisão de conta). Não fecha a sessão. */
+/** Registra pagamento parcial (divisão de conta). A quitação simples pode fechar a sessão. */
 async function registrarPagamento(sessaoIdBruto, body) {
   const sessaoId = validarSessaoId(sessaoIdBruto);
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
@@ -293,7 +300,6 @@ async function registrarPagamento(sessaoIdBruto, body) {
   try {
     await client.query('BEGIN');
     const sessao = await travarSessao(client, sessaoId);
-    if (sessao.status !== 'aberta') throw new ErroCaixa(409, 'Sessão já está fechada');
 
     // Replay idempotente: toque duplo no caixa / retry de rede com a mesma
     // chave devolve o lançamento original em vez de baixar o valor 2x.
@@ -322,10 +328,13 @@ async function registrarPagamento(sessaoIdBruto, body) {
           valorTotal: total,
           valorPago,
           valorRestante: Number(Math.max(0, total - valorPago).toFixed(2)),
+          status: sessao.status,
+          sessaoFechada: sessao.status === 'fechada',
           idempotentReplay: true,
         };
       }
     }
+    if (sessao.status !== 'aberta') throw new ErroCaixa(409, 'Sessão já está fechada');
 
     // Teto contra cobrança a maior calculado do total AUTORITATIVO (itens
     // entregues agora), não do acumulador histórico da sessão.
@@ -349,12 +358,37 @@ async function registrarPagamento(sessaoIdBruto, body) {
            RETURNING id, valor, forma_pagamento, criado_em`,
           [sessaoId, valor, forma]
         );
-    await client.query('COMMIT');
-
     const valorPago = Number((jaPago + valor).toFixed(2));
+    let sessaoFechada = false;
+    if (Math.abs(total - valorPago) <= 0.009) {
+      const { rows: pedidosPendentes } = await client.query(
+        `SELECT COUNT(*)::int AS n FROM pedidos WHERE sessao_id=$1 AND status <> 'entregue'`,
+        [sessaoId]
+      );
+      const { rows: avisosPixPendentes } = await client.query(
+        `SELECT COUNT(*)::int AS n FROM pix_avisos WHERE sessao_id=$1 AND status='pendente'`,
+        [sessaoId]
+      );
+      // Quitação automática só fecha se toda a operação estiver concluída.
+      // Avisos PIX pendentes e pedidos não entregues mantêm a sessão aberta.
+      if (Number(pedidosPendentes[0]?.n || 0) === 0 && Number(avisosPixPendentes[0]?.n || 0) === 0) {
+        await client.query(
+          `UPDATE mesa_sessoes
+              SET status='fechada', fechada_em=now(), forma_pagamento=$2,
+                  desconto=0, taxa_servico=0, valor_cobrado=$3, valor_total=$3
+            WHERE id=$1 AND status='aberta'`,
+          [sessaoId, forma, total]
+        );
+        await client.query(`UPDATE mesas SET status='livre' WHERE id=$1`, [sessao.mesa_id]);
+        sessaoFechada = true;
+      }
+    }
+    await client.query('COMMIT');
     return {
       ok: true,
       mesa: sessao.mesa,
+      status: sessaoFechada ? 'fechada' : 'aberta',
+      sessaoFechada,
       pagamento: {
         id: ins[0].id,
         valor: Number(ins[0].valor),
