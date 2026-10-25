@@ -59,7 +59,6 @@ test('pagamento PWA exige responsável atual dentro da transação e mantém ret
   const serverSource = fs.readFileSync('server.js', 'utf8');
   const caixaSource = fs.readFileSync('db/caixa.js', 'utf8');
   const workflow = fs.readFileSync('.github/workflows/ci.yml', 'utf8');
-  assert.match(serverSource, /registrarPagamento\\(Number\\(m\\[2\\]\\), payload, garcom\\.nome, garcom\\.id\\)/);
   assert.ok(serverSource.includes('registrarPagamento(Number(m[2]), payload, garcom.nome, garcom.id)'));
   assert.ok(caixaSource.includes('SELECT id, ativo FROM garcons WHERE id = $1 FOR SHARE'));
   assert.ok(caixaSource.includes('sessao.garcom_responsavel_id'));
