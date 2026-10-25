@@ -9,7 +9,7 @@ const js = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
 
 test('consentimento inicial é contextual e persistido por token de garçom', () => {
-  assert.match(js, /const CONSENT_SEEN='garcom-notification-intro-v1-\'+waiterToken/);
+  assert.ok(js.includes("const CONSENT_SEEN='garcom-notification-intro-v1-'+waiterToken"));
   assert.match(js, /if\(!localStorage\.getItem\(CONSENT_SEEN\)\)\s*\{[\s\S]*?consentDialog\.showModal\(\)/);
   assert.match(js, /consentDialog\.addEventListener\('close',[^;]*localStorage\.setItem\(CONSENT_SEEN,'1'\)/);
   assert.match(js, /\$\('#dismissNotificationConsent'\)\.addEventListener\('click',[^;]*localStorage\.setItem\(CONSENT_SEEN,'1'\)/);
@@ -28,7 +28,7 @@ test('pedido de permissão existe uma única vez e fica dentro de ação explíc
 
 test('recusa informa consequência, pede confirmação e não tenta reabrir permissão negada', () => {
   assert.match(js, /window\.confirm\('Você recusou as notificações e não receberá avisos por este navegador/);
-  assert.match(js, /garcom-notifications-declined-\'+waiterToken/);
+  assert.ok(js.includes("garcom-notifications-declined-'+waiterToken"));
   assert.match(js, /Permissão negada nas configurações do navegador/);
   assert.match(js, /requestNotificationPermission'\)\.disabled=permission==='unavailable'\|\|permission==='denied'/);
   assert.match(js, /alterá-la nas configurações do site/);
