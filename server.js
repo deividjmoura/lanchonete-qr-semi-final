@@ -57,6 +57,8 @@ const {
   exigirAcesso,
   homeDoPapel,
   garantirStaffSeed,
+  csrfTokenParaSessao,
+  verificarProtecaoCSRF,
 } = require('./db/auth');
 const { golpePermitido } = require('./db/rateLimit');
 const { ErroAtendimento, listarMesasGarcom, assumirMesa, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesaGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
@@ -445,6 +447,7 @@ const server = http.createServer(async (req, res) => {
           ok: true,
           staff,
           home: homeDoPapel(staff.papel),
+          csrfToken: csrfTokenParaSessao(token),
         });
       } catch (e) {
         if (e instanceof ErroAuth) return json(res, e.status, { error: e.message });
@@ -452,6 +455,7 @@ const server = http.createServer(async (req, res) => {
       }
     }
     if (p === '/api/logout' && req.method === 'POST') {
+      verificarProtecaoCSRF(req);
       await destruirSessao(parseCookies(req)[SESSION_COOKIE]);
       res.setHeader('Set-Cookie', cookieDeLogout());
       return json(res, 200, { ok: true });
@@ -459,7 +463,8 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/me' && req.method === 'GET') {
       const staff = await getStaffDaRequisicao(req);
       if (!staff) return json(res, 401, { error: 'Não autenticado' });
-      return json(res, 200, { staff, home: homeDoPapel(staff.papel) });
+      const sessionToken = parseCookies(req)[SESSION_COOKIE];
+      return json(res, 200, { staff, home: homeDoPapel(staff.papel), csrfToken: csrfTokenParaSessao(sessionToken) });
     }
 
     if (p === '/api/config/pix' && req.method === 'GET') {
