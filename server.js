@@ -496,6 +496,37 @@ const server = http.createServer(async (req, res) => {
       throw e;
     }
 
+    // Pagamento pelo PWA do garçom: o token identifica o garçom, mas a
+    // autorização financeira é sempre conferida contra o responsável atual
+    // persistido na sessão. Nunca aceitar operador/garçom informado no body.
+    if ((m = p.match(/^\\/api\\/garcom\\/([^/]+)\\/sessoes\\/(\\d+)\\/pagamentos$/)) && req.method === 'POST') {
+      try {
+        const garcom = await getGarcomPorToken(m[1]);
+        if (!garcom || !garcom.ativo) {
+          return json(res, 401, { error: 'Link do garçom inválido ou desativado' });
+        }
+        const sessaoId = Number(m[2]);
+        const { rows: sessoes } = await pool.query(
+          'SELECT status, garcom_responsavel_id FROM mesa_sessoes WHERE id = $1',
+          [sessaoId]
+        );
+        const sessao = sessoes[0];
+        if (!sessao) return json(res, 404, { error: 'Sessão não encontrada' });
+        if (sessao.status !== 'aberta') {
+          return json(res, 409, { error: 'Sessão já está fechada' });
+        }
+        if (Number(sessao.garcom_responsavel_id) !== Number(garcom.id)) {
+          return json(res, 403, { error: 'Somente o garçom responsável atual pode registrar pagamentos desta mesa' });
+        }
+        const out = await registrarPagamento(sessaoId, await body(req), garcom.nome);
+        broadcast('update', { type: 'pagamento_parcial', sessaoId });
+        return json(res, 201, out);
+      } catch (e) {
+        if (e instanceof ErroCaixa) return json(res, e.status, { error: e.message });
+        throw e;
+      }
+    }
+
     if (p === '/api/cozinha/pedidos' && req.method === 'GET') {
       return json(res, 200, await getFilaCozinha());
     }
