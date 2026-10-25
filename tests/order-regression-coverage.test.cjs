@@ -418,7 +418,7 @@ test('criação rejeita produto inexistente e produto indisponível sem confirma
     const fake = clientePedidoFake(options);
     await comPoolDePedidoFake(fake, () => assert.rejects(
       criarPedido(TOKEN_MESA_TESTE, { items: [{ productId: 8, qty: 1 }] }),
-      (error) => error instanceof ErroPedido && error.status === 400 && /Nenhum item válido/.test(error.message)
+      (error) => error instanceof ErroPedido && error.status === 409 && /Produto 8 inexistente ou indisponível; nenhum item foi pedido/.test(error.message)
     ));
     assert.ok(fake.calls.some((c) => c.sql === 'ROLLBACK'));
     assert.equal(fake.calls.some((c) => c.sql === 'COMMIT'), false);
