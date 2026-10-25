@@ -10,7 +10,7 @@ const vm = require('node:vm');
 const pool = require('../db/pool');
 const { papelPodeAcessar, ACESSO, ErroAuth, exigirAcesso } = require('../db/auth');
 const { ErroGarcom, entregarComoGarcom } = require('../db/garcons');
-const { ErroPedido, sincronizarStatusPedido } = require('../db/pedidos');
+const { ErroPedido, sincronizarStatusPedido, setStatusPedido } = require('../db/pedidos');
 const { ErroCaixa } = require('../db/caixa');
 const { sincronizarValorTotalSessao, idempotencyKeyDoCorpo } = require('../db/conta');
 
@@ -285,6 +285,31 @@ describe('3. Ciclo de Vida — Mesa aberta pelo cliente e assumida pelo garçom'
    4. ATUALIZAÇÃO DE STATUS, ENTREGA PARCIAL E FECHAMENTO
    ========================================================================= */
 describe('4. Status, Entrega Parcial e Fechamento', () => {
+  test('Cozinha/bar recebem 403 se o pedido não possui itens do próprio setor', async () => {
+    const updates = [];
+    const restore = setupMockPool(async (sql) => {
+      if (/^(BEGIN|COMMIT|ROLLBACK)$/.test(sql.trim())) return { rows: [] };
+      if (/FROM pedidos WHERE id = \$1 FOR UPDATE/.test(sql)) {
+        return { rows: [{ id: 7, status: 'em_producao', sessao_id: 2 }] };
+      }
+      if (/SELECT ip\.id/.test(sql)) {
+        return { rows: [{ id: 70, status: 'recebido', setor: 'bar' }] };
+      }
+      if (/^UPDATE /.test(sql.trim())) updates.push(sql);
+      return { rows: [], rowCount: 0 };
+    });
+
+    try {
+      await assert.rejects(
+        () => setStatusPedido(7, 'em_producao', 'cozinha'),
+        (error) => error instanceof ErroPedido && error.status === 403
+      );
+      assert.deepEqual(updates, [], 'nenhum item/pedido deve ser atualizado fora do setor autorizado');
+    } finally {
+      restore();
+    }
+  });
+
   test('Sincronização de status do pedido respeita regra de itens agregados', async () => {
     const mockClient = {
       async query(sql, params) {
