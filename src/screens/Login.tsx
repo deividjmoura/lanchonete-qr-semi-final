@@ -68,7 +68,7 @@ export default function Login() {
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
         className="w-full max-w-md relative"
       >
-        <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-14 w-32 h-60 sm:w-44 opacity-[.09]" style={{background:"url('/branding/delicias/totem.svg') center / contain no-repeat"}} />
+        <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-14 w-32 h-60 sm:w-44 opacity-[.09]" style={{background:"url('/logo/qradmin-mark.png') center / contain no-repeat"}} />
         <div className="text-center mb-8">
           <div className="flex justify-center">
             <Logo size="lg" />
