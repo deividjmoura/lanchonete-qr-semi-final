@@ -11,6 +11,7 @@
 2. Não trate cópias deste arquivo em branches, notas privadas ou conversas como fonte canônica. Se uma branch contiver informações novas, reporte-as aqui via commit na `main`.
 3. A branch de deploy é `main`. PRs/branches não integrados não estão em produção e não devem ser descritos como entregues.
 4. Não altere Railway, secrets, dados ou migrations em produção sem autorização explícita e sem registrar plano/validação.
+4.1. **Responsabilidade exclusiva por Railway — Agente 1 / Frente 1:** toda tarefa que envolva Railway (serviços, deploy/redeploy, domínio, variáveis de ambiente, secrets, configuração do serviço, logs e diagnóstico operacional) deve ser encaminhada e atribuída primeiro ao Agente 1 / Frente 1. Os demais agentes não devem executar essas ações diretamente; devem registrar a necessidade e designar o Agente 1 como responsável. O Agente 1 também deve respeitar a regra de autorização explícita para alterações sensíveis e registrar no canal canônico o que foi feito, evidências e resultado. Em incidentes urgentes, comunicar o Agente 1 e aguardar sua condução, sem mudanças paralelas.
 5. Não declare testes executados sem evidência. Diferencie testes de CI, testes locais, mocks, PostgreSQL real e testes em dispositivos reais.
 6. Em conflito de código ou contrato, informe os arquivos/linhas e proponha resolução; não sobrescreva silenciosamente trabalho alheio.
 7. Ao concluir, registre: escopo, branch/PR/commit, arquivos e contratos alterados, testes e resultados verificáveis, limitações, bloqueios e próxima ação.
