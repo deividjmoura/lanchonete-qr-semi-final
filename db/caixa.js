@@ -403,6 +403,7 @@ async function registrarPagamento(sessaoIdBruto, body, operadorNome = null) {
         valor: Number(ins[0].valor),
         formaPagamento: ins[0].forma_pagamento,
         criadoEm: ins[0].criado_em,
+        operadorNome: ins[0].operador_nome || null,
       },
       valorTotal: total,
       valorPago,
@@ -419,7 +420,7 @@ async function registrarPagamento(sessaoIdBruto, body, operadorNome = null) {
   }
 }
 
-async function fecharSessao(sessaoIdBruto, body) {
+async function fecharSessao(sessaoIdBruto, body, operadorNome = null) {
   const sessaoId = validarSessaoId(sessaoIdBruto);
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new ErroCaixa(400, 'Dados de fechamento inválidos');
@@ -510,11 +511,21 @@ async function fecharSessao(sessaoIdBruto, body) {
     }
     const falta = Number((valorCobrado - valorPago).toFixed(2));
     if (falta > 0.009) {
-      await client.query(
-        `INSERT INTO sessao_pagamentos (sessao_id, valor, forma_pagamento)
-         VALUES ($1, $2, $3)`,
-        [sessaoId, falta, forma]
-      );
+      const temOperadorNoFechamento = await pagamentosTemOperadorNome(client).catch(() => false);
+      const operador = typeof operadorNome === 'string' ? operadorNome.trim().slice(0, 120) || null : null;
+      if (temOperadorNoFechamento) {
+        await client.query(
+          `INSERT INTO sessao_pagamentos (sessao_id, valor, forma_pagamento, operador_nome)
+           VALUES ($1, $2, $3, $4)`,
+          [sessaoId, falta, forma, operador]
+        );
+      } else {
+        await client.query(
+          `INSERT INTO sessao_pagamentos (sessao_id, valor, forma_pagamento)
+           VALUES ($1, $2, $3)`,
+          [sessaoId, falta, forma]
+        );
+      }
       valorPago = Number((valorPago + falta).toFixed(2));
     }
 
