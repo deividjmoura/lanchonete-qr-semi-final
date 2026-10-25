@@ -102,41 +102,129 @@ Responder com estes pontos, mesmo que a conclusão seja “não precisa alterar�
 **Formato de resposta:** marcar cada item como NECESSÁRIO, VALIDAR ou NÃO NECESSÁRIO, com justificativa e evidência (arquivo/endpoint/migration). Se a Frente 2 precisar de mudanças no Railway, pedir autorização com a lista exata antes de executar.
 
 
-## Coordenação do comandante — integração de migrations (2026-10-25)
+## Plano de execução coordenado — objetivo de hoje (2026-10-25)
 
-**Frente 2 / PR #86:** a colisão de prefixo foi resolvida nesta branch. A migration de atendimento agora é `db/migrations/0023_atendimento_transferencia_actor.sql`; a migration `0022_atendimento_transferencia_actor.sql` foi removida. O contrato em `docs/CONTRATO-ATENDIMENTO-GARCOM.md` foi atualizado para refletir o novo nome. A migration é aditiva, mas precisa ser validada com a sequência completa em PostgreSQL isolado antes de merge/deploy.
+A meta de hoje é fechar as três entregas em PRs revisáveis, com CI verde e contratos compatíveis; não é fazer deploy apressado.
 
-**Frente 1 / PR #85:** manter `0022_sessao_pagamentos_operador.sql` como a migration 0022 na sequência de integração, desde que permaneça no conjunto final. A integração da Frente 2 depende da confirmação de que o branch integrado inclui essa migration e não outra migration concorrente com o mesmo prefixo.
+### Frente 1 — coordenador (PR #85)
+- Fechar CI e revisar as regressões de pagamento/comprovante.
+- Integrar com Frente 2 a autorização de cobrança pelo garçom, usando o responsável atual da sessão no servidor; não confiar em IDs/nome enviados livremente pelo cliente.
+- Corrigir/confirmar numeração única de migrations. A migration de operador de pagamento usa 0022_sessao_pagamentos_operador.sql; a Frente 2 deve escolher o próximo número livre e renomear a sua migration para evitar colisão.
+- Documentar o que depende de configuração privada PIX e manter Railway/produção intocados até aprovação explícita.
+- Sem merge/deploy antes de revisão integrada.
 
-**Critério de integração:** CI verde no head atual do PR #86, conflito resolvido, contrato documentado, revisão do diff e teste de migrations em banco descartável. Os testes existentes com mocks não substituem o teste com PostgreSQL real. PR permanece em draft; sem merge, sem migration manual e sem deploy de código incompleto.
+### Frente 2 — responsável por mesa (PR #86)
+- Corrigir possível colisão de prefixo da migration 0022_atendimento_transferencia_actor.sql com a migration da Frente 1; verificar a sequência completa e renomear para o próximo número livre.
+- Confirmar contrato dos endpoints de garçons ativos e transferência, autorização por responsável, estado de sessão e histórico.
+- Cobrir por regressão: A inicia atendimento → pedido pronto → A transfere para B → só B vê a tarefa → B entrega → admin continua vendo todas.
+- Preservar isolamento dos arquivos financeiros da Frente 1 e do fluxo de instalação/notificações da Frente 3.
+- Reportar CI do head atual, limitações de teste real e contrato final de API/DB.
 
-**Railway:** a autorização operacional do proprietário permite ao coordenador realizar ajustes rotineiros de configuração sem pedir confirmação a cada mudança. Isso não autoriza a Frente 2 a mudar o serviço ou executar migrations em produção. O Railway deve continuar apontando para `main`; a migration só chega ao ambiente quando o código integrado for revisado e promovido.
+### Frente 3 — PWA e notificações (issue #87)
+- Remover a aba Início redundante e cobrir a navegação por teste.
+- Implementar consentimento contextual no primeiro acesso, pedido de permissão somente após ação explícita, confirmação adicional após recusa e caminho para ativar depois sem insistência recorrente.
+- Distinguir permissão do navegador de push funcional: auditoria anterior não encontrou subscrição persistida nem envio Web Push no backend.
+- Não adicionar VAPID, secrets ou alterações de Railway sem comprovar necessidade e receber aprovação.
+- Consumir o contrato de tarefas da Frente 2 sem duplicar regras de atribuição; evitar editar arquivos compartilhados sem coordenação.
+- Abrir PR draft e reportar CI, cobertura e limitações por plataforma.
+
+### Gate de integração do trio
+1. Confirmar CI verde em cada head e resolver conflitos de migration.
+2. Revisar juntos endpoints/contratos e executar a suíte de regressão integrada, incluindo os testes de PostgreSQL descartável quando disponíveis.
+3. Conferir que pagamentos não fecham sessões com pendências, transferência muda o destinatário sem duplicar tarefas e o PWA não promete notificações de background que o servidor ainda não entrega.
+4. Só depois solicitar autorização para merge/deploy. Nenhuma frente altera Railway, secrets, dados de produção ou configuração externa sem autorização explícita.
 
 
-## Atualização de coordenação — Frente 3 / CI e pedido de retorno da Frente 2 (2026-10-25)
+## Atualização do coordenador — situação integrada e Railway (2026-10-25)
 
-**Frente 3:** PR draft [#88](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/88) adiciona `tests/pwa-garcom-consent.test.cjs`. Ao revisar o workflow, encontrei que `npm run test:regression` não incluía esse novo arquivo; por isso, o CI verde anterior não era evidência de execução desses testes. Corrigi os scripts `test` e `test:regression` em commit `3aefd704273eead3ab551d5dfc905440ecb2e31d` no branch `work/frente-3-validacao-final`. Aguardando CI desse novo commit. Não alterei backend, APIs de atribuição, Railway, secrets ou banco.
+Esta atualização registra o estado observado após revisar os PRs e o ambiente de produção. A autorização operacional do proprietário para ajustes rotineiros no Railway foi dada diretamente na conversa em 2026-10-25; portanto, não é necessário pedir confirmação a cada alteração de configuração reversível. Continuam proibidos segredos no Git, logs e documentação, e deploy de código incompleto.
 
-**Pedido à Frente 2:** por favor, atualize esta seção ou a seção da Frente 2 com o estado real do trabalho e informe:
-- branch/PR atual e commit-base;
-- endpoints, tabelas/migrations e arquivos alterados (ou confirmação de que ainda não houve mudanças);
-- política para tarefas já prontas quando a mesa é transferida;
-- testes executados de dois garçons, autorização e ausência de duplicidade/perda após transferência;
-- qualquer contrato compartilhado que a Frente 3 deva consumir, sem implementar lógica paralela de atribuição;
-- parecer Railway por item: NECESSÁRIO / VALIDAR / NÃO NECESSÁRIO, com evidência e sem alterar configuração externa.
+### Railway — estado observado
+- Projeto `exquisite-nurturing`, serviço `lanchonete-qr-semi-final`, ambiente `production`.
+- A fonte do serviço permanece `deividjmoura/lanchonete-qr-semi-final` / branch `main`; build `npm run build`; start `npm run start:prod`; pre-deploy `npm run db:migrate && npm run db:seed`.
+- Domínio Railway observado: `qradminn.up.railway.app`. Nenhum domínio customizado aparece anexado ao serviço.
+- Deploy da integração da Frente 3, commit `daf1b2aab6df6c656b18d27059cf03f766f80237`, terminou `SUCCESS`; serviço online com uma réplica, sem falhas recentes ou alertas ativos.
+- `PIX_CHAVE`, `PIX_NOME`, `PIX_CIDADE` e as variáveis `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` estão configuradas no serviço de produção. Não registrar nem copiar valores secretos aqui.
+- A configuração VAPID foi aplicada com skip-deploy. Durante a revisão, `VAPID_SUBJECT` foi alinhado ao domínio realmente anexado ao serviço (`https://qradminn.up.railway.app`), também com skip-deploy. A configuração não comprova que Web Push funcione; o código ainda precisa consumir as variáveis após a integração/deploy apropriados.
 
-Até existir evidência, não considerar os testes de dispositivo Android/iOS executados e não afirmar Web Push em segundo plano. Manter as branches separadas e avisar antes de editar arquivos compartilhados.
+### Estado dos PRs e bloqueios
+- **PR #84 / Frente 3:** mergeado na `main`; deploy correspondente confirmado como `SUCCESS`. Isso entrega UX/consentimento, não Web Push em segundo plano.
+- **PR #85 / Frente 1:** draft, aberto, head `9d093ad68b8434b4c58e1f90f70557e5efb1998d`; CI associado ao head observado como `SUCCESS`. Ainda faltam validações integradas e PostgreSQL real para os fluxos financeiros.
+- **PR #86 / Frente 2:** draft, aberto, head `90471c46b7f566ec40aa8b02e1a9bf22f0e81b6e); o GitHub reporta `mergeable=false` e não foi localizado run de CI para esse head exato. O run verde citado anteriormente pertencia a um SHA anterior; não reutilizar essa evidência como se validasse o head atual.
+- **Colisão de migrations confirmada:** a Frente 1 contém `0022_sessao_pagamentos_operador.sql` e a Frente 2 contém `0022_atendimento_transferencia_actor.sql`. Como a sequência de integração prioriza Frente 1 antes da Frente 2, manter `0022` na Frente 1 e renumerar a migration da Frente 2 para `0023_atendimento_transferencia_actor.sql`, conferindo o runner e os testes antes de atualizar o PR. Não executar migration manualmente em produção.
+- O contrato operacional da Frente 2 continua sem exigir VAPID/Web Push por si só. VAPID pertence à implementação de notificações da Frente 3; não confundir a preparação de variáveis com requisito concluído da Frente 2.
+
+### Próximos passos coordenados
+1. Frente 2: resolver conflitos do PR, renumerar a migration para `0023`, confirmar autorização/histórico e executar CI no head novo.
+2. Frente 1: revisar o CI verde do head atual e concluir testes integrados dos pagamentos, sem confiar em valores enviados pelo cliente.
+3. Integração: validar a sequência completa de migrations em PostgreSQL descartável e executar testes de transferência/entrega e pagamentos com os contratos combinados.
+4. Depois de revisão e CI verde, promover a integração em `main`; acompanhar o deploy automático e validar em produção com smoke tests não destrutivos. Não executar `test:dia` ou qualquer teste mutável contra produção sem avaliar seu impacto primeiro.
+5. Frente 3: só reabrir o escopo de Web Push quando houver implementação completa de subscrição, persistência, autorização, envio, limpeza HTTP 410 e teste real com o PWA encerrado.
 
 
-## Retorno observado na revisão cruzada — Frente 2 (2026-10-25)
+## Atualização de coordenação — validação observada (2026-10-25, rodada seguinte)
 
-Com base no estado atual do [PR #86](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/86) e no diff consultado (não é teste físico nem validação PostgreSQL):
+- **Frente 1 / PR #85:** CI SUCCESS no head `26da6d4051331b2c9d2070adfaf1cb4384042afe`. O código agora corrige os placeholders SQL posicionais do INSERT dinâmico e atribui o operador autenticado também ao lançamento automático do saldo restante durante o fechamento. O teste de regressão cobre ambos. O PR segue draft até validar fluxos financeiros com PostgreSQL descartável e fechar a integração de cobrança do garçom.
+- **Frente 2 / PR #86:** migration conflitante continua presente no head observado. Mantém-se a instrução de renomear `0022_atendimento_transferencia_actor.sql` para `0023_atendimento_transferencia_actor.sql` após confirmar a sequência completa; validar no CI do novo head, não reutilizar um run verde antigo.
+- **Frente 3 / PR #88:** CI SUCCESS no head `ce64c67fdacdab14dc4b3b800977422de1004851` para os testes estáticos de consentimento. Isso não comprova Web Push em background nem substitui testes em Android/iOS.
+- Comentário de coordenação atualizado no PR #86. O contrato entre frentes e a sequência de migrations continuam sendo bloqueadores antes de qualquer merge integrado.
 
-- **Contrato observado:** `GET /api/garcom/:token/garcons-ativos`; `POST /api/garcom/:token/mesas/:numero/transferir` com `{garcomDestinoId}`; fila do garçom filtrada no backend pela sessão aberta e `garcom_responsavel_id`.
-- **Auditoria observada:** `mesa_atendimento_historico.alterado_por_id`; migration no branch consultado: `0023_atendimento_transferencia_actor.sql`, evitando o prefixo 0022 reservado à Frente 1.
-- **Tarefas já prontas:** permanecem `concluido`; não são entregues/recriadas automaticamente. Após transferência, a fila é filtrada pelo responsável atual, então o novo responsável vê a tarefa e o anterior deixa de vê-la.
-- **Autorização observada:** transferência pelo responsável atual, destino ativo; entrega valida sessão aberta e responsável atual no servidor.
-- **Testes relatados no PR #86:** CI anterior declarou 102 testes passando, com mocks para fila/transferência/autorização. O próprio PR declara pendente PostgreSQL descartável e teste em dispositivos reais. O head do PR foi atualizado pela comunicação documental; confirme CI novamente no head final antes de integrar.
-- **Railway:** não há evidência técnica de necessidade de mudar variáveis/build/start/domínio para este contrato; classificar como **NÃO NECESSÁRIO para as mudanças de código observadas**, com **VALIDAR** apenas que o serviço continua implantando `main` e que a migration integrada é aplicada pelo mecanismo já configurado. Não alterar Railway nem executar migration de produção nesta etapa.
 
-**Integração Frente 3:** o PR #88 não chama endpoints novos de atribuição nem implementa regra própria de responsável; o escopo atual é navegação/consentimento e testes estáticos do PWA. Se a Frente 2 alterar o contrato de fila, avisar antes de editar os arquivos compartilhados da PWA.
+## Atualização de coordenação — migration da Frente 2 renumerada (2026-10-25)
+
+- A Frente 2 confirmou que renomeou a migration para `0023_atendimento_transferencia_actor.sql` e atualizou os documentos relacionados. A colisão de nome com `0022_sessao_pagamentos_operador.sql` foi resolvida na branch do PR #86.
+- Head observado do PR #86: `8c533dc32120a07387a14d55f6739c8dab623371`. Ainda não havia CI associado a esse SHA na última consulta e o GitHub reportava `mergeable=false`; a Frente 2 foi orientada a resolver os conflitos e validar o novo head antes de sair do draft.
+- Frente 1 / PR #85: CI SUCCESS no head `7de3e336155fd06fd6c94a0563e1c2d8ee7cf61a`.
+- Frente 3 / PR #88: CI SUCCESS no head `3aefd704273eead3ab551d5dfc905440ecb2e31d`.
+- Próxima barreira compartilhada: revisar contratos de API e rodar testes integrados em PostgreSQL descartável. Nenhuma migration foi executada em produção e nenhum merge/deploy foi feito.
+
+
+## Contrato de pagamento pelo PWA do garçom (Frente 1 → Frente 2)
+
+A Frente 1 adicionou em `server.js` a rota `POST /api/garcom/:token/sessoes/:sessaoId/pagamentos` na branch `work/frente-1-caixa-pagamentos`.
+
+- Autentica o token do garçom via `getGarcomPorToken` e rejeita tokens inexistentes/inativos.
+- No servidor, confere que a sessão existe, está aberta e que `mesa_sessoes.garcom_responsavel_id` corresponde ao garçom autenticado. O navegador não escolhe o operador.
+- Corpo: `{ valor, formaPagamento, idempotencyKey? }`; formas aceitas pelo motor financeiro: `dinheiro`, `pix`, `cartao_debito`, `cartao_credito`.
+- Sucesso (201): `{ ok, mesa, pagamento: { id, valor, formaPagamento, criadoEm, operadorNome }, valorTotal, valorPago, valorRestante, idempotentReplay }`.
+- Erros previstos: 400 valor/forma inválidos ou acima do saldo; 401 token inválido/inativo; 403 sessão atribuída a outro garçom; 404 sessão inexistente; 409 sessão fechada.
+- A rota registra usando o mesmo motor `registrarPagamento` do caixa, com o nome obtido do cadastro autenticado, preservando a auditoria/idempotência. Não concede ao garçom acesso geral a `/api/caixa`.
+- **Ação da Frente 2:** após revisar o contrato, integrar a chamada no PWA da mesa sob responsabilidade atual e apresentar valor restante/forma registrada. Não alterar o backend financeiro da Frente 1; sinalizar incompatibilidades neste documento antes de mudar o contrato.
+- **Validação do backend:** CI SUCCESS no head `be5a8da99fffb25489821460c2c38ba8b1b8bb16` (run 40199491940), incluindo typecheck, build, integridade de `dist/`, regressões e sintaxe Node/SQL. O teste estático cobre token ativo, sessão aberta, responsável atual e uso do motor financeiro comum.
+- **Limitação atual:** ainda falta a integração visual do PWA pela Frente 2 e teste com PostgreSQL descartável. Não declarar cobrança de garçom pronta só porque a rota passou no CI.
+
+
+## Atualização do comandante — integração de frentes (2026-10-25, rodada 2)
+
+- **Frente 1 / PR #85:** CI **SUCCESS** no head `824768b8fbbbd0128277f9dbde7a168bbe4f216d` (run #343): migrations aplicadas em PostgreSQL 16 limpo e teste funcional real passou para pagamento parcial, replay idempotente, rejeição de valor acima do saldo, quitação, fechamento e auditoria do operador. Variáveis PIX já estão configuradas no Railway production; o PR permanece draft até revisão integrada final.
+- **Frente 2 / PR antigo #86:** fechado como substituído, pois estava baseado na `main` anterior à integração da Frente 3 e reportava conflito.
+- **Frente 2 / PR novo #89:** https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/89. A branch `work/frente-2-responsavel-mesa-integrada` foi criada diretamente da `main` atual (`daf1b2aab6df6c656b18d27059cf03f766f80237`), com o fluxo de responsabilidade/transferência integrado à UX atual da PWA. A migration foi renumerada para `0023_atendimento_transferencia_actor.sql`; `0022_sessao_pagamentos_operador.sql` continua sendo a migration de pagamentos. O PR #89 está em draft, mergeable e com CI **SUCCESS** (run #340) no head `d94a0907ade7a9fb4e4bad6a1a7f26f19c4ad202`, incluindo migrations em PostgreSQL 16 limpo. Acrescentei também teste ponta a ponta de transferência/fila/entrega em PostgreSQL real; o novo CI desse head ainda está em execução.
+- **Frente 3:** PR #84 já está integrado na `main`. Isso cobre instalação contextual e consentimento, não o envio Web Push em segundo plano. VAPID está configurado no Railway, mas as variáveis por si só não completam a implementação.
+- **Produção:** não executei migrations nem testes mutáveis no banco de produção. Nenhum deploy foi feito a partir dos PRs #85 ou #89. A fonte de deploy permanece `main`.
+
+### Próximos gates
+1. Esperar o CI do PR #89 e corrigir qualquer falha no novo head.
+2. Revisar o diff combinado da PWA, incluindo autorização de mesa e estados de notificação.
+3. Validar migrations 0022 + 0023 e fluxos financeiros/atendimento em PostgreSQL descartável.
+4. Somente depois de CI verde, revisão e validação integrada, decidir a promoção dos PRs; após merge autorizado, acompanhar o deploy automático e executar smoke tests não destrutivos.
+
+
+## Atualização do comandante — testes PostgreSQL reais e sincronização do documento (2026-10-25)
+
+### Frente 1 / PR #85
+- CI #343 **SUCCESS** no commit de código `824768b8fbbbd0128277f9dbde7a168bbe4f216d`.
+- O teste `tests/postgres-financial-integration.test.cjs` passou em PostgreSQL 16 descartável: pagamento parcial, replay idempotente, rejeição de cobrança acima do saldo, quitação, fechamento de sessão, registro do operador e replay do fechamento.
+- O commit `fd14fca104830d0d2d76b947b731708ed49ba663` atualiza apenas esta documentação de coordenação. O PR continua draft até revisão integrada final.
+
+### Frente 2 / PR #89
+- O PR #86 foi fechado como substituído porque sua branch partia da versão anterior à integração da Frente 3.
+- PR atual: https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/89, branch `work/frente-2-responsavel-mesa-integrada`.
+- CI #345 **SUCCESS** no commit de código `70d09d921ba3830541d8e9a909e60aec41f4e98d`.
+- O teste `tests/postgres-waiter-integration.test.cjs` passou em PostgreSQL 16 descartável: iniciar atendimento, pedido pronto visível ao responsável, transferência com auditoria, remoção da fila do antigo responsável, inclusão na fila do novo e bloqueio de entrega pelo antigo responsável; o novo responsável concluiu a entrega.
+- O PR segue draft até revisão final do diff e validação visual em navegador/dispositivos reais.
+
+### Coordenação de merge
+- Os dois PRs alteram `docs/COMUNICACAO-AGENTES.md`. Para evitar conflito de arquivo adicionado, o conteúdo deste documento passa a ser a cópia canônica compartilhada e foi sincronizado para a branch do PR #89. Ao atualizar coordenação antes do merge, manter o mesmo conteúdo nos dois PRs.
+- A sequência de migrations permanece: `0022_sessao_pagamentos_operador.sql` (Frente 1) e `0023_atendimento_transferencia_actor.sql` (Frente 2). Ambas passaram separadamente em migrations de PostgreSQL limpo; a implementação de cada frente passou também seu teste funcional isolado.
+- A integração conjunta final deve ser validada após a sequência de merges. Não executar migrations manuais, seeds ou testes mutáveis em produção.
+- A Frente 3 está integrada na `main`, mas Web Push com aplicativo fechado continua fora do que foi implementado: as variáveis VAPID não equivalem a subscrição e envio em segundo plano.
