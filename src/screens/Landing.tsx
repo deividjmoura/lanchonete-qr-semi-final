@@ -34,17 +34,14 @@ const RECURSOS = [
 
 export default function Landing() {
   const hydrateCardapio = usePub((s) => s.hydrateCardapio);
-  const hydrateMesas = usePub((s) => s.hydrateMesas);
   const hydrateMe = usePub((s) => s.hydrateMe);
   useEffect(() => {
     void hydrateCardapio();
     void hydrateMe();
-    void hydrateMesas().catch(() => null);
-  }, [hydrateCardapio, hydrateMesas, hydrateMe]);
+  }, [hydrateCardapio, hydrateMe]);
 
   const sessoes = usePub((s) => s.sessoes);
   const pedidos = usePub((s) => s.pedidos);
-  const mesas = usePub((s) => s.mesas);
 
   const naFila = pedidos.filter((p) => p.status === "na_fila" || p.status === "em_producao").length;
   const comandas = sessoes.filter((s) => s.status === "aberta").length;
@@ -103,26 +100,6 @@ export default function Landing() {
                 </div>
               </div>
 
-              {mesas.length > 0 && (
-                <div className="mt-5">
-                  <p className="text-[11px] uppercase tracking-wider font-bold text-slate-500 mb-2">
-                    Iniciar pelo QR da mesa:
-                  </p>
-                  <div className="flex flex-wrap gap-2 max-w-xl">
-                    {mesas.map((m) => (
-                      <button
-                        key={m.token}
-                        type="button"
-                        onClick={() => ir(`/mesa/${m.token}`)}
-                        className="btn-press inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/80 hover:bg-white px-3 py-1.5 text-xs font-semibold text-navy-900 shadow-sm transition cursor-pointer"
-                      >
-                        <QrCode className="size-3 text-brand-600" />
-                        <span>{m.nome}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </motion.div>
 
             {/* placar ao vivo */}
