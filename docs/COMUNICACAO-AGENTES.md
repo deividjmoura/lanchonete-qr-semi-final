@@ -458,3 +458,13 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 - **Evidência de CI:** workflow #425 SUCCESS no HEAD da PR `f171d00b6fed74f465cb646fd5330c62ba4463cf`; o escopo integrado é apenas `docs/engineering/data-retention-rfc.md`.
 - **Issue #44:** continua aberta. A RFC não aprova prazos, não implementa automação e não autoriza executar purge; falta decisão do responsável sobre retenção, anonimização, obrigações contábeis, auditoria e backup/restauração.
 - **Deploy:** merge em `main` pode disparar deploy automático. Agente 1 / Frente 1 é o responsável por verificar e registrar o estado do deploy; esta frente não alterou Railway, secrets ou produção.
+
+
+### Rodada de destravamento — cancelamento público + PostgreSQL (2026-10-25)
+
+- **Responsabilidade assumida:** consolidar a correção da issue #75 com teste PostgreSQL descartável, sem disputar os arquivos das frentes financeiras/PWA em andamento.
+- **PR de consolidação:** [#101](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/101), branch `fix/postgres-integration-rebased-20261025`.
+- **Motivo da reconstrução:** a branch da PR #64 estava 52 commits atrás da `main`; foi criada uma branch limpa a partir da base atual e reaplicado somente o escopo necessário: `db/pedidos.js`, `tests/postgres-integration.test.cjs` e `.github/workflows/postgres-integration.yml`. Nenhuma alteração foi feita em `ci.yml`, migrations, Railway ou secrets.
+- **Validação:** no HEAD `bbd7f1f361c4ca3a1e215b54858410e3fd18350c`, CI #441 passou e PostgreSQL integration #20 passou. A primeira rodada da integração revelou que a fixture precisava atribuir a sessão sintética ao garçom responsável; o teste foi corrigido e reexecutado com sucesso.
+- **Estado:** PR #101 pronta para revisão, `mergeable=true`. Não houve merge ou deploy. PRs #64 e #80 permanecem abertas como contingência até a revisão/merge da #101; depois avaliar encerrá-las como substituídas e só então concluir a issue #75/#42 conforme critérios.
+- **Próximo passo:** revisão independente da #101; confirmar que o HEAD não mudou e que os dois workflows seguem verdes antes de qualquer merge. Nenhuma operação em produção.
