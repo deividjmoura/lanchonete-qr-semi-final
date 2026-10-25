@@ -82,3 +82,11 @@ test('quitação automática atribui o operador e usa placeholders SQL posiciona
   assert.ok(caixaDbSource.includes('valores.map((_, i) => `$${i + 1}`).join(\', \')'));
   assert.ok(caixaDbSource.includes('INSERT INTO sessao_pagamentos (sessao_id, valor, forma_pagamento, operador_nome)'));
 });
+
+test('pagamento pelo garçom exige token ativo e responsabilidade atual da sessão', () => {
+  assert.ok(serverSource.includes('/api\\/garcom\\/([^/]+)\\/sessoes\\/(\\d+)\\/pagamentos'));
+  assert.ok(serverSource.includes('const garcom = await getGarcomPorToken(m[1])'));
+  assert.ok(serverSource.includes("sessao.status !== 'aberta'"));
+  assert.ok(serverSource.includes('Number(sessao.garcom_responsavel_id) !== Number(garcom.id)'));
+  assert.ok(serverSource.includes('registrarPagamento(sessaoId, await body(req), garcom.nome)'));
+});
