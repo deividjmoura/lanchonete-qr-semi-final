@@ -228,3 +228,24 @@ A Frente 1 adicionou em `server.js` a rota `POST /api/garcom/:token/sessoes/:ses
 - A sequência de migrations permanece: `0022_sessao_pagamentos_operador.sql` (Frente 1) e `0023_atendimento_transferencia_actor.sql` (Frente 2). Ambas passaram separadamente em migrations de PostgreSQL limpo; a implementação de cada frente passou também seu teste funcional isolado.
 - A integração conjunta final deve ser validada após a sequência de merges. Não executar migrations manuais, seeds ou testes mutáveis em produção.
 - A Frente 3 está integrada na `main`, mas Web Push com aplicativo fechado continua fora do que foi implementado: as variáveis VAPID não equivalem a subscrição e envio em segundo plano.
+
+
+## Atualização do comandante — cobrança no PWA e proteção transacional (2026-10-25)
+
+### Frente 1 / PR #85 — proteção de concorrência
+- Foi corrigida a janela TOCTOU na cobrança pelo garçom: `registrarPagamento` agora revalida `garcom_responsavel_id` dentro da transação e do lock da sessão, não apenas na rota HTTP. A rota passa o ID do garçom autenticado ao motor financeiro.
+- O teste PostgreSQL da Frente 1 agora cria dois garçons, tenta registrar pagamento com o ID do não responsável, exige 403 e confirma que nenhum lançamento foi criado; depois valida pagamento parcial e fechamento com o responsável correto.
+- O CI mais recente falhou apenas porque um teste estático ainda esperava a assinatura antiga da rota. A expectativa foi atualizada em `tests/receipt-route-regression.test.cjs`; o head atual da Frente 1 é `bc42a7d041a06e4381235e79ed53b57fee710039` e precisa de novo CI antes de declarar verde.
+
+### Frente 2 / PR #89 — cobrança parcial no PWA
+- O PWA agora oferece botão **Cobrar** nas mesas sob responsabilidade e uma aba Cobrança funcional para registrar recebimentos parciais.
+- Foi adicionado `GET /api/garcom/:token/sessoes/:sessaoId/resumo-pagamento`, que expõe total entregue, total pago e saldo somente ao responsável atual. O endpoint reutiliza os cálculos financeiros compartilhados e lê em snapshot PostgreSQL.
+- O formulário chama o `POST /api/garcom/:token/sessoes/:sessaoId/pagamentos` da Frente 1; o contrato é compartilhado entre os PRs. A chave idempotente fica guardada localmente para retry após timeout, e o formulário impede trocar mesa/valor/forma enquanto houver tentativa pendente.
+- O operador precisa confirmar explicitamente o recebimento. Para PIX, a UI instrui conferir o crédito no app bancário e informa que não gera QR nem confirma liquidação automaticamente. A cobrança parcial não fecha a sessão; o fechamento final continua no Caixa.
+- O teste PostgreSQL da Frente 2 também verifica que o resumo de cobrança só é acessível ao responsável atual. A UI e o novo endpoint foram adicionados depois do CI #345; o head atual `d837310d78487c0b0b7f45942968dd88d7325ea0` precisa de novo CI.
+
+### Gates atualizados
+1. Reexecutar CI no head atual de ambos os PRs. O teste financeiro da Frente 1 deve cobrir o 403 transacional e a suíte de regressão atualizada.
+2. O teste PostgreSQL da Frente 2 deve validar transferência, fila, entrega e resumo de cobrança sob a responsabilidade correta.
+3. Após ambos verdes, revisar o merge conjunto das rotas no `server.js`, a PWA e o workflow compartilhado. O fechamento continua no Caixa.
+4. Os PRs permanecem draft; não houve merge nem deploy das alterações financeiras/atendimento para produção.
