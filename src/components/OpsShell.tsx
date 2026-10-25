@@ -94,8 +94,8 @@ export function OpsShell({
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(240,94,74,0.07),transparent_62%)]" />
       </div>
 
-      {/* Elemento artesanal do ambiente: marca d'água, sem competir com a marca */}
-      <div aria-hidden="true" className="fixed -z-10 bottom-0 right-0 w-36 sm:w-52 h-80 opacity-[.045] pointer-events-none" style={{ background:"url('/branding/delicias/totem.svg') center bottom / contain no-repeat" }} />
+      {/* Marca d'água discreta do QR Admin */}
+      <div aria-hidden="true" className="fixed -z-10 bottom-0 right-0 w-36 sm:w-52 h-80 opacity-[.045] pointer-events-none" style={{ background:"url('/logo/qradmin-mark.png') center bottom / contain no-repeat" }} />
       {/* header */}
       <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-3 sm:px-6 h-14 sm:h-16 flex items-center gap-1.5 sm:gap-3 min-w-0">

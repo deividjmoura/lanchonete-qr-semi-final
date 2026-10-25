@@ -81,7 +81,7 @@ export default function Admin() {
   );
 
   return (
-    <OpsShell ativo="admin" kicker="gestão · a casa" titulo={<>Delicia’s <span className="text-gradient">São Miguel</span></>} extra={extras}>
+    <OpsShell ativo="admin" kicker="gestão · QR Admin" titulo={<>QR <span className="text-gradient">Admin</span></>} extra={extras}>
       <AnimatePresence mode="wait">
         <motion.div
           key={aba}

@@ -143,21 +143,19 @@ async function gravarItensPedido(client, pedidoId, itensInput) {
   // (antes: 3 consultas POR ITEM, segurando o lock da mesa e a conexão). A
   // trava prévia em ordem global é também o que impede deadlock entre
   // carrinhos simultâneos de mesas diferentes com itens em ordens opostas.
-  const idsSolicitados = [];
-  for (const item of itensInput) {
-    if (!item || typeof item !== 'object') continue;
-    const produtoId = Number(item.productId ?? item.id);
-    if (Number.isInteger(produtoId) && produtoId >= 1) idsSolicitados.push(produtoId);
-  }
+  // O payload inteiro já foi validado antes de abrir a transação. Mantemos
+  // IDs estritos aqui como defesa em profundidade: nenhum item enviado pode
+  // desaparecer silenciosamente do pedido.
+  const idsSolicitados = itensInput.map((item) => Number(item.productId ?? item.id));
   await travarProdutosEmOrdem(client, idsSolicitados);
   const produtosPorId = await getProdutosComRegras(client, idsSolicitados);
 
   for (const item of itensInput) {
-    if (!item || typeof item !== 'object') continue;
     const produtoId = Number(item.productId ?? item.id);
-    if (!Number.isInteger(produtoId) || produtoId < 1) continue;
     const produto = produtosPorId.get(produtoId);
-    if (!produto || !produto.disponivel) continue;
+    if (!produto || !produto.disponivel) {
+      throw new ErroPedido(409, `Produto ${produtoId} inexistente ou indisponível; nenhum item foi pedido`);
+    }
 
     // Fora de 1–99 é rejeitado explicitamente; antes era clamp silencioso
     // (Math.max/Math.min), que escondia cliente quebrado e teste abusivo.
@@ -293,6 +291,18 @@ async function criarPedido(token, body, atendimento = null) {
   const itensInput = Array.isArray(body.items) ? body.items : [];
   if (!itensInput.length) throw new ErroPedido(400, 'O pedido está vazio');
 
+  // Rejeita o carrinho completo antes de reservar conexão ou criar o pedido.
+  // Ignorar um item malformado faria a API confirmar um subconjunto do carrinho.
+  for (const [index, item] of itensInput.entries()) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      throw new ErroPedido(400, `Item ${index + 1} inválido no pedido`);
+    }
+    const produtoId = Number(item.productId ?? item.id);
+    if (!Number.isInteger(produtoId) || produtoId < 1) {
+      throw new ErroPedido(400, `Produto inválido no item ${index + 1}`);
+    }
+  }
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -302,14 +312,18 @@ async function criarPedido(token, body, atendimento = null) {
 
     const sessaoId = await getOuAbrirSessao(client, mesa.id);
 
-    // Pedido lançado por garçom: o servidor valida autoria dentro da mesma
-    // transação, sob o lock da mesa, inclusive durante uma transferência.
+    // A autoria do pedido é validada sob lock. Um garçom ativo pode registrar
+    // novo pedido na sessão de outro responsável sem transferir a mesa.
     if (atendimento) {
+      if (atendimento.sessaoIdEsperada && Number(atendimento.sessaoIdEsperada) !== Number(sessaoId)) {
+        throw new ErroPedido(409, 'A sessão da mesa mudou. Atualize as mesas e tente novamente.');
+      }
       const { rows: atribuidos } = await client.query(
         'SELECT garcom_responsavel_id FROM mesa_sessoes WHERE id = $1 FOR UPDATE',
         [sessaoId]
       );
-      if (atribuidos[0]?.garcom_responsavel_id !== atendimento.garcomId) {
+      if (!atendimento.permitirResponsavelDiferente &&
+          atribuidos[0]?.garcom_responsavel_id !== atendimento.garcomId) {
         throw new ErroPedido(409, 'Assuma a mesa antes de enviar o pedido');
       }
     }
@@ -422,9 +436,8 @@ async function cancelarPedidoCliente(token, pedidoId) {
        FROM pedidos p
        JOIN mesa_sessoes s ON s.id = p.sessao_id
        WHERE p.id = $1 AND s.mesa_id = $2 AND s.status = 'aberta'
-         AND ($3::int IS NULL OR s.garcom_responsavel_id = $3)
        FOR UPDATE OF p`,
-      [Number(pedidoId), mesa.id, garcomResponsavelId]
+      [pedidoNumerico, mesa.id]
     );
     const pedido = rows[0];
     if (!pedido) throw new ErroPedido(404, 'Pedido não encontrado nesta mesa');
@@ -891,8 +904,8 @@ async function getFilaCozinha() {
   return listarPedidosPorStatus(['recebido', 'em_producao', 'concluido'], 'cozinha');
 }
 
-async function getFilaGarcom() {
-  /* Pedidos com pelo menos um item PRONTO (concluido) aguardando entrega parcial ou total */
+async function getFilaGarcom(garcomId = null) {
+  /* Pedidos prontos para o responsável da mesa ou o garçom atribuído ao pedido. */
   const { rows: pedidos } = await pool.query(
     `SELECT DISTINCT p.id, p.status, p.criado_em, p.observacao_geral, p.cliente_nome, p.garcom_nome,
             p.editado_em, m.numero AS mesa
@@ -902,7 +915,8 @@ async function getFilaGarcom() {
      JOIN itens_pedido ip ON ip.pedido_id = p.id
      WHERE p.status <> 'entregue'
        AND COALESCE(ip.status, 'recebido') = 'concluido'
-     ORDER BY p.criado_em`
+       AND ($1::int IS NULL OR s.garcom_responsavel_id=$1 OR p.garcom_id=$1)
+     ORDER BY p.criado_em`, [garcomId]
   );
   if (!pedidos.length) return [];
 
@@ -1102,11 +1116,13 @@ async function setStatusPedido(pedidoId, statusAlvo, setor = null) {
       [pedido.id]
     );
 
-    // Se o pedido não tem NENHUM item deste setor (ex.: só bebida e quem
-    // chamou foi a cozinha), avança TODOS os itens — evita 200 "mentiroso"
-    // e o 409 posterior no garçom.
-    let setorEfetivo = setor;
-    if (setor && !itens.some((i) => i.setor === setor)) setorEfetivo = null;
+    // Uma chamada autenticada de cozinha/bar só pode alterar pedidos que
+    // contenham itens do próprio setor. Nunca transforme uma seleção vazia
+    // em atualização global: isso permitiria cruzar a fronteira de autorização.
+    if (setor && !itens.some((i) => i.setor === setor)) {
+      throw new ErroPedido(403, 'Pedido não possui itens do setor autorizado');
+    }
+    const setorEfetivo = setor;
     const afetados = setorEfetivo ? itens.filter((i) => i.setor === setorEfetivo) : itens;
 
     if (alvo === 'entregue') {
