@@ -9,7 +9,7 @@ const { entregarComoGarcom } = require('../db/garcons');
 
 test('PostgreSQL real: fila acompanha a transferência e só o novo responsável pode entregar', async () => {
   const ids = { categoria: null, produto: null, garcomA: null, garcomB: null, mesa: null, sessao: null, pedido: null, item: null };
-  const mesaNumero = 6 + (process.pid % 50);
+  const mesaNumero = 6;
   const tokenA = '00000000-0000-4000-8000-000000000201';
   const tokenB = '00000000-0000-4000-8000-000000000202';
 
