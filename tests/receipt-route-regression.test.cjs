@@ -24,3 +24,32 @@ test('rotas de comprovante passam pela autorização e preservam erro de domíni
   assert.ok(receiptRoute > guard, 'rotas de comprovante devem passar pelo middleware de autorização');
   assert.ok(serverSource.includes('ErroComprovante'), 'erro de domínio deve continuar tratado');
 });
+
+
+test('comprovante detalha preço unitário, observações e operador quando disponíveis', () => {
+  const printSource = fs.readFileSync('src/lib/print.ts', 'utf8');
+  const receiptSource = fs.readFileSync('db/comprovante.js', 'utf8');
+  assert.ok(printSource.includes('Unitário:'));
+  assert.ok(printSource.includes('Obs. item:'));
+  assert.ok(printSource.includes('operadorNome'));
+  assert.ok(receiptSource.includes('observacaoPedido'));
+  assert.ok(receiptSource.includes('operador_nome'));
+});
+
+test('quitação de pagamento atualiza caixa e mesas', () => {
+  const storeSource = fs.readFileSync('src/store/usePub.ts', 'utf8');
+  assert.ok(storeSource.includes('await get().hydrateMesas().catch(() => null)'));
+});
+
+test('hydrateCaixa descarta cards operacionais de sessões já fechadas', () => {
+  const storeSource = fs.readFileSync('src/store/usePub.ts', 'utf8');
+  assert.ok(storeSource.includes('idsVivos.has(p.sessaoId)'));
+});
+
+test('QR PIX acompanha o valor digitado e gera TXID por lançamento', () => {
+  const caixaSource = fs.readFileSync('src/screens/Caixa.tsx', 'utf8');
+  assert.ok(caixaSource.includes('valor: Number(valor) > 0.005 ? Number(valor)'));
+  assert.ok(caixaSource.includes('txid: `S${sessao.id}P${sessao.pagamentos.length + 1}`'));
+  assert.ok(caixaSource.includes('forma === "pix"'));
+  assert.ok(caixaSource.includes('Confira o recebimento no banco antes de registrar'));
+});

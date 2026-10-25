@@ -608,7 +608,8 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/caixa\/sessoes\/(\d+)\/pagamentos$/)) && req.method === 'POST') {
       try {
-        const out = await registrarPagamento(Number(m[1]), await body(req));
+        const operador = await getStaffDaRequisicao(req);
+        const out = await registrarPagamento(Number(m[1]), await body(req), operador?.nome || null);
         broadcast('update', { type: 'pagamento_parcial', sessaoId: Number(m[1]) });
         return json(res, 201, out);
       } catch (e) {
@@ -632,7 +633,8 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/caixa\/sessoes\/(\d+)\/fechar$/)) && req.method === 'POST') {
       try {
-        const out = await fecharSessao(Number(m[1]), await body(req));
+        const operador = await getStaffDaRequisicao(req);
+        const out = await fecharSessao(Number(m[1]), await body(req), operador?.nome || null);
         broadcast('update', { type: 'sessao_fechada', sessaoId: Number(m[1]) });
         return json(res, 200, out);
       } catch (e) {

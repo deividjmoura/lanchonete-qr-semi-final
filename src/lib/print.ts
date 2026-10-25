@@ -630,15 +630,23 @@ export function imprimirComprovanteConsumo(c: {
   id:number; mesa:number; clienteNome?:string|null; garcomNome?:string|null;
   abertaEm:string; fechadaEm:string; totalConsumo:number; desconto:number; taxa:number;
   valorCobrado:number; valorPago:number; saldo:number;
-  itens:Array<{nome:string;quantidade:number;precoUnitario:number;adicionais:number;adicionaisNomes?:string;total:number;pedidoId:number}>;
-  pagamentos:Array<{id:number;valor:number;forma:string;criadoEm:string}>;
+  itens:Array<{nome:string;descricao?:string;observacao?:string;observacaoPedido?:string;removidos?:string;quantidade:number;precoUnitario:number;adicionais:number;adicionaisNomes?:string;total:number;pedidoId:number}>;
+  pagamentos:Array<{id:number;valor:number;forma:string;criadoEm:string;operadorNome?:string|null}>;
 }) {
   const linha=(label:string,v:number)=>`<div class="meta" style="display:flex;justify-content:space-between;gap:8px;margin:3px 0"><span>${esc(label)}</span><b>${esc(BRL(v))}</b></div>`;
-  const itens=c.itens.map(i=>`<div class="item"><div class="item-head" style="display:flex;justify-content:space-between;gap:8px">
-      <span>${esc(i.quantidade)}x ${esc(i.nome)}</span><span>${esc(BRL(i.total))}</span></div>
-      ${i.adicionaisNomes?`<div class="item-extra">+ ${esc(i.adicionaisNomes)}</div>`:""}</div>`).join("");
+  const itens=c.itens.map(i=>`<div class="item">
+      <div class="item-head" style="display:flex;justify-content:space-between;gap:8px">
+        <span>${esc(i.quantidade)}x ${esc(i.nome)}</span><span>${esc(BRL(i.total))}</span>
+      </div>
+      <div class="item-extra">Pedido #${esc(i.pedidoId)} · Unitário: ${esc(BRL(i.precoUnitario))}</div>
+      ${i.descricao?`<div class="item-extra">${esc(i.descricao)}</div>`:""}
+      ${i.adicionaisNomes?`<div class="item-extra">Adicionais: ${esc(i.adicionaisNomes)} (${esc(BRL(i.adicionais))} por unidade)</div>`:""}
+      ${i.removidos?`<div class="item-extra">Sem: ${esc(i.removidos)}</div>`:""}
+      ${i.observacao?`<div class="item-extra">Obs. item: ${esc(i.observacao)}</div>`:""}
+      ${i.observacaoPedido?`<div class="item-extra">Obs. pedido: ${esc(i.observacaoPedido)}</div>`:""}
+    </div>`).join("");
   const pagamentos=c.pagamentos.map(p=>`<div class="meta" style="display:flex;justify-content:space-between;gap:8px">
-    <span>${esc(formaLabel(p.forma))}</span><b>${esc(BRL(p.valor))}</b></div>`).join("");
+    <span>${esc(formaLabel(p.forma))}${p.operadorNome?` · ${esc(p.operadorNome)}`:""}</span><b>${esc(BRL(p.valor))}</b></div>`).join("");
   const body=`<div class="center"><p class="title">QR ADMIN</p>
     <p class="sub">COMPROVANTE DE CONSUMO<br><b>DOCUMENTO NÃO FISCAL</b></p></div>
     <hr class="line-solid"/>
