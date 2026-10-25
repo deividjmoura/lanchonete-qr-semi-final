@@ -59,7 +59,7 @@ const {
   garantirStaffSeed,
 } = require('./db/auth');
 const { golpePermitido } = require('./db/rateLimit');
-const { ErroAtendimento, listarMesasGarcom, assumirMesa, deixarMesa, criarPedidoGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
+const { ErroAtendimento, listarMesasGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, deixarMesa, criarPedidoGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
 const { normalizarChavePix, inspecionarChavePix } = require('./db/pix-normaliza');
 const { subscribe, broadcast } = require('./db/events');
 const pool = require('./db/pool');
@@ -349,7 +349,7 @@ const server = http.createServer(async (req, res) => {
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/pedidos$/)) && req.method === 'GET') {
       const g = await getGarcomPorToken(m[1]);
       if (!g || !g.ativo) return json(res, 401, { error: 'Link inválido ou desativado' });
-      return json(res, 200, await getFilaGarcom());
+      return json(res, 200, await listarPedidosProntosGarcom(m[1]));
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/pedidos\/(\d+)\/entregar$/)) && req.method === 'POST') {
       try {
@@ -386,6 +386,22 @@ const server = http.createServer(async (req, res) => {
         return json(res,200,out);
       }catch(e){
         if(e instanceof ErroAtendimento||e instanceof ErroPedido)return json(res,e.status,{error:e.message});
+        throw e;
+      }
+    }
+    if ((m = p.match(/^\\/api\\/garcom\\/([^/]+)\\/garcons-ativos$/)) && req.method === 'GET') {
+      try { return json(res, 200, { garcons: await listarGarconsAtivos(m[1]) }); }
+      catch (e) { if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message }); throw e; }
+    }
+    if ((m = p.match(/^\\/api\\/garcom\\/([^/]+)\\/mesas\\/(\\d+)\\/transferir$/)) && req.method === 'POST') {
+      try {
+        const payload = await body(req);
+        const out = await transferirMesa(m[1], m[2], payload.garcomDestinoId);
+        broadcast('update', { type: 'mesa_transferida', mesa: out.mesa, de: out.de.id, para: out.para.id });
+        return json(res, 200, out);
+      } catch (e) {
+        if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message });
+        if (e && (e.status === 400 || e.status === 413)) return json(res, e.status, { error: e.message });
         throw e;
       }
     }
