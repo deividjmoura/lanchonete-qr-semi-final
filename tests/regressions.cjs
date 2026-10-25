@@ -15,7 +15,7 @@ const { verificarOrigemRequisicao } = require('../db/auth');
 const { ErroValidacao, numeroFinito, numeroInteiroPositivo } = require('../db/validacao');
 const { getOuAbrirSessao, getProdutoComRegras } = require('../db/queries');
 const { ErroGarcom, removerGarcom, setGarcomAtivo, entregarComoGarcom } = require('../db/garcons');
-const { ErroPedido, setStatusPedido, setStatusItem } = require('../db/pedidos');
+const { ErroPedido, setStatusPedido, setStatusItem, validarItensCarrinho } = require('../db/pedidos');
 
 /* Mock mínimo de <html> que espelha o DOM real:
    dataset ↔ data-theme ficam sincronizados com getAttribute/setAttribute. */
@@ -559,6 +559,33 @@ test('caixa/pedidos rejeitam ids e corpos inválidos antes de abrir conexão', a
     () => pedidosModulo.criarPedido('00000000-0000-4000-8000-000000000000', { items: [{}], idempotencyKey: 'x' }),
     /idempotência inválida/
   );
+});
+
+test('carrinho é rejeitado integralmente se qualquer item tiver ID inválido', () => {
+  assert.throws(
+    () => validarItensCarrinho([{ productId: 12, qty: 1 }, { productId: 'abc', qty: 1 }]),
+    (err) => err instanceof ErroPedido && err.status === 400
+  );
+  assert.throws(
+    () => validarItensCarrinho([{ productId: 12 }, null]),
+    (err) => err instanceof ErroPedido && err.status === 400
+  );
+});
+
+test('carrinho é rejeitado integralmente se um produto não existir ou estiver indisponível', () => {
+  const produtos = new Map([
+    [12, { id: 12, nome: 'Válido', disponivel: true }],
+    [13, { id: 13, nome: 'Pausado', disponivel: false }],
+  ]);
+  assert.throws(
+    () => validarItensCarrinho([{ productId: 12 }, { productId: 99 }], produtos),
+    (err) => err instanceof ErroPedido && err.status === 409
+  );
+  assert.throws(
+    () => validarItensCarrinho([{ productId: 12 }, { productId: 13 }], produtos),
+    (err) => err instanceof ErroPedido && err.status === 409
+  );
+  assert.deepEqual(validarItensCarrinho([{ productId: 12, qty: 2 }], produtos), [12]);
 });
 
 test('SSE público é coalescido (1 aviso/janela); staff recebe tudo na hora', async () => {
