@@ -5,6 +5,7 @@ assert.ok(process.env.DATABASE_URL, 'Este teste deve rodar apenas contra o Postg
 
 const pool = require('../db/pool');
 const { assumirMesa, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao } = require('../db/atendimento');
+const { registrarPagamento } = require('../db/caixa');
 const { entregarComoGarcom } = require('../db/garcons');
 
 test('PostgreSQL real: fila acompanha a transferência e só o novo responsável pode entregar', async () => {
@@ -103,10 +104,29 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
     const finalItem = await pool.query('SELECT status FROM itens_pedido WHERE id = $1', [ids.item]);
     assert.equal(finalItem.rows[0].status, 'entregue');
 
+    const paymentBody = {
+      valor: 1,
+      formaPagamento: 'pix',
+      idempotencyKey: '00000000-0000-4000-8000-000000000204',
+    };
+    await assert.rejects(
+      () => registrarPagamento(ids.sessao, paymentBody, 'Garçom A CI ' + process.pid, ids.garcomA),
+      (error) => error.status === 403
+    );
+    const deniedPayment = await pool.query('SELECT COUNT(*)::int AS n FROM sessao_pagamentos WHERE sessao_id=$1', [ids.sessao]);
+    assert.equal(deniedPayment.rows[0].n, 0, 'responsável anterior não deve lançar pagamento');
+
+    const acceptedPayment = await registrarPagamento(ids.sessao, paymentBody, 'Garçom B CI ' + process.pid, ids.garcomB);
+    assert.equal(acceptedPayment.idempotentReplay, false);
+    assert.equal(acceptedPayment.pagamento.operadorNome, 'Garçom B CI ' + process.pid);
+    const paymentReplay = await registrarPagamento(ids.sessao, paymentBody, 'Garçom B CI ' + process.pid, ids.garcomB);
+    assert.equal(paymentReplay.idempotentReplay, true);
+    assert.equal(paymentReplay.pagamento.id, acceptedPayment.pagamento.id);
+
     const resumo = await resumoPagamentoSessao(tokenB, ids.sessao);
     assert.equal(Number(resumo.valorTotal), 12);
-    assert.equal(Number(resumo.valorPago), 0);
-    assert.equal(Number(resumo.valorRestante), 12);
+    assert.equal(Number(resumo.valorPago), 1);
+    assert.equal(Number(resumo.valorRestante), 11);
     await assert.rejects(
       () => resumoPagamentoSessao(tokenA, ids.sessao),
       (error) => error.status === 403
