@@ -101,8 +101,10 @@ async function transferirMesa(token, numeroBruto, garcomDestinoBruto) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    // Não bloqueamos a linha da mesa aqui: fechamento/início podem usar a ordem
+    // mesa → sessão. A transferência bloqueia somente a sessão para evitar deadlocks.
     const { rows: mesaRows } = await client.query(
-      'SELECT id, numero FROM mesas WHERE numero=$1 FOR UPDATE', [numero]);
+      'SELECT id FROM mesas WHERE numero=$1', [numero]);
     const mesa = mesaRows[0];
     if (!mesa) throw new ErroAtendimento(404, 'Mesa não encontrada');
 
