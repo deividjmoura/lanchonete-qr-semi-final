@@ -92,7 +92,7 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
 
   <section class="page" id="page-tables" data-page="tables" aria-label="Mesas">
     <div class="section-heading"><div><span class="section-eyebrow">SEU SALÃO</span><h3>Mesas e atendimento</h3></div><button class="primary small" id="newOrderTables" type="button">＋ Novo pedido</button></div>
-    <div class="panel compact"><label class="field">Escolha uma mesa<select id="tableSelect" aria-label="Mesa para atendimento"></select></label><label class="field">Nome do cliente<input id="customerName" maxlength="80" placeholder="Como podemos chamar o cliente?" autocomplete="off"></label><div class="action-row"><button class="primary" id="assumeTable" type="button">Assumir mesa</button><button class="secondary" id="showQr" type="button">Mostrar QR da mesa</button></div><p id="tableMessage" class="muted small-copy">Você pode assumir uma mesa mesmo quando o cliente já fez um pedido pelo QR.</p></div>
+    <div class="panel compact"><label class="field">Escolha uma mesa<select id="tableSelect" aria-label="Mesa para atendimento"></select></label><label class="field">Nome do cliente<input id="customerName" maxlength="80" placeholder="Como podemos chamar o cliente?" autocomplete="off"></label><div class="action-row"><button class="primary" id="startAttendance" type="button">Iniciar atendimento</button><button class="secondary" id="showQr" type="button">Mostrar QR da mesa</button></div><p id="tableMessage" class="muted small-copy">Iniciar atendimento vincula esta sessão ao seu usuário, inclusive quando o cliente já pediu pelo QR.</p></div>
     <div class="panel"><div class="section-heading"><h4>Minhas mesas <span id="myTablesCount" class="status confirmed">0</span></h4><span class="muted small-copy">Você pode atender várias mesas ao mesmo tempo</span></div><div id="myTables" class="table-grid"></div></div>
     <div class="panel"><div class="section-heading"><h4>Todas as mesas</h4><button id="refreshTables" class="text-button" type="button">Atualizar ↻</button></div><div id="tableGrid" class="table-grid"><p class="muted">Carregando mesas…</p></div></div>
   </section>
@@ -127,7 +127,7 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
   <div class="sheet-body">
     <div class="step-card"><span class="step-number">01</span><div><strong>Cliente e mesa</strong><p>Escolha a mesa e informe o cliente.</p></div></div>
     <div class="modal-fields"><label class="field">Mesa<select id="modalTable"></select></label><label class="field">Nome do cliente<input id="modalCustomer" placeholder="Ex.: Patrícia" maxlength="80"></label></div>
-    <div class="action-row"><button id="modalAssume" class="secondary" type="button">Assumir / abrir mesa</button><button id="modalQr" class="text-button" type="button">Mostrar QR</button></div>
+    <div class="action-row"><button id="modalQr" class="text-button" type="button">Mostrar QR</button></div>
     <p id="modalMessage" class="muted small-copy"></p>
     <div class="step-card top-gap"><span class="step-number">02</span><div><strong>Escolher produtos</strong><p>Busque pelo nome e adicione ao pedido.</p></div></div>
     <input id="search" class="search" type="search" placeholder="⌕ Digite o nome do produto…" autocomplete="off" aria-label="Buscar produto">
