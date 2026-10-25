@@ -666,6 +666,22 @@ test('SSE público é coalescido (1 aviso/janela); staff recebe tudo na hora', a
 });
 
 
+test('sharp usa versão corrigida e continua convertendo uploads para WebP', async () => {
+  const sharpPackage = require('../node_modules/sharp/package.json');
+  const semver = require('semver');
+  assert.ok(
+    semver.gte(sharpPackage.version, '0.35.5'),
+    `sharp vulnerável: ${sharpPackage.version}; esperado >= 0.35.5`
+  );
+
+  const { processarUploadFoto } = require('../db/foto');
+  // PNG 1x1 sintético: sem arquivos externos, rede ou banco de dados.
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
+  const result = await processarUploadFoto({ data: `data:image/png;base64,${png}` });
+  assert.match(result.fotoUrl, /^data:image\/webp;base64,/);
+  assert.ok(result.bytes > 0);
+});
+
 test('seed de garçom não imprime nem retorna token bearer', () => {
   const seed = fs.readFileSync('db/seed.js', 'utf8');
   assert.doesNotMatch(
