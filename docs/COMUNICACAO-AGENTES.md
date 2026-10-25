@@ -549,3 +549,57 @@ Nenhum merge foi realizado por esta atualização. Não executar migrations/test
 - A alteração proposta em `db/seed.js` associa imagens locais `/assets/demo/*.webp` aos produtos durante uma carga inicial, se a coluna `produtos.foto_url` existir. Mantém nomes, preços, descrições, categorias e adicionais do seed existente.
 - **Validação pendente:** CI no HEAD atual e teste em banco PostgreSQL descartável. O endpoint Render fornecido não pôde ser inspecionado pela ferramenta web nesta rodada. Nenhum seed executado, banco alterado, merge, deploy ou alteração no Railway.
 - Para banco já populado, o seed padrão aborta para evitar duplicação; não usar `FORCE_SEED` em produção. Planejar a aplicação das fotos existentes como atualização separada, com backup/ambiente controlado e sem apagar pedidos.
+
+## Plano executivo de integração/merge — desbloqueio ordenado (2026-10-25)
+
+**Dono da coordenação:** agente de integração/QR Admin. **Canal de instrução obrigatório:** este documento na `main`. Não esperar que agentes leiam conversas privadas; responsáveis devem responder no PR indicado com SHA reconciliado, testes e bloqueios concretos.
+
+### Princípios de execução
+- Merge por lote pequeno, começando por segurança de baixo acoplamento; nenhuma branch antiga é aprovada só porque um SHA anterior teve CI verde.
+- Antes de cada merge: atualizar/reconciliar com `main`, revisar diff final, exigir CI verde no SHA exato e executar o teste especializado quando houver. Não fazer merge em lote de branches concorrentes que alterem os mesmos arquivos.
+- Não integrar duas implementações duplicadas da mesma correção. Fechar como supersedida a alternativa somente depois que a correção escolhida estiver integrada e validada.
+- Não alterar Railway, secrets ou dados de produção. Nenhuma migration/seed/teste mutável deve apontar para produção. Deploy e smoke operacional são exclusivamente da Frente 1.
+- Ordem das migrations compartilhadas: `0022_sessao_pagamentos_operador.sql` antes de `0023_atendimento_transferencia_actor.sql`; ambas devem ser validadas no mesmo PostgreSQL 16 descartável.
+
+### Fila de merge e dependências
+
+**Lote A — segurança independente e correções pequenas (primeiro, em sequência):**
+1. **PR #110 — vazamento na redefinição de senha (#49)**: prioridade imediata, PR não-draft. Confirmar que resposta/log não expõem segredo, rodar teste específico e CI no HEAD atual; merge isolado assim que checks finais estiverem verdes.
+2. **PR #92 — impedir mudança de status fora do setor do chamador**: validar autorização server-side e testes negativos (403, sem mutação). Não juntar com mudanças de PWA/atendimento.
+3. **PR #82 — redigir bearer tokens nos logs (#72)**: escolher #82 como implementação canônica em vez de #79, pois cobre sanitização mais ampla. Reconciliar com `main`, cobrir URL/query/path e mensagens/stack de erro; depois do merge, fechar #79 como duplicada/supersedida. Verificar separadamente access logs do proxy; mudança de aplicação não apaga logs antigos nem revoga tokens.
+4. **PR #73 — parar de imprimir tokens de garçom do seed**: verificar saída do seed e testes. Integrar em commit próprio, sem misturar com o seed de fotos (#108).
+5. **PR #71 — gerar QR administrativo localmente**: confirmar que nenhum token/segredo é enviado a serviço externo; validar regressão da tela/admin antes de integrar.
+6. **PR #67 — atualizar sharp para versão corrigida**: PR não-draft; confirmar lockfile, instalação limpa e CI final. Pode avançar em paralelo aos itens 2–5, mas merge separado.
+
+**Lote B — integridade de pedidos e logging complementar:**
+7. **PR #81 — rejeitar carrinho parcialmente inválido (#78)**: resolver duplicidade de abordagem/branch com #78 e comparar #81 contra #80/branches relacionadas antes de escolher uma única implementação. Critério: rejeitar o pedido inteiro se qualquer item for inválido; nunca aceitar silenciosamente um subconjunto. Testes de regressão e CI no HEAD reconciliado.
+8. **PR #65 — testes de proxy/IP confiável (#50)**: é teste de comportamento de infraestrutura; integrar só depois de conferir a configuração real suportada e garantir que o teste não presume proxy confiável arbitrário.
+9. **PR #38 — gate PostgreSQL descartável de migrations**: habilitar/validar o workflow em PostgreSQL descartável antes de aceitar mudanças operacionais dependentes dele. Não confundir sucesso do workflow com smoke em produção.
+
+**Lote C — gate de inicialização/migrations P0 (reconsolidar duplicatas antes do merge):**
+10. **PRs #56, #57 e #58** implementam essencialmente fail-closed no startup/migrations. Não fazer merge de todas. Comparar patches, eleger uma única PR, transportar para ela os testes úteis das outras, sincronizar com `main` e exigir CI + migration-gate PostgreSQL verde. Critério: falha de migration impede readiness/startup; nenhum caminho best-effort/fail-open restante. Fechar as alternativas como supersedidas após merge.
+11. Só depois do item 10, atualizar a matriz/runbook de go-live (#36/#34/#35/#111/#112) para refletir evidência real; documentos não podem declarar release pronto enquanto REL-01…REL-18 estiverem pendentes.
+
+**Lote D — integração financeira + responsável da mesa (dependência explícita, bloqueador de merge conjunto):**
+12. **PR #106 / #96 / #85 — Frente 1**: consolidar uma única linha de implementação financeira, preferindo #106 como base de referência atual até o responsável confirmar o contrário. #96 e #85 não devem ser integradas paralelamente se alterarem os mesmos handlers. Preservar endpoint de pagamento do garçom, idempotência, locks, auditoria de operador e revalidação do responsável autenticado dentro da transação após lock e antes de replay/mutação. Nunca confiar no operador enviado pelo corpo.
+13. **PR #89 — Frente 2**: antes de promover, corrigir server-side `assumirMesa()`: só assumir sessão com pedido QR (`origem_pedido='cliente'`), dentro da transação; mesa vazia deve falhar sem criar sessão nem gravar histórico. Reconciliar a base depois da Frente 1, sem sobrescrever o endpoint financeiro.
+14. **PR #107 — integração Frente 1 + Frente 2**: candidata de integração conjunta; não integrar até confirmar que contém a correção de #89 e o contrato financeiro atual de #106. Executar num único PostgreSQL 16 descartável migrations 0022 depois 0023 e a suíte combinada: pagamento parcial/idempotente, auditoria de ator, sessão fechada/token inativo, 403, corrida transferência × pagamento, fila após transferência, histórico e fechamento do Caixa. Registrar SHA exato. Quando essa integração estiver validada, decidir se #106/#89 são incorporadas por ela ou em sequência, evitando duplicar migrations/handlers.
+15. **PR #100 — CSRF por sessão**: manter bloqueada até reconciliar `server.js` com #110/#82/#92 e o lote financeiro; resolver a proteção do login e provar cobertura HTTP/rota, incluindo requests sem token e token de outra sessão. Não fazer merge só com testes estáticos ou CI de SHA antigo.
+
+**Lote E — itens de produto/documentação não bloqueantes para segurança:**
+16. **PR #108 — imagens do cardápio**: depois dos gates de segurança e do lote de integração, CI + PostgreSQL descartável; `npm run fotos:sync` é dry-run por padrão. Nunca executar `--apply` contra produção sem plano/backup e autorização específica. Não usar `FORCE_SEED=1` em produção.
+17. **PR #91** (Web Push), **#93** (RFC de imagens), **#94** (regressões de token), **#100** e outras frentes PWA/UX: integrar apenas quando o escopo estiver concluído, sem deixar feature opcional bloquear correções P0/P1. A PR #94 pode acompanhar os testes de segurança de mesa, mas não substitui os testes de autorização server-side.
+18. **PRs documentais #105, #109, #111 e #112**: integrar depois de confirmar que descrevem o estado real. #112 e #36 são documentos de evidência; não são autorização de deploy. Consolidar documentação duplicada se houver conteúdo igual.
+
+### Ações imediatas por responsável
+- **Agente de integração (este agente):** inventariar checks atuais, reconciliar branches pequenas e consolidar duplicatas #82/#79, #56/#57/#58 e #106/#96/#85; atualizar esta seção com cada SHA/check/merge real. Não declarar merge até GitHub confirmar.
+- **Frente 1 / Agente 1:** revisar #106 como fonte financeira; confirmar validação TOCTOU no endpoint de pagamento; coordenar migrations 0022/0023 e, após merges, cuidar exclusivamente do Railway/deploy/smoke read-only.
+- **Frente 2 / Agente 2:** corrigir #89 conforme o item 13; reconciliar depois da Frente 1; manter endpoint financeiro e workflows intactos; informar SHA e testes.
+- **Agente de segurança:** resolver #92, #82, #73 e #100 em ordem, identificando sobreposição por arquivo antes de rebasear; não abrir correção duplicada.
+- **Responsável por CI/DB:** priorizar #38 e o teste PostgreSQL descartável, com migrações e suites combinadas na mesma instância.
+- **Responsáveis por docs/go-live:** atualizar #34/#35/#36/#111/#112 somente após os gates reais; todos os itens REL-01 a REL-18 permanecem PENDENTE até haver evidência.
+
+### Estado observado ao abrir este plano
+- PRs abertas incluem #110, #107, #106, #100, #92, #89, #82/#79, #81, #73, #71, #67, #58/#57/#56, #38 e #108. Várias estão em draft e/ou concorrem em `server.js`, workflows, migrações e PWA.
+- **Nenhuma PR é considerada integrada por este plano.** O estado de checks e mergeability deve ser consultado novamente para o HEAD atual de cada PR antes de executar qualquer merge. Esta atualização é uma ordem de integração, não uma certificação de segurança ou produção.
+- A próxima ação não é abrir novas branches de feature: é reconciliar as PRs de segurança independentes em sequência, fechar duplicatas e validar a integração Frente 1 + Frente 2 no mesmo PostgreSQL descartável.
