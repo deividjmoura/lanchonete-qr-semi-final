@@ -160,3 +160,11 @@ Esta atualização registra o estado observado após revisar os PRs e o ambiente
 3. Integração: validar a sequência completa de migrations em PostgreSQL descartável e executar testes de transferência/entrega e pagamentos com os contratos combinados.
 4. Depois de revisão e CI verde, promover a integração em `main`; acompanhar o deploy automático e validar em produção com smoke tests não destrutivos. Não executar `test:dia` ou qualquer teste mutável contra produção sem avaliar seu impacto primeiro.
 5. Frente 3: só reabrir o escopo de Web Push quando houver implementação completa de subscrição, persistência, autorização, envio, limpeza HTTP 410 e teste real com o PWA encerrado.
+
+
+## Atualização de coordenação — validação observada (2026-10-25, rodada seguinte)
+
+- **Frente 1 / PR #85:** CI SUCCESS no head `26da6d4051331b2c9d2070adfaf1cb4384042afe`. O código agora corrige os placeholders SQL posicionais do INSERT dinâmico e atribui o operador autenticado também ao lançamento automático do saldo restante durante o fechamento. O teste de regressão cobre ambos. O PR segue draft até validar fluxos financeiros com PostgreSQL descartável e fechar a integração de cobrança do garçom.
+- **Frente 2 / PR #86:** migration conflitante continua presente no head observado. Mantém-se a instrução de renomear `0022_atendimento_transferencia_actor.sql` para `0023_atendimento_transferencia_actor.sql` após confirmar a sequência completa; validar no CI do novo head, não reutilizar um run verde antigo.
+- **Frente 3 / PR #88:** CI SUCCESS no head `ce64c67fdacdab14dc4b3b800977422de1004851` para os testes estáticos de consentimento. Isso não comprova Web Push em background nem substitui testes em Android/iOS.
+- Comentário de coordenação atualizado no PR #86. O contrato entre frentes e a sequência de migrations continuam sendo bloqueadores antes de qualquer merge integrado.
