@@ -107,6 +107,24 @@ test('transferência é recusada se o solicitante não for o responsável atual'
   assert.equal(calls.some(sql => /INSERT INTO mesa_atendimento_historico/i.test(sql)), false);
 });
 
+test('transferência rejeita um destino desativado', async () => {
+  stubTokenLookup();
+  const calls = [];
+  pool.connect = async () => ({
+    async query(sql, params = []) {
+      calls.push(sql);
+      if (/SELECT id, numero FROM mesas/i.test(sql)) return { rows: [{ id: 40, numero: 4 }] };
+      if (/SELECT id, garcom_responsavel_id FROM mesa_sessoes/i.test(sql)) return { rows: [{ id: 90, garcom_responsavel_id: 1 }] };
+      if (/SELECT id, nome, ativo FROM garcons/i.test(sql)) return { rows: [{ id: 2, nome: 'Bruno', ativo: false }] };
+      return { rows: [] };
+    },
+    release() {},
+  });
+  await assert.rejects(() => transferirMesa('00000000-0000-4000-8000-000000000001', 4, 2), err => err.status === 409);
+  assert.equal(calls.some(sql => /UPDATE mesa_sessoes SET garcom_responsavel_id/i.test(sql)), false);
+  assert.equal(calls.some(sql => /INSERT INTO mesa_atendimento_historico/i.test(sql)), false);
+});
+
 test('iniciar atendimento não permite tomar mesa já atribuída, mesmo com transferir:true', async () => {
   stubTokenLookup();
   const calls = [];
