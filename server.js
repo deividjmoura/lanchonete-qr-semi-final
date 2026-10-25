@@ -55,6 +55,8 @@ const {
   destruirSessao,
   getStaffDaRequisicao,
   exigirAcesso,
+  exigirSessao,
+  trocarSenha,
   homeDoPapel,
   garantirStaffSeed,
   csrfTokenParaSessao,
@@ -95,6 +97,11 @@ function clientIp(req) {
     }
   }
   return req.socket.remoteAddress || 'unknown';
+}
+
+/** Corpo JSON de um ErroAuth; inclui `code` quando existe (ex.: SENHA_TROCA_OBRIGATORIA). */
+function erroAuthJson(e) {
+  return e.code ? { error: e.message, code: e.code } : { error: e.message };
 }
 
 function applySecurityHeaders(res) {
@@ -510,6 +517,22 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { staff, home: homeDoPapel(staff.papel), csrfToken: csrfTokenParaSessao(sessionToken) });
     }
 
+    if (p === '/api/me/senha' && req.method === 'POST') {
+      // Troca da própria senha: sessão + origem + CSRF; reautentica com a senha atual (#55).
+      const staff = await exigirSessao(req);
+      const ip = clientIp(req);
+      if (
+        !golpePermitido(`senha:${staff.id}`, { janelaMs: 15 * 60 * 1000, max: 5 }) ||
+        !golpePermitido(`senha-ip:${ip}`, { janelaMs: 15 * 60 * 1000, max: 20 })
+      ) {
+        return json(res, 429, { error: 'Muitas tentativas de troca de senha. Aguarde alguns minutos.' });
+      }
+      const b = await body(req);
+      const r = await trocarSenha(staff.id, b && b.senhaAtual, b && b.senhaNova);
+      res.setHeader('Set-Cookie', cookieDeSessao(r.token));
+      return json(res, 200, { ok: true, csrfToken: r.csrfToken, sessoesRevogadas: r.sessoesRevogadas });
+    }
+
     if (p === '/api/config/pix' && req.method === 'GET') {
       /* Normalização é a MESMA do front (db/pix-normaliza.js é fonte única).
          Havia uma cópia divergente aqui que reescrevia chave aleatória (EVP)
@@ -550,7 +573,7 @@ const server = http.createServer(async (req, res) => {
         await exigirAcesso(req, 'bar');
       }
     } catch (e) {
-      if (e instanceof ErroAuth) return json(res, e.status, { error: e.message });
+      if (e instanceof ErroAuth) return json(res, e.status, erroAuthJson(e));
       throw e;
     }
 
@@ -591,11 +614,11 @@ const server = http.createServer(async (req, res) => {
           try {
             await exigirAcesso(req, 'bar');
           } catch (e2) {
-            if (e2 instanceof ErroAuth) return json(res, e2.status, { error: e2.message });
+            if (e2 instanceof ErroAuth) return json(res, e2.status, erroAuthJson(e2));
             throw e2;
           }
         } else if (e instanceof ErroAuth) {
-          return json(res, e.status, { error: e.message });
+          return json(res, e.status, erroAuthJson(e));
         } else {
           throw e;
         }
@@ -687,7 +710,7 @@ const server = http.createServer(async (req, res) => {
           sessaoAberta: m.sessaoAberta,
         })));
       } catch (e) {
-        if (e instanceof ErroAuth) return json(res, e.status, { error: e.message });
+        if (e instanceof ErroAuth) return json(res, e.status, erroAuthJson(e));
         throw e;
       }
     }
@@ -1073,7 +1096,7 @@ const server = http.createServer(async (req, res) => {
        req.url, e usá-lo sem esse cuidado derruba o processo. */
     if (e && e.status && e.status >= 400 && e.status < 500) {
       console.warn(`[http ${e.status}] ${req.method} ${sanitizarAlvoRequisicao(req.url)} — ${sanitizarDetalheErro(e.message || 'rejeitado')}`);
-      return json(res, e.status, { error: e.message || 'Erro' });
+      return json(res, e.status, e.code ? { error: e.message || 'Erro', code: e.code } : { error: e.message || 'Erro' });
     }
     console.error('[http interno]', sanitizarDetalheErro(e));
     if (e && e.status) {

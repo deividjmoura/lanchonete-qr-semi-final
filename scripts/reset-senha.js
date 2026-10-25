@@ -29,7 +29,7 @@ async function main() {
     const hash = await hashSenha(senha);
     const { rows } = await pool.query(
       `UPDATE staff
-       SET senha_hash = $1, ativo = true
+       SET senha_hash = $1, ativo = true, deve_trocar_senha = true
        WHERE lower(login) IN ('admin', 'cozinha', 'caixa')
        RETURNING login, papel, ativo`,
       [hash]
