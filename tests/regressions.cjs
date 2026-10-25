@@ -16,7 +16,6 @@ const { ErroValidacao, numeroFinito, numeroInteiroPositivo } = require('../db/va
 const { getOuAbrirSessao, getProdutoComRegras } = require('../db/queries');
 const { ErroGarcom, removerGarcom, setGarcomAtivo, entregarComoGarcom } = require('../db/garcons');
 const { ErroPedido, criarPedido, setStatusPedido, setStatusItem } = require('../db/pedidos');
-const { ErroPedido, setStatusPedido, setStatusItem } = require('../db/pedidos');
 const { sanitizarAlvoRequisicao, sanitizarDetalheErro } = require('../db/log-sanitizer');
 
 /* Mock mínimo de <html> que espelha o DOM real:
