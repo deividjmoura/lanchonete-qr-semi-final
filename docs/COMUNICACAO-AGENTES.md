@@ -341,3 +341,15 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 - **Limite importante:** esta PR prepara apenas o Service Worker. Não implementa `PushManager.subscribe()`, persistência de subscrições, endpoints autenticados nem envio server-side. Não foi validada em dispositivos Android/iOS com o app encerrado.
 - **Coordenação:** nenhuma alteração em `server.js`, `package.json`, migrations, Railway, secrets ou dados de produção. A PR #91 não deve ser considerada Web Push completo; o backend depende do contrato de destinatários e autorização da Frente 2 e deve ser integrado depois de reduzir a concorrência com #85/#89.
 - **Próximo passo:** revisão do diff e CI na PR #91; depois, fechar contrato de destinatário com a Frente 2 e implementar subscrição/envio backend numa etapa separada, com testes de autorização, endpoint expirado, deduplicação, transferência e testes reais em dispositivos.
+
+
+## Frente 4 — desempenho e armazenamento de imagens do cardápio (2026-10-25)
+
+- **Issue:** [#53 — tirar fotos em Base64 das respostas JSON](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/53).
+- **PR documental:** [#93 — RFC de armazenamento de imagens](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/93), branch `work/frente-4-cardapio-imagens-rfc`, commit `0a6c68d7b589e2aa6b1bd5f23b063644477c85fc`. Draft, não integrado.
+- **Diagnóstico confirmado na main:** `db/foto.js` otimiza para WebP até 960 px e 320 KiB, mas converte o resultado em data-URL Base64 para gravar em `produtos.foto_url`; `db/cardapio.js` devolve o valor completo no campo `fotoUrl`. O overhead estimado de Base64 é aproximadamente 4/3 do arquivo; não houve medição de payload de produção.
+- **Entrega:** RFC em `docs/engineering/cardapio-image-storage-rfc.md` define opções de armazenamento durável, migração compatível, backfill idempotente/dry-run, medição por fixtures, rollback e critérios de aceite.
+- **Bloqueio de implementação:** falta decisão/autorização do responsável sobre o destino de armazenamento durável. Não presumir fornecedor, não mover imagens para disco efêmero, não alterar secrets/Railway e não executar backfill em produção.
+- **Validação:** mudança documental apenas; nenhum teste de aplicação foi executado e nenhuma medição real foi feita.
+- **Próximo passo:** revisar a RFC e decidir o destino de armazenamento; após isso, implementar em branch separada com fixtures sintéticas, medição comparativa e compatibilidade com data-URLs/URLs/caminhos legados.
+- **Nota operacional:** commits na `main`, inclusive documentação, podem disparar deploy automático. A Frente 1 / Agente 1 deve verificar e registrar o resultado do deploy deste commit; esta atualização não altera intencionalmente runtime, banco, secrets ou configuração.
