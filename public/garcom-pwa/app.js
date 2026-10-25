@@ -33,26 +33,28 @@ order.status='confirmed';order.serverOrderId=data.id;order.confirmedAt=Date.now(
 }catch(err){order.status=err.status&&err.status<500?'conflict':'offline';order.lastError=String(err.message||err);}await putOrder(order);await renderOrders();if(order.status==='confirmed')void loadOrderStatuses();}
 async function syncPending(){if(!navigator.onLine){setConnection();return}const pending=(await allOrders()).filter(o=>o.status==='offline');for(const o of pending)await syncOne(o.localId);setConnection()}function setConnection(){$('#connection').textContent=navigator.onLine?'Online · sincronização disponível':'Offline · pedidos ficam neste aparelho';$('#connection').style.color=navigator.onLine?'#166534':'#a16207'}function updateQr(){const n=Number($('#qrTable').value);const mesa=mesas.find(x=>Number(x.numero)===n);if(!mesa)return;const url=new URL('../',location.href).href+'#/mesa/'+mesa.token;$('#qrUrl').value=url;$('#qrImage').src=navigator.onLine?'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(url):'';$('#qrImage').onerror=()=>{$('#qrImage').alt='QR indisponível offline'}}$('#search').addEventListener('input',renderProducts);$('#saveOrder').addEventListener('click',saveOrder);$('#syncBtn').addEventListener('click',syncPending);$('#qrTable').addEventListener('change',updateQr);$('#copyQr').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('#qrUrl').value);$('#copyQr').textContent='Endereço copiado';setTimeout(()=>$('#copyQr').textContent='Copiar endereço',1500)}catch{ $('#qrUrl').select();document.execCommand('copy')}});window.addEventListener('online',syncPending);window.addEventListener('offline',setConnection);setConnection();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});openDb().then(async d=>{db=d;await recoverInterruptedSync();await loadProducts();try{await loadMesas();if(navigator.onLine){syncPending();loadDeliveries();loadOrderStatuses()}}catch(e){$('#identity').textContent=e.message;if(!navigator.onLine){try{mesas=JSON.parse(localStorage.getItem('waiter-mesas-cache-'+waiterToken)||'[]');tables.splice(0,tables.length,...mesas.map(x=>Number(x.numero)));populateTables();updateQr();renderTableGrid();}catch{}}}}).catch(e=>{console.error(e);alert('Não foi possível abrir o armazenamento offline neste navegador.')});
 let deferredInstall=null;
-const installBtn=document.querySelector('#installBtn');
+const installBtn=$('#installAppBtn');
+const isStandalone=()=>window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 function refreshInstallState(){
- if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true){installBtn.hidden=true;return}
- installBtn.hidden=false;
- installBtn.textContent=deferredInstall?'↓ Instalar aplicativo':'↓ Como instalar';
+ const ios=/iPhone|iPad|iPod/.test(navigator.userAgent);
+ if(isStandalone()){installBtn.hidden=true;$('#installHelp').hidden=true;return}
+ installBtn.hidden=!deferredInstall;
+ $('#installHelp').hidden=!!deferredInstall;
+ if(!deferredInstall){
+   $('#installHelp').hidden=false;
+   $('#installHelp').textContent=ios?'Para instalar no iPhone/iPad: abra esta página no Safari, toque em Compartilhar e escolha “Adicionar à Tela de Início”.':'Este navegador não ofereceu instalação automática. Abra o menu do navegador e procure “Instalar aplicativo” ou “Adicionar à tela inicial”.';
+ }
 }
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;refreshInstallState()});
 installBtn?.addEventListener('click',async()=>{
- if(deferredInstall){
-   const prompt=deferredInstall;deferredInstall=null;
-   await prompt.prompt();
-   const choice=await prompt.userChoice;
-   if(choice?.outcome!=='accepted')refreshInstallState();
-   return;
- }
- const ios=/iPhone|iPad|iPod/.test(navigator.userAgent);
- alert(ios?'No Safari, toque em Compartilhar e depois em Adicionar à Tela de Início. O iOS não permite instalação automática.':'O navegador não disponibilizou a instalação automática. Use o menu do navegador → Instalar aplicativo / Adicionar à tela inicial. No Chrome Android compatível, o botão Instalar abre o convite automaticamente.');
+ if(!deferredInstall)return;
+ const prompt=deferredInstall;deferredInstall=null;
+ try{await prompt.prompt();await prompt.userChoice;}catch{}
+ refreshInstallState();
 });
-window.addEventListener('appinstalled',()=>{installBtn.hidden=true;deferredInstall=null});
+window.addEventListener('appinstalled',()=>{deferredInstall=null;refreshInstallState();updateNotificationStatus()});
 refreshInstallState();
+
 
 async function loadDeliveries(){if(!navigator.onLine||!waiterToken)return;const root=$('#readyOrders');try{const orders=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/pedidos');root.replaceChildren();const ready=(Array.isArray(orders)?orders:[]).filter(p=>(p.itens||[]).some(i=>i.status==='concluido'));if(!ready.length){root.innerHTML='<p class="muted">Nenhum pedido pronto para entrega.</p>';return;}for(const order of ready){const card=document.createElement('article');card.className='order';const name=document.createElement('strong');name.textContent='Mesa '+(order.mesa||order.mesaNumero||'?')+' · Pedido #'+order.id;card.append(name);const details=document.createElement('p');details.className='muted';details.textContent=(order.itens||[]).filter(i=>i.status==='concluido').map(i=>(i.quantidade||i.qtd||1)+'× '+i.nome).join(', ');card.append(details);const btn=document.createElement('button');btn.textContent='Confirmar entrega';btn.onclick=async()=>{if(!confirm('Confirmar que entregou os itens prontos do pedido #'+order.id+'?'))return;btn.disabled=true;try{await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/pedidos/'+order.id+'/entregar',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});await loadDeliveries();}catch(e){alert(e.message);btn.disabled=false;}};card.append(btn);root.append(card)}}catch(e){root.textContent='Não foi possível consultar as entregas: '+e.message;}}
 document.querySelector('#refreshDeliveries')?.addEventListener('click',loadDeliveries);
@@ -66,7 +68,6 @@ async function recoverInterruptedSync(){for(const order of await allOrders()){if
 
 /* QR Admin · navegação de páginas e fluxo sob demanda */
 const pageCopy={
- home:['Seu salão, em ordem.','Mesas, pedidos e entregas sem bagunça.'],
  tables:['Cada mesa, bem cuidada.','Inicie um atendimento ou transfira uma mesa já atribuída.'],
  orders:['Pedidos sob controle.','Veja o que está salvo e o que chegou ao servidor.'],
  deliveries:['Tudo saindo quentinho.','Pedidos prontos para entregar aos clientes.'],
@@ -125,11 +126,7 @@ function renderTableGrid(){
  }
 }
 document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.dataset.tab)));
-for(const id of ['newOrderHome','newOrderTables','newOrderOrders'])$('#'+id).addEventListener('click',()=>openOrder());
-$('#openTablesHome').addEventListener('click',()=>switchTab('tables'));
-$('#openOrdersHome').addEventListener('click',()=>switchTab('orders'));
-$('#openDeliveriesHome').addEventListener('click',()=>switchTab('deliveries'));
-$('#openBillingHome').addEventListener('click',()=>switchTab('billing'));
+for(const id of ['newOrderTables','newOrderOrders'])$('#'+id).addEventListener('click',()=>openOrder());
 $('#closeOrder').addEventListener('click',()=>$('#orderModal').close());
 $('#closeQr').addEventListener('click',()=>$('#qrModal').close());
 $('#showQr').addEventListener('click',()=>openQr($('#tableSelect').value));
@@ -261,20 +258,67 @@ function notifyReady(o,quantidade=1){
  const toast=$('#readyToast');$('#readyToastTitle').textContent=title;$('#readyToastDescription').textContent=body;toast.hidden=false;
 
  try{navigator.vibrate?.([140,80,140])}catch{}
- if('Notification'in window&&Notification.permission==='granted'){
+ if(readyAlertsEnabled&&'Notification'in window&&Notification.permission==='granted'){
    try{navigator.serviceWorker?.ready.then(reg=>reg.showNotification(title,{body,tag:'ready-'+o.id,icon:'./icon-192.png'})).catch(()=>new Notification(title,{body,tag:'ready-'+o.id,icon:'./icon-192.png'}))}catch{}
  }
  if(window.speechSynthesis){try{speechSynthesis.cancel();const msg=new SpeechSynthesisUtterance('Pedido pronto na mesa '+o.mesa);msg.lang='pt-BR';speechSynthesis.speak(msg)}catch{}}
 }
 $('#refreshOrderStatus').addEventListener('click',loadOrderStatuses);
-$('#enableAlerts').addEventListener('click',async()=>{
- readyAlertsEnabled=true;
- localStorage.setItem('garcom-ready-alerts-'+waiterToken,'1');
- if('Notification'in window&&Notification.permission==='default')await Notification.requestPermission();
- $('#alertMessage').textContent='Avisos ativados: você só será alertado quando um item ficar pronto para entrega.';
- $('#enableAlerts').textContent='🔔 Avisos de entrega ativados';
+const CONSENT_SEEN='garcom-notification-intro-v1-'+waiterToken;
+const consentDialog=$('#notificationConsent');
+function notificationPermission(){
+ if(!('Notification'in window))return 'unavailable';
+ return Notification.permission;
+}
+function updateNotificationStatus(){
+ const permission=notificationPermission(),installed=isStandalone();
+ let state;
+ if(permission==='unavailable')state='Notificações indisponíveis: este navegador não oferece a API necessária.';
+ else if(permission==='denied')state='Permissão negada nas configurações do navegador. Você pode alterá-la nas configurações do site.';
+ else if(permission==='granted')state='Permissão concedida. Avisos locais dependem de o app estar executando; push em segundo plano não está configurado no servidor.';
+ else state='Permissão ainda não solicitada.';
+ $('#notificationStatus').textContent=(installed?'PWA instalado. ':'PWA não instalado. ')+state;
+ $('#enableAlerts').textContent=permission==='granted'?'Ver status das notificações':'Configurar notificações';
+ $('#requestNotificationPermission').disabled=permission==='unavailable'||permission==='denied';
+ $('#consentPlatformNote').textContent=installed?'O PWA está instalado neste dispositivo.':'A instalação pode ser necessária para notificações em algumas plataformas. Use a opção de instalação ou siga as instruções do navegador.';
+ refreshInstallState();
+}
+function openNotificationSetup(){
+ updateNotificationStatus();
+ const p=notificationPermission();
+ if(p==='denied')$('#consentStatus').textContent='A permissão foi negada. Altere-a nas configurações do site no navegador; não podemos reabrir o pedido automaticamente.';
+ else if(p==='unavailable')$('#consentStatus').textContent='Notificações indisponíveis neste navegador ou dispositivo.';
+ else if(p==='granted')$('#consentStatus').textContent='Permissão concedida, mas o servidor não possui subscrição/envio Web Push em segundo plano.';
+ else $('#consentStatus').textContent='';
+ if(!consentDialog.open)consentDialog.showModal();
+}
+$('#enableAlerts').addEventListener('click',openNotificationSetup);
+$('#closeNotificationConsent').addEventListener('click',()=>consentDialog.close());
+consentDialog.addEventListener('close',()=>localStorage.setItem(CONSENT_SEEN,'1'));
+$('#dismissNotificationConsent').addEventListener('click',()=>{localStorage.setItem(CONSENT_SEEN,'1');consentDialog.close()});
+$('#requestNotificationPermission').addEventListener('click',async()=>{
+ if(!('Notification'in window)){updateNotificationStatus();return}
+ try{
+   const result=await Notification.requestPermission();
+   if(result==='denied'){
+     const confirmed=window.confirm('Você recusou as notificações e não receberá avisos por este navegador. Deseja confirmar essa escolha? Você poderá configurar novamente depois nas configurações do site e neste painel.');
+     if(confirmed){localStorage.setItem('garcom-notifications-declined-'+waiterToken,'1');$('#consentStatus').textContent='Escolha salva. Você não receberá notificações enquanto a permissão estiver negada. Para reativar, altere a permissão nas configurações do navegador.'}
+     else $('#consentStatus').textContent='A permissão foi negada pelo navegador. Para tentar novamente, altere-a nas configurações do site.';
+   }else if(result==='granted'){
+     localStorage.setItem('garcom-ready-alerts-'+waiterToken,'1');readyAlertsEnabled=true;
+     $('#consentStatus').textContent='Permissão concedida. Isso não ativa push em segundo plano: o servidor ainda não implementa subscrição nem envio Web Push.';
+   }else $('#consentStatus').textContent='Você ainda não permitiu notificações. Pode decidir depois por este painel.';
+ }catch(e){$('#consentStatus').textContent='Não foi possível solicitar permissão neste contexto. Verifique se o site usa HTTPS e tente por uma ação explícita.'}
+ localStorage.setItem(CONSENT_SEEN,'1');updateNotificationStatus();
 });
-if(readyAlertsEnabled)$('#enableAlerts').textContent='🔔 Avisos de entrega ativados';
+updateNotificationStatus();
+if(!localStorage.getItem(CONSENT_SEEN)){
+ $('#consentStatus').textContent='Na primeira visita, explicamos os requisitos antes de solicitar permissão.';
+ consentDialog.showModal();
+}
+window.addEventListener('pageshow',updateNotificationStatus);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateNotificationStatus()});
+
 
 $('#readyToastAction').addEventListener('click',()=>{switchTab('deliveries');$('#readyToast').hidden=true});
 $('#readyToastDismiss').addEventListener('click',()=>{$('#readyToast').hidden=true});
