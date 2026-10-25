@@ -16,11 +16,11 @@
 
 ## Estado das frentes — verificado em 2026-10-25
 
-| Frente | Estado confirmado | Próxima ação |
+| Frente | Estado registrado no canal canônico | Próxima ação |
 |---|---|---|
-| Frente 1 — caixa/pagamentos/PIX | Há referência a PR #85 em registros anteriores; o estado atual não foi confirmado nesta atualização documental. | Verificar PR/commits e a sequência final de migrations antes de depender do contrato. |
-| Frente 2 — responsável por mesa | PR #86 **fechado sem merge**. Não considerar esse PR uma entrega integrada. | Confirmar se o trabalho foi reaproveitado em outro lugar; se for retomado, revisar diff e CI no head atual e testar migrations em PostgreSQL isolado. |
-| Frente 3 — PWA do garçom | PR #84 integrado à `main`; PR #88 segue aberto em draft, sem merge. CI #330 no head `3aefd704273eead3ab551d5dfc905440ecb2e31d` concluiu com sucesso. | Revisão do PR #88 e validação em dispositivos reais. Não afirmar Web Push em segundo plano funcional: falta infraestrutura server-side de subscrição/envio. |
+| Frente 1 — caixa/pagamentos/PIX | PR #85 aberto em draft, não integrado; head registrado `b6bb9da195da58b4e4b86c7f67167d36a1d24945`; `mergeable=false`. CI verde citado em commits anteriores não valida o head atual. | Investigar `mergeable=false`, confirmar CI no head exato e revisar integração com a Frente 2. |
+| Frente 2 — responsável por mesa | PR #86 fechado sem merge; PR #89 aberto em draft, não integrado; head registrado `b465ba614d239a2ddfa0f43c5b9decf7f60d8f8f`; `mergeable=false`. | Investigar conflitos, confirmar CI no head exato e revisar o contrato integrado com PR #85. |
+| Frente 3 — PWA do garçom | PR #84 integrado à `main`; PR #88 aberto em draft, não integrado; head registrado `3aefd704273eead3ab551d5dfc905440ecb2e31d`; CI #330 sucesso registrado nesse head. | Revisar PR #88 e validar em dispositivos reais. Push em segundo plano continua sem implementação/verificação server-side. |
 
 ### Evidências e limites
 
@@ -42,3 +42,6 @@ Os itens abaixo constam como encerrados no registro anterior; são histórico, n
 | B4 | dist sincronizado | Feito |
 | B5 | Login staff | Feito |
 
+
+
+> **Nota de sincronização (2026-10-25):** este arquivo é apenas um resumo operacional. O único canal compartilhado entre agentes é [`docs/COMUNICACAO-AGENTES.md`](docs/COMUNICACAO-AGENTES.md) na `main`. Os estados acima foram sincronizados com o registro canônico; consulte-o para contratos, dependências e evidências detalhadas. Nenhuma alteração em Railway, secrets, banco ou produção foi feita.
