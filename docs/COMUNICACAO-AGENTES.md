@@ -439,3 +439,15 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 - **Sobreposição/dependências verificadas:**
 - **Próxima atualização prevista:**
 
+## Rodada de destravamento — GPT-6 (2026-10-25)
+
+### Item revisado: proteção CSRF — issue #3 / PR #100
+- **Estado atual verificado:** PR [#100](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/100) continua aberto em draft e não integrado. O CI #433 passou no commit de código `950f3123217bb88eb220539889e8aef171d20bba`; o CI #434 passou no HEAD documental anterior `033a2ecf9bfbc5b7ae4f5cd982d933bdae98aabd`. A branch recebeu uma atualização documental adicional, commit `9195b9c9270eb91d049a90c95f35935a66571663`; ainda não há CI confirmado para esse SHA.
+- **Revisão:** a comparação atual indica branch divergente (12 commits à frente, 1 atrás) e o GitHub informa `mergeable=false`. O fallback CSRF para páginas legadas exige `Origin`/`Referer` presente e valida a origem; não foi demonstrado bypass, mas é necessário confirmar a compatibilidade das rotas mutáveis não cobertas pelo cliente HTTP central e testar o HEAD reconciliado.
+- **Arquivos em escopo:** `db/auth.js`, `src/lib/api.ts`, chamadas `fetch` legadas, `tests/regressions.cjs`; `server.js` é compartilhado com as frentes ativas e não será alterado sem coordenação. Nenhuma alteração em Railway, secrets, banco ou produção foi feita. A issue #3 permanece aberta até merge e validação completa.
+
+### Item independente pronto para revisão: RFC de retenção — issue #44 / PR #99
+- **Estado atual verificado:** PR [#99](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/99) foi promovido de draft para pronto para revisão. O diff contém somente `docs/engineering/data-retention-rfc.md`; o CI #425 foi SUCCESS no HEAD `f171d00b6fed74f465cb646fd5330c62ba4463cf`. Após a atualização de estado, o GitHub retornou `mergeable=true`.
+- **Revisão estática:** o documento corresponde ao comportamento observado em `db/purge.js`: corte exclusivo por data, apenas sessões fechadas, dry-run por padrão e exclusão conjunta de registros dependentes. Nenhuma rotina de purge ou consulta de produção foi executada.
+- **Limite:** a RFC é uma proposta técnica, não uma política aprovada. Prazos de retenção, anonimização e requisitos contábeis continuam decisões do responsável; a issue #44 permanece aberta até que essas decisões e os critérios completos sejam atendidos.
+- **Próxima ação operacional:** como commits na `main`, inclusive documentais, podem disparar deploy automático, Agente 1 / Frente 1 deve verificar e registrar o estado do deploy deste commit. Nenhuma alteração direta de Railway foi feita por esta frente.
