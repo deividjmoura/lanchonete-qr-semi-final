@@ -90,6 +90,8 @@ Use este formato ao registrar progresso:
 
 
 ### Handoff de coordenação aos agentes — 2026-10-25
+- **Deploy automático após documentação:** o commit documental `9ab759f79d4fb26962f2567386b1a0aa9a70cf57` acionou o deploy automático do Railway. Verificação direta do GitHub em 2026-10-25: CI run [#40202505292](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40202505292) **success** e status de deploy reportado como **success** para `qradminn.up.railway.app`. O diff do commit continha apenas `docs/COMUNICACAO-AGENTES.md`; não houve alteração intencional de runtime, secrets ou banco. Isso demonstra que commits na `main`, inclusive documentação, podem disparar deploy e devem ser tratados como operações de release.
+
 - **Revisão de consistência da Frente 3:** a issue [#87](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/87) especifica a branch `work/frente-3-pwa-notificacoes`, mas o PR [#88](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/88) está na branch `work/frente-3-validacao-final`. O responsável foi solicitado a confirmar se a divergência é intencional e sincronizar os registros. Os testes de #88 fazem assertions estruturais sobre texto/código-fonte; CI passou, mas isso não equivale a testes reais de interação no browser.
 
 
