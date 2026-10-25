@@ -15,6 +15,33 @@
 6. Em conflito de código ou contrato, informe os arquivos/linhas e proponha resolução; não sobrescreva silenciosamente trabalho alheio.
 7. Ao concluir, registre: escopo, branch/PR/commit, arquivos e contratos alterados, testes e resultados verificáveis, limitações, bloqueios e próxima ação.
 
+## Atualização canônica de coordenação — 2026-10-25 (verificação direta no GitHub)
+
+Esta seção substitui afirmações anteriores que ficaram desatualizadas. A verificação foi feita lendo este documento, `COORDENACAO.md` e `AGENTS.md` em `main`, além dos PRs e runs consultáveis no GitHub.
+
+### Frente 1 — caixa/pagamentos/PIX/comprovantes
+- **Estado:** PR aberto em draft, não integrado. PR [#85](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/85), branch `work/frente-1-caixa-pagamentos`, head consultado: `b6bb9da195da58b4e4b86c7f67167d36a1d24945`. GitHub reporta `mergeable=false`.
+- **Escopo declarado no PR:** landing sem diretório público de mesas, QR PIX pelo valor, quitação/fechamento, limpeza de pedidos operacionais após fechar sessão, comprovante detalhado, operador registrado nos pagamentos e endpoint de pagamento do garçom com autenticação e validação de responsável.
+- **Evidência de teste:** o corpo atual do PR declara CI #343 success no commit `824768b8fbbbd0128277f9dbde7a168bbe4f216d`, incluindo migration e integração financeira em PostgreSQL 16 limpo. A consulta de runs também encontrou CI #349 success no commit `925490513c6c3645e3f9ab23042949abdafcf925`. **Não foi confirmado que esses runs correspondem ao head atual** `b6bb9da...`; não marcar o head atual como validado.
+- **Bloqueios/próxima ação:** verificar a causa de `mergeable=false`, comparar o head atual com `main`, confirmar CI no head exato e revisar integração ponta a ponta do contrato de cobrança do garçom com a Frente 2. Não integrar nem publicar até a revisão.
+
+### Frente 2 — responsável por mesa/transferência e integração PWA
+- **Estado:** PR antigo #86 fechado sem merge; substituído por PR aberto em draft [#89](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/89), branch `work/frente-2-responsavel-mesa-integrada`, head consultado: `b465ba614d239a2ddfa0f43c5b9decf7f60d8f8f`. GitHub reporta `mergeable=false`.
+- **Contrato compartilhado:** migration `0023_atendimento_transferencia_actor.sql`; `GET /api/garcom/:token/garcons-ativos`; `POST /api/garcom/:token/mesas/:numero/transferir`; a fila de prontos e a entrega verificam o responsável atual no backend. PR #89 também inclui consulta de resumo de cobrança, mas declara que não altera o contrato de pagamento/PIX.
+- **Evidência de teste:** o corpo/comentários do PR declaram CI #345 success no commit `70d09d921ba3830541d8e9a909e60aec41f4e98d`, incluindo PostgreSQL 16 descartável e teste funcional de transferência, fila filtrada e autorização de entrega. O head atual `b465ba6...` não retornou run de CI na consulta efetuada; portanto, não atribuir o sucesso do commit anterior ao head atual.
+- **Bloqueios/próxima ação:** investigar `mergeable=false`, confirmar a causa dos conflitos, obter CI verde no head exato e fazer revisão integrada com PR #85. Validação visual em navegador/dispositivos reais continua pendente.
+
+### Frente 3 — PWA/consentimento de notificações
+- **Estado:** PR [#88](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/88) aberto em draft, não integrado; head descrito no PR: `3aefd704273eead3ab551d5dfc905440ecb2e31d`. O PR #84 está integrado, merge commit `daf1b2aab6df6c656b18d27059cf03f766f80237`.
+- **Evidência de teste:** PR #88 declara CI #330 success no head informado, com 104 testes de regressão, typecheck, build, integridade de `dist/` e verificações de sintaxe. Esse resultado é do head declarado no PR, não prova de validação em dispositivo real.
+- **Limitações/bloqueios:** instalação e consentimento têm cobertura de regressão, mas push em segundo plano não está implementado/verificado; faltam validação real em Android/iOS e revisão do PR.
+
+### Regras e dependências transversais
+- A numeração proposta é `0022_sessao_pagamentos_operador.sql` (Frente 1) seguida de `0023_atendimento_transferencia_actor.sql` (Frente 2). Confirmar ambas as migrations na comparação final contra `main`; não presumir integração.
+- A Frente 1 depende da validação do endpoint de pagamento do garçom com a PWA da Frente 2. O contrato deve ser integrado sem confiar em nome de operador enviado pelo cliente.
+- Nenhuma alteração em Railway, secrets, banco ou produção foi feita por esta atualização documental. Não executar migrations ou testes mutáveis em produção sem autorização explícita.
+- **Próxima ação coordenadora:** comparar PRs #85 e #89 com `main`, resolver `mergeable=false`, rodar/confirmar CI nos heads atuais, e só então revisão final. PR aberto, CI de commit anterior, código integrado e deploy validado são estados distintos.
+
 ## Estado operacional verificado — 2026-10-25
 
 ### Frente 1 — caixa, pagamentos, PIX e comprovante
