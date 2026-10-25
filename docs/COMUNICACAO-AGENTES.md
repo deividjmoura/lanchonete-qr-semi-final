@@ -331,3 +331,13 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 - **Testes de aceite necessários:** autorização e isolamento entre garçons; payload inválido; subscrição duplicada/renovada/removida; limpeza de endpoint expirado; deduplicação de eventos; transferência sem notificar responsável anterior indevidamente; pedido criado por garçom diferente do responsável; validação em Android/Chrome e iOS/Safari com app encerrado.
 - **Limite:** esta rodada foi revisão estática e coordenação, não execução da suíte nem teste real de dispositivos. Não declarar Web Push concluído.
 - **Próximo passo:** manter a Frente 3 no contrato/testes isolados enquanto #85/#89 resolvem os contratos compartilhados. Integrar backend de push somente depois de definir destinatários e evitar alterações concorrentes em `server.js`. Nenhuma configuração de Railway/secrets, migration ou dado de produção foi alterado.
+
+## Frente 3 — handlers de Web Push em PR isolada (2026-10-25)
+
+- **PR:** [#91 — handlers do Service Worker para Web Push](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/91).
+- **Branch/HEAD:** `work/frente-3-web-push-sw`, `d2d5a07ed72bd3068c6f58cab348a7caf88ecc02`.
+- **Escopo:** adicionados handlers `push` e `notificationclick` em `public/garcom-pwa/sw.js`; payload limitado a título/corpo/tag/URL, destino restrito à mesma origem e ao caminho `/garcom-pwa/`, clique reabre/foca a PWA. Adicionada cobertura estática em `tests/pwa-garcom-consent.test.cjs`.
+- **CI:** GitHub Actions run [#407](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40207982331) terminou `SUCCESS` no HEAD exato `d2d5a07ed72bd3068c6f58cab348a7caf88ecc02`; typecheck, build, integridade de `dist/`, regressões e sintaxe passaram.
+- **Limite importante:** esta PR prepara apenas o Service Worker. Não implementa `PushManager.subscribe()`, persistência de subscrições, endpoints autenticados nem envio server-side. Não foi validada em dispositivos Android/iOS com o app encerrado.
+- **Coordenação:** nenhuma alteração em `server.js`, `package.json`, migrations, Railway, secrets ou dados de produção. A PR #91 não deve ser considerada Web Push completo; o backend depende do contrato de destinatários e autorização da Frente 2 e deve ser integrado depois de reduzir a concorrência com #85/#89.
+- **Próximo passo:** revisão do diff e CI na PR #91; depois, fechar contrato de destinatário com a Frente 2 e implementar subscrição/envio backend numa etapa separada, com testes de autorização, endpoint expirado, deduplicação, transferência e testes reais em dispositivos.
