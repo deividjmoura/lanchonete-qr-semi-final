@@ -78,7 +78,7 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
 
   <section class="page active" id="page-tables" data-page="tables" aria-label="Mesas">
     <div class="section-heading"><div><span class="section-eyebrow">SEU SALÃO</span><h3>Mesas e atendimento</h3></div><button class="primary small" id="newOrderTables" type="button">＋ Novo pedido</button></div>
-    <div class="panel compact"><label class="field">Escolha uma mesa<select id="tableSelect" aria-label="Mesa para atendimento"></select></label><label class="field">Nome do cliente<input id="customerName" maxlength="80" placeholder="Como podemos chamar o cliente?" autocomplete="off"></label><div class="action-row"><button class="primary" id="startAttendance" type="button">Iniciar atendimento</button><button class="secondary" id="showQr" type="button">Mostrar QR da mesa</button></div><p id="tableMessage" class="muted small-copy">Iniciar atendimento vincula esta sessão ao seu usuário, inclusive quando o cliente já pediu pelo QR.</p></div>
+    <div hidden aria-hidden="true"><select id="tableSelect" aria-label="Mesa para atendimento"></select><input id="customerName" maxlength="100"><button id="startAttendance" type="button">Iniciar atendimento</button><button id="showQr" type="button">Mostrar QR da mesa</button><p id="tableMessage" class="muted small-copy"></p></div>
     <div class="panel"><div class="section-heading"><h4>Minhas mesas <span id="myTablesCount" class="status confirmed">0</span></h4><span class="muted small-copy">Você pode atender várias mesas ao mesmo tempo</span></div><div id="myTables" class="table-grid"></div></div>
     <div class="panel"><div class="section-heading"><h4>Todas as mesas</h4><button id="refreshTables" class="text-button" type="button">Atualizar ↻</button></div><div id="tableGrid" class="table-grid"><p class="muted">Carregando mesas…</p></div></div>
   </section>
@@ -121,6 +121,10 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
 
 <dialog id="notificationConsent" class="sheet small-sheet" aria-labelledby="notificationConsentTitle"><div class="sheet-top"><div><span class="section-eyebrow">AVISOS DE ATENDIMENTO</span><h2 id="notificationConsentTitle">Configure seus avisos</h2></div><button type="button" id="closeNotificationConsent" class="close-button" aria-label="Fechar">×</button></div><div class="sheet-body"><p>Para receber notificações, o dispositivo precisa oferecer suporte técnico, o PWA deve estar instalado quando a plataforma exigir e você precisa permitir as notificações.</p><p id="consentPlatformNote" class="muted small-copy"></p><p>Importante: o servidor ainda não tem subscrição Web Push nem infraestrutura de envio em segundo plano. Conceder permissão, por si só, não garante avisos quando o aplicativo estiver fechado.</p><div class="action-row"><button id="requestNotificationPermission" class="primary" type="button">Permitir notificações</button><button id="dismissNotificationConsent" class="secondary" type="button">Agora não</button></div><p id="consentStatus" class="muted small-copy" aria-live="polite"></p></div></dialog>
 
+<dialog id="tableDetailsModal" class="sheet small-sheet" aria-labelledby="tableDetailsTitle">
+ <div class="sheet-top"><div><span class="section-eyebrow">ATENDIMENTO</span><h2 id="tableDetailsTitle">Mesa</h2></div><button type="button" id="closeTableDetails" class="close-button" aria-label="Fechar">×</button></div>
+ <div class="sheet-body"><p id="tableDetailsStatus" class="muted"></p><div id="tableDetailsActions" class="table-actions"></div></div>
+</dialog>
 <dialog id="orderModal" class="sheet" aria-labelledby="modalTitle">
   <div class="sheet-top"><div><span class="section-eyebrow">NOVO ATENDIMENTO</span><h2 id="modalTitle">Montar pedido</h2></div><button type="button" class="close-button" id="closeOrder" aria-label="Fechar" autofocus>×</button></div>
   <div class="sheet-body">
