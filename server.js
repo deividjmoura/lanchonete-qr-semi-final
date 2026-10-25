@@ -389,11 +389,11 @@ const server = http.createServer(async (req, res) => {
         throw e;
       }
     }
-    if ((m = p.match(/^\\/api\\/garcom\\/([^/]+)\\/garcons-ativos$/)) && req.method === 'GET') {
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/garcons-ativos$/)) && req.method === 'GET') {
       try { return json(res, 200, { garcons: await listarGarconsAtivos(m[1]) }); }
       catch (e) { if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message }); throw e; }
     }
-    if ((m = p.match(/^\\/api\\/garcom\\/([^/]+)\\/mesas\\/(\\d+)\\/transferir$/)) && req.method === 'POST') {
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/transferir$/)) && req.method === 'POST') {
       try {
         const payload = await body(req);
         const out = await transferirMesa(m[1], m[2], payload.garcomDestinoId);
