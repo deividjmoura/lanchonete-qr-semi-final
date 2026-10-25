@@ -20,6 +20,42 @@ class ErroPedido extends Error {
   }
 }
 
+/**
+ * Valida o carrinho inteiro antes de inserir qualquer item.
+ * Quando produtosPorId é fornecido, valida também existência e disponibilidade.
+ */
+function validarItensCarrinho(itensInput, produtosPorId = null) {
+  if (!Array.isArray(itensInput) || itensInput.length > 100) {
+    throw new ErroPedido(400, 'Quantidade de itens do pedido inválida');
+  }
+
+  const ids = [];
+  for (let indice = 0; indice < itensInput.length; indice += 1) {
+    const item = itensInput[indice];
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      throw new ErroPedido(400, `Item ${indice + 1} do pedido inválido`);
+    }
+
+    const produtoId = Number(item.productId ?? item.id);
+    if (!Number.isInteger(produtoId) || produtoId < 1) {
+      throw new ErroPedido(400, `Produto inválido no item ${indice + 1}`);
+    }
+
+    if (produtosPorId) {
+      const produto = produtosPorId.get(produtoId);
+      if (!produto) {
+        throw new ErroPedido(409, `Produto do item ${indice + 1} não existe mais. Atualize o carrinho.`);
+      }
+      if (!produto.disponivel) {
+        throw new ErroPedido(409, `Produto "${produto.nome}" indisponível. Atualize o carrinho.`);
+      }
+    }
+
+    ids.push(produtoId);
+  }
+  return ids;
+}
+
 async function restaurarEstoqueDoPedido(client, pedidoId) {
   const { rows: itens } = await client.query(
     `SELECT ip.produto_id, ip.quantidade, pr.controla_estoque, pr.disponivel, pr.estoque
@@ -133,31 +169,21 @@ async function gravarItensPedido(client, pedidoId, itensInput) {
   let total = 0;
   let mudouDisponibilidade = false;
 
-  // Limite defensivo: payload abusivo vira erro 400 em vez de loop longo dentro
-  // da transação (segura lock de estoque por mais tempo do que o necessário).
-  if (!Array.isArray(itensInput) || itensInput.length > 100) {
-    throw new ErroPedido(400, 'Quantidade de itens do pedido inválida');
-  }
+  // Valida todo o payload antes de travar estoque ou inserir itens. Um item
+  // inválido nunca pode ser silenciosamente omitido de um pedido confirmado.
+  const idsSolicitados = validarItensCarrinho(itensInput);
 
   // Produtos travados em ordem crescente de id e lidos em 3 consultas no total
   // (antes: 3 consultas POR ITEM, segurando o lock da mesa e a conexão). A
   // trava prévia em ordem global é também o que impede deadlock entre
   // carrinhos simultâneos de mesas diferentes com itens em ordens opostas.
-  const idsSolicitados = [];
-  for (const item of itensInput) {
-    if (!item || typeof item !== 'object') continue;
-    const produtoId = Number(item.productId ?? item.id);
-    if (Number.isInteger(produtoId) && produtoId >= 1) idsSolicitados.push(produtoId);
-  }
   await travarProdutosEmOrdem(client, idsSolicitados);
   const produtosPorId = await getProdutosComRegras(client, idsSolicitados);
+  validarItensCarrinho(itensInput, produtosPorId);
 
   for (const item of itensInput) {
-    if (!item || typeof item !== 'object') continue;
     const produtoId = Number(item.productId ?? item.id);
-    if (!Number.isInteger(produtoId) || produtoId < 1) continue;
     const produto = produtosPorId.get(produtoId);
-    if (!produto || !produto.disponivel) continue;
 
     // Fora de 1–99 é rejeitado explicitamente; antes era clamp silencioso
     // (Math.max/Math.min), que escondia cliente quebrado e teste abusivo.
@@ -1227,4 +1253,5 @@ module.exports = {
   cancelarPedidoCliente: comRetry('cancelarPedidoCliente', cancelarPedidoCliente),
   editarPedidoCliente: comRetry('editarPedidoCliente', editarPedidoCliente),
   ErroPedido,
+  validarItensCarrinho,
 };
