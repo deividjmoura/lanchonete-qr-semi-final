@@ -177,3 +177,17 @@ Esta atualização registra o estado observado após revisar os PRs e o ambiente
 - Frente 1 / PR #85: CI SUCCESS no head `7de3e336155fd06fd6c94a0563e1c2d8ee7cf61a`.
 - Frente 3 / PR #88: CI SUCCESS no head `3aefd704273eead3ab551d5dfc905440ecb2e31d`.
 - Próxima barreira compartilhada: revisar contratos de API e rodar testes integrados em PostgreSQL descartável. Nenhuma migration foi executada em produção e nenhum merge/deploy foi feito.
+
+
+## Contrato de pagamento pelo PWA do garçom (Frente 1 → Frente 2)
+
+A Frente 1 adicionou em `server.js` a rota `POST /api/garcom/:token/sessoes/:sessaoId/pagamentos` na branch `work/frente-1-caixa-pagamentos`.
+
+- Autentica o token do garçom via `getGarcomPorToken` e rejeita tokens inexistentes/inativos.
+- No servidor, confere que a sessão existe, está aberta e que `mesa_sessoes.garcom_responsavel_id` corresponde ao garçom autenticado. O navegador não escolhe o operador.
+- Corpo: `{ valor, formaPagamento, idempotencyKey? }`; formas aceitas pelo motor financeiro: `dinheiro`, `pix`, `cartao_debito`, `cartao_credito`.
+- Sucesso (201): `{ ok, mesa, pagamento: { id, valor, formaPagamento, criadoEm, operadorNome }, valorTotal, valorPago, valorRestante, idempotentReplay }`.
+- Erros previstos: 400 valor/forma inválidos ou acima do saldo; 401 token inválido/inativo; 403 sessão atribuída a outro garçom; 404 sessão inexistente; 409 sessão fechada.
+- A rota registra usando o mesmo motor `registrarPagamento` do caixa, com o nome obtido do cadastro autenticado, preservando a auditoria/idempotência. Não concede ao garçom acesso geral a `/api/caixa`.
+- **Ação da Frente 2:** após revisar o contrato, integrar a chamada no PWA da mesa sob responsabilidade atual e apresentar valor restante/forma registrada. Não alterar o backend financeiro da Frente 1; sinalizar incompatibilidades neste documento antes de mudar o contrato.
+- **Limitação atual:** a rota foi adicionada e tem teste estático; CI da branch deve confirmar sintaxe/build/regressões. Ainda falta a integração visual do PWA e teste com PostgreSQL descartável. Não declarar cobrança de garçom pronta só porque a rota existe.
