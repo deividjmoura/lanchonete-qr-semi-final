@@ -378,9 +378,10 @@ export const usePub = create<PubState>((set, get) => ({
         if (!aj) return s;
         return { ...s, desconto: aj.desconto, taxa: aj.taxa };
       });
-      /* NÃO apagar fila da cozinha/garçom: só mescla entregues do caixa */
+      /* Preserva filas de sessões abertas, mas remove cards órfãos após fechamento em outro painel. */
       const ativos = get().pedidos.filter((p) =>
-        p.status === "na_fila" || p.status === "em_producao" || p.status === "pronto"
+        idsVivos.has(p.sessaoId) &&
+        (p.status === "na_fila" || p.status === "em_producao" || p.status === "pronto")
       );
       const entregueIds = new Set(entregues.map((p) => p.id));
       const ativosSemEntregue = ativos.filter((p) => !entregueIds.has(p.id));

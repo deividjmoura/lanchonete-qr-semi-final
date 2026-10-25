@@ -41,6 +41,11 @@ test('quitação de pagamento atualiza caixa e mesas', () => {
   assert.ok(storeSource.includes('await get().hydrateMesas().catch(() => null)'));
 });
 
+test('hydrateCaixa descarta cards operacionais de sessões já fechadas', () => {
+  const storeSource = fs.readFileSync('src/store/usePub.ts', 'utf8');
+  assert.ok(storeSource.includes('idsVivos.has(p.sessaoId)'));
+});
+
 test('QR PIX acompanha o valor digitado e gera TXID por lançamento', () => {
   const caixaSource = fs.readFileSync('src/screens/Caixa.tsx', 'utf8');
   assert.ok(caixaSource.includes('valor: Number(valor) > 0.005 ? Number(valor)'));
