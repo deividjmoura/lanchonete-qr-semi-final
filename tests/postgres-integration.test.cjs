@@ -86,6 +86,12 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
     assert.equal(persisted.rows[0].status, 'recebido');
     sessaoId = persisted.rows[0].sessao_id;
 
+    // A entrega exige que o garçom autenticado seja responsável pela sessão.
+    await pool.query(
+      'UPDATE mesa_sessoes SET garcom_responsavel_id = $1 WHERE id = $2',
+      [garcomId, sessaoId]
+    );
+
     const itemRows = await pool.query(
       `SELECT id, produto_id, quantidade, preco_unitario, status
        FROM itens_pedido WHERE pedido_id = $1 ORDER BY id`,
