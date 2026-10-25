@@ -159,6 +159,8 @@ function openTableDetails(tableNumber){
 document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.dataset.tab)));
 for(const id of ['newOrderTables','newOrderOrders'])$('#'+id).addEventListener('click',()=>openOrder());
 $('#closeOrder').addEventListener('click',()=>$('#orderModal').close());
+$('#closeTableDetails').addEventListener('click',()=>$('#tableDetailsModal').close());
+$('#tableDetailsModal').addEventListener('click',e=>{if(e.target===$('#tableDetailsModal'))$('#tableDetailsModal').close()});
 $('#closeQr').addEventListener('click',()=>$('#qrModal').close());
 $('#showQr').addEventListener('click',()=>openQr($('#tableSelect').value));
 $('#modalQr').addEventListener('click',()=>openQr($('#modalTable').value));
