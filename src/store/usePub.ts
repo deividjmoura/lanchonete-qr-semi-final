@@ -650,6 +650,8 @@ export const usePub = create<PubState>((set, get) => ({
       try {
         await api.registrarPagamento(sessaoId, valor, formaToApi(forma));
         await get().hydrateCaixa();
+        // A quitação simples pode liberar a mesa no servidor dentro da mesma transação.
+        await get().hydrateMesas().catch(() => null);
       } catch (e: any) {
         alert(e.message || "Erro no pagamento");
       }

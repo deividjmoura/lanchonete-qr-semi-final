@@ -36,6 +36,11 @@ test('comprovante detalha preço unitário, observações e operador quando disp
   assert.ok(receiptSource.includes('operador_nome'));
 });
 
+test('quitação de pagamento atualiza caixa e mesas', () => {
+  const storeSource = fs.readFileSync('src/store/usePub.ts', 'utf8');
+  assert.ok(storeSource.includes('await get().hydrateMesas().catch(() => null)'));
+});
+
 test('QR PIX acompanha o valor digitado e gera TXID por lançamento', () => {
   const caixaSource = fs.readFileSync('src/screens/Caixa.tsx', 'utf8');
   assert.ok(caixaSource.includes('valor: Number(valor) > 0.005 ? Number(valor)'));
