@@ -1,10 +1,10 @@
 <div align="center">
 
-# QRAdmin
+# QR Admin
 
 **Sistema de pedidos e operação por QR Code para um único estabelecimento**
 
-Feito para a operação da **Delicia’s São Miguel**: cliente, cozinha, bar, garçom e caixa trabalham no mesmo fluxo, com o PostgreSQL como fonte oficial dos dados.
+O QR Admin é apresentado como uma solução genérica de pedidos e operação por QR Code. A personalização visual e comercial de cada estabelecimento será feita posteriormente.
 
 [![Produção](https://img.shields.io/badge/Deploy-Railway-7B61FF?style=for-the-badge)](https://qradmin.up.railway.app/)
 
@@ -130,7 +130,7 @@ Requisitos: Node.js 20 ou superior e um PostgreSQL de desenvolvimento/teste.
 
 6. Abra `http://localhost:3000`.
 
-**Cuidado com o seed:** `FORCE_SEED=1 npm run db:seed` é destrutivo. Ele apaga pedidos, sessões, pagamentos e cardápio antes de substituir os dados de demonstração. Nunca rode esse comando no banco de produção. Personalize o cardápio e a identidade do estabelecimento pelo ambiente de teste antes de colocar a instalação em uso.
+**Cuidado com o seed:** `FORCE_SEED=1 npm run db:seed` é destrutivo. Ele apaga pedidos, sessões, pagamentos e cardápio antes de substituir os dados de demonstração. Nunca rode esse comando no banco de produção. A identidade visual atual é provisoriamente QR Admin. A personalização da marca de cada estabelecimento deve ser feita em etapa futura, após validação do produto.
 
 ## Testes e validação
 
@@ -179,7 +179,7 @@ O CI do GitHub executa instalação limpa, TypeScript, build, testes de regress�
 
 <div align="center">
 
-**QRAdmin** · sistema de pedidos por QR Code para um estabelecimento  
+**QR Admin** · sistema de pedidos por QR Code para um estabelecimento  
 [deividjmoura](https://github.com/deividjmoura)
 
 </div>

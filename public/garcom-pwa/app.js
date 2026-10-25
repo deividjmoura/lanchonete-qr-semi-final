@@ -49,7 +49,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&navigator
 // Reutiliza a mesma idempotencyKey para recuperar a confirmação sem duplicar.
 async function recoverInterruptedSync(){for(const order of await allOrders()){if(order.status==='sync'){order.status='offline';await putOrder(order)}}await renderOrders()}
 
-/* Delicia's · navegação de páginas e fluxo sob demanda */
+/* QR Admin · navegação de páginas e fluxo sob demanda */
 const pageCopy={
  home:['Seu salão, em ordem.','Mesas, pedidos e entregas sem bagunça.'],
  tables:['Cada mesa, bem cuidada.','Assuma um atendimento ou compartilhe o QR.'],

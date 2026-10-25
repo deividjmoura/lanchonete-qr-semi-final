@@ -1,12 +1,12 @@
 {
-  "name": "Delicia’s São Miguel · Atendimento",
-  "short_name": "Delicia’s",
+  "name": "QR Admin · Atendimento",
+  "short_name": "QR Admin",
   "description": "PWA de atendimento online e offline",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#fff8f0",
-  "theme_color": "#f05e4a",
+  "background_color": "#ffffff",
+  "theme_color": "#3157a4",
   "lang": "pt-BR",
   "icons": [
     {
@@ -20,12 +20,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
-    },
-    {
-      "src": "./icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
     }
   ]
 }
