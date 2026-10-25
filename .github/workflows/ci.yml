@@ -1,5 +1,7 @@
 name: CI
 
+# Database-backed integration tests run when their test files are present in the branch.
+
 on:
   push:
     branches: ['main', 'hardening/**', 'arena/**']
