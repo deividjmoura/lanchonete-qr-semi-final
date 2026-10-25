@@ -16,6 +16,13 @@ test('Ao tocar numa mesa a PWA oferece novo pedido ou acréscimo sem assumir mes
  assert.match(server,/listarPedidosAtivosMesaGarcom/);
  assert.match(pwa,/if\(!tableInfo\?\.sessaoId\|\|!tableInfo\.garcomResponsavelId\)/);
 });
+test('Fila e entrega ficam restritas ao responsável da mesa ou ao garçom atribuído ao pedido',()=>{
+ const api=read('db/atendimento.js'),garcons=read('db/garcons.js'),pedidos=read('db/pedidos.js'),server=read('server.js');
+ assert.match(api,/s\.garcom_responsavel_id=\$1 OR p\.garcom_id=\$1/);
+ assert.match(garcons,/Este pedido está atribuído a outro garçom/);
+ assert.match(pedidos,/s\.garcom_responsavel_id=\$1 OR p\.garcom_id=\$1/);
+ assert.match(server,/getFilaGarcom\(g\.id\)/);
+});
 test('PWA tem JavaScript valido apos edicao de pedidos e notificacoes',()=>{cp.execFileSync(process.execPath,['--check',path.join(root,'public/garcom-pwa/app.js')]);});
 test('Garcom consulta status de todas as suas mesas, nao apenas entregas',()=>{
  const api=read('db/atendimento.js');const pwa=read('public/garcom-pwa/app.js');

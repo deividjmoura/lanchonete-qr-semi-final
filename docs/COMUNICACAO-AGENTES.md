@@ -305,3 +305,8 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 - PWA não chama assumir/transferir para sessão já atribuída a outro garçom. Cache do service worker incrementado para v11.
 - Testes de regressão adicionados para a regra de autoria/mesa e a UX. Aguardando CI no commit exato; não declarei testes executados localmente nem PostgreSQL conjunto.
 - O incidente de mesas pagas/zeradas presas no caixa permanece aberto e não é corrigido por esta alteração. Nenhuma escrita no banco de produção ou mudança de Railway/secrets foi realizada intencionalmente.
+
+
+### Complemento da implementação de pedidos por garçom — autorização de entrega
+- A fila de prontos foi restringida ao responsável pela sessão ou ao garçom registrado no próprio pedido; o endpoint de entrega também valida essa regra no servidor sob lock. Isso permite que um garçom entregue os pedidos que ele registrou em mesa de outro responsável, sem abrir a fila de todos os pedidos a qualquer funcionário.
+- CI do primeiro commit de implementação: run [#40206750514](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40206750514) estava em execução na última consulta. Este complemento gera um novo commit e requer CI novamente no SHA final.

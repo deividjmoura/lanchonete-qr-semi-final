@@ -154,7 +154,7 @@ async function listarAtendimentosGarcom(token) {
     JOIN pedidos p ON p.sessao_id=s.id
     LEFT JOIN itens_pedido ip ON ip.pedido_id=p.id
     LEFT JOIN produtos pr ON pr.id=ip.produto_id
-    WHERE s.status='aberta' AND s.garcom_responsavel_id=$1
+    WHERE s.status='aberta' AND (s.garcom_responsavel_id=$1 OR p.garcom_id=$1)
     GROUP BY p.id,m.numero,s.id
     ORDER BY p.criado_em DESC LIMIT 250`,[garcom.id]);
   return rows.map(x=>({id:x.id,mesa:x.mesa,sessaoId:x.sessao_id,status:x.status,

@@ -895,8 +895,8 @@ async function getFilaCozinha() {
   return listarPedidosPorStatus(['recebido', 'em_producao', 'concluido'], 'cozinha');
 }
 
-async function getFilaGarcom() {
-  /* Pedidos com pelo menos um item PRONTO (concluido) aguardando entrega parcial ou total */
+async function getFilaGarcom(garcomId = null) {
+  /* Pedidos prontos para o responsável da mesa ou o garçom atribuído ao pedido. */
   const { rows: pedidos } = await pool.query(
     `SELECT DISTINCT p.id, p.status, p.criado_em, p.observacao_geral, p.cliente_nome, p.garcom_nome,
             p.editado_em, m.numero AS mesa
@@ -906,7 +906,8 @@ async function getFilaGarcom() {
      JOIN itens_pedido ip ON ip.pedido_id = p.id
      WHERE p.status <> 'entregue'
        AND COALESCE(ip.status, 'recebido') = 'concluido'
-     ORDER BY p.criado_em`
+       AND ($1::int IS NULL OR s.garcom_responsavel_id=$1 OR p.garcom_id=$1)
+     ORDER BY p.criado_em`, [garcomId]
   );
   if (!pedidos.length) return [];
 

@@ -349,7 +349,7 @@ const server = http.createServer(async (req, res) => {
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/pedidos$/)) && req.method === 'GET') {
       const g = await getGarcomPorToken(m[1]);
       if (!g || !g.ativo) return json(res, 401, { error: 'Link inválido ou desativado' });
-      return json(res, 200, await getFilaGarcom());
+      return json(res, 200, await getFilaGarcom(g.id));
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/pedidos\/(\d+)\/entregar$/)) && req.method === 'POST') {
       try {
