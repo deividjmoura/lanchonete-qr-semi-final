@@ -109,6 +109,17 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
 
 <dialog id="notificationConsent" class="sheet small-sheet" aria-labelledby="notificationConsentTitle"><div class="sheet-top"><div><span class="section-eyebrow">AVISOS DE ATENDIMENTO</span><h2 id="notificationConsentTitle">Configure seus avisos</h2></div><button type="button" id="closeNotificationConsent" class="close-button" aria-label="Fechar">×</button></div><div class="sheet-body"><p>Para receber notificações, o dispositivo precisa oferecer suporte técnico, o PWA deve estar instalado quando a plataforma exigir e você precisa permitir as notificações.</p><p id="consentPlatformNote" class="muted small-copy"></p><p>Importante: o servidor ainda não tem subscrição Web Push nem infraestrutura de envio em segundo plano. Conceder permissão, por si só, não garante avisos quando o aplicativo estiver fechado.</p><div class="action-row"><button id="requestNotificationPermission" class="primary" type="button">Permitir notificações</button><button id="dismissNotificationConsent" class="secondary" type="button">Agora não</button></div><p id="consentStatus" class="muted small-copy" aria-live="polite"></p></div></dialog>
 
+<dialog id="tableActionsModal" class="sheet small-sheet" aria-labelledby="tableActionsTitle">
+ <div class="sheet-top"><div><span class="section-eyebrow">MESA SELECIONADA</span><h2 id="tableActionsTitle">Mesa</h2></div><button type="button" id="closeTableActions" class="close-button" aria-label="Fechar">×</button></div>
+ <div class="sheet-body"><p class="muted">Como deseja continuar?</p><div class="table-action-options">
+ <button id="tableActionNew" class="primary full" type="button">＋ Novo pedido</button>
+ <button id="tableActionAdd" class="secondary full" type="button">＋ Acrescentar itens ao pedido atual</button>
+ <p id="tableActionsMessage" class="muted small-copy"></p></div></div>
+</dialog>
+<dialog id="addItemsModal" class="sheet" aria-labelledby="addItemsTitle">
+ <div class="sheet-top"><div><span class="section-eyebrow">COMANDA DA MESA</span><h2 id="addItemsTitle">Acrescentar itens</h2></div><button type="button" id="closeAddItems" class="close-button" aria-label="Fechar">×</button></div>
+ <div class="sheet-body"><p class="muted">Escolha um pedido de referência. Os itens serão registrados em um novo pedido da mesma sessão, atribuídos a você para entrega.</p><div id="addItemsOrders" class="orders-list"><p class="muted">Carregando pedidos…</p></div></div>
+</dialog>
 <dialog id="orderModal" class="sheet" aria-labelledby="modalTitle">
   <div class="sheet-top"><div><span class="section-eyebrow">NOVO ATENDIMENTO</span><h2 id="modalTitle">Montar pedido</h2></div><button type="button" class="close-button" id="closeOrder" aria-label="Fechar" autofocus>×</button></div>
   <div class="sheet-body">

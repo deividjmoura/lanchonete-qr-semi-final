@@ -7,15 +7,18 @@ const addWrap=document.createElement('div');addWrap.className='addon-options';
 if(opts.length){const caption=document.createElement('span');caption.textContent='Adicionais (opcionais)';addWrap.append(caption);for(const a of opts){const label=document.createElement('label');label.className='addon-choice';const cb=document.createElement('input');cb.type='checkbox';cb.checked=(item.additions||[]).some(x=>Number(x.id||x)===Number(a.id));cb.onchange=()=>{const selected=new Set((item.additions||[]).map(x=>Number(x.id||x)));if(cb.checked)selected.add(Number(a.id));else selected.delete(Number(a.id));item.additions=[...selected].map(id=>({id}));renderCart();};const title=document.createElement('span');title.textContent=a.nome+' · '+money(Number(a.preco||0));label.append(cb,title);addWrap.append(label);}}else addWrap.textContent='Sem adicionais disponíveis';
 addInput.closest('label').replaceWith(addWrap);
 for(const f of ['removals','note']){const input=row.querySelector('[data-field="'+f+'"]');input.value=Array.isArray(item[f])?item[f].join(', '):item[f];input.onchange=()=>{item[f]=f==='note'?input.value:input.value.split(',').map(x=>x.trim()).filter(Boolean)}}root.append(row)}$('#total').textContent=money(total)}async function renderOrders(){const orders=await allOrders();$('#queueCount').textContent=orders.filter(o=>o.status!=='confirmed').length+' pendentes';const root=$('#orders');root.replaceChildren();if(!orders.length){root.innerHTML='<p class="muted">Nenhum pedido salvo neste aparelho.</p>';return}for(const o of orders){const card=document.createElement('article');card.className='order';const head=document.createElement('div');head.className='order-head';const title=document.createElement('strong');title.textContent='Mesa '+o.table+' · '+o.customerName;const badge=document.createElement('span');badge.className='status '+o.status;badge.textContent=statusText(o.status);head.append(title,badge);const details=document.createElement('p');details.className='muted';details.textContent=o.items.map(i=>i.qty+'× '+i.name).join(', ')+' · '+money(o.total);card.append(head,details);if(o.status==='offline'||o.status==='conflict'){const retry=document.createElement('button');retry.className='secondary';retry.textContent=o.status==='conflict'?'Revisar conflito':'Tentar sincronizar';retry.onclick=()=>o.status==='conflict'?alert('O servidor informou conflito. Compare o pedido local com o retorno do backend antes de reenviar.'):syncOne(o.localId);card.append(retry)}if(o.status==='offline'){const edit=document.createElement('button');edit.className='secondary';edit.textContent='Editar rascunho';edit.onclick=()=>openEditDraft(o);card.append(edit)}root.append(card)}}async function saveOrder(){if(editingDraftId){await updateDraft();return}if(!waiterToken){alert('Abra o link individual do garçom antes de registrar pedidos.');return}if(!cart.size){alert('Adicione pelo menos um produto.');return}const customerName=$('#modalCustomer').value.trim();if(!customerName){$('#modalCustomer').focus();alert('Informe o nome do cliente.');return}const items=[...cart.values()].map(i=>({productId:Number(i.product.id),name:i.product.name||i.product.nome,qty:i.qty,unitPrice:Number(i.product.price??i.product.preco??0),additions:(i.additions||[]).map(x=>({id:Number(x.id||x)})).filter(x=>Number.isSafeInteger(x.id)),removals:i.removals||[],note:i.note}));if(editingServerId){if(!navigator.onLine){alert('Edição de pedido já enviado exige conexão.');return}try{await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/pedidos/'+editingServerId,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({items,note:$('#orderNote').value.trim()})});editingServerId=null;cart.clear();renderCart();$('#orderModal').close();switchTab('orders');await loadOrderStatuses();}catch(e){alert(e.message||'Não foi possível editar o pedido.');}return}
-const order={ownerToken:waiterToken,localId:uid(),idempotencyKey:uid(),table:Number($('#modalTable').value),customerName,items,note:$('#orderNote').value.trim(),total:[...cart.values()].reduce((sum,it)=>sum+it.qty*(Number((it.product.preco??it.product.price??0))+(it.additions||[]).reduce((v,x)=>v+Number((it.product.adicionais||[]).find(a=>Number(a.id)===Number(x.id||x))?.preco||0),0)),0),status:'offline',createdAt:Date.now(),attempts:0};await putOrder(order);cart.clear();$('#orderNote').value='';renderCart();await renderOrders();$('#orderModal').close();switchTab('orders');if(navigator.onLine)syncOne(order.localId)}async function syncOne(localId){const order=(await allOrders()).find(o=>o.localId===localId);if(!order||order.status==='confirmed'||order.status==='sync'||order.status==='conflict')return;if(!navigator.onLine)return;order.status='sync';order.attempts++;await putOrder(order);await renderOrders();try{
+const order={ownerToken:waiterToken,localId:uid(),idempotencyKey:uid(),table:Number($('#modalTable').value),customerName,items,note:$('#orderNote').value.trim(),total:[...cart.values()].reduce((sum,it)=>sum+it.qty*(Number((it.product.preco??it.product.price??0))+(it.additions||[]).reduce((v,x)=>v+Number((it.product.adicionais||[]).find(a=>Number(a.id)===Number(x.id||x))?.preco||0),0)),0),status:'offline',createdAt:Date.now(),attempts:0};await putOrder(order);pendingAddOnOrderId=null;cart.clear();$('#orderNote').value='';renderCart();await renderOrders();$('#orderModal').close();switchTab('orders');if(navigator.onLine)syncOne(order.localId)}async function syncOne(localId){const order=(await allOrders()).find(o=>o.localId===localId);if(!order||order.status==='confirmed'||order.status==='sync'||order.status==='conflict')return;if(!navigator.onLine)return;order.status='sync';order.attempts++;await putOrder(order);await renderOrders();try{
 const root='/api/garcom/'+encodeURIComponent(waiterToken)+'/mesas/'+order.table;
-const assign=await fetch(root+'/assumir',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({clienteNome:order.customerName})});
-const assigned=await assign.json().catch(()=>({}));if(!assign.ok){const e=new Error(assigned.error||'Falha ao assumir mesa');e.status=assign.status;throw e;}
+const tableInfo=mesas.find(m=>Number(m.numero)===Number(order.table));
+if(!tableInfo?.sessaoId||!tableInfo.garcomResponsavelId){
+ const assign=await fetch(root+'/assumir',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({clienteNome:order.customerName})});
+ const assigned=await assign.json().catch(()=>({}));if(!assign.ok){const e=new Error(assigned.error||'Falha ao abrir atendimento');e.status=assign.status;throw e;}
+}
 const body={clienteNome:order.customerName,items:order.items,note:order.note,idempotencyKey:order.idempotencyKey};
 const res=await fetch(root+'/pedidos',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
 const data=await res.json().catch(()=>({}));if(!res.ok){const e=new Error(data.error||'Falha ao enviar pedido');e.status=res.status;throw e;}
 order.status='confirmed';order.serverOrderId=data.id;order.confirmedAt=Date.now();order.lastError=null;
-}catch(err){order.status=err.status&&err.status<500?'conflict':'offline';order.lastError=String(err.message||err);}await putOrder(order);await renderOrders();if(order.status==='confirmed')void loadOrderStatuses();}
+}catch(err){order.status=err.status&&err.status<500?'conflict':'offline';order.lastError=String(err.message||err);}await putOrder(order);await renderOrders();if(order.status==='confirmed'){void loadOrderStatuses();void loadMesas().catch(()=>{});}}
 async function syncPending(){if(!navigator.onLine){setConnection();return}const pending=(await allOrders()).filter(o=>o.status==='offline');for(const o of pending)await syncOne(o.localId);setConnection()}function setConnection(){$('#connection').textContent=navigator.onLine?'Online · sincronização disponível':'Offline · pedidos ficam neste aparelho';$('#connection').style.color=navigator.onLine?'#166534':'#a16207'}function updateQr(){const n=Number($('#qrTable').value);const mesa=mesas.find(x=>Number(x.numero)===n);if(!mesa)return;const url=new URL('../',location.href).href+'#/mesa/'+mesa.token;$('#qrUrl').value=url;$('#qrImage').src=navigator.onLine?'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(url):'';$('#qrImage').onerror=()=>{$('#qrImage').alt='QR indisponível offline'}}$('#search').addEventListener('input',renderProducts);$('#saveOrder').addEventListener('click',saveOrder);$('#syncBtn').addEventListener('click',syncPending);$('#qrTable').addEventListener('change',updateQr);$('#copyQr').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('#qrUrl').value);$('#copyQr').textContent='Endereço copiado';setTimeout(()=>$('#copyQr').textContent='Copiar endereço',1500)}catch{ $('#qrUrl').select();document.execCommand('copy')}});window.addEventListener('online',syncPending);window.addEventListener('offline',setConnection);setConnection();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});openDb().then(async d=>{db=d;await recoverInterruptedSync();await loadProducts();try{await loadMesas();if(navigator.onLine){syncPending();loadDeliveries();loadOrderStatuses()}}catch(e){$('#identity').textContent=e.message;if(!navigator.onLine){try{mesas=JSON.parse(localStorage.getItem('waiter-mesas-cache-'+waiterToken)||'[]');tables.splice(0,tables.length,...mesas.map(x=>Number(x.numero)));populateTables();updateQr();renderTableGrid();}catch{}}}}).catch(e=>{console.error(e);alert('Não foi possível abrir o armazenamento offline neste navegador.')});
 let deferredInstall=null;
 const installBtn=$('#installAppBtn');
@@ -71,7 +74,7 @@ function switchTab(tab){
 function openOrder(tableNumber){
  editingServerId=null;editingDraftId=null;cart.clear();renderCart();const n=Number(tableNumber||$('#tableSelect').value||tables[0]);if(n)$('#modalTable').value=String(n);
  $('#modalCustomer').value=$('#customerName').value||'';
- $('#modalMessage').textContent='';
+ if(!pendingAddOnOrderId){$('#modalTitle').textContent='Montar pedido';$('#modalMessage').textContent='';$('#orderNote').value='';}
  $('#orderModal').showModal();
 }
 function openQr(n){
@@ -100,6 +103,43 @@ async function clickAssume(mode){
  try{await assumirMesa(n,name);target.textContent='Mesa '+n+' sob seus cuidados. Pode anotar o pedido ou apresentar o QR.';$('#tableSelect').value=String(n);$('#modalTable').value=String(n);if(name){$('#customerName').value=name;$('#modalCustomer').value=name}}
  catch(e){target.textContent=e.message||'Não foi possível assumir a mesa.';}
 }
+let selectedActionTable=null;
+let pendingAddOnOrderId=null;
+function openTableActions(tableNumber){
+ selectedActionTable=Number(tableNumber);
+ const m=mesas.find(x=>Number(x.numero)===selectedActionTable);
+ if(!m)return;
+ $('#tableActionsTitle').textContent='Mesa '+selectedActionTable;
+ $('#tableActionsMessage').textContent='';
+ $('#tableActionAdd').disabled=!m.sessaoId;
+ $('#tableActionAdd').title=m.sessaoId?'':'Não há atendimento aberto nesta mesa.';
+ $('#tableSelect').value=String(selectedActionTable);$('#modalTable').value=String(selectedActionTable);$('#qrTable').value=String(selectedActionTable);
+ $('#tableActionsModal').showModal();
+}
+async function openAddItemsOrders(){
+ if(!selectedActionTable)return;
+ const root=$('#addItemsOrders');root.replaceChildren();
+ $('#tableActionsModal').close();$('#addItemsModal').showModal();
+ const loading=document.createElement('p');loading.className='muted';loading.textContent='Carregando pedidos ativos…';root.append(loading);
+ try{
+  const orders=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/mesas/'+selectedActionTable+'/pedidos-ativos');
+  root.replaceChildren();
+  if(!orders.length){const empty=document.createElement('p');empty.className='muted';empty.textContent='Não há pedidos com itens pendentes nesta sessão. Escolha “Novo pedido”.';root.append(empty);return;}
+  for(const order of orders){
+   const btn=document.createElement('button');btn.type='button';btn.className='order add-items-choice';
+   const title=document.createElement('strong');title.textContent='Pedido #'+order.id+' · '+(order.garcomNome||'Garçom não identificado');
+   const detail=document.createElement('p');detail.className='muted';detail.textContent=(order.itens||[]).filter(i=>i.status!=='entregue').map(i=>(i.qty||1)+'× '+i.nome).join(', ');
+   btn.append(title,detail);btn.addEventListener('click',()=>startAddOnOrder(order.id));root.append(btn);
+  }
+ }catch(e){root.replaceChildren();const err=document.createElement('p');err.className='muted';err.textContent=e.message||'Não foi possível carregar os pedidos ativos.';root.append(err);}
+}
+function startAddOnOrder(orderId){
+ const table=selectedActionTable;pendingAddOnOrderId=Number(orderId);
+ $('#addItemsModal').close();openOrder(table);
+ $('#modalTitle').textContent='Acrescentar itens · Pedido #'+orderId;
+ $('#modalMessage').textContent='O complemento será um novo pedido na mesma sessão, atribuído a você para entrega.';
+ $('#orderNote').value='Complemento do pedido #'+orderId;
+}
 function renderTableGrid(){
  const root=$('#tableGrid');if(!root)return;root.replaceChildren();
  if(!mesas.length){root.textContent='Nenhuma mesa carregada. Conecte-se para atualizar.';return}
@@ -108,13 +148,17 @@ function renderTableGrid(){
   if(m.garcomResponsavelId&&m.garcomResponsavelNome)card.classList.add('taken');
   const title=document.createElement('strong');title.textContent='Mesa '+String(m.numero).padStart(2,'0');
   const desc=document.createElement('small');desc.textContent=m.garcomResponsavelNome?('Atendimento: '+m.garcomResponsavelNome):(m.sessaoId?'Cliente na mesa':'Pronta para atender');
-  card.append(title,desc);card.onclick=()=>{$('#tableSelect').value=String(m.numero);$('#modalTable').value=String(m.numero);$('#qrTable').value=String(m.numero);$('#tableMessage').textContent='Mesa '+m.numero+' selecionada.'};
+  card.append(title,desc);card.onclick=()=>openTableActions(m.numero);
   root.append(card);
  }
 }
 document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.dataset.tab)));
 for(const id of ['newOrderTables','newOrderOrders'])$('#'+id).addEventListener('click',()=>openOrder());
 $('#closeOrder').addEventListener('click',()=>$('#orderModal').close());
+$('#closeTableActions').addEventListener('click',()=>$('#tableActionsModal').close());
+$('#closeAddItems').addEventListener('click',()=>$('#addItemsModal').close());
+$('#tableActionNew').addEventListener('click',()=>{const n=selectedActionTable;$('#tableActionsModal').close();pendingAddOnOrderId=null;openOrder(n);});
+$('#tableActionAdd').addEventListener('click',()=>void openAddItemsOrders());
 $('#closeQr').addEventListener('click',()=>$('#qrModal').close());
 $('#showQr').addEventListener('click',()=>openQr($('#tableSelect').value));
 $('#modalQr').addEventListener('click',()=>openQr($('#modalTable').value));
@@ -143,7 +187,7 @@ function renderMyTables(){
   const btn=document.createElement('button');btn.type='button';btn.className='table-tile mine';
   const title=document.createElement('strong');title.textContent='Mesa '+m.numero;
   const info=document.createElement('small');info.textContent=(m.clienteNome||'Cliente não informado')+' · Anotar novo pedido ↗';
-  btn.append(title,info);btn.onclick=()=>openOrder(m.numero);root.append(btn);
+  btn.append(title,info);btn.onclick=()=>openTableActions(m.numero);root.append(btn);
   const actions=document.createElement('div');actions.className='table-actions';
   const detail=document.createElement('button');detail.className='secondary small';detail.textContent='Ver pedidos';detail.onclick=()=>openOrdersModal(m.numero);
   const leave=document.createElement('button');leave.className='secondary small leave-table';leave.textContent='Deixar mesa';leave.onclick=()=>leaveTable(m.numero);

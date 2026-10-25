@@ -296,3 +296,12 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 2. Só depois da integração validada/autorizada de #85, atualizar #89 para a base resultante, preservar migration 0023 depois de 0022 e implementar/testar o novo fluxo de pedidos no contrato acima.
 3. Rodar os testes financeiros e de atendimento juntos no mesmo PostgreSQL descartável e exigir CI verde no HEAD combinado exato. Manter Web Push em segundo plano e testes reais Android/iOS como pendências separadas.
 4. Nenhum merge, push de código nas branches de trabalho, alteração de Railway/secrets/banco de produção ou deploy manual foi executado por esta rechecagem. Como a atualização deste documento na `main` pode disparar deploy automático, a Frente 1 deve verificar e registrar o estado resultante do deploy.
+
+## Implementação inicial — pedidos por qualquer garçom (2026-10-25)
+
+- Implementação proposta nesta alteração da `main`: a PWA abre ações ao tocar numa mesa (“Novo pedido” / “Acrescentar itens ao pedido atual”), consulta pedidos com itens pendentes e permite selecionar pedido de referência para o complemento.
+- O complemento é registrado como **novo pedido na mesma sessão**, com observação de referência ao pedido escolhido, para preservar a autoria do novo lançamento e a atribuição individual de entrega. Não altera pedido existente nem transfere a mesa.
+- Backend previsto: novo GET `/api/garcom/:token/mesas/:numero/pedidos-ativos`; criação de pedido permite outro garçom ativo na sessão aberta e revalida o ID da sessão sob lock; autor do novo pedido continua sendo o garçom autenticado.
+- PWA não chama assumir/transferir para sessão já atribuída a outro garçom. Cache do service worker incrementado para v11.
+- Testes de regressão adicionados para a regra de autoria/mesa e a UX. Aguardando CI no commit exato; não declarei testes executados localmente nem PostgreSQL conjunto.
+- O incidente de mesas pagas/zeradas presas no caixa permanece aberto e não é corrigido por esta alteração. Nenhuma escrita no banco de produção ou mudança de Railway/secrets foi realizada intencionalmente.

@@ -302,14 +302,18 @@ async function criarPedido(token, body, atendimento = null) {
 
     const sessaoId = await getOuAbrirSessao(client, mesa.id);
 
-    // Pedido lançado por garçom: o servidor valida autoria dentro da mesma
-    // transação, sob o lock da mesa, inclusive durante uma transferência.
+    // A autoria do pedido é validada sob lock. Um garçom ativo pode registrar
+    // novo pedido na sessão de outro responsável sem transferir a mesa.
     if (atendimento) {
+      if (atendimento.sessaoIdEsperada && Number(atendimento.sessaoIdEsperada) !== Number(sessaoId)) {
+        throw new ErroPedido(409, 'A sessão da mesa mudou. Atualize as mesas e tente novamente.');
+      }
       const { rows: atribuidos } = await client.query(
         'SELECT garcom_responsavel_id FROM mesa_sessoes WHERE id = $1 FOR UPDATE',
         [sessaoId]
       );
-      if (atribuidos[0]?.garcom_responsavel_id !== atendimento.garcomId) {
+      if (!atendimento.permitirResponsavelDiferente &&
+          atribuidos[0]?.garcom_responsavel_id !== atendimento.garcomId) {
         throw new ErroPedido(409, 'Assuma a mesa antes de enviar o pedido');
       }
     }
