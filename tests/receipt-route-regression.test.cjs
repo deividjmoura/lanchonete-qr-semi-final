@@ -88,5 +88,7 @@ test('pagamento pelo gar√ßom exige token ativo e responsabilidade atual da sess√
   assert.ok(serverSource.includes('const garcom = await getGarcomPorToken(m[1])'));
   assert.ok(serverSource.includes("sessao.status !== 'aberta'"));
   assert.ok(serverSource.includes('Number(sessao.garcom_responsavel_id) !== Number(garcom.id)'));
-  assert.ok(serverSource.includes('registrarPagamento(sessaoId, await body(req), garcom.nome)'));
+  assert.ok(serverSource.includes('registrarPagamento(sessaoId, await body(req), garcom.nome, garcom.id)'));
+  const caixaSource = fs.readFileSync('db/caixa.js', 'utf8');
+  assert.ok(caixaSource.includes('Number(sessao.garcom_responsavel_id) !== Number(garcomResponsavelId)'));
 });
