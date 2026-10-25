@@ -15,7 +15,11 @@ async function listarMesasGarcom(token) {
   const garcom = await validarGarcom(token);
   const { rows } = await pool.query(`
     SELECT m.id, m.numero, m.token, s.id AS sessao_id, s.cliente_nome,
-           s.garcom_responsavel_id, g.nome AS garcom_responsavel_nome
+           s.garcom_responsavel_id, g.nome AS garcom_responsavel_nome,
+           EXISTS (
+             SELECT 1 FROM pedidos p
+              WHERE p.sessao_id = s.id AND p.origem_pedido = 'cliente'
+           ) AS pedido_cliente_qr
       FROM mesas m
       LEFT JOIN mesa_sessoes s ON s.mesa_id = m.id AND s.status = 'aberta'
       LEFT JOIN garcons g ON g.id = s.garcom_responsavel_id
@@ -26,6 +30,7 @@ async function listarMesasGarcom(token) {
     sessaoId: r.sessao_id, clienteNome: r.cliente_nome,
     garcomResponsavelId: r.garcom_responsavel_id,
     garcomResponsavelNome: r.garcom_responsavel_nome,
+    pedidoClienteQr: r.pedido_cliente_qr === true,
   })) };
 }
 async function assumirMesa(token, numeroBruto, body = {}) {
