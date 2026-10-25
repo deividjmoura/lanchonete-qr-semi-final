@@ -9,7 +9,7 @@ function requiresStaffCsrf(path: string, method: string) {
     path.startsWith("/api/caixa/") ||
     path.startsWith("/api/cozinha/") ||
     path.startsWith("/api/bar/") ||
-    /^\\/api\\/pedidos\\/\\d+\\/status$/.test(path);
+    /^\/api\/pedidos\/\d+\/status$/.test(path);
 }
 
 export class ApiError extends Error {
