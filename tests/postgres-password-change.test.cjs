@@ -5,6 +5,10 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 
+// Mesma trava dos demais testes de integração: nunca roda fora do banco descartável de CI.
+assert.equal(new URL(process.env.DATABASE_URL || 'postgres://x/none').pathname, '/qradmin_test',
+  'Integração bloqueada: database deve ser qradmin_test');
+
 process.env.STAFF_FORCE_PASSWORD_CHANGE = 'true';
 
 const pool = require('../db/pool');
