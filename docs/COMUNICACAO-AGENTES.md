@@ -362,3 +362,15 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 - Validação reportada no HEAD anterior: `node --check` e 48 testes relevantes passaram; `npm run typecheck`, `npm run build` e CI GitHub Actions run `40208399800` passaram no SHA `2c1d89907283ffe557d135aa39c5eda9ff20ba3b`. Esta reconstrução exige CI novamente no SHA final antes do merge.
 - Sem validação em navegador/dispositivo real, PostgreSQL ou Android/iOS nesta frente. Nenhuma alteração em banco de produção, secrets ou configuração manual do Railway.
 - Web Push server-side, QR local e fluxos de caixa/cobrança das frentes #85/#89 continuam fora de escopo.
+
+
+## Frente 5 — regressão de autorização de tokens de mesa (2026-10-25)
+
+- **Issue:** [#1 — GET /api/mesas expõe tokens sem autenticação](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/1).
+- **Achado atualizado na `main`:** a rota `GET /api/mesas` já executa `await exigirAcesso(req, 'admin')` antes de chamar `listMesas()` e serializar `token`. A issue parece estar desatualizada quanto à correção de runtime; ainda é útil garantir regressão automatizada para impedir remoção acidental da autorização.
+- **PR:** [#94 — teste de autorização da rota de tokens](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/94), branch `work/frente-5-mesa-token-auth-regression`, HEAD `1dc18a1f876d0494c69e44ab0509fbee56a79977`. Draft, não integrado.
+- **Mudanças:** novo `tests/security-mesa-token-route.test.cjs` verifica que a autorização precede a consulta/serialização dos tokens e que a rota administrativa fica depois do gate `/api/admin`; incluído em `test` e `test:regression`.
+- **CI:** workflow [#416](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40208748752): typecheck, build, integridade de `dist/`, regressões e sintaxe do servidor/banco concluíram success nos passos observados; o job ainda estava finalizando limpeza na última consulta, portanto confirmar conclusão final antes de declarar CI completo.
+- **Limitação:** teste estrutural estático; não substitui teste HTTP real com sessão sintética nem demonstra por si só 401 anônimo em runtime. Não foram usados dados/credenciais de produção; nenhum código de runtime, banco, Railway ou secret foi alterado.
+- **Próxima ação:** confirmar conclusão final do CI e revisar se já existe cobertura dinâmica equivalente. Só então decidir se a issue #1 pode ser fechada.
+- **Nota operacional:** este registro na `main` pode disparar deploy automático. Frente 1 / Agente 1 deve verificar e registrar o resultado do deploy associado a este commit documental; nenhuma alteração de produção foi solicitada por esta frente.
