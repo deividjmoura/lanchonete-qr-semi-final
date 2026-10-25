@@ -59,3 +59,20 @@ test('quitação integral simples tenta fechar a sessão e atualizar mesas', () 
 test('hydrateCaixa não preserva pedidos operacionais de sessões já fechadas', () => {
   assert.ok(storeSource.includes('idsVivos.has(p.sessaoId)'));
 });
+
+const caixaDbSource = fs.readFileSync('db/caixa.js', 'utf8');
+const comprovanteDbSource = fs.readFileSync('db/comprovante.js', 'utf8');
+const paymentMigrationSource = fs.readFileSync('db/migrations/0022_sessao_pagamentos_operador.sql', 'utf8');
+
+test('pagamentos registram o operador autenticado e o mostram no histórico', () => {
+  assert.ok(serverSource.includes('operador?.nome || null'));
+  assert.ok(caixaDbSource.includes('operador_nome'));
+  assert.ok(caixaDbSource.includes('operadorNome: ins[0].operador_nome || null'));
+  assert.ok(caixaSource.includes('registrado por {pg.operadorNome}'));
+  assert.ok(paymentMigrationSource.includes('ADD COLUMN IF NOT EXISTS operador_nome'));
+});
+
+test('comprovante final preserva o operador responsável por cada pagamento', () => {
+  assert.ok(comprovanteDbSource.includes('operadorNome:p.operador_nome||null'));
+  assert.ok(printSource.includes('registrado por ${esc(p.operadorNome)}'));
+});
