@@ -1,10 +1,11 @@
 import { motion } from "framer-motion";
-import { ChefHat, House, LogOut, Volume2, VolumeX, Wallet, LayoutGrid, Wine } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { ChefHat, House, KeyRound, LogOut, Volume2, VolumeX, Wallet, LayoutGrid, Wine } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePub } from "../store/usePub";
 import { ir } from "../router";
 import { cn } from "../utils/cn";
 import { LivePill, Logo, ThemeToggle } from "./ui";
+import { TrocarSenha } from "./TrocarSenha";
 import { audioMudo, beepAlerta, beepDuplo, falar, setMudo } from "../lib/sonus";
 import { FRASES_GARCOM } from "../lib/data";
 
@@ -75,7 +76,15 @@ export function OpsShell({
   const toggleSom = usePub((s) => s.toggleSom);
   const logout = usePub((s) => s.logout);
   const auth = usePub((s) => s.auth);
+  const hydrateMe = usePub((s) => s.hydrateMe);
   const role = auth?.role || null;
+  const [trocando, setTrocando] = useState(false);
+  const trocaObrigatoria = Boolean(auth?.deveTrocar);
+
+  /* confirma com o servidor se esta conta precisa trocar a senha (ex.: página recarregada) */
+  useEffect(() => {
+    if (role) void hydrateMe();
+  }, [role, hydrateMe]);
   /* sem role (ex.: garçom por token) → sem menu de áreas; cada papel só vê o que pode */
   const nav = role
     ? NAV_ALL.filter((n) => (n.roles as readonly string[]).includes(role))
@@ -163,6 +172,16 @@ export function OpsShell({
           >
             <House className="size-4.5" />
           </button>
+          {role && (
+            <button
+              onClick={() => setTrocando(true)}
+              title="Alterar senha"
+              aria-label="Alterar senha"
+              className="btn-press hidden sm:grid place-items-center size-10 rounded-full bg-slate-100/70 border border-slate-200 text-slate-500 hover:text-navy-800 cursor-pointer"
+            >
+              <KeyRound className="size-4.5" />
+            </button>
+          )}
           <button
             onClick={() => {
               logout();
@@ -186,6 +205,9 @@ export function OpsShell({
         </div>
         {children}
       </main>
+      {role && (trocaObrigatoria || trocando) && (
+        <TrocarSenha obrigatorio={trocaObrigatoria} onClose={() => setTrocando(false)} />
+      )}
     </div>
   );
 }
