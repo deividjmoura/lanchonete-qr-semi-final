@@ -43,7 +43,11 @@ function cookieDe(setCookies) {
 async function req(method, path, { body, cookie, origem } = {}) {
   const headers = {};
   if (body !== undefined) headers['Content-Type'] = 'application/json';
-  if (cookie) headers.Cookie = cookie;
+  if (cookie) {
+    headers.Cookie = cookie;
+    // Mutações de staff exigem Origin da própria aplicação (proteção CSRF).
+    headers.Origin = BASE;
+  }
   if (origem) headers.Origin = origem;
   const res = await fetch(BASE + path, {
     method,
