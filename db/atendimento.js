@@ -1,6 +1,7 @@
 const pool = require('./pool');
 const { getGarcomPorToken } = require('./garcons');
 const { getOuAbrirSessao } = require('./queries');
+const { totalEntregueDaSessao, totalPagoDaSessao } = require('./conta');
 
 class ErroAtendimento extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -153,6 +154,48 @@ async function listarPedidosProntosGarcom(token) {
   const { getFilaGarcom } = require('./pedidos');
   return getFilaGarcom(Number(garcom.id));
 }
+
+async function resumoPagamentoSessao(token, sessaoIdBruto) {
+  const garcom = await validarGarcom(token);
+  const sessaoId = Number(sessaoIdBruto);
+  if (!Number.isSafeInteger(sessaoId) || sessaoId < 1) {
+    throw new ErroAtendimento(400, 'Sessão inválida');
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+    const { rows } = await client.query(
+      `SELECT s.id, s.status, s.garcom_responsavel_id, m.numero AS mesa
+         FROM mesa_sessoes s
+         JOIN mesas m ON m.id = s.mesa_id
+        WHERE s.id = $1`,
+      [sessaoId]
+    );
+    const sessao = rows[0];
+    if (!sessao) throw new ErroAtendimento(404, 'Sessão não encontrada');
+    if (sessao.status !== 'aberta') throw new ErroAtendimento(409, 'Sessão já está fechada');
+    if (Number(sessao.garcom_responsavel_id) !== Number(garcom.id)) {
+      throw new ErroAtendimento(403, 'Somente o garçom responsável atual pode consultar a cobrança desta mesa');
+    }
+
+    const valorTotal = await totalEntregueDaSessao(client, sessaoId);
+    const valorPago = await totalPagoDaSessao(client, sessaoId);
+    await client.query('COMMIT');
+    return {
+      sessaoId,
+      mesa: sessao.mesa,
+      valorTotal,
+      valorPago,
+      valorRestante: Number(Math.max(0, valorTotal - valorPago).toFixed(2)),
+    };
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    throw e;
+  } finally {
+    client.release();
+  }
+}
 async function deixarMesa(token, numeroBruto) {
   const garcom = await validarGarcom(token);
   const numero = Number(numeroBruto);
@@ -254,4 +297,4 @@ async function metricasGarcons({ data } = {}) {
     garcons: rows.map(x=>({ id:x.id, nome:x.nome, ativo:x.ativo, atendimentos:x.atendimentos,
       vendas:Number(x.vendas), ticketMedio:Number(x.ticket_medio) })) };
 }
-module.exports={ ErroAtendimento, listarMesasGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, deixarMesa, criarPedidoGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons };
+module.exports={ ErroAtendimento, listarMesasGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons };
