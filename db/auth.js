@@ -241,6 +241,32 @@ function verificarOrigemRequisicao(req) {
   }
 }
 
+function csrfTokenParaSessao(sessionToken) {
+  if (!sessionToken || typeof sessionToken !== 'string') return null;
+  return crypto
+    .createHmac('sha256', sessionToken)
+    .update('qradmin-csrf-v1')
+    .digest('hex');
+}
+
+function verificarProtecaoCSRF(req) {
+  const metodo = String(req.method || 'GET').toUpperCase();
+  if (['GET', 'HEAD', 'OPTIONS'].includes(metodo)) return;
+
+  const sessionToken = parseCookies(req)[SESSION_COOKIE];
+  const esperado = csrfTokenParaSessao(sessionToken);
+  const recebido = req.headers['x-csrf-token'];
+  if (!esperado || typeof recebido !== 'string') {
+    throw new ErroAuth(403, 'Token CSRF ausente ou inválido');
+  }
+
+  const a = Buffer.from(esperado, 'utf8');
+  const b = Buffer.from(recebido, 'utf8');
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    throw new ErroAuth(403, 'Token CSRF ausente ou inválido');
+  }
+}
+
 /** recurso: 'admin' | 'cozinha' | 'bar' | 'caixa' */
 async function exigirAcesso(req, recurso) {
   const staff = await getStaffDaRequisicao(req);
@@ -249,6 +275,7 @@ async function exigirAcesso(req, recurso) {
     throw err;
   }
   verificarOrigemRequisicao(req);
+  verificarProtecaoCSRF(req);
   if (!papelPodeAcessar(staff.papel, recurso)) {
     throw new ErroAuth(403, 'Sem permissão para esta área');
   }
@@ -286,4 +313,6 @@ module.exports = {
   garantirStaffSeed,
   contarStaff,
   verificarOrigemRequisicao,
+  csrfTokenParaSessao,
+  verificarProtecaoCSRF,
 };
