@@ -354,7 +354,7 @@ async function registrarPagamento(sessaoIdBruto, body, operadorNome = null) {
       colunas.push('operador_nome');
       valores.push(operador);
     }
-    const placeholders = valores.map((_, i) => `${i + 1}`).join(', ');
+    const placeholders = valores.map((_, i) => `$${i + 1}`).join(', ');
     const { rows: ins } = await client.query(
       `INSERT INTO sessao_pagamentos (${colunas.join(', ')})
        VALUES (${placeholders})
