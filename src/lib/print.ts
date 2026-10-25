@@ -631,7 +631,7 @@ export function imprimirComprovanteConsumo(c: {
   abertaEm:string; fechadaEm:string; totalConsumo:number; desconto:number; taxa:number;
   valorCobrado:number; valorPago:number; saldo:number;
   itens:Array<{nome:string;descricao?:string;observacao?:string;observacaoPedido?:string;removidos?:string;quantidade:number;precoUnitario:number;adicionais:number;adicionaisNomes?:string;total:number;pedidoId:number}>;
-  pagamentos:Array<{id:number;valor:number;forma:string;criadoEm:string}>;
+  pagamentos:Array<{id:number;valor:number;forma:string;criadoEm:string;operadorNome?:string|null}>;
 }) {
   const linha=(label:string,v:number)=>`<div class="meta" style="display:flex;justify-content:space-between;gap:8px;margin:3px 0"><span>${esc(label)}</span><b>${esc(BRL(v))}</b></div>`;
   const itens=c.itens.map(i=>`<div class="item">
@@ -646,7 +646,7 @@ export function imprimirComprovanteConsumo(c: {
       ${i.observacaoPedido?`<div class="item-extra">Obs. pedido: ${esc(i.observacaoPedido)}</div>`:""}
     </div>`).join("");
   const pagamentos=c.pagamentos.map(p=>`<div class="meta" style="display:flex;justify-content:space-between;gap:8px">
-    <span>${esc(formaLabel(p.forma))}</span><b>${esc(BRL(p.valor))}</b></div>`).join("");
+    <span>${esc(formaLabel(p.forma))}${p.operadorNome?` · registrado por ${esc(p.operadorNome)}`:""}</span><b>${esc(BRL(p.valor))}</b></div>`).join("");
   const body=`<div class="center"><p class="title">QR ADMIN</p>
     <p class="sub">COMPROVANTE DE CONSUMO<br><b>DOCUMENTO NÃO FISCAL</b></p></div>
     <hr class="line-solid"/>
