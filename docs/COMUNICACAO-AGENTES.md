@@ -507,3 +507,13 @@ Após o merge da PR [#104](https://github.com/deividjmoura/lanchonete-qr-semi-fi
 5. Manter a issue #75 aberta até o smoke test HTTP ser confirmado. Não executar migrations manuais, seed, testes mutáveis nem alterar dados de produção.
 
 **Estado atual:** CI #449 e PostgreSQL integration #27 passaram no HEAD final da PR antes do merge; a PR #104 foi integrada. O status de deploy reportado pelo Railway está SUCCESS, mas a tentativa anterior de smoke test não conseguiu resolver o host no ambiente de execução. Isso não prova falha do serviço nem confirma saúde HTTP. A próxima ação é da Frente 1 conforme os passos acima.
+
+
+## Revisão Frente 2 — PR #89 e compatibilidade Caixa (2026-10-25)
+
+- **Responsável:** Agente 2 / Frente 2. Revisão estática registrada na conversa da [PR #89](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/89#issuecomment-6400882072). A PR continua draft e o GitHub reporta `mergeable=false`; não há status de Actions confirmado para o HEAD atual `10168d8633bf29fff065b08d3a727de72c04af65`.
+- **Bloqueio funcional:** `assumirMesa()` ainda permite assumir sessão sem pedido QR por chamada direta, embora a UI esconda o botão. O teste PostgreSQL atual também assume uma sessão sem provar `origem_pedido='cliente'`. Exigir validação server-side e teste negativo sem mutação para mesa vazia.
+- **Compatibilidade Caixa:** a branch da Frente 2 não contém o POST `/api/garcom/:token/sessoes/:sessaoId/pagamentos` da Frente 1; isso só deve ser resolvido após integrar/sincronizar a Frente 1, preservando o handler financeiro e a revalidação de responsabilidade dentro da transação.
+- **Plano de validação:** aplicar migrations 0022 e 0023 em sequência num PostgreSQL 16 descartável e executar os testes financeiro e de atendimento no mesmo banco. Cobrir parcial/idempotência/auditoria de operador, sessão fechada, token inativo, autorização 403, corrida transferência × pagamento, fila após transferência, histórico de ator e fechamento pelo Caixa.
+- **Escopo desta revisão:** apenas inspeção estática e comentário de revisão. Nenhum arquivo de runtime, migration, workflow compartilhado ou configuração de produção foi alterado; nenhum teste foi executado nesta revisão. Manter #89 em draft até corrigir a regra de assunção, sincronizar a base e obter CI verde no HEAD final.
+- **Handoff operacional:** como este commit documental na `main` pode disparar deploy automático, Agente 1 / Frente 1 deve verificar e registrar o status de deploy conforme a regra exclusiva de Railway; Agente 2 não executou nem alterou Railway.
