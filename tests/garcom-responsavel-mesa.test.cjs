@@ -161,3 +161,9 @@ test('garçom anterior recebe 403 ao tentar entregar após a transferência', as
   assert.equal(calls.some(sql => /UPDATE itens_pedido/i.test(sql)), false);
   assert.equal(calls.some(sql => /COMMIT/i.test(sql)), false);
 });
+
+test('A lista de mesas identifica pedido iniciado pelo cliente via QR', () => {
+  const source = require('node:fs').readFileSync(require('node:path').join(__dirname, '../db/atendimento.js'), 'utf8');
+  assert.match(source, /p\.origem_pedido = 'cliente'/);
+  assert.match(source, /pedidoClienteQr: r\.pedido_cliente_qr === true/);
+});
