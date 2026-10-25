@@ -60,3 +60,13 @@ test('navegação não reintroduz a aba Início e service worker não intercepta
   }
   assert.match(sw, /url\.pathname\.startsWith\('\/api\/'\)/);
 });
+
+test('service worker trata Web Push e limita o destino ao PWA da mesma origem', () => {
+  assert.match(sw, /addEventListener\('push'/);
+  assert.match(sw, /addEventListener\('notificationclick'/);
+  assert.match(sw, /self\.registration\.showNotification/);
+  assert.match(sw, /target\.origin !== self\.location\.origin/);
+  assert.match(sw, /target\.pathname\.startsWith\('\/garcom-pwa\/'\)/);
+  assert.match(sw, /clients\.matchAll\(\{ type: 'window', includeUncontrolled: true \}\)/);
+  assert.match(sw, /clients\.openWindow\(target\)/);
+});
