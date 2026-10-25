@@ -28,6 +28,7 @@ async function listarMesasGarcom(token) {
   })) };
 }
 async function assumirMesa(token, numeroBruto, body = {}) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) throw new ErroAtendimento(400, 'Corpo de início de atendimento inválido');
   const garcom = await validarGarcom(token);
   const numero = Number(numeroBruto);
   if (!Number.isSafeInteger(numero) || numero < 1 || numero > 70) {
