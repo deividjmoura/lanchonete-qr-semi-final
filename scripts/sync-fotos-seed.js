@@ -96,7 +96,10 @@ async function main() {
   for (const row of rows) {
     const current = String(row.foto_url || '');
     const target = fotoPara(row.nome, row.categoria);
-    const managed = !current || current.startsWith('data:') || current.startsWith('/assets/demo/');
+    // Fotos enviadas pelo admin são gravadas como data:image/webp;base64 (db/foto.js)
+    // e a coluna é a única cópia delas: nunca sobrescrever. Só gerenciamos campo
+    // vazio ou imagens de demonstração do próprio repositório.
+    const managed = !current || current.startsWith('/assets/demo/');
     if (!managed) {
       preserved++;
       console.log(`  · #${row.id} ${row.nome}: foto personalizada preservada (${resumoUrl(current)})`);
