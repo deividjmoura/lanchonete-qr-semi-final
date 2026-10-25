@@ -93,12 +93,12 @@ async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null) {
     // Ler a sessão sem lock primeiro, depois bloquear sempre na ordem sessão → pedido.
     // Isso serializa com transferências/fechamento sem inverter a ordem dos locks.
     const { rows: referencia } = await client.query(
-      'SELECT sessao_id FROM pedidos WHERE id=$1', [pid]);
+      'SELECT sessao_id FROM pedidos WHERE id = $1', [pid]);
     if (!referencia[0]) throw new ErroGarcom(404, 'Pedido não encontrado');
 
     const { rows: sessoes } = await client.query(
       `SELECT id, status, garcom_responsavel_id
-         FROM mesa_sessoes WHERE id=$1 FOR UPDATE`,
+         FROM mesa_sessoes WHERE id = $1 FOR UPDATE`,
       [referencia[0].sessao_id]
     );
     const sessao = sessoes[0];
@@ -108,7 +108,7 @@ async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null) {
     }
 
     const { rows } = await client.query(
-      'SELECT id, status, sessao_id, garcom_id FROM pedidos WHERE id=$1 FOR UPDATE',
+      'SELECT id, status, sessao_id, garcom_id FROM pedidos WHERE id = $1 FOR UPDATE',
       [pid]);
     const pedido = rows[0];
     if (!pedido) throw new ErroGarcom(404, 'Pedido não encontrado');
