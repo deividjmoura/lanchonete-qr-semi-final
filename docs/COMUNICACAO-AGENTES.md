@@ -184,3 +184,20 @@ Foram publicados comentários de coordenação no GitHub para manter o handoff j
 
 - **Mergeabilidade #85/#89:** a API REST bruta do GitHub retornou `mergeable=null` e `mergeable_state=unknown` na consulta mais recente. O conector de PR reportou `mergeable=false`, mas isso não basta para afirmar que existe conflito textual confirmado. O dado concreto é que as branches estão divergentes da `main` e atrás dela (comparação de refs: #85 19 commits atrás; #89 18 commits atrás). Reconciliar com a base atual, preservando alterações, e só então aguardar o recálculo do GitHub.
 - **Deploy automático:** o deployment Railway `7482ed84-0262-4cc0-b968-22fb53c09e95`, originado do commit documental `866274970347d08794c473e0bad43d58b61456e8`, concluiu `SUCCESS` em 2026-10-25 14:34:47 UTC. Estado observado depois: serviço `lanchonete-qr-semi-final` online, 1 réplica ativa, sem falhas recentes nem trabalho pendente. Logs mostraram build concluído, seed sem duplicar categorias/staff e nenhuma migration pendente. Isso valida o deploy desse commit, não os recursos ainda ausentes das Frentes 1/2; nenhum deploy manual foi executado.
+
+
+## Retomada de coordenação — verificação direta no GitHub (2026-10-25)
+
+### Estado confirmado nesta rodada
+- Lidos na `main` antes de decidir: `AGENTS.md`, `COORDENACAO.md` e `docs/COMUNICACAO-AGENTES.md`. HEAD atual da `main`: `df8e23f86d51b691e226a2363ba5e516233cc38e`.
+- PR #85 permanece aberta em draft, head `dab9820a4e7cb70946d21c65695a72d25a5c7162`. Workflow run #40201539020 concluiu SUCCESS; o job retornado foi `verify`. O PR continua sem merge e a migration `0022_sessao_pagamentos_operador.sql`/teste financeiro não está na `main`.
+- PR #89 permanece aberta em draft, head `4e828e074404682a0a5f5711747585955d69b310`. Workflow run #40201544526 concluiu SUCCESS; o job retornado foi `verify`. O PR continua sem merge e a migration `0023_atendimento_transferencia_actor.sql`/teste de atendimento não está na `main`.
+- Comparação de refs atual com a `main` em `df8e23f86d51b691e226a2363ba5e516233cc38e`: #85 = 60 commits à frente / 25 atrás; #89 = 21 à frente / 24 atrás. As duas comparações retornaram `diverged`. API REST bruta retornou `mergeable=false`, `mergeable_state=dirty`, `rebaseable=false` para ambas. Isso confirma bloqueio de mergeabilidade no estado atual; ainda não foi feita análise/resolução de conflitos arquivo a arquivo.
+- Os comentários mais recentes nas PRs #85/#89 continuam sendo mensagens de coordenação do proprietário; não encontrei resposta do agente responsável nem confirmação de branch sincronizada. Não presumir resposta ou trabalho realizado.
+- A lista atual de migrations da `main` termina em `0021_corrigir_setores_bebidas_marcas.sql`; 0022 e 0023 não aparecem. Não há evidência de teste integrado das duas migrations e dos dois testes funcionais no mesmo banco descartável.
+
+### Decisão segura
+- **Não fazer merge de #85 nem #89 neste estado**, apesar dos checks verdes, porque ambas estão divergentes e o GitHub indica estado `dirty`. Não forçar merge, não rebasear ou sobrescrever branches de agentes sem preservar e revisar suas alterações.
+- Próxima ação: pedir aos responsáveis das PRs reconciliação com a `main` atual, com inventário de conflitos/resolução por arquivo e push de um novo HEAD; em seguida conferir checks no SHA exato atualizado. Prioridade permanece #85 primeiro. Após eventual integração de #85, sincronizar #89 e exigir CI conjunto com migrations 0022+0023 e os dois testes funcionais no mesmo PostgreSQL descartável.
+- Revisão visual ponta a ponta de caixa/cobrança PWA e teste real de navegador/dispositivos seguem pendentes; CI não é prova dessas validações.
+- Nenhuma alteração de código de produto, merge de PR, operação manual no Railway, mudança de secrets, migration ou mutação em produção foi feita nesta rodada. O próximo commit documental na `main` pode acionar deploy automático; verificar o resultado do deployment se o registro for publicado.
