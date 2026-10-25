@@ -69,7 +69,7 @@ test('transferência grava origem, destino e ator; pedidos prontos não são alt
   pool.connect = async () => ({
     async query(sql, params = []) {
       calls.push({ sql, params });
-      if (/SELECT id, numero FROM mesas/i.test(sql)) return { rows: [{ id: 40, numero: 4 }] };
+      if (/SELECT id FROM mesas WHERE numero/i.test(sql)) return { rows: [{ id: 40, numero: 4 }] };
       if (/SELECT id, garcom_responsavel_id FROM mesa_sessoes/i.test(sql)) return { rows: [{ id: 90, garcom_responsavel_id: 1 }] };
       if (/SELECT id, nome, ativo FROM garcons/i.test(sql)) return { rows: [{ id: 2, nome: 'Bruno', ativo: true }] };
       return { rows: [] };
@@ -95,7 +95,7 @@ test('transferência é recusada se o solicitante não for o responsável atual'
   pool.connect = async () => ({
     async query(sql, params = []) {
       calls.push(sql);
-      if (/SELECT id, numero FROM mesas/i.test(sql)) return { rows: [{ id: 40, numero: 4 }] };
+      if (/SELECT id FROM mesas WHERE numero/i.test(sql)) return { rows: [{ id: 40, numero: 4 }] };
       if (/SELECT id, garcom_responsavel_id FROM mesa_sessoes/i.test(sql)) return { rows: [{ id: 90, garcom_responsavel_id: 2 }] };
       if (/SELECT id, nome, ativo FROM garcons/i.test(sql)) return { rows: [{ id: 2, nome: 'Bruno', ativo: true }] };
       return { rows: [] };
@@ -113,7 +113,7 @@ test('transferência rejeita um destino desativado', async () => {
   pool.connect = async () => ({
     async query(sql, params = []) {
       calls.push(sql);
-      if (/SELECT id, numero FROM mesas/i.test(sql)) return { rows: [{ id: 40, numero: 4 }] };
+      if (/SELECT id FROM mesas WHERE numero/i.test(sql)) return { rows: [{ id: 40, numero: 4 }] };
       if (/SELECT id, garcom_responsavel_id FROM mesa_sessoes/i.test(sql)) return { rows: [{ id: 90, garcom_responsavel_id: 1 }] };
       if (/SELECT id, nome, ativo FROM garcons/i.test(sql)) return { rows: [{ id: 2, nome: 'Bruno', ativo: false }] };
       return { rows: [] };
