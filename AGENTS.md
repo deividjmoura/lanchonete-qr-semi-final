@@ -1,3 +1,28 @@
+# Fluxo atual de colaboração multiagente (2026-10-24)
+
+> **Este bloco é a política operacional atual.** As notas de sessões e tabelas de PRs mais abaixo são histórico; datas, estados e instruções temporárias nelas podem estar desatualizados. Em caso de conflito, siga esta política e as decisões mais recentes do responsável pelo projeto.
+
+## Política operacional vigente
+
+1. **`main` é a única branch de produção/deploy.** Não altere a configuração do Railway nem faça deploy de outra branch sem autorização explícita.
+2. **Trabalho normal passa por branch curta e PR para `main`.** Não faça commits diretamente em `main`, salvo instrução explícita do responsável. PRs devem ser pequenos, revisáveis e vinculados a uma issue quando aplicável.
+3. **Não faça merge nem promoção para produção automaticamente.** Primeiro apresente os checks, riscos e evidências. Merge/deploy em produção exige aprovação explícita para aquela liberação.
+4. Antes de editar, leia este arquivo, `COORDENACAO.md`, o README e os arquivos pertinentes. Verifique a branch/base e os PRs abertos; não presuma que notas históricas ainda descrevem o estado atual.
+5. Cada tarefa precisa declarar objetivo, escopo, dependências, critérios de aceitação, testes e riscos. Divida trabalho paralelo por áreas/arquivos sem sobreposição; nomeie um responsável pela integração.
+6. Cada agente trabalha em branch/worktree isolada. Nunca sobrescreva alterações de outro agente nem faça merge de branches sem ancestral comum sem comparar os diffs arquivo a arquivo.
+7. Em mudanças de frontend, execute `npm run build` e inclua o `dist/` gerado quando fizer parte da entrega, conforme as regras atuais do projeto. Não afirme que o build foi executado se não houver evidência.
+8. Use Node.js 20, `npm ci` e os scripts versionados no `package.json`. Antes de adicionar ou mudar CI, confira o workflow existente e evite duplicar jobs.
+9. **Nunca aponte testes mutáveis para produção.** `test:smoke`, `test:full`, `test:seguranca`, `test:carga`, `test:carga70` e `test:dia` exigem ambiente de teste isolado conforme o README. Não execute seed destrutivo ou migration em produção como parte de testes.
+10. Mudanças de banco devem usar migrations versionadas em `db/migrations/`. Avalie compatibilidade, backup, ordem de implantação e recuperação antes de qualquer mudança de produção.
+11. Nunca inclua segredos, tokens de mesa/garçom, dados de clientes ou valores de ambiente em commits, issues, PRs ou logs.
+12. Ao concluir, registre arquivos alterados, commits/PR, comandos realmente executados e resultados, limitações, riscos e próximo passo no PR/issue e no handoff.
+
+## Critério de conclusão
+
+Uma tarefa só está pronta quando os critérios de aceitação são atendidos, as verificações relevantes foram executadas ou explicitamente marcadas como não executadas, o diff foi revisado e a documentação/estado da issue foi atualizado. “O agente terminou” não é evidência de qualidade.
+
+---
+
 # Protocolo de Colaboração — Lanchonete QR / QRAdmin
 
 **Repo:** https://github.com/deividjmoura/lanchonete-qr-semi-final  

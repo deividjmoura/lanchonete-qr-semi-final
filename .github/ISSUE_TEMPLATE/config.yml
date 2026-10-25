@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentação do projeto
+    url: https://github.com/deividjmoura/lanchonete-qr-semi-final#readme
+    about: Consulte a arquitetura, os comandos e os avisos de segurança antes de abrir uma tarefa.
