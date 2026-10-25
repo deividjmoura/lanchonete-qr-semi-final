@@ -55,7 +55,7 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
 .sheet-top,.sheet-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px;background:#fff;border-bottom:1px solid #eddfd0}
 .sheet-body{padding:17px;min-height:0;max-height:none!important;overflow-y:auto;overscroll-behavior:contain;flex:1 1 auto}
 .field{display:grid;gap:5px;margin-bottom:12px;font-size:.82rem;font-weight:700}
-input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5c5;border-radius:10px}
+input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5c5;border-radius:10px}.check-field{display:flex;align-items:flex-start;gap:10px;margin:12px 0;color:#594b42;font-size:.88rem}.check-field input{width:auto;min-width:18px;margin-top:3px}.billing-summary{padding:13px;background:#fff7ef;border:1px solid #eddfd0;border-radius:12px;line-height:1.6;margin:12px 0}
 .products,.table-grid,.orders-list{display:grid;gap:10px}
 .product,.order,.table-tile{padding:14px;background:white;border:1px solid #eddfd0;border-radius:13px}
 @media(max-width:480px){.header-inner{align-items:flex-start}.header-actions{flex-direction:column;align-items:flex-end}.brand h1{font-size:1rem}.workspace{padding:18px 13px}.sync-button{font-size:.72rem;padding:7px}.hero-content{padding:23px 19px}.quick-card{min-height:130px;padding:14px}.quick-grid{gap:10px}dialog.sheet[open]{width:calc(100vw - 26px)!important;max-height:min(80dvh,640px)!important;border-radius:22px!important}.sheet-body{max-height:none!important}}
@@ -96,7 +96,19 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
 
   <section class="page" id="page-billing" data-page="billing" aria-label="Cobrança">
     <div class="section-heading"><div><span class="section-eyebrow">FECHAMENTO DE CONTA</span><h3>Cobrança</h3></div></div>
-    <div class="panel coming-soon"><span class="coming-icon">▤</span><h4>Fechamento em preparação</h4><p>O pagamento pelo garçom ficará disponível aqui após a integração financeira segura. Por enquanto, a confirmação do pagamento e o fechamento da mesa são feitos no Caixa.</p><button class="secondary" disabled type="button">Cobrança pelo garçom — em breve</button></div>
+    <div class="panel compact">
+      <p class="muted">Registre somente valores que você confirmou ter recebido. O servidor valida o saldo e a responsabilidade atual da mesa.</p>
+      <label class="field">Minha mesa<select id="billingSession" aria-label="Mesa para registrar pagamento"></select></label>
+      <div id="billingSummary" class="billing-summary" aria-live="polite">Selecione uma mesa sob sua responsabilidade para consultar o saldo.</div>
+      <div class="action-row"><button id="refreshBilling" class="secondary small" type="button">Atualizar saldo ↻</button></div>
+      <label class="field">Valor recebido (R$)<input id="billingAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0,00" autocomplete="off"></label>
+      <label class="field">Forma de pagamento<select id="billingMethod"><option value="dinheiro">Dinheiro</option><option value="pix">PIX</option><option value="cartao_debito">Cartão de débito</option><option value="cartao_credito">Cartão de crédito</option></select></label>
+      <p id="pixPaymentNote" class="muted small-copy" hidden>PIX: confira o crédito no aplicativo bancário antes de registrar. Esta tela não gera QR nem confirma transferência automaticamente.</p>
+      <label class="check-field"><input id="billingReceivedConfirm" type="checkbox"><span id="billingConfirmLabel">Confirmo que recebi o valor informado.</span></label>
+      <button id="registerPayment" class="primary full" type="button">Registrar recebimento</button>
+      <p id="billingMessage" class="muted small-copy" aria-live="polite"></p>
+      <p class="hint">Este é um lançamento parcial e não fecha a sessão. O fechamento final e a liberação da mesa continuam no Caixa.</p>
+    </div>
   </section>
 </main>
 
