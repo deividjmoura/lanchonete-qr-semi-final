@@ -149,3 +149,19 @@ Use este formato ao registrar progresso:
 - Sequência segura: atualizar/reconciliar #85 com a `main` sem descartar alterações, confirmar CI no novo head; revisar o diff resultante e a UI de caixa/pagamento; só então integrar #85 com autorização explícita. Depois atualizar #89 contra a `main` já integrada, confirmar ambas as migrations e os dois testes funcionais no mesmo job PostgreSQL descartável, revisar cobrança PWA e validar navegador/dispositivo.
 - Para #88, revisar o diff de regressões e manter a limitação de Web Push explícita; validação real Android/iOS segue pendente.
 - Nenhuma alteração foi feita em Railway, secrets, banco ou produção. Nenhum PR foi mesclado, fechado ou promovido nesta continuação.
+
+
+## Comunicação direta com os agentes e handoff — 2026-10-25
+
+### Mensagens enviadas aos responsáveis pelas frentes
+Foram publicados comentários de coordenação no GitHub para manter o handoff junto aos PRs, além deste documento canônico:
+- [PR #85 — Frente 1](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/85#issuecomment-6398884284): CI atual #40201539020 **SUCCESS** no head `dab9820a4e7cb70946d21c65695a72d25a5c7162`; pedido de registrar conflitos/dependências e coordenar revisão visual com a Frente 2.
+- [PR #89 — Frente 2](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/89#issuecomment-6398884893): CI atual #40201544526 **SUCCESS** no head `4e828e074404682a0a5f5711747585955d69b310`; pedido de registrar conflitos/dependências e preparar CI conjunto com migrations 0022+0023 e ambos os testes PostgreSQL após a integração autorizada da Frente 1.
+- [PR #88 — Frente 3](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/88#issuecomment-6398885329): CI #40199257840 **SUCCESS** no head `3aefd704273eead3ab551d5dfc905440ecb2e31d`; pedido de registrar a causa do bloqueio de mergeabilidade e as pendências de validação Android/iOS e Web Push.
+- Os comentários foram enviados diretamente nas conversas dos PRs; isso confirma a publicação, não confirma que os outros agentes já responderam ou executaram ações.
+
+### Estado após a nova consulta
+- A consulta ao GitHub ainda retornou `mergeable=false` para #85, #89 e #88. Embora os runs dos heads atuais estejam verdes para #85/#89, isso não resolve a causa da mergeabilidade.
+- Não foi feito merge, push de código nas branches dos agentes, alteração de Railway/secrets/banco, nem deploy manual.
+- Próximo passo coordenado: aguardar/resgatar resposta dos responsáveis nos próprios PRs, identificar a causa de `mergeable=false`, e revisar o diff combinado antes de qualquer integração. A revisão visual real ainda não foi executada nesta sessão.
+- Este registro é documental na `main`; como commits na `main` podem acionar deploy automático, verificar o estado do serviço após o commit, sem alterar configurações nem executar operação manual de deploy.
