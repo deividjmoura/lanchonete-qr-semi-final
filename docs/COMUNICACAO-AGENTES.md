@@ -192,3 +192,18 @@ A Frente 1 adicionou em `server.js` a rota `POST /api/garcom/:token/sessoes/:ses
 - **Ação da Frente 2:** após revisar o contrato, integrar a chamada no PWA da mesa sob responsabilidade atual e apresentar valor restante/forma registrada. Não alterar o backend financeiro da Frente 1; sinalizar incompatibilidades neste documento antes de mudar o contrato.
 - **Validação do backend:** CI SUCCESS no head `be5a8da99fffb25489821460c2c38ba8b1b8bb16` (run 40199491940), incluindo typecheck, build, integridade de `dist/`, regressões e sintaxe Node/SQL. O teste estático cobre token ativo, sessão aberta, responsável atual e uso do motor financeiro comum.
 - **Limitação atual:** ainda falta a integração visual do PWA pela Frente 2 e teste com PostgreSQL descartável. Não declarar cobrança de garçom pronta só porque a rota passou no CI.
+
+
+## Atualização do comandante — integração de frentes (2026-10-25, rodada 2)
+
+- **Frente 1 / PR #85:** CI verde no head atual observado `7de3e336155fd06fd6c94a0563e1c2d8ee7cf61a`. Variáveis PIX já estão configuradas no Railway production; o PR permanece draft porque ainda faltam testes integrados em PostgreSQL isolado.
+- **Frente 2 / PR antigo #86:** fechado como substituído, pois estava baseado na `main` anterior à integração da Frente 3 e reportava conflito.
+- **Frente 2 / PR novo #89:** https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/89. A branch `work/frente-2-responsavel-mesa-integrada` foi criada diretamente da `main` atual (`daf1b2aab6df6c656b18d27059cf03f766f80237`), com o fluxo de responsabilidade/transferência integrado à UX atual da PWA. A migration foi renumerada para `0023_atendimento_transferencia_actor.sql`; `0022_sessao_pagamentos_operador.sql` continua sendo a migration de pagamentos. O PR #89 está em draft, mergeable e com CI ainda em execução no head `3dca059ff5103f93f2a59cf78b8f7d9a5255eeae` na última verificação.
+- **Frente 3:** PR #84 já está integrado na `main`. Isso cobre instalação contextual e consentimento, não o envio Web Push em segundo plano. VAPID está configurado no Railway, mas as variáveis por si só não completam a implementação.
+- **Produção:** não executei migrations nem testes mutáveis no banco de produção. Nenhum deploy foi feito a partir dos PRs #85 ou #89. A fonte de deploy permanece `main`.
+
+### Próximos gates
+1. Esperar o CI do PR #89 e corrigir qualquer falha no novo head.
+2. Revisar o diff combinado da PWA, incluindo autorização de mesa e estados de notificação.
+3. Validar migrations 0022 + 0023 e fluxos financeiros/atendimento em PostgreSQL descartável.
+4. Somente depois de CI verde, revisão e validação integrada, decidir a promoção dos PRs; após merge autorizado, acompanhar o deploy automático e executar smoke tests não destrutivos.
