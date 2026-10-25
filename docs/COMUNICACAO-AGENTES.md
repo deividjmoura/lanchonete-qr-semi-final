@@ -486,7 +486,7 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 ### Validação de cancelamento público + PostgreSQL descartável (2026-10-25)
 
 - **Responsabilidade:** corrigir o cancelamento público da issue #75 e adicionar integração real em PostgreSQL descartável.
-- **PR:** será registrada após reconstrução sobre o HEAD atual da `main` (a0426e9ab3adf584ec9f06968626f33b1833f522), que já inclui o registro mais recente da Frente 2 / PR #89.
+- **PR de consolidação atual:** [#104](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/104), reconstruída sobre o HEAD atual da `main` (`a0426e9ab3adf584ec9f06968626f33b1833f522`), que já inclui o registro mais recente da Frente 2 / PR #89. Substitui a #103, cuja base avançou depois dos checks.
 - **Código:** `db/pedidos.js` remove o parâmetro indefinido e o filtro de garçom sem efeito na rota pública; a consulta continua limitada ao pedido da mesa indicada pelo token e à sessão aberta.
 - **Cobertura:** `tests/postgres-integration.test.cjs` valida host/nome do banco/ambiente antes de consultar o banco, confirma PostgreSQL major 16 e verifica idempotência, estoque, cancelamento e restauração, entrega parcial, pagamentos e fechamento. O workflow provisiona PostgreSQL 16 por job, usa credenciais sintéticas e não requer secrets de produção.
 - **Validação anterior:** no HEAD `ff214963435c93b9f2e30b7eb4df40f6769d37ba`, CI #447 e PostgreSQL integration #25 passaram. Como a `main` avançou documentalmente depois, esses resultados não substituem os checks da nova PR e do seu HEAD final.
