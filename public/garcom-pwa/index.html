@@ -2,81 +2,62 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#e9eef3"><meta name="description" content="QR Admin · atendimento de mesa online e offline">
-<link rel="manifest" href="./manifest.webmanifest">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script>
-/* Mesmo contrato de tema do restante do QR Admin: qradmin-tema = claro | escuro. */
-(function(){
-  var t; try { t = localStorage.getItem("qradmin-tema"); } catch(e) {}
-  if (t === "dark") t = "escuro";
-  if (t === "light") t = "claro";
-  if (t !== "claro" && t !== "escuro")
-    t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "escuro" : "claro";
-  var root = document.documentElement;
-  root.setAttribute("data-theme", t);
-  root.classList.toggle("dark", t === "escuro");
-  var meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", t === "escuro" ? "#0b1524" : "#e9eef3");
-})();
-</script>
-<style id="critical-pwa-layout">
+<meta name="theme-color" content="#3157a4"><meta name="description" content="QR Admin · atendimento de mesa online e offline">
+<link rel="manifest" href="./manifest.webmanifest"><style id="critical-pwa-layout">
 /* Layout seguro até quando o CSS externo estiver temporariamente indisponível. */
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
 html{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
-body{margin:0;background:#e9eef3;color:#0a2540;padding-bottom:90px}
-.app-header{background:#f7f9fb;border-bottom:1px solid #d5dee7}
+body{margin:0;background:#fffaf5;color:#17243b;padding-bottom:90px}
+.app-header{background:#fffcf7;border-bottom:1px solid #eddfd0}
 .header-inner{max-width:1050px;margin:auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .brand{display:flex;align-items:center;gap:12px;min-width:0}
-.brand-symbol{display:grid;place-items:center;width:40px;height:40px;flex-shrink:0;border-radius:12px;background:#00b3a5;color:#fff;font-size:24px}
+.brand-symbol{display:grid;place-items:center;width:40px;height:40px;flex-shrink:0;border-radius:12px;background:#3157a4;color:#fff;font-size:24px}
 .brand h1{font-size:1.15rem;margin:2px 0;line-height:1.25}
-.brand-italic,.greeting em{font-family:Georgia,serif;color:#00958a}
-.eyebrow,.section-eyebrow{font-size:.67rem;font-weight:800;letter-spacing:.13em;color:#596b7e}
+.brand-italic,.greeting em{font-family:Georgia,serif;color:#e45a48}
+.eyebrow,.section-eyebrow{font-size:.67rem;font-weight:800;letter-spacing:.13em;color:#a66a4d}
 .header-actions{display:flex;align-items:center;gap:8px}
-.connection-pill{font-size:.72rem;color:#0f766e;background:#ecfaf8;padding:7px 10px;border-radius:20px}
+.connection-pill{font-size:.72rem;color:#2d7957;background:#e8f4e9;padding:7px 10px;border-radius:20px}
 .workspace{max-width:1000px;margin:0 auto;padding:23px 15px}
 .greeting{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;margin-bottom:17px}
 .greeting h2{font-size:clamp(1.4rem,5vw,2.1rem);margin:5px 0;letter-spacing:-.04em}
-.subtitle,.muted,.hint{color:#596b7e;line-height:1.5;font-size:.85rem}
+.subtitle,.muted,.hint{color:#80736c;line-height:1.5;font-size:.85rem}
 .page{display:none!important}
 .page.active{display:block!important}
-.hero-panel{position:relative;overflow:hidden;border-radius:20px;background:linear-gradient(120deg,#0a2540,#115e59);color:white;min-height:220px}
+.hero-panel{position:relative;overflow:hidden;border-radius:20px;background:linear-gradient(120deg,#533944,#975c52);color:white;min-height:220px}
 .hero-content{position:relative;padding:25px;z-index:2;max-width:530px}
 .hero-content h3{font-size:clamp(1.65rem,6vw,2.7rem);line-height:1.15;margin:12px 0}
-.hero-content em{font-family:Georgia,serif;color:#99f6e4}
-.hero-content p{font-size:.86rem;line-height:1.55;color:#eaf2fb}
+.hero-content em{font-family:Georgia,serif;color:#ffd1b8}
+.hero-content p{font-size:.86rem;line-height:1.55;color:#fff4ec}
 .hero-mascot{display:none!important}
 .quick-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}
-.quick-card{display:flex!important;flex-direction:column;align-items:flex-start;gap:7px;position:relative;min-width:0;min-height:142px;padding:17px;border:1px solid #d5dee7;border-radius:17px;background:white;color:#0a2540;text-align:left;overflow:hidden}
-.quick-card .quick-icon{font-size:23px;color:#00b3a5}
+.quick-card{display:flex!important;flex-direction:column;align-items:flex-start;gap:7px;position:relative;min-width:0;min-height:142px;padding:17px;border:1px solid #eadbd0;border-radius:17px;background:white;color:#17243b;text-align:left;overflow:hidden}
+.quick-card .quick-icon{font-size:23px;color:#3157a4}
 .quick-card strong{font-size:.94rem;line-height:1.2}
-.quick-card small{font-size:.75rem;line-height:1.3;color:#596b7e}
+.quick-card small{font-size:.75rem;line-height:1.3;color:#80736c}
 .quick-card .quick-arrow{position:absolute;right:12px;top:12px}
-.quick-card .count{position:static;margin-top:2px;font-size:.7rem;border-radius:20px;padding:5px 9px;background:#ecfaf8;color:#08766e}
+.quick-card .count{position:static;margin-top:2px;font-size:.7rem;border-radius:20px;padding:5px 9px;background:#fff0e7;color:#c44f3d}
 button{cursor:pointer;font:inherit}
-.primary,.button-light{display:inline-flex;align-items:center;justify-content:center;background:#00b3a5;color:#fff;border:0;border-radius:12px;padding:12px 17px;font-weight:750}
-.button-light{background:#eef2f6;color:#0a2540}
-.secondary{padding:10px 12px;background:#fff;color:#0a2540;border:1px solid #d5dee7;border-radius:12px}
-.notice,.panel{border-radius:17px;padding:17px;background:white;border:1px solid #d5dee7;margin-bottom:15px}
-.notice{display:flex;gap:10px;background:#ecfaf8}
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:20;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;background:#f7f9fb;border-top:1px solid #d5dee7;padding:7px 5px calc(8px + env(safe-area-inset-bottom))}
-.bottom-nav button{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;padding:6px 2px;background:transparent;border:0;border-radius:9px;color:#596b7e;font-size:.65rem}
-.bottom-nav button.active{color:#00b3a5;background:#ecfaf8}
+.primary,.button-light{display:inline-flex;align-items:center;justify-content:center;background:#3157a4;color:#fff;border:0;border-radius:12px;padding:12px 17px;font-weight:750}
+.button-light{background:#fff5eb;color:#17243b}
+.secondary{padding:10px 12px;background:#fff;color:#17243b;border:1px solid #dfcfc2;border-radius:12px}
+.notice,.panel{border-radius:17px;padding:17px;background:white;border:1px solid #eddfd0;margin-bottom:15px}
+.notice{display:flex;gap:10px;background:#f1f5e9}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:20;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;background:#fffdfa;border-top:1px solid #eddfd0;padding:7px 5px calc(8px + env(safe-area-inset-bottom))}
+.bottom-nav button{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;padding:6px 2px;background:transparent;border:0;border-radius:9px;color:#81746e;font-size:.65rem}
+.bottom-nav button.active{color:#e85644;background:#fff0e9}
 .nav-icon{font-size:21px}
 .sheet:not([open]){display:none}
 /* Diálogos centralizados: nunca ocupar a tela toda nem ancorar na lateral. */
-.sheet{border:0;padding:0;background:#e9eef3;color:#0a2540}
-dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!important;width:min(calc(100vw - 32px),520px)!important;max-width:520px!important;height:fit-content!important;max-height:min(82dvh,690px)!important;border-radius:24px!important;display:flex!important;flex-direction:column;overflow:hidden;box-shadow:0 20px 72px #0a254066}
-.sheet::backdrop{background:#0a2540b3}
-.sheet-top,.sheet-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px;background:#fff;border-bottom:1px solid #d5dee7}
+.sheet{border:0;padding:0;background:#fffaf5;color:#17243b}
+dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!important;width:min(calc(100vw - 32px),520px)!important;max-width:520px!important;height:fit-content!important;max-height:min(82dvh,690px)!important;border-radius:24px!important;display:flex!important;flex-direction:column;overflow:hidden;box-shadow:0 20px 72px #251d1d55}
+.sheet::backdrop{background:#251c24a9}
+.sheet-top,.sheet-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px;background:#fff;border-bottom:1px solid #eddfd0}
 .sheet-body{padding:17px;min-height:0;max-height:none!important;overflow-y:auto;overscroll-behavior:contain;flex:1 1 auto}
 .field{display:grid;gap:5px;margin-bottom:12px;font-size:.82rem;font-weight:700}
-input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #d5dee7;border-radius:10px}
+input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5c5;border-radius:10px}.check-field{display:flex;align-items:flex-start;gap:10px;margin:12px 0;color:#594b42;font-size:.88rem}.check-field input{width:auto;min-width:18px;margin-top:3px}.billing-summary{padding:13px;background:#fff7ef;border:1px solid #eddfd0;border-radius:12px;line-height:1.6;margin:12px 0}
 .products,.table-grid,.orders-list{display:grid;gap:10px}
-.product,.order,.table-tile{padding:14px;background:white;border:1px solid #d5dee7;border-radius:13px}
+.product,.order,.table-tile{padding:14px;background:white;border:1px solid #eddfd0;border-radius:13px}
 @media(max-width:480px){.header-inner{align-items:flex-start}.header-actions{flex-direction:column;align-items:flex-end}.brand h1{font-size:1rem}.workspace{padding:18px 13px}.sync-button{font-size:.72rem;padding:7px}.hero-content{padding:23px 19px}.quick-card{min-height:130px;padding:14px}.quick-grid{gap:10px}dialog.sheet[open]{width:calc(100vw - 26px)!important;max-height:min(80dvh,640px)!important;border-radius:22px!important}.sheet-body{max-height:none!important}}
 </style><link rel="icon" href="./icon.svg" type="image/svg+xml"><link rel="stylesheet" href="./styles.css">
 <title>Atendimento · QR Admin</title>
@@ -84,26 +65,26 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #d5de
 <body>
 <header class="app-header">
   <div class="header-inner">
-    <div class="brand"><span class="brand-symbol" aria-hidden="true"><img class="qr-logo-light" src="/logo/qradmin-horizontal.png" alt=""><img class="qr-logo-dark" src="/logo/qradmin-horizontal-dark.png" alt=""></span><div><span class="eyebrow">QR ADMIN · ATENDIMENTO</span><h1>Garçom <span class="brand-italic">online</span></h1></div></div>
-    <div class="header-actions"><button id="themeToggle" class="theme-toggle" type="button" aria-label="Alternar tema">☾</button><span class="connection-pill" id="connection">Verificando rede…</span></div>
+    <div class="brand"><span class="brand-symbol" aria-hidden="true">✳</span><div><span class="eyebrow">QR ADMIN</span><h1>Atendimento <span class="brand-italic">QR Admin</span></h1></div></div>
+    <div class="header-actions"><span class="connection-pill" id="connection">Verificando rede…</span></div>
   </div>
 </header>
 <div id="readyToast" role="status" aria-live="polite" hidden class="ready-toast"><strong id="readyToastTitle">Pedido pronto!</strong><span id="readyToastDescription"></span><button id="readyToastAction" type="button">Ver entregas →</button><button id="readyToastDismiss" type="button" aria-label="Dispensar aviso">×</button></div>
 <main class="workspace">
   <div class="greeting">
-    <div><p id="identity" class="section-eyebrow">Carregando seu atendimento…</p><h2 id="pageTitle">Cada mesa, bem <em>cuidada.</em></h2><p id="pageSubtitle" class="subtitle">Assuma um atendimento ou compartilhe o QR.</p></div>
+    <div><p id="identity" class="section-eyebrow">Carregando seu atendimento…</p><h2 id="pageTitle">Seu salão, <em>em ordem.</em></h2><p id="pageSubtitle" class="subtitle">Mesas, pedidos e entregas sem bagunça.</p></div>
     <button id="syncBtn" class="secondary sync-button" type="button">↻ Sincronizar</button>
   </div>
 
   <section class="page active" id="page-tables" data-page="tables" aria-label="Mesas">
     <div class="section-heading"><div><span class="section-eyebrow">SEU SALÃO</span><h3>Mesas e atendimento</h3></div><button class="primary small" id="newOrderTables" type="button">＋ Novo pedido</button></div>
-    <div class="panel compact"><label class="field">Escolha uma mesa<select id="tableSelect" aria-label="Mesa para atendimento"></select></label><label class="field">Nome do cliente<input id="customerName" maxlength="80" placeholder="Como podemos chamar o cliente?" autocomplete="off"></label><div class="action-row"><button class="primary" id="assumeTable" type="button">Assumir mesa</button><button class="secondary" id="showQr" type="button">Mostrar QR da mesa</button></div><p id="tableMessage" class="muted small-copy">Você pode assumir uma mesa mesmo quando o cliente já fez um pedido pelo QR.</p></div>
+    <div hidden aria-hidden="true"><select id="tableSelect" aria-label="Mesa para atendimento"></select><input id="customerName" maxlength="100"><button id="startAttendance" type="button">Iniciar atendimento</button><button id="showQr" type="button">Mostrar QR da mesa</button><p id="tableMessage" class="muted small-copy"></p></div>
     <div class="panel"><div class="section-heading"><h4>Minhas mesas <span id="myTablesCount" class="status confirmed">0</span></h4><span class="muted small-copy">Você pode atender várias mesas ao mesmo tempo</span></div><div id="myTables" class="table-grid"></div></div>
     <div class="panel"><div class="section-heading"><h4>Todas as mesas</h4><button id="refreshTables" class="text-button" type="button">Atualizar ↻</button></div><div id="tableGrid" class="table-grid"><p class="muted">Carregando mesas…</p></div></div>
   </section>
 
   <section class="page" id="page-orders" data-page="orders" aria-label="Meus pedidos">
-    <div class="section-heading"><div><span class="section-eyebrow">HISTÓRICO LOCAL</span><h3>Meus pedidos <span id="queueCount" class="status">0 pendentes</span></h3></div><button class="primary small" id="newOrderOrders" type="button">＋ Novo pedido</button></div>
+    <div class="section-heading"><div><span class="section-eyebrow">HISTÓRICO LOCAL</span><h3>Meus pedidos</h3></div><button class="primary small" id="newOrderOrders" type="button">＋ Novo pedido</button></div>
     <div class="notice"><span>↻</span><p>Pedidos <strong>salvos offline</strong> permanecem aqui até serem confirmados pelo servidor. Não são considerados enviados antes disso.</p></div>
     <div id="orders" class="orders-list"></div><div class="section-heading" style="margin-top:22px"><h4>Pedidos nas minhas mesas</h4><button class="secondary small" type="button" id="refreshOrderStatus">Atualizar ↻</button></div><button type="button" id="showActiveOrders" class="primary">Abrir pedidos das mesas</button><div id="activeOrderStatuses" class="orders-list" hidden></div>
   </section>
@@ -115,7 +96,19 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #d5de
 
   <section class="page" id="page-billing" data-page="billing" aria-label="Cobrança">
     <div class="section-heading"><div><span class="section-eyebrow">FECHAMENTO DE CONTA</span><h3>Cobrança</h3></div></div>
-    <div class="panel coming-soon"><span class="coming-icon">▤</span><h4>Fechamento em preparação</h4><p>O pagamento pelo garçom ficará disponível aqui após a integração financeira segura. Por enquanto, a confirmação do pagamento e o fechamento da mesa são feitos no Caixa.</p><button class="secondary" disabled type="button">Cobrança pelo garçom — em breve</button></div>
+    <div class="panel compact">
+      <p class="muted">Registre somente valores que você confirmou ter recebido. O servidor valida o saldo e a responsabilidade atual da mesa.</p>
+      <label class="field">Minha mesa<select id="billingSession" aria-label="Mesa para registrar pagamento"></select></label>
+      <div id="billingSummary" class="billing-summary" aria-live="polite">Selecione uma mesa sob sua responsabilidade para consultar o saldo.</div>
+      <div class="action-row"><button id="refreshBilling" class="secondary small" type="button">Atualizar saldo ↻</button></div>
+      <label class="field">Valor recebido (R$)<input id="billingAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0,00" autocomplete="off"></label>
+      <label class="field">Forma de pagamento<select id="billingMethod"><option value="dinheiro">Dinheiro</option><option value="pix">PIX</option><option value="cartao_debito">Cartão de débito</option><option value="cartao_credito">Cartão de crédito</option></select></label>
+      <p id="pixPaymentNote" class="muted small-copy" hidden>PIX: confira o crédito no aplicativo bancário antes de registrar. Esta tela não gera QR nem confirma transferência automaticamente.</p>
+      <label class="check-field"><input id="billingReceivedConfirm" type="checkbox"><span id="billingConfirmLabel">Confirmo que recebi o valor informado.</span></label>
+      <button id="registerPayment" class="primary full" type="button">Registrar recebimento</button>
+      <p id="billingMessage" class="muted small-copy" aria-live="polite"></p>
+      <p class="hint">Este é um lançamento parcial e não fecha a sessão. O fechamento final e a liberação da mesa continuam no Caixa.</p>
+    </div>
   </section>
 </main>
 
@@ -128,23 +121,16 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #d5de
 
 <dialog id="notificationConsent" class="sheet small-sheet" aria-labelledby="notificationConsentTitle"><div class="sheet-top"><div><span class="section-eyebrow">AVISOS DE ATENDIMENTO</span><h2 id="notificationConsentTitle">Configure seus avisos</h2></div><button type="button" id="closeNotificationConsent" class="close-button" aria-label="Fechar">×</button></div><div class="sheet-body"><p>Para receber notificações, o dispositivo precisa oferecer suporte técnico, o PWA deve estar instalado quando a plataforma exigir e você precisa permitir as notificações.</p><p id="consentPlatformNote" class="muted small-copy"></p><p>Importante: o servidor ainda não tem subscrição Web Push nem infraestrutura de envio em segundo plano. Conceder permissão, por si só, não garante avisos quando o aplicativo estiver fechado.</p><div class="action-row"><button id="requestNotificationPermission" class="primary" type="button">Permitir notificações</button><button id="dismissNotificationConsent" class="secondary" type="button">Agora não</button></div><p id="consentStatus" class="muted small-copy" aria-live="polite"></p></div></dialog>
 
-<dialog id="tableActionsModal" class="sheet small-sheet" aria-labelledby="tableActionsTitle">
- <div class="sheet-top"><div><span class="section-eyebrow">MESA SELECIONADA</span><h2 id="tableActionsTitle">Mesa</h2></div><button type="button" id="closeTableActions" class="close-button" aria-label="Fechar">×</button></div>
- <div class="sheet-body"><p class="muted">Como deseja continuar?</p><div class="table-action-options">
- <button id="tableActionNew" class="primary full" type="button">＋ Novo pedido</button>
- <button id="tableActionAdd" class="secondary full" type="button">＋ Acrescentar itens ao pedido atual</button>
- <p id="tableActionsMessage" class="muted small-copy"></p></div></div>
-</dialog>
-<dialog id="addItemsModal" class="sheet" aria-labelledby="addItemsTitle">
- <div class="sheet-top"><div><span class="section-eyebrow">COMANDA DA MESA</span><h2 id="addItemsTitle">Acrescentar itens</h2></div><button type="button" id="closeAddItems" class="close-button" aria-label="Fechar">×</button></div>
- <div class="sheet-body"><p class="muted">Escolha um pedido de referência. Os itens serão registrados em um novo pedido da mesma sessão, atribuídos a você para entrega.</p><div id="addItemsOrders" class="orders-list"><p class="muted">Carregando pedidos…</p></div></div>
+<dialog id="tableDetailsModal" class="sheet small-sheet" aria-labelledby="tableDetailsTitle">
+ <div class="sheet-top"><div><span class="section-eyebrow">ATENDIMENTO</span><h2 id="tableDetailsTitle">Mesa</h2></div><button type="button" id="closeTableDetails" class="close-button" aria-label="Fechar">×</button></div>
+ <div class="sheet-body"><p id="tableDetailsStatus" class="muted"></p><div id="tableDetailsActions" class="table-actions"></div></div>
 </dialog>
 <dialog id="orderModal" class="sheet" aria-labelledby="modalTitle">
   <div class="sheet-top"><div><span class="section-eyebrow">NOVO ATENDIMENTO</span><h2 id="modalTitle">Montar pedido</h2></div><button type="button" class="close-button" id="closeOrder" aria-label="Fechar" autofocus>×</button></div>
   <div class="sheet-body">
     <div class="step-card"><span class="step-number">01</span><div><strong>Cliente e mesa</strong><p>Escolha a mesa e informe o cliente.</p></div></div>
     <div class="modal-fields"><label class="field">Mesa<select id="modalTable"></select></label><label class="field">Nome do cliente<input id="modalCustomer" placeholder="Ex.: Patrícia" maxlength="80"></label></div>
-    <div class="action-row"><button id="modalAssume" class="secondary" type="button">Assumir / abrir mesa</button><button id="modalQr" class="text-button" type="button">Mostrar QR</button></div>
+    <div class="action-row"><button id="modalQr" class="text-button" type="button">Mostrar QR</button></div>
     <p id="modalMessage" class="muted small-copy"></p>
     <div class="step-card top-gap"><span class="step-number">02</span><div><strong>Escolher produtos</strong><p>Busque pelo nome e adicione ao pedido.</p></div></div>
     <input id="search" class="search" type="search" placeholder="⌕ Digite o nome do produto…" autocomplete="off" aria-label="Buscar produto">
