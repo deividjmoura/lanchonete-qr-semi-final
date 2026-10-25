@@ -190,6 +190,7 @@ function renderBillingSessions(){
  for(const m of mine){const option=document.createElement('option');option.value=String(m.sessaoId);option.textContent='Mesa '+m.numero+(m.clienteNome?' · '+m.clienteNome:'');select.append(option);}
  const pendingOption=pendingWaiterPayment&&mine.find(m=>Number(m.sessaoId)===Number(pendingWaiterPayment.sessaoId));
  select.value=pendingOption?String(pendingWaiterPayment.sessaoId):(mine.some(m=>String(m.sessaoId)===previous)?previous:String(mine[0].sessaoId));
+ if(!pendingWaiterPayment&&select.value!==previous){$('#billingAmount').value='';$('#billingReceivedConfirm').checked=false;}
  $('#registerPayment').disabled=false;
  if(pendingWaiterPayment){
   if(pendingOption){
@@ -209,6 +210,7 @@ function openBillingForSession(sessaoId,mesaNumero){
  renderBillingSessions();
  const select=$('#billingSession');
  if([...select.options].some(o=>o.value===String(sessaoId)))select.value=String(sessaoId);
+ if(!pendingWaiterPayment){$('#billingAmount').value='';$('#billingReceivedConfirm').checked=false;}
  $('#billingMessage').textContent='Mesa '+mesaNumero+' selecionada. Consulte o saldo antes de registrar o recebimento.';
  void loadBillingSummary();
 }
@@ -264,7 +266,7 @@ async function submitWaiterPayment(){
   $('#billingMessage').textContent=(e.message||'Não foi possível registrar o recebimento.')+(pendingWaiterPayment?' Se houve timeout, tente novamente sem alterar mesa, valor ou forma para reutilizar a mesma chave.':'');
  }finally{button.disabled=false;void loadBillingSummary();}
 }
-$('#billingSession').addEventListener('change',()=>{if(pendingWaiterPayment&&Number($('#billingSession').value)!==Number(pendingWaiterPayment.sessaoId)){const mine=mesas.find(m=>Number(m.sessaoId)===Number(pendingWaiterPayment.sessaoId)&&Number(m.garcomResponsavelId)===currentWaiterId);if(mine)$('#billingSession').value=String(pendingWaiterPayment.sessaoId);$('#billingMessage').textContent='Resolva a tentativa pendente com os mesmos dados antes de selecionar outra mesa.';}void loadBillingSummary()});
+$('#billingSession').addEventListener('change',()=>{if(pendingWaiterPayment&&Number($('#billingSession').value)!==Number(pendingWaiterPayment.sessaoId)){const mine=mesas.find(m=>Number(m.sessaoId)===Number(pendingWaiterPayment.sessaoId)&&Number(m.garcomResponsavelId)===currentWaiterId);if(mine)$('#billingSession').value=String(pendingWaiterPayment.sessaoId);$('#billingMessage').textContent='Resolva a tentativa pendente com os mesmos dados antes de selecionar outra mesa.';}else if(!pendingWaiterPayment){$('#billingAmount').value='';$('#billingReceivedConfirm').checked=false;}void loadBillingSummary()});
 $('#refreshBilling').addEventListener('click',()=>loadBillingSummary());
 $('#billingMethod').addEventListener('change',updateBillingConfirmation);
 $('#registerPayment').addEventListener('click',submitWaiterPayment);
