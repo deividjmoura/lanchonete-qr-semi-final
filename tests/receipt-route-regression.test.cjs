@@ -76,3 +76,9 @@ test('comprovante final preserva o operador responsável por cada pagamento', ()
   assert.ok(comprovanteDbSource.includes('operadorNome:p.operador_nome||null'));
   assert.ok(printSource.includes('registrado por ${esc(p.operadorNome)}'));
 });
+
+test('quitação automática atribui o operador e usa placeholders SQL posicionais', () => {
+  assert.ok(serverSource.includes('fecharSessao(Number(m[1]), await body(req), operador?.nome || null)'));
+  assert.ok(caixaDbSource.includes('valores.map((_, i) => `$${i + 1}`).join(\', \')'));
+  assert.ok(caixaDbSource.includes('INSERT INTO sessao_pagamentos (sessao_id, valor, forma_pagamento, operador_nome)'));
+});
