@@ -236,10 +236,10 @@ describe('3. Ciclo de Vida — Mesa aberta pelo cliente e assumida pelo garçom'
       if (/FROM garcons WHERE token =/.test(sql)) {
         return { rows: [{ id: 5, nome: 'Roberto Garçom', token: params[0], ativo: true }] };
       }
-      if (/FROM pedidos WHERE id = \$1 FOR UPDATE/.test(sql)) {
+      if (/FROM pedidos p JOIN mesa_sessoes s.*WHERE p\.id = \$1 FOR UPDATE OF p,s/s.test(sql)) {
         return {
           rows: [
-            { id: 10, status: 'concluido', sessao_id: 1, garcom_id: null, garcom_nome: null },
+            { id: 10, status: 'concluido', sessao_id: 1, garcom_id: null, garcom_nome: null, garcom_responsavel_id: 5 },
           ],
         };
       }
@@ -308,8 +308,8 @@ describe('4. Status, Entrega Parcial e Fechamento', () => {
       if (/FROM garcons WHERE token =/.test(sql)) {
         return { rows: [{ id: 2, nome: 'Ana Garçonete', token: params[0], ativo: true }] };
       }
-      if (/FROM pedidos WHERE id = \$1 FOR UPDATE/.test(sql)) {
-        return { rows: [{ id: 20, status: 'pronto', sessao_id: 100, garcom_id: null }] };
+      if (/FROM pedidos p JOIN mesa_sessoes s.*WHERE p\.id = \$1 FOR UPDATE OF p,s/s.test(sql)) {
+        return { rows: [{ id: 20, status: 'pronto', sessao_id: 100, garcom_id: null, garcom_responsavel_id: 2 }] };
       }
       if (/UPDATE itens_pedido SET status = 'entregue'/.test(sql)) {
         itensEntreguesIds = params[0];

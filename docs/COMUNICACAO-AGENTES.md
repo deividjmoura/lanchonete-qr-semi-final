@@ -310,3 +310,7 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 ### Complemento da implementação de pedidos por garçom — autorização de entrega
 - A fila de prontos foi restringida ao responsável pela sessão ou ao garçom registrado no próprio pedido; o endpoint de entrega também valida essa regra no servidor sob lock. Isso permite que um garçom entregue os pedidos que ele registrou em mesa de outro responsável, sem abrir a fila de todos os pedidos a qualquer funcionário.
 - CI do primeiro commit de implementação: run [#40206750514](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40206750514) estava em execução na última consulta. Este complemento gera um novo commit e requer CI novamente no SHA final.
+
+
+### Ajuste de regressões após CI — 2026-10-25
+- O CI do commit `a60df07b212f074618e158d010ab993be33b6a1e` falhou em dois mocks antigos de entrega que reconheciam somente `FROM pedidos WHERE id...`; a consulta agora trava pedido e sessão com JOIN para validar o responsável. Atualizando os mocks para o novo SQL e acrescentando o responsável às fixtures. O CI anterior do commit `aef039d7923f8365a5bef2f17d9bc1fc908eecff` foi success, mas precedia a restrição de autorização da entrega.
