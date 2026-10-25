@@ -518,7 +518,7 @@ const server = http.createServer(async (req, res) => {
         if (Number(sessao.garcom_responsavel_id) !== Number(garcom.id)) {
           return json(res, 403, { error: 'Somente o garçom responsável atual pode registrar pagamentos desta mesa' });
         }
-        const out = await registrarPagamento(sessaoId, await body(req), garcom.nome);
+        const out = await registrarPagamento(sessaoId, await body(req), garcom.nome, garcom.id);
         broadcast('update', { type: 'pagamento_parcial', sessaoId });
         return json(res, 201, out);
       } catch (e) {
