@@ -289,10 +289,10 @@ describe('4. Status, Entrega Parcial e Fechamento', () => {
     const updates = [];
     const restore = setupMockPool(async (sql) => {
       if (/^(BEGIN|COMMIT|ROLLBACK)$/.test(sql.trim())) return { rows: [] };
-      if (/SELECT id, status, sessao_id FROM pedidos WHERE id = \\$1 FOR UPDATE/.test(sql)) {
+      if (/FROM pedidos WHERE id = \$1 FOR UPDATE/.test(sql)) {
         return { rows: [{ id: 7, status: 'em_producao', sessao_id: 2 }] };
       }
-      if (/SELECT ip.id, COALESCE\\(ip.status, 'recebido'\\) AS status/.test(sql)) {
+      if (/SELECT ip\.id/.test(sql)) {
         return { rows: [{ id: 70, status: 'recebido', setor: 'bar' }] };
       }
       if (/^UPDATE /.test(sql.trim())) updates.push(sql);
