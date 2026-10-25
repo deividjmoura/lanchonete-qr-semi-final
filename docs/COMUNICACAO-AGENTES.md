@@ -392,3 +392,50 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 - **Limites:** endpoint não testa conexão/prontidão do PostgreSQL; smoke não foi executado contra produção e não há automação pós-deploy, alertas, canal/owner, nem correlação/redação de logs nesta PR. A issue #43 **permanece aberta** para as partes restantes. Nenhuma configuração Railway, secret, migration ou dado de produção foi alterado por esta frente.
 - **Coordenação:** mensagens de handoff enviadas nas PRs #85 e #89 para confirmar estado e preservar a ordem de integração pagamentos/0022 antes da Frente 2/0023. Não inferir resposta dos agentes até confirmar nos comentários.
 - **Deploy:** merge na `main` pode disparar deploy automático. Aguardar/verificar o estado associado ao commit antes de declarar disponibilidade do endpoint em produção.
+
+
+## Sprint de destravamento — priorizar entregas pequenas e verificáveis (2026-10-25)
+
+**Diretriz temporária para todos os agentes:** antes de avançar em frentes grandes ou com dependências cruzadas, fazer uma rodada curta de fechamento de itens simples. Objetivo: reduzir PRs/issues paradas, entregar melhorias pequenas com risco baixo e devolver capacidade à integração principal. Esta diretriz não autoriza merge automático nem flexibiliza os critérios de qualidade.
+
+### Como escolher o próximo item
+1. Consulte o estado atual no GitHub e este documento na `main`; não confie em snapshots antigos.
+2. Priorize, nesta ordem:
+   - PR pequena, isolada, sem conflito e com CI verde no HEAD atual, pronta para revisão/merge;
+   - issue pequena cujo comportamento já esteja implementado e só falte evidência de teste ou documentação objetiva;
+   - melhoria de teste/documentação com benefício claro e sem criar um segundo canal de coordenação;
+   - só depois, tarefas novas de implementação.
+3. Evite assumir tarefas que alterem os mesmos arquivos/contratos de outra frente ativa, sobretudo `server.js`, migrations, `package.json`, workflow de CI e PWA compartilhada, sem combinar antes com os responsáveis.
+4. Não feche issue apenas porque existe uma PR relacionada: confirme que a PR foi integrada e que todos os critérios da issue foram atendidos. Quando uma PR corrigir uma issue, inclua `Closes #N` no corpo se for apropriado e só considere concluída após merge e validação.
+5. Não transforme um teste estático em alegação de teste de runtime; diferencie teste unitário/estrutural, HTTP integrado, PostgreSQL descartável, CI, teste manual e dispositivo real.
+
+### Critérios mínimos para concluir PR simples
+- Diff pequeno, escopo único, sem segredo/dado sensível ou mudança operacional desnecessária.
+- Branch atualizada com a base relevante; conflitos resolvidos sem descartar trabalho de outros agentes.
+- CI concluído com sucesso no HEAD exato que será revisado/mesclado.
+- Revisão rápida de segurança, autorização, acessibilidade e regressões aplicáveis.
+- Descrição da PR e checklist de testes atualizados; riscos/limitações explícitos.
+- Merge somente quando o agente responsável/revisor autorizado confirmar que está pronta. Após merge, verificar o estado da `main` e registrar SHA/CI; se o merge disparar deploy, a Frente 1 / Agente 1 verifica o deploy conforme as regras existentes.
+- Fechar issue somente com evidência de que todos os critérios de aceite estão cumpridos; caso contrário, manter aberta e registrar o item residual.
+
+### Divisão de trabalho e comunicação
+- Cada agente deve responder no PR/issue que já está sob sua responsabilidade com: **(a)** estado atual verificado, **(b)** uma tarefa pequena que consegue fechar primeiro, **(c)** arquivos que tocará, **(d)** teste/evidência necessária, **(e)** dependências ou sobreposição com outra frente.
+- Antes de editar, anunciar no canal canônico a tarefa escolhida e verificar se outro agente já está trabalhando nela. Não iniciar duas mudanças concorrentes no mesmo arquivo/issue.
+- Ao terminar, publicar o SHA e o link do CI, informar se foi mergeado e o que ainda falta. Se bloqueado por requisito externo, escrever a pergunta objetiva e mudar para outro item independente, sem ficar aguardando indefinidamente.
+- Trabalhar em lotes curtos: **um item pequeno concluído de ponta a ponta por vez**, depois escolher o próximo. Não abrir várias PRs de baixa qualidade só para aumentar a contagem.
+- Não editar ou apagar PRs/branches de outro agente sem coordenação explícita.
+
+### Guardrails que continuam obrigatórios
+- A sequência financeira continua prioritária quando retomada: PR #85 / migration `0022` antes da Frente 2 / migration `0023`; exigir os testes integrados de ambas as migrations e de ambas as frentes no mesmo PostgreSQL descartável antes de considerar a integração concluída.
+- Nenhuma alteração em Railway, secrets, migrations/dados de produção ou deploy manual sem autorização explícita. Mudanças em `main`, inclusive documentação, podem disparar deploy automático.
+- Não fechar questões de segurança com base apenas em inspeção textual quando o critério exige comportamento HTTP real. Não declarar Web Push completo sem subscrição, persistência, envio e validação real necessários.
+- Se o item for apenas documental ou de teste estrutural, registrar exatamente esse alcance, sem alegar correção funcional não demonstrada.
+
+### Modelo de resposta para iniciar esta rodada
+- **Item pequeno escolhido (PR/issue):**
+- **Por que é seguro/independente:**
+- **Arquivos e escopo:**
+- **Critérios de aceite e testes:**
+- **Sobreposição/dependências verificadas:**
+- **Próxima atualização prevista:**
+
