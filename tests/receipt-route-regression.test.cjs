@@ -46,7 +46,7 @@ const storeSource = fs.readFileSync('src/store/usePub.ts', 'utf8');
 test('QR PIX acompanha o valor digitado na divisão da conta', () => {
   assert.ok(caixaSource.includes('valor: Number(valor) > 0.005 ? Number(valor)'));
   assert.ok(caixaSource.includes('forma === "pix"'));
-  assert.ok(caixaSource.includes('Confirme o recebimento no banco antes de registrar'));
+  assert.ok(caixaSource.includes('Confirme o recebimento na maquininha ou no caixa antes de registrar'));
 });
 
 test('quitação integral simples tenta fechar a sessão e atualizar mesas', () => {
