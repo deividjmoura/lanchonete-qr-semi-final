@@ -24,3 +24,18 @@ test('rotas de comprovante passam pela autorização e preservam erro de domíni
   assert.ok(receiptRoute > guard, 'rotas de comprovante devem passar pelo middleware de autorização');
   assert.ok(serverSource.includes('ErroComprovante'), 'erro de domínio deve continuar tratado');
 });
+
+const printSource = fs.readFileSync('src/lib/print.ts', 'utf8');
+const landingSource = fs.readFileSync('src/screens/Landing.tsx', 'utf8');
+
+test('comprovante detalha preço unitário e adicionais dos itens', () => {
+  assert.ok(printSource.includes('Unitário:'));
+  assert.ok(printSource.includes('Adicionais:'));
+  assert.ok(printSource.includes('TOTAL COBRADO'));
+  assert.ok(printSource.includes('DOCUMENTO NÃO FISCAL'));
+});
+
+test('landing pública não apresenta diretório de mesas', () => {
+  assert.ok(!landingSource.includes('mesas.map('));
+  assert.ok(!landingSource.includes('Iniciar pelo QR da mesa:'));
+});
