@@ -216,6 +216,13 @@ const server = http.createServer(async (req, res) => {
     const u = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
     const p = u.pathname;
 
+    // Liveness check: confirma apenas que o processo HTTP está respondendo.
+    // Intencionalmente não consulta o banco nem expõe versão/configuração.
+    if (p === '/healthz' && req.method === 'GET') {
+      return json(res, 200, { status: 'ok' });
+    }
+
+
     if (p === '/api/cardapio' && req.method === 'GET') {
       return json(res, 200, await getCardapio(), {
         'Cache-Control': 'public, max-age=15, stale-while-revalidate=60',
