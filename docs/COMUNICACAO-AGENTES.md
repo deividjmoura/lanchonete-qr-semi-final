@@ -482,3 +482,12 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 - **Testes adicionados:** `tests/pwa-garcom-ux.test.cjs` e `tests/garcom-responsavel-mesa.test.cjs`. **Validação:** não há execução de Actions/status retornada para o HEAD nesta consulta; não declarar CI verde até confirmar o run e seu SHA.
 - **Estado:** em revisão, não integrado, sem validação em navegador/dispositivo real. PR #89 continua draft e dependente da migration 0022 da Frente 1 antes de 0023.
 - **Handoff:** Frente 2 deve revisar os commits e executar CI/testes integrados em PostgreSQL 16 descartável. Frente 1 / Agente 1 deve verificar qualquer efeito de deploy se a mudança for integrada à `main`; nenhuma ação de Railway ou produção foi feita por esta atualização.
+
+### Validação de cancelamento público + PostgreSQL descartável (2026-10-25)
+
+- **Responsabilidade:** corrigir o cancelamento público da issue #75 e adicionar integração real em PostgreSQL descartável.
+- **PR:** será registrada após reconstrução sobre o HEAD atual da `main` (a0426e9ab3adf584ec9f06968626f33b1833f522), que já inclui o registro mais recente da Frente 2 / PR #89.
+- **Código:** `db/pedidos.js` remove o parâmetro indefinido e o filtro de garçom sem efeito na rota pública; a consulta continua limitada ao pedido da mesa indicada pelo token e à sessão aberta.
+- **Cobertura:** `tests/postgres-integration.test.cjs` valida host/nome do banco/ambiente antes de consultar o banco, confirma PostgreSQL major 16 e verifica idempotência, estoque, cancelamento e restauração, entrega parcial, pagamentos e fechamento. O workflow provisiona PostgreSQL 16 por job, usa credenciais sintéticas e não requer secrets de produção.
+- **Validação anterior:** no HEAD `ff214963435c93b9f2e30b7eb4df40f6769d37ba`, CI #447 e PostgreSQL integration #25 passaram. Como a `main` avançou documentalmente depois, esses resultados não substituem os checks da nova PR e do seu HEAD final.
+- **Limite operacional:** migrations são executadas apenas no PostgreSQL descartável provisionado pelo workflow; nenhuma alteração em Railway, secrets ou produção foi feita nesta frente. Merge autorizado pelo usuário somente depois de verificar checks no HEAD final e revisar o diff. Após o merge, a Frente 1 deve confirmar o resultado do deploy automático e fazer smoke test de saúde sem alterar dados de negócio.
