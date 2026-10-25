@@ -164,7 +164,14 @@ test('PostgreSQL real: mesa sem pedido QR é rejeitada sem criar sessão nem his
     );
     assert.equal(historico.rows.length, 0, 'tentativa rejeitada não deve registrar atribuição');
   } finally {
-    if (mesaId) await pool.query('DELETE FROM mesas WHERE id=$1', [mesaId]).catch(() => {});
+    if (mesaId) {
+      await pool.query(
+        'DELETE FROM mesa_atendimento_historico WHERE sessao_id IN (SELECT id FROM mesa_sessoes WHERE mesa_id=$1)',
+        [mesaId]
+      ).catch(() => {});
+      await pool.query('DELETE FROM mesa_sessoes WHERE mesa_id=$1', [mesaId]).catch(() => {});
+      await pool.query('DELETE FROM mesas WHERE id=$1', [mesaId]).catch(() => {});
+    }
     if (garcomId) await pool.query('DELETE FROM garcons WHERE id=$1', [garcomId]).catch(() => {});
   }
 });
