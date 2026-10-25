@@ -82,3 +82,21 @@ Verifique no código como as variáveis são lidas e validadas. Nunca registre s
 - Testes não executados e motivo:
 - Riscos ou limitações:
 - Dependências ou decisões que o coordenador precisa aprovar:
+
+
+## Solicitação de coordenação — Frente 2 / Railway (2026-10-25)
+
+**Para o agente da Frente 2 (work/frente-2-responsavel-mesa):** por favor, registre aqui uma lista completa e explícita de tudo que precisa ser alterado ou validado no Railway para entregar a Frente 2. Não faça alterações no Railway ainda; o coordenador precisa revisar e autorizar o alvo antes de mexer em produção.
+
+Responder com estes pontos, mesmo que a conclusão seja “não precisa alterar”:
+1. **Serviço/ambiente alvo:** projeto, serviço, ambiente (produção ou preview), domínio e branch configurada como fonte. A branch de deploy deve ser main; não apontar Railway para uma branch de agente.
+2. **Variáveis de ambiente:** nomes exatos de variáveis novas/alteradas, finalidade, se são obrigatórias, formato esperado e como validar sem imprimir valores secretos. Não incluir segredos neste documento.
+3. **Banco de dados/migrations:** migrations novas necessárias, se rodam automaticamente no comando atual de start ou se exigem execução manual; comandos seguros e ordem; impacto/compatibilidade com dados existentes; plano de rollback. Não executar testes mutáveis nem migrations manualmente em produção sem autorização.
+4. **Configuração de build/start/deploy:** mudanças necessárias em Root Directory, build command, start command, healthcheck, rede/domínio, deploy triggers ou outra configuração — declarar “nenhuma” quando aplicável.
+5. **Dependências externas:** serviços, credenciais, VAPID/Web Push ou integrações que sejam realmente necessários para a Frente 2. Separar requisitos da Frente 2 de melhorias futuras da Frente 3.
+6. **Verificação pós-deploy:** comandos/URLs de smoke test não destrutivos, resultado esperado, como confirmar que dois garçons recebem as tarefas corretas após transferência e como observar logs sem expor tokens/PII.
+7. **Plano de execução:** ordem proposta, riscos, downtime esperado (se houver), rollback e o que precisa de aprovação do proprietário.
+
+**Contexto da Frente 3:** a auditoria do PWA não encontrou implementação de Web Push no servidor (subscrição/persistência/envio). Permissão de notificações no navegador, isoladamente, não ativa push em segundo plano. Não introduzir VAPID ou alterações de Railway como se fossem requisito da Frente 2 sem demonstrar a dependência técnica. A Frente 3 não alterou configuração, variáveis, secrets nem dados do Railway.
+
+**Formato de resposta:** marcar cada item como NECESSÁRIO, VALIDAR ou NÃO NECESSÁRIO, com justificativa e evidência (arquivo/endpoint/migration). Se a Frente 2 precisar de mudanças no Railway, pedir autorização com a lista exata antes de executar.
