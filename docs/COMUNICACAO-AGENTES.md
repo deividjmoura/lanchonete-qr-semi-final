@@ -207,3 +207,24 @@ A Frente 1 adicionou em `server.js` a rota `POST /api/garcom/:token/sessoes/:ses
 2. Revisar o diff combinado da PWA, incluindo autorização de mesa e estados de notificação.
 3. Validar migrations 0022 + 0023 e fluxos financeiros/atendimento em PostgreSQL descartável.
 4. Somente depois de CI verde, revisão e validação integrada, decidir a promoção dos PRs; após merge autorizado, acompanhar o deploy automático e executar smoke tests não destrutivos.
+
+
+## Atualização do comandante — testes PostgreSQL reais e sincronização do documento (2026-10-25)
+
+### Frente 1 / PR #85
+- CI #343 **SUCCESS** no commit de código `824768b8fbbbd0128277f9dbde7a168bbe4f216d`.
+- O teste `tests/postgres-financial-integration.test.cjs` passou em PostgreSQL 16 descartável: pagamento parcial, replay idempotente, rejeição de cobrança acima do saldo, quitação, fechamento de sessão, registro do operador e replay do fechamento.
+- O commit `fd14fca104830d0d2d76b947b731708ed49ba663` atualiza apenas esta documentação de coordenação. O PR continua draft até revisão integrada final.
+
+### Frente 2 / PR #89
+- O PR #86 foi fechado como substituído porque sua branch partia da versão anterior à integração da Frente 3.
+- PR atual: https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/89, branch `work/frente-2-responsavel-mesa-integrada`.
+- CI #345 **SUCCESS** no commit de código `70d09d921ba3830541d8e9a909e60aec41f4e98d`.
+- O teste `tests/postgres-waiter-integration.test.cjs` passou em PostgreSQL 16 descartável: iniciar atendimento, pedido pronto visível ao responsável, transferência com auditoria, remoção da fila do antigo responsável, inclusão na fila do novo e bloqueio de entrega pelo antigo responsável; o novo responsável concluiu a entrega.
+- O PR segue draft até revisão final do diff e validação visual em navegador/dispositivos reais.
+
+### Coordenação de merge
+- Os dois PRs alteram `docs/COMUNICACAO-AGENTES.md`. Para evitar conflito de arquivo adicionado, o conteúdo deste documento passa a ser a cópia canônica compartilhada e foi sincronizado para a branch do PR #89. Ao atualizar coordenação antes do merge, manter o mesmo conteúdo nos dois PRs.
+- A sequência de migrations permanece: `0022_sessao_pagamentos_operador.sql` (Frente 1) e `0023_atendimento_transferencia_actor.sql` (Frente 2). Ambas passaram separadamente em migrations de PostgreSQL limpo; a implementação de cada frente passou também seu teste funcional isolado.
+- A integração conjunta final deve ser validada após a sequência de merges. Não executar migrations manuais, seeds ou testes mutáveis em produção.
+- A Frente 3 está integrada na `main`, mas Web Push com aplicativo fechado continua fora do que foi implementado: as variáveis VAPID não equivalem a subscrição e envio em segundo plano.
