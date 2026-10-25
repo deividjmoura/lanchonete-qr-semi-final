@@ -517,3 +517,26 @@ Após o merge da PR [#104](https://github.com/deividjmoura/lanchonete-qr-semi-fi
 - **Plano de validação:** aplicar migrations 0022 e 0023 em sequência num PostgreSQL 16 descartável e executar os testes financeiro e de atendimento no mesmo banco. Cobrir parcial/idempotência/auditoria de operador, sessão fechada, token inativo, autorização 403, corrida transferência × pagamento, fila após transferência, histórico de ator e fechamento pelo Caixa.
 - **Escopo desta revisão:** apenas inspeção estática e comentário de revisão. Nenhum arquivo de runtime, migration, workflow compartilhado ou configuração de produção foi alterado; nenhum teste foi executado nesta revisão. Manter #89 em draft até corrigir a regra de assunção, sincronizar a base e obter CI verde no HEAD final.
 - **Handoff operacional:** como este commit documental na `main` pode disparar deploy automático, Agente 1 / Frente 1 deve verificar e registrar o status de deploy conforme a regra exclusiva de Railway; Agente 2 não executou nem alterou Railway.
+
+
+## Coordenação ativa — Frente 1 / Caixa e pagamentos (2026-10-25)
+
+**Canal oficial:** este documento na `main`. Comentários de integração publicados em [PR #106](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/106#issuecomment-6401356788) e [PR #89](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/89#issuecomment-6401355862).
+
+### Estado e divisão de responsabilidades
+
+- **PR #106 — Frente 1 / referência financeira:** https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/106 — branch `work/frente1-portabilidade-main-20261025`, HEAD observado `08eae9ddf631f680218fa3c3b5b26a5f8e7e18a3`, base informada `b76e6e0326d562e62de1475d6de20050791e54be`. Abrange migration 0022, Caixa/pagamentos, auditoria do operador, comprovante e workflow de testes financeiros PostgreSQL. PR aberto; não integrado.
+- **PR #105 — revisão Frente 2:** https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/105 — documento de revisão, não implementação.
+- **PR #89 — implementação Frente 2:** https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/89 — continua em revisão. A correção server-side de `assumirMesa()` é bloqueante: validar pedido com `origem_pedido='cliente'` dentro da transação antes de abrir/criar sessão ou gravar histórico; mesa vazia deve responder 409 sem mutação. O teste positivo deve criar pedido QR e é necessário teste negativo sem mutação.
+
+### Contrato compartilhado e próximos passos
+
+1. Frente 1 mantém o endpoint financeiro, a idempotência de retries, os locks transacionais e a validação do responsável atual no momento de registrar pagamento.
+2. Frente 2 corrige a regra de assunção e preserva o endpoint financeiro ao reconciliar `server.js`, `.github/workflows/ci.yml`, `public/garcom-pwa/app.js` e `README.md`. Alterações compartilhadas devem ser mescladas por hunks; não substituir arquivos inteiros.
+3. Transferência deve registrar ator, responsável anterior/novo e timestamp. Após transferir, pedidos prontos mudam de fila, sem serem marcados automaticamente como entregues.
+4. Validação combinada obrigatória em PostgreSQL 16 descartável limpo: aplicar `0022_sessao_pagamentos_operador.sql` e depois `0023_atendimento_transferencia_actor.sql` no mesmo banco; executar os testes financeiros e de atendimento juntos. Registrar o SHA exato que passou.
+5. PIX/QR ou um pagamento registrado não comprovam recebimento real. O operador precisa conferir manualmente o recebimento antes de confirmar.
+
+### Limites operacionais
+
+Nenhum merge foi realizado por esta atualização. Não executar migrations/testes mutáveis em produção, não alterar Railway ou secrets e não afirmar que a integração está concluída com base em checks de SHA antigo. A validação e os checks precisam corresponder ao HEAD final reconciliado. Agentes: respondam nos PRs vinculados com SHA, testes/checks observados e bloqueios concretos.
