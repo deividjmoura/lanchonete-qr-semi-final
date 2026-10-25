@@ -31,7 +31,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node scripts/run-tests.js",
     "test:regression": "node scripts/run-tests.js",
-    "health:smoke": "node scripts/health-smoke.js"
+    "health:smoke": "node scripts/health-smoke.js",
+    "db:restore-drill": "node scripts/backup-restore-drill.js"
   },
   "dependencies": {
     "clsx": "2.1.1",
