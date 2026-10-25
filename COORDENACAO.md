@@ -18,16 +18,18 @@
 
 | Frente | Estado registrado no canal canônico | Próxima ação |
 |---|---|---|
-| Frente 1 — caixa/pagamentos/PIX | PR #85 aberto em draft, não integrado; head registrado `b6bb9da195da58b4e4b86c7f67167d36a1d24945`; `mergeable=false`. CI verde citado em commits anteriores não valida o head atual. | Investigar `mergeable=false`, confirmar CI no head exato e revisar integração com a Frente 2. |
-| Frente 2 — responsável por mesa | PR #86 fechado sem merge; PR #89 aberto em draft, não integrado; head registrado `b465ba614d239a2ddfa0f43c5b9decf7f60d8f8f`; `mergeable=false`. | Investigar conflitos, confirmar CI no head exato e revisar o contrato integrado com PR #85. |
+| Frente 1 — caixa/pagamentos/PIX | PR #85 aberto em draft, não integrado; head atual `3e456138936f05b1da49af8ea095882aac7caaa4` (documentação sincronizada após o código). CI #366 **success** no head de código `955523a5c3f72aba2981dc430e1291258666bf41`; `mergeable=true` na última consulta. | Validação visual conjunta; depois integrar #85 primeiro e conferir CI na `main`. |
+| Frente 2 — responsável por mesa | PR #86 fechado sem merge; PR #89 aberto em draft, não integrado; head atual `37cbe9f76dd7c82b7d208de1fd9d8c285fb74167` (documentação sincronizada após o código). CI #367 **success** no head de código `80a9e20a09356a60a35e302a4b3a2703a0d71a6c`; `mergeable=true`/`clean` na última consulta. | Validar visualmente cobrança parcial e, após merge de #85, atualizar #89 para a base resultante e confirmar CI conjunto. |
 | Frente 3 — PWA do garçom | PR #84 integrado à `main`; PR #88 aberto em draft, não integrado; head registrado `3aefd704273eead3ab551d5dfc905440ecb2e31d`; CI #330 sucesso registrado nesse head. | Revisar PR #88 e validar em dispositivos reais. Push em segundo plano continua sem implementação/verificação server-side. |
 
 ### Evidências e limites
 
-- PR #86: https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/86 — estado consultado em 2026-10-25: fechado, não mesclado.
+- PR #85: https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/85 — CI #366 success no commit de código indicado na tabela; teste financeiro real em PostgreSQL 16 descartável, incluindo idempotência e autorização transacional do garçom.
+- PR #89: https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/89 — CI #367 success no commit de código indicado na tabela; teste real em PostgreSQL 16 para transferência, fila, entrega e resumo de cobrança autorizado.
+- PR #86: https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/86 — fechado sem merge; substituído pelo PR #89.
 - PR #88: https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/88 — aberto em draft, CI #330 sucesso no head indicado acima.
 - PR #84 foi integrado com merge commit `daf1b2aab6df6c656b18d27059cf03f766f80237`.
-- Não foi feita validação ponta a ponta em Android/iOS nem teste de migration em PostgreSQL descartável nesta atualização.
+- Migrations e fluxos financeiros/atendimento passaram testes em PostgreSQL 16 descartável nos PRs #85/#89 separadamente. Ainda não há validação visual ponta a ponta em Android/iOS nem CI conjunto após os dois merges.
 - Nenhuma alteração em Railway, secrets, banco ou produção foi feita nesta atualização.
 
 ## Fila histórica B1–B5
