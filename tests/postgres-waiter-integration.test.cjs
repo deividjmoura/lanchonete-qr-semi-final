@@ -49,14 +49,15 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
     );
     ids.sessao = sessao.rows[0].id;
 
-    const inicio = await assumirMesa(tokenA, mesaNumero, { clienteNome: 'Teste CI' });
-    assert.equal(Number(inicio.garcom.id), Number(ids.garcomA));
-
+    // O início de atendimento só é permitido quando já existe pedido QR de cliente.
     const pedido = await pool.query(
-      "INSERT INTO pedidos (sessao_id, status, cliente_nome, observacao_geral) VALUES ($1, 'concluido', 'Teste CI', 'Fixture de transferência') RETURNING id",
+      "INSERT INTO pedidos (sessao_id, status, cliente_nome, observacao_geral, origem_pedido) VALUES ($1, 'concluido', 'Teste CI', 'Fixture de transferência', 'cliente') RETURNING id",
       [ids.sessao]
     );
     ids.pedido = pedido.rows[0].id;
+
+    const inicio = await assumirMesa(tokenA, mesaNumero, { clienteNome: 'Teste CI' });
+    assert.equal(Number(inicio.garcom.id), Number(ids.garcomA));
     const item = await pool.query(
       "INSERT INTO itens_pedido (pedido_id, produto_id, quantidade, preco_unitario, status) VALUES ($1, $2, 1, 12, 'concluido') RETURNING id",
       [ids.pedido, ids.produto]
@@ -115,6 +116,49 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
     if (ids.garcomB) await pool.query('DELETE FROM garcons WHERE id = $1', [ids.garcomB]).catch(() => {});
     if (ids.produto) await pool.query('DELETE FROM produtos WHERE id = $1', [ids.produto]).catch(() => {});
     if (ids.categoria) await pool.query('DELETE FROM categorias WHERE id = $1', [ids.categoria]).catch(() => {});
+  }
+});
+
+test('PostgreSQL real: mesa sem pedido QR é rejeitada sem criar sessão nem histórico', async () => {
+  const mesaNumero = 7;
+  const token = '00000000-0000-4000-8000-000000000203';
+  let garcomId = null;
+  let mesaId = null;
+
+  try {
+    const garcom = await pool.query(
+      'INSERT INTO garcons (nome, token, ativo) VALUES ($1, $2, TRUE) RETURNING id',
+      ['Garçom sem pedido CI ' + process.pid, token]
+    );
+    garcomId = garcom.rows[0].id;
+
+    const mesa = await pool.query(
+      "INSERT INTO mesas (numero, status) VALUES ($1, 'livre') RETURNING id",
+      [mesaNumero]
+    );
+    mesaId = mesa.rows[0].id;
+
+    await assert.rejects(
+      () => assumirMesa(token, mesaNumero, { clienteNome: 'Não deve criar sessão' }),
+      (error) => error.status === 409
+    );
+
+    const sessoes = await pool.query(
+      'SELECT id FROM mesa_sessoes WHERE mesa_id=$1',
+      [mesaId]
+    );
+    assert.equal(sessoes.rows.length, 0, 'mesa vazia não deve ganhar sessão por tentativa de assumir');
+    const historico = await pool.query(
+      `SELECT h.id
+         FROM mesa_atendimento_historico h
+         JOIN mesa_sessoes s ON s.id=h.sessao_id
+        WHERE s.mesa_id=$1`,
+      [mesaId]
+    );
+    assert.equal(historico.rows.length, 0, 'tentativa rejeitada não deve registrar atribuição');
+  } finally {
+    if (mesaId) await pool.query('DELETE FROM mesas WHERE id=$1', [mesaId]).catch(() => {});
+    if (garcomId) await pool.query('DELETE FROM garcons WHERE id=$1', [garcomId]).catch(() => {});
   }
 });
 
