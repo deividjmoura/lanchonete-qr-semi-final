@@ -1107,11 +1107,13 @@ async function setStatusPedido(pedidoId, statusAlvo, setor = null) {
       [pedido.id]
     );
 
-    // Se o pedido não tem NENHUM item deste setor (ex.: só bebida e quem
-    // chamou foi a cozinha), avança TODOS os itens — evita 200 "mentiroso"
-    // e o 409 posterior no garçom.
-    let setorEfetivo = setor;
-    if (setor && !itens.some((i) => i.setor === setor)) setorEfetivo = null;
+    // Uma chamada autenticada de cozinha/bar só pode alterar pedidos que
+    // contenham itens do próprio setor. Nunca transforme uma seleção vazia
+    // em atualização global: isso permitiria cruzar a fronteira de autorização.
+    if (setor && !itens.some((i) => i.setor === setor)) {
+      throw new ErroPedido(403, 'Pedido não possui itens do setor autorizado');
+    }
+    const setorEfetivo = setor;
     const afetados = setorEfetivo ? itens.filter((i) => i.setor === setorEfetivo) : itens;
 
     if (alvo === 'entregue') {
