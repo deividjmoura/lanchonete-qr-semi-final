@@ -80,12 +80,19 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
     assert.ok(filaDepoisB.some((row) => Number(row.id) === Number(ids.pedido)));
 
     const historico = await pool.query(
-      'SELECT garcom_anterior_id, garcom_novo_id, alterado_por_id FROM mesa_atendimento_historico WHERE sessao_id = $1 ORDER BY id DESC LIMIT 1',
+      'SELECT garcom_anterior_id, garcom_novo_id, alterado_por_id, alterado_em FROM mesa_atendimento_historico WHERE sessao_id = $1 ORDER BY id DESC LIMIT 1',
       [ids.sessao]
     );
     assert.equal(Number(historico.rows[0].garcom_anterior_id), Number(ids.garcomA));
     assert.equal(Number(historico.rows[0].garcom_novo_id), Number(ids.garcomB));
     assert.equal(Number(historico.rows[0].alterado_por_id), Number(ids.garcomA));
+    assert.ok(historico.rows[0].alterado_em, 'transferência deve registrar o horário da alteração');
+
+    const pedidoMantido = await pool.query(
+      'SELECT status FROM pedidos WHERE id=$1',
+      [ids.pedido]
+    );
+    assert.equal(pedidoMantido.rows[0].status, 'concluido', 'transferência não deve alterar o status do pedido pronto');
 
     await assert.rejects(
       () => entregarComoGarcom(ids.pedido, tokenA, [ids.item]),
