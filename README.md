@@ -76,7 +76,7 @@ flowchart TD
 4. **Pagamentos parciais:** registre cada parcela com sua forma e valor; mantenha a comanda aberta enquanto houver saldo. Atualize a lista e o saldo após cada lançamento.
 5. **Evite duplicidade:** operações financeiras devem respeitar a idempotência do servidor. Em caso de timeout, consulte o estado atualizado antes de tentar lançar o mesmo pagamento novamente.
 6. **Fechamento consistente:** só considere a mesa livre depois que o servidor confirmar o encerramento. Se o pagamento for registrado, mas o fechamento falhar, informe os dois estados explicitamente e não esconda a comanda.
-7. **Histórico e comprovante:** preserve os lançamentos e apresente os itens, quantidades, valores unitários, adicionais, descontos, taxas, formas de pagamento e total. O comprovante de consumo não substitui documento fiscal.
+7. **Histórico e comprovante:** preserve os lançamentos e apresente os itens, quantidades, valores unitários, adicionais, descontos, taxas, formas de pagamento, total e operador autenticado que registrou cada pagamento. O comprovante de consumo não substitui documento fiscal.
 
 ### Validação obrigatória antes de publicar
 
