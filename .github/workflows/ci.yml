@@ -42,6 +42,9 @@ jobs:
       - name: Migration integration on clean PostgreSQL
         run: npm run db:migrate
 
+      - name: Financial flow integration on clean PostgreSQL
+        run: node --test tests/postgres-financial-integration.test.cjs
+
       - name: Typecheck
         run: npm run typecheck
 
