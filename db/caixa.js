@@ -13,6 +13,7 @@ const { comRetryConcorrencia } = require('./retry');
 
 const pagamentosTemIdempotencyKey = colunaExiste('sessao_pagamentos', 'idempotency_key');
 const pagamentosTemPixAviso = colunaExiste('sessao_pagamentos', 'pix_aviso_id');
+const pagamentosTemOperadorNome = colunaExiste('sessao_pagamentos', 'operador_nome');
 const sessoesTemFechamentoKey = colunaExiste('mesa_sessoes', 'fechamento_idempotency_key');
 
 const FORMAS = new Set(['dinheiro', 'pix', 'cartao_debito', 'cartao_credito']);
@@ -124,11 +125,13 @@ async function lerSessoesAbertas(client) {
 
   const totaisEntregues = await totaisEntreguesPorSessao(client, sessaoIds);
 
+  const temOperadorPagamento = await pagamentosTemOperadorNome(client).catch(() => false);
   const { rows: pagRows } = await client.query(
-    `SELECT id, sessao_id, valor, forma_pagamento, criado_em
+    `SELECT id, sessao_id, valor, forma_pagamento, criado_em,
+            ${temOperadorPagamento ? 'operador_nome' : 'NULL::text AS operador_nome'}
      FROM sessao_pagamentos
      WHERE sessao_id = ANY($1::int[])
-     ORDER BY criado_em`,
+     ORDER BY criado_em, id`,
     [sessaoIds]
   ).catch(() => ({ rows: [] }));
 
@@ -140,6 +143,7 @@ async function lerSessoesAbertas(client) {
       valor: Number(p.valor),
       formaPagamento: p.forma_pagamento,
       criadoEm: p.criado_em,
+      operadorNome: p.operador_nome || null,
     });
   }
 
@@ -267,7 +271,7 @@ async function lerSessoesAbertas(client) {
 }
 
 /** Registra pagamento parcial (divisão de conta). Não fecha a sessão. */
-async function registrarPagamento(sessaoIdBruto, body) {
+async function registrarPagamento(sessaoIdBruto, body, operadorNome = null) {
   const sessaoId = validarSessaoId(sessaoIdBruto);
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new ErroCaixa(400, 'Dados de pagamento inválidos');
@@ -300,9 +304,12 @@ async function registrarPagamento(sessaoIdBruto, body) {
     // A sessão travada serializa o "verifica e insere"; o índice único da
     // migration 0018 é a segunda trava.
     const usarChave = chaveIdempotencia ? await pagamentosTemIdempotencyKey(client) : false;
+    const temOperadorPagamento = await pagamentosTemOperadorNome(client).catch(() => false);
+    const operador = typeof operadorNome === 'string' ? operadorNome.trim().slice(0, 120) || null : null;
     if (usarChave) {
       const { rows: existentes } = await client.query(
-        `SELECT id, valor, forma_pagamento, criado_em
+        `SELECT id, valor, forma_pagamento, criado_em,
+                ${temOperadorPagamento ? 'operador_nome' : 'NULL::text AS operador_nome'}
          FROM sessao_pagamentos WHERE sessao_id = $1 AND idempotency_key = $2 LIMIT 1`,
         [sessaoId, chaveIdempotencia]
       );
@@ -318,6 +325,7 @@ async function registrarPagamento(sessaoIdBruto, body) {
             valor: Number(existentes[0].valor),
             formaPagamento: existentes[0].forma_pagamento,
             criadoEm: existentes[0].criado_em,
+            operadorNome: existentes[0].operador_nome || null,
           },
           valorTotal: total,
           valorPago,
@@ -336,19 +344,24 @@ async function registrarPagamento(sessaoIdBruto, body) {
       throw new ErroCaixa(400, `Valor maior que o restante (R$ ${restante.toFixed(2).replace('.', ',')})`);
     }
 
-    const { rows: ins } = usarChave
-      ? await client.query(
-          `INSERT INTO sessao_pagamentos (sessao_id, valor, forma_pagamento, idempotency_key)
-           VALUES ($1, $2, $3, $4)
-           RETURNING id, valor, forma_pagamento, criado_em`,
-          [sessaoId, valor, forma, chaveIdempotencia]
-        )
-      : await client.query(
-          `INSERT INTO sessao_pagamentos (sessao_id, valor, forma_pagamento)
-           VALUES ($1, $2, $3)
-           RETURNING id, valor, forma_pagamento, criado_em`,
-          [sessaoId, valor, forma]
-        );
+    const colunas = ['sessao_id', 'valor', 'forma_pagamento'];
+    const valores = [sessaoId, valor, forma];
+    if (usarChave) {
+      colunas.push('idempotency_key');
+      valores.push(chaveIdempotencia);
+    }
+    if (temOperadorPagamento) {
+      colunas.push('operador_nome');
+      valores.push(operador);
+    }
+    const placeholders = valores.map((_, i) => `${i + 1}`).join(', ');
+    const { rows: ins } = await client.query(
+      `INSERT INTO sessao_pagamentos (${colunas.join(', ')})
+       VALUES (${placeholders})
+       RETURNING id, valor, forma_pagamento, criado_em,
+                 ${temOperadorPagamento ? 'operador_nome' : 'NULL::text AS operador_nome'}`,
+      valores
+    );
     await client.query('COMMIT');
 
     const valorPago = Number((jaPago + valor).toFixed(2));
@@ -360,6 +373,7 @@ async function registrarPagamento(sessaoIdBruto, body) {
         valor: Number(ins[0].valor),
         formaPagamento: ins[0].forma_pagamento,
         criadoEm: ins[0].criado_em,
+        operadorNome: ins[0].operador_nome || null,
       },
       valorTotal: total,
       valorPago,
