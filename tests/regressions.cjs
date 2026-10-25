@@ -11,7 +11,7 @@ const { EventEmitter } = require('node:events');
 const { eventAccess } = require('../db/event-access');
 const { subscribe, broadcast, clientCount } = require('../db/events');
 const { validarDestinoRemoto } = require('../db/foto');
-const { verificarOrigemRequisicao } = require('../db/auth');
+const { verificarOrigemRequisicao, csrfTokenParaSessao, verificarProtecaoCSRF } = require('../db/auth');
 const { ErroValidacao, numeroFinito, numeroInteiroPositivo } = require('../db/validacao');
 const { getOuAbrirSessao, getProdutoComRegras } = require('../db/queries');
 const { ErroGarcom, removerGarcom, setGarcomAtivo, entregarComoGarcom } = require('../db/garcons');
@@ -578,4 +578,37 @@ test('SSE público é coalescido (1 aviso/janela); staff recebe tudo na hora', a
   staff.emit('close');
   publico.emit('close');
   assert.equal(clientCount(), 0);
+});
+
+
+test('mutacoes autenticadas exigem token CSRF vinculado ao cookie de sessão', () => {
+  const session = 'session-canary-not-a-real-credential';
+  const csrf = csrfTokenParaSessao(session);
+  assert.match(csrf, /^[a-f0-9]{64}$/);
+
+  assert.doesNotThrow(() => verificarProtecaoCSRF({
+    method: 'POST',
+    headers: { cookie: 'lqr_session=' + session, 'x-csrf-token': csrf },
+  }));
+
+  assert.throws(() => verificarProtecaoCSRF({
+    method: 'POST',
+    headers: { cookie: 'lqr_session=' + session },
+  }), /Token CSRF ausente ou inválido/);
+
+  assert.throws(() => verificarProtecaoCSRF({
+    method: 'PATCH',
+    headers: { cookie: 'lqr_session=' + session, 'x-csrf-token': '0'.repeat(64) },
+  }), /Token CSRF ausente ou inválido/);
+
+  assert.throws(() => verificarProtecaoCSRF({
+    method: 'DELETE',
+    headers: { 'x-csrf-token': csrf },
+  }), /Token CSRF ausente ou inválido/);
+});
+
+test('token CSRF varia por sessão e métodos somente de leitura não o exigem', () => {
+  assert.notEqual(csrfTokenParaSessao('session-a'), csrfTokenParaSessao('session-b'));
+  assert.doesNotThrow(() => verificarProtecaoCSRF({ method: 'GET', headers: {} }));
+  assert.doesNotThrow(() => verificarProtecaoCSRF({ method: 'OPTIONS', headers: {} }));
 });
