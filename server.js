@@ -407,7 +407,7 @@ const server = http.createServer(async (req, res) => {
         throw e;
       }
     }
-    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/sessoes\/(\\d+)\/resumo-pagamento$/)) && req.method === 'GET') {
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/sessoes\/(\d+)\/resumo-pagamento$/)) && req.method === 'GET') {
       try { return json(res, 200, await resumoPagamentoSessao(m[1], m[2])); }
       catch (e) { if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message }); throw e; }
     }
