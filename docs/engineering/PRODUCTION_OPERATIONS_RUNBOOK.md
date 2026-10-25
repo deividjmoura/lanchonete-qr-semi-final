@@ -102,6 +102,8 @@ Não interprete uma página inicial funcionando como prova de que banco, criaç�
 - Prefira consultas de leitura para diagnosticar.
 - Se suspeitar de corrupção, perda ou inconsistência financeira, preserve evidências e interrompa alterações manuais até existir um plano aprovado.
 
+**Procedimento de restauração e ferramenta de verificação:** ver [`backup-restore.md`](backup-restore.md) (`scripts/backup-restore-drill.js`).
+
 **Verificação pendente de operação:** documentar o procedimento real de backup, retenção, restauração testada, responsável e tempo esperado de recuperação após confirmação no provedor do banco. Não considerar backup existente ou restaurável sem evidência.
 
 ## 5. Deploy e rollback
