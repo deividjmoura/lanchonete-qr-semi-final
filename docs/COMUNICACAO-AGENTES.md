@@ -17,19 +17,19 @@
 
 ## Atualização canônica de coordenação — 2026-10-25 (verificação direta no GitHub)
 
-Esta seção reflete a verificação mais recente dos PRs, commits e runs de CI consultados no GitHub. A existência de um PR ou de CI verde não significa que o código esteja integrado ou implantado.
+Esta seção substitui os snapshots anteriores de status. CI verde se aplica ao commit exato informado; não significa integração ou deploy.
 
 ### Frente 1 — caixa/pagamentos/PIX/comprovantes
-- **Estado:** PR [#85](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/85) aberto em draft, não integrado; head atual `955523a5c3f72aba2981dc430e1291258666bf41`. GitHub reporta `mergeable=true` contra a base atual consultada.
-- **Contrato:** migration `0022_sessao_pagamentos_operador.sql`; cobrança parcial e quitação pelo motor financeiro do Caixa; comprovante detalhado e operador auditado. A rota de pagamento do garçom revalida o responsável atual dentro da transação/lock da sessão para fechar a janela TOCTOU com transferência.
-- **Evidência:** CI #366 **SUCCESS** no head atual. O run inclui migration em PostgreSQL 16 limpo, teste financeiro real (pagamento parcial, idempotência, sobrecobrança, quitação/fechamento, auditoria do operador) e rejeição 403 sem lançamento quando o garçom não é responsável.
-- **Limitação:** a UI integrada ainda precisa ser revisada junto com a Frente 2; não há validação visual em dispositivo real.
+- **Estado:** PR [#85](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/85) aberto em draft, não integrado. O commit de código validado é `955523a5c3f72aba2981dc430e1291258666bf41`; a branch recebeu depois apenas commits documentais para sincronizar este canal.
+- **Contrato:** migration `0022_sessao_pagamentos_operador.sql`; cobrança parcial e quitação pelo motor financeiro do Caixa; comprovante detalhado e operador auditado. A rota de pagamento do garçom passa o ID autenticado e revalida a responsabilidade atual dentro da transação/lock da sessão para fechar a janela TOCTOU com transferência.
+- **Evidência:** CI #366 **SUCCESS** no commit de código indicado. Inclui migration em PostgreSQL 16 limpo e teste financeiro real: pagamento parcial, idempotência, sobrecobrança, quitação/fechamento, auditoria do operador e 403 sem lançamento quando o garçom não é responsável.
+- **Limitação:** a UI integrada precisa ser revisada junto com a Frente 2; não há validação visual em dispositivo real.
 
 ### Frente 2 — responsável por mesa/transferência e integração PWA
-- **Estado:** PR antigo #86 fechado sem merge; PR [#89](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/89) aberto em draft, não integrado; branch `work/frente-2-responsavel-mesa-integrada`, head atual `80a9e20a09356a60a35e302a4b3a2703a0d71a6c`. GitHub reporta `mergeable=true` contra a base atual consultada.
+- **Estado:** PR antigo #86 fechado sem merge; PR [#89](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/89) aberto em draft, não integrado. O commit de código validado é `80a9e20a09356a60a35e302a4b3a2703a0d71a6c`; a branch recebeu depois apenas commits documentais para sincronizar este canal.
 - **Contrato:** migration `0023_atendimento_transferencia_actor.sql`; início de atendimento, transferência auditada, fila de prontos filtrada por responsável e entrega autorizada no servidor.
 - **Cobrança no PWA:** `GET /api/garcom/:token/sessoes/:sessaoId/resumo-pagamento` devolve total entregue, total pago e saldo somente ao responsável atual. A aba Cobrança chama `POST /api/garcom/:token/sessoes/:sessaoId/pagamentos` da Frente 1, registra recebimentos parciais com chave idempotente persistida para retry e exige confirmação explícita. Para PIX, o garçom precisa conferir o crédito no app bancário; a tela não gera QR nem confirma liquidação automaticamente. O fechamento final continua no Caixa.
-- **Evidência:** CI #367 **SUCCESS** no head atual. O run inclui migration em PostgreSQL 16 limpo, transferência e histórico de ator/origem/destino, fila filtrada, bloqueio 403 ao antigo responsável, entrega pelo novo responsável e resumo de cobrança autorizado.
+- **Evidência:** CI #367 **SUCCESS** no commit de código indicado. Inclui migration em PostgreSQL 16 limpo, transferência e histórico de ator/origem/destino, fila filtrada, bloqueio 403 ao antigo responsável, entrega pelo novo responsável e resumo de cobrança autorizado.
 - **Limitação:** validação visual em navegador/dispositivos reais continua pendente.
 
 ### Frente 3 — PWA/consentimento de notificações
@@ -38,11 +38,12 @@ Esta seção reflete a verificação mais recente dos PRs, commits e runs de CI 
 - **Limitação:** instalação e consentimento não significam Web Push em segundo plano funcional. Subscrição persistida/envio server-side e validação Android/iOS continuam pendentes.
 
 ### Dependências e plano de integração
-- A sequência de migrations é `0022_sessao_pagamentos_operador.sql` (Frente 1) seguida de `0023_atendimento_transferencia_actor.sql` (Frente 2). Cada branch validou sua migration isoladamente em PostgreSQL 16 limpo; o CI após integração deverá executar ambas as migrations e ambos os testes funcionais no mesmo banco descartável.
-- PRs #85 e #89 compartilham `server.js`, `README.md`, `tests/garcom-operacao-integrada.test.cjs`, `.github/workflows/ci.yml` e este documento. A integração planejada é PR #85 primeiro e PR #89 depois, com revisão do diff combinado e CI na `main`; ainda não foram mesclados.
+- A sequência de migrations é `0022_sessao_pagamentos_operador.sql` (Frente 1) seguida de `0023_atendimento_transferencia_actor.sql` (Frente 2). Cada branch validou sua migration isoladamente em PostgreSQL 16 limpo; o CI após integração deve executar ambas as migrations e os dois testes funcionais no mesmo banco descartável.
+- PRs #85 e #89 compartilham `server.js`, `README.md`, `tests/garcom-operacao-integrada.test.cjs`, `.github/workflows/ci.yml` e este documento. A sequência proposta é PR #85 primeiro e PR #89 depois; revisar o diff combinado, atualizar a base do PR #89 após o primeiro merge e confirmar CI conjunto.
+- Ambos os PRs continuam draft e não foram mesclados nem implantados. O estado de mergeabilidade precisa ser reconsultado após sincronizar as branches com a versão atual deste documento.
 - Railway production permanece na branch `main`. Variáveis PIX e VAPID foram configuradas anteriormente; `VAPID_SUBJECT` foi alinhado ao domínio gerado observado `https://qradminn.up.railway.app`, sem deploy automático. Não houve deploy das branches #85/#89.
 - Há divergência histórica entre `qradmin.up.railway.app` nos registros antigos e `qradminn.up.railway.app` na configuração atual do serviço. O README do PR #85 aponta para o domínio observado; nenhum domínio foi alterado no Railway.
-- **Próxima ação:** revisar visualmente os dois fluxos no navegador; depois integrar #85, confirmar CI na `main`, atualizar #89 para a base resultante, confirmar o CI conjunto e só então avaliar deploy. Não executar migrations manuais ou testes mutáveis em produção.
+- **Próxima ação:** confirmar mergeabilidade após sincronização documental, revisar visualmente os dois fluxos no navegador, integrar #85, confirmar CI na `main`, atualizar #89 para a base resultante e confirmar o CI conjunto. Não executar migrations manuais ou testes mutáveis em produção.
 
 ## Estado operacional verificado — 2026-10-25
 
