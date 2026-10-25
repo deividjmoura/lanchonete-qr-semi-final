@@ -540,15 +540,3 @@ Após o merge da PR [#104](https://github.com/deividjmoura/lanchonete-qr-semi-fi
 ### Limites operacionais
 
 Nenhum merge foi realizado por esta atualização. Não executar migrations/testes mutáveis em produção, não alterar Railway ou secrets e não afirmar que a integração está concluída com base em checks de SHA antigo. A validação e os checks precisam corresponder ao HEAD final reconciliado. Agentes: respondam nos PRs vinculados com SHA, testes/checks observados e bloqueios concretos.
-
-
-## Integração conjunta Frente 1 + Frente 2 — 25/10/2026
-
-- Referência financeira da Frente 1: PR #106, HEAD de origem `08eae9ddf631f680218fa3c3b5b26a5f8e7e18a3`. Não retomar a portabilidade de #85/#96; usar #106 como fonte da Frente 1.
-- Branch de reconciliação criada a partir da referência #106: `work/frente1-frente2-integracao-20261025`. A PR #89 continua separada e em draft; não houve merge.
-- Contrato combinado: `POST /api/caixa/sessoes/:sessaoId/pagamentos` para equipe de caixa; `POST /api/garcom/:token/sessoes/:sessaoId/pagamentos` para PWA. Ambos recebem `{ valor, formaPagamento, idempotencyKey }`; a rota PWA revalida token ativo e responsabilidade atual dentro da transação que bloqueia mesa/sessão.
-- Ordem de locks: pagamento usa mesa `FOR UPDATE` e sessão `FOR UPDATE` (helper `travarSessao`); em seguida bloqueia a linha do garçom com `FOR SHARE` e valida `ativo` e `garcom_responsavel_id`. Transferência também trava mesa/sessão antes de alterar o responsável.
-- A PWA mantém a mesma chave idempotente para retry de timeout, exige confirmação manual do recebimento (para PIX, no app bancário) e não cria confirmação automática nem gateway.
-- CI integrado configurado para PostgreSQL 16 descartável, aplicando migrations em ordem alfabética via `npm run db:migrate` (`0022_sessao_pagamentos_operador.sql` antes de `0023_atendimento_transferencia_actor.sql`) e executando os testes financeiro e de atendimento na mesma instância.
-- Achados em correção/validação: PR #89 HEAD `10168d8633bf29fff065b08d3a727de72c04af65` não tem checks associados e GitHub reporta `mergeable=false`; o CI histórico não é evidência para esse HEAD. Foi corrigido na branch de reconciliação o erro de sintaxe `async async function transferTable` encontrado no `public/garcom-pwa/app.js`.
-- Próximo gate: CI verde no HEAD da branch de reconciliação, incluindo teste de que o responsável anterior recebe 403 e não grava pagamento após transferência; sem merge, deploy, Railway, secrets ou dados de produção.
