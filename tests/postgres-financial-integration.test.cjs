@@ -73,7 +73,7 @@ test('PostgreSQL real: pagamento parcial é idempotente e quitação registra o 
         valor: 11,
         formaPagamento: 'pix',
         idempotencyKey: '00000000-0000-4000-8000-000000000103',
-      }, 'QA PostgreSQL', ids.garcomAutorizado),
+      }, 'QA PostgreSQL'),
       (error) => error.status === 400
     );
 
