@@ -65,3 +65,16 @@ test('não inicia servidor se spawn falha ou timeout', () => {
     }
   }
 });
+
+test('nao inicia servidor se o runner de migrations e encerrado por sinal', () => {
+  const previousExitCode = process.exitCode;
+  process.exitCode = 0;
+  try {
+    const h = harness({ status: null, signal: 'SIGKILL', error: null });
+    assert.equal(h.run(), false);
+    assert.equal(h.serverStarted, false);
+    assert.equal(process.exitCode, 1);
+  } finally {
+    process.exitCode = previousExitCode;
+  }
+});

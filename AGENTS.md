@@ -6,6 +6,13 @@
 
 ---
 
+## Fonte de verdade documental
+
+- **Canal único entre agentes:** [`docs/COMUNICACAO-AGENTES.md`](docs/COMUNICACAO-AGENTES.md) na `main`.
+- **Estado operacional resumido:** [`COORDENACAO.md`](COORDENACAO.md).
+- Não usar cópias do documento em branches como referência canônica; portar informações relevantes para o arquivo da `main`.
+- Diferenciar explicitamente trabalho proposto, PR aberto, código integrado e deploy validado.
+
 ## ⛔ REGRA OBRIGATÓRIA (pedido do dono — 2026-09-15)
 
 1. **Todo trabalho de agentes vai para a `main`.**
@@ -14,18 +21,23 @@
 3. **PRs abertos sem merge = trabalho invisível.** Integrar ou fechar; não deixar pronto parado.
 4. **Antes de abrir branch longa:** verificar o AGENTS; preferir commits pequenos na main.
 
-### PRs abertos agora (status)
-| PR | Branch | Estado | Ação |
-|----|--------|--------|------|
-| #8 | `arena/01a0a77d-...` → main | conteúdo de tema portado para a main via #10 | fechar quando o #10 entrar (não trazia o hardening) |
-| #7 | `hardening/pre-sale-audit` → main | replayado na main em commits pequenos (0c6a161) + resto no #10 | fechar quando o #10 entrar |
-| #10 | `arena/01a0a79b-...` → main | 🟢 CI verde, 26 regressões: tema, #5, ADR-007, migration `0016`, upload/SSRF do `a197030` | **mergar** (é o lote que falta na main) |
+### Estado operacional atual
 
-**Grok já publicou na main:** tema (escuro/dark), `build` sem typecheck bloqueante, `test:dia`, este protocolo.
-> **Sessão `01a0a79b` (orquestração), 2026-09-16 01:05 UTC:** este doc foi consolidado sobre a versão da `main`
-> (que é a autoridade). Nada do que estava aqui foi apagado; foram acrescentadas a topologia de branches (§5.0),
-> a tabela de PRs e o lote do PR #10. Regra do dono respeitada: **o entrega é um lote pequeno sobre a `main`**, não um merge gigante.
+A tabela antiga de PRs #7/#8/#10 abaixo foi um retrato histórico de setembro de 2026, não o estado atual. Para estado de frentes, PRs e pendências, consulte `COORDENACAO.md` e, como canal único entre agentes, `docs/COMUNICACAO-AGENTES.md` na `main`.
 
+- PR #86 (Frente 2): fechado sem merge em 2026-10-25; não considerar integrado.
+- PR #88 (Frente 3): aberto em draft; CI #330 passou no head `3aefd704273eead3ab551d5dfc905440ecb2e31d`; validação em dispositivos reais continua pendente.
+- PR #84 (PWA base): integrado na `main` no merge commit `daf1b2aab6df6c656b18d27059cf03f766f80237`.
+
+### Registro histórico de PRs (setembro/2026 — não usar como status atual)
+
+| PR | Branch | Estado à época | Observação histórica |
+|----|--------|----------------|----------------------|
+| #8 | `arena/01a0a77d-...` → main | Em aberto à época | Conteúdo de tema portado via #10; tabela histórica. |
+| #7 | `hardening/pre-sale-audit` → main | Em aberto à época | Parte do hardening foi reaplicada em commits pequenos; tabela histórica. |
+| #10 | `arena/01a0a79b-...` → main | CI verde à época | Lote de hardening/tema de setembro; confirmar estado atual diretamente no GitHub. |
+
+> O histórico de auditoria abaixo é preservado como registro técnico. Para decidir o que fazer agora, confira a `main`, CI atual e o documento canônico de comunicação.
 
 ---
 

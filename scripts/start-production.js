@@ -3,10 +3,10 @@ const { spawnSync } = require('child_process');
 const path = require('path');
 
 /**
- * Fail closed: la aplicación no puede recibir tráfico si las migrations
- * fallaron, expiraron o no se pudieron iniciar. La recuperación de una falla
- * del banco debe ocurrir en la etapa de release/orquestación, no sirviendo una
- * versión potencialmente incompatible con el esquema.
+ * Fail closed: a aplicacao nao pode receber trafego se as migrations falharam,
+ * expiraram ou nao puderam ser iniciadas. A recuperacao de uma falha do banco
+ * deve ocorrer na etapa de release/orquestracao, em vez de servir uma versao
+ * potencialmente incompativel com o schema.
  */
 function startProduction({
   spawn = spawnSync,

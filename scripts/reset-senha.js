@@ -1,48 +1,61 @@
 #!/usr/bin/env node
 /**
- * Redefine a senha de admin / cozinha / caixa para o valor de STAFF_SEED_PASSWORD.
+ * Redefine a senha dos logins de staff legados para STAFF_SEED_PASSWORD.
  *
  * Uso:
- *   node scripts/reset-senha.js
- *   STAFF_SEED_PASSWORD=minha-senha node scripts/reset-senha.js
+ *   STAFF_SEED_PASSWORD='senha-forte-temporaria' node scripts/reset-senha.js
+ *
+ * A senha nunca deve ser impressa em logs nem embutida em comandos de teste.
  */
 require('dotenv').config();
-const { hashSenha, garantirStaffSeed } = require('../db/auth');
-const pool = require('../db/pool');
 
 async function main() {
-  const senha = process.env.STAFF_SEED_PASSWORD || process.env.ADMIN_PASSWORD || 'troque-esta-senha';
-
-  // Garante que os 3 usuários existam (idempotente)
-  const seed = await garantirStaffSeed();
-  if (seed.created) {
-    console.log('Staff criado agora (estava vazio).');
+  const senha = process.env.STAFF_SEED_PASSWORD || process.env.ADMIN_PASSWORD;
+  if (typeof senha !== 'string' || senha.length < 12) {
+    console.error('Defina STAFF_SEED_PASSWORD (preferencial) ou ADMIN_PASSWORD com pelo menos 12 caracteres.');
+    process.exitCode = 1;
+    return;
   }
 
-  const hash = await hashSenha(senha);
-  const { rows } = await pool.query(
-    `UPDATE staff
-     SET senha_hash = $1, ativo = true
-     WHERE lower(login) IN ('admin', 'cozinha', 'caixa')
-     RETURNING login, papel, ativo`,
-    [hash]
-  );
+  const { hashSenha, garantirStaffSeed } = require('../db/auth');
+  const pool = require('../db/pool');
 
-  if (!rows.length) {
-    console.error('Nenhum usuário admin/cozinha/caixa encontrado na tabela staff.');
-    process.exit(1);
-  }
+  try {
+    const seed = await garantirStaffSeed();
+    if (seed.created) {
+      console.log('Staff criado agora (estava vazio).');
+    }
 
-  console.log('Senha atualizada para:', JSON.stringify(senha));
-  for (const u of rows) {
-    console.log(`  · ${u.login} (${u.papel}) ativo=${u.ativo}`);
+    const hash = await hashSenha(senha);
+    const { rows } = await pool.query(
+      `UPDATE staff
+       SET senha_hash = $1, ativo = true
+       WHERE lower(login) IN ('admin', 'cozinha', 'caixa')
+       RETURNING login, papel, ativo`,
+      [hash]
+    );
+
+    if (!rows.length) {
+      console.error('Nenhum usuário admin/cozinha/caixa encontrado na tabela staff.');
+      process.exitCode = 1;
+      return;
+    }
+
+    console.log('Senha atualizada com sucesso para os logins legados:');
+    for (const u of rows) {
+      console.log(`  · ${u.login} (${u.papel}) ativo=${u.ativo}`);
+    }
+  } finally {
+    await pool.end().catch(() => {});
   }
-  console.log('\nTeste: curl -s -X POST http://127.0.0.1:3000/api/login -H "Content-Type: application/json" -d \'{"usuario":"admin","senha":"' + senha + '"}\'');
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(() => pool.end().catch(() => {}));
+if (require.main === module) {
+  main().catch((error) => {
+    // Do not print arbitrary error objects that could contain query parameters/secrets.
+    console.error('Falha ao redefinir a senha de staff.');
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { main };
