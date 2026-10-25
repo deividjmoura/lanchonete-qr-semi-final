@@ -101,14 +101,39 @@ async function criarPedidoGarcom(token, numeroBruto, body) {
     throw new ErroAtendimento(400, 'Número de mesa inválido');
   }
   const { rows } = await pool.query(
-    `SELECT m.token FROM mesas m
+    `SELECT m.token, s.id AS sessao_id FROM mesas m
       JOIN mesa_sessoes s ON s.mesa_id=m.id AND s.status='aberta'
-      WHERE m.numero=$1 AND s.garcom_responsavel_id=$2`,
-    [numero, garcom.id]
+      WHERE m.numero=$1`,
+    [numero]
   );
-  if (!rows[0]) throw new ErroAtendimento(409, 'Assuma a mesa antes de enviar o pedido');
+  if (!rows[0]) throw new ErroAtendimento(409, 'A mesa não tem sessão aberta. Abra o atendimento antes de enviar o pedido.');
   const { criarPedido } = require('./pedidos');
-  return criarPedido(rows[0].token, body, { garcomId:garcom.id, garcomNome:garcom.nome });
+  return criarPedido(rows[0].token, body, {
+    garcomId:garcom.id, garcomNome:garcom.nome,
+    permitirResponsavelDiferente:true, sessaoIdEsperada:rows[0].sessao_id
+  });
+}
+
+async function listarPedidosAtivosMesaGarcom(token, numeroBruto) {
+  await validarGarcom(token);
+  const numero = Number(numeroBruto);
+  if (!Number.isSafeInteger(numero) || numero < 1 || numero > 70) throw new ErroAtendimento(400, 'Número de mesa inválido');
+  const { rows: sessaoRows } = await pool.query(
+    `SELECT s.id AS sessao_id FROM mesas m
+       JOIN mesa_sessoes s ON s.mesa_id=m.id AND s.status='aberta' WHERE m.numero=$1`, [numero]);
+  if (!sessaoRows[0]) return [];
+  const { rows } = await pool.query(
+    `SELECT p.id,p.status,p.cliente_nome,p.garcom_nome,p.criado_em,
+       COALESCE(json_agg(json_build_object('id',ip.id,'nome',pr.nome,'qty',ip.quantidade,
+         'status',COALESCE(ip.status,'recebido'),'setor',COALESCE(pr.setor,'cozinha'))
+         ORDER BY ip.id) FILTER (WHERE ip.id IS NOT NULL),'[]'::json) AS itens
+       FROM pedidos p LEFT JOIN itens_pedido ip ON ip.pedido_id=p.id
+       LEFT JOIN produtos pr ON pr.id=ip.produto_id
+      WHERE p.sessao_id=$1 AND EXISTS (SELECT 1 FROM itens_pedido active
+        WHERE active.pedido_id=p.id AND COALESCE(active.status,'recebido') <> 'entregue')
+      GROUP BY p.id ORDER BY p.criado_em DESC`, [sessaoRows[0].sessao_id]);
+  return rows.map(p=>({id:p.id,status:p.status,clienteNome:p.cliente_nome||null,
+    garcomNome:p.garcom_nome||null,criadoEm:p.criado_em,itens:p.itens}));
 }
 
 async function listarAtendimentosGarcom(token) {
@@ -129,7 +154,7 @@ async function listarAtendimentosGarcom(token) {
     JOIN pedidos p ON p.sessao_id=s.id
     LEFT JOIN itens_pedido ip ON ip.pedido_id=p.id
     LEFT JOIN produtos pr ON pr.id=ip.produto_id
-    WHERE s.status='aberta' AND s.garcom_responsavel_id=$1
+    WHERE s.status='aberta' AND (s.garcom_responsavel_id=$1 OR p.garcom_id=$1)
     GROUP BY p.id,m.numero,s.id
     ORDER BY p.criado_em DESC LIMIT 250`,[garcom.id]);
   return rows.map(x=>({id:x.id,mesa:x.mesa,sessaoId:x.sessao_id,status:x.status,
@@ -173,4 +198,4 @@ async function metricasGarcons({ data } = {}) {
     garcons: rows.map(x=>({ id:x.id, nome:x.nome, ativo:x.ativo, atendimentos:x.atendimentos,
       vendas:Number(x.vendas), ticketMedio:Number(x.ticket_medio) })) };
 }
-module.exports={ ErroAtendimento, listarMesasGarcom, assumirMesa, deixarMesa, criarPedidoGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons };
+module.exports={ ErroAtendimento, listarMesasGarcom, assumirMesa, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesaGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons };
