@@ -53,8 +53,9 @@ A comanda da mesa é acumulativa: a mesa pode receber vários pedidos durante a 
 
 ### Garçom
 - Link individual por token, que pode ser desativado pelo administrador.
-- Atribuição de mesas, identificação do responsável e histórico de transferência.
-- Entrega total ou parcial dos itens que ficaram prontos.
+- Início de atendimento com responsável persistido na sessão; a transferência só pode ser feita pelo responsável atual para outro garçom ativo e fica auditada.
+- Pedidos prontos da cozinha/bar aparecem apenas ao responsável atual; itens prontos continuam pendentes após a transferência e passam para a fila do novo responsável.
+- Entrega total ou parcial dos itens prontos, com autorização conferida no servidor contra o responsável atual da sessão.
 - PWA em `/garcom-pwa/`, com manifesto instalável e fila local no IndexedDB para pedidos criados sem conexão.
 - A sincronização offline depende de reconexão e do aplicativo voltar a executar no navegador. Preços, disponibilidade e estoque são sempre validados pelo servidor; um conflito precisa ser revisado, não presumido como pedido confirmado.
 - **A PWA ainda precisa de validação ponta a ponta em navegador/dispositivo real e PostgreSQL isolado antes de ser considerada pronta para a venda.**
