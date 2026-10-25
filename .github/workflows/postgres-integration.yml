@@ -49,3 +49,5 @@ jobs:
         run: node --test tests/postgres-financial-integration.test.cjs
       - name: Run waiter ownership PostgreSQL integration tests
         run: node --test tests/postgres-waiter-integration.test.cjs
+      - name: Staff password change PostgreSQL integration tests
+        run: node --test tests/postgres-password-change.test.cjs
