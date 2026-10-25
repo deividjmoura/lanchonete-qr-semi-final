@@ -91,7 +91,7 @@ async function main() {
   );
   let updated = 0;
   let preserved = 0;
-  console.log(`\\nFotos no cardápio: ${rows.length} produto(s). Modo: ${apply ? 'APLICAR' : 'SIMULAÇÃO'}\\n`);
+  console.log(`\nFotos no cardápio: ${rows.length} produto(s). Modo: ${apply ? 'APLICAR' : 'SIMULAÇÃO'}\n`);
 
   for (const row of rows) {
     const current = String(row.foto_url || '');
@@ -112,7 +112,7 @@ async function main() {
       await pool.query('UPDATE produtos SET foto_url = $1 WHERE id = $2', [target, row.id]);
     }
   }
-  console.log(`\\n${apply ? 'Concluído' : 'Simulação concluída'}: ${updated} foto(s) ${apply ? 'atualizadas' : 'seriam atualizadas'}; ${preserved} foto(s) personalizada(s) preservada(s).\\n`);
+  console.log(`\n${apply ? 'Concluído' : 'Simulação concluída'}: ${updated} foto(s) ${apply ? 'atualizadas' : 'seriam atualizadas'}; ${preserved} foto(s) personalizada(s) preservada(s).\n`);
   if (!apply) console.log('Para gravar as alterações listadas, execute: npm run fotos:sync -- --apply');
 }
 
