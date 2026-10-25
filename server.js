@@ -9,7 +9,6 @@ const {
   getSessao,
   getFilaCozinha,
   getFilaBar,
-  getFilaGarcom,
   checkinCliente,
   cancelarPedidoCliente,
   editarPedidoCliente,
