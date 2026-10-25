@@ -27,7 +27,11 @@ function cookieDe(setCookies) {
 async function req(method, path, { body, cookie, origem, headers: h, bruto } = {}) {
   const headers = Object.assign({}, h);
   if (body !== undefined) headers['Content-Type'] = 'application/json';
-  if (cookie) headers.Cookie = cookie;
+  if (cookie) {
+    headers.Cookie = cookie;
+    // Mutações de staff exigem Origin da própria aplicação (proteção CSRF).
+    headers.Origin = BASE;
+  }
   if (origem) headers.Origin = origem;
   let res;
   try {
@@ -304,7 +308,7 @@ async function tCorpoELimite(mesa) {
   const r6 = await req('POST', `/api/mesas/${token}/pedidos`, {
     body: { items: [{ productId: 999999, qty: 1 }] },
   });
-  if (r6.status === 400) ok('produto inexistente rejeitado (preço nunca vem do cliente)');
+  if (r6.status === 409) ok('produto inexistente rejeitado (preço nunca vem do cliente)');
   else ruim(`produto inexistente → ${r6.status}`);
 
   const r4 = await req('POST', `/api/mesas/${token}/pedidos`, {

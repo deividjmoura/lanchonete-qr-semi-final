@@ -45,7 +45,11 @@ async function req(method, path, { body, cookie, expectStatus } = {}) {
   const url = BASE + path;
   const headers = {};
   if (body !== undefined) headers['Content-Type'] = 'application/json';
-  if (cookie) headers.Cookie = cookie;
+  if (cookie) {
+    headers.Cookie = cookie;
+    // Mutações de staff exigem Origin da própria aplicação (proteção CSRF).
+    headers.Origin = BASE;
+  }
 
   let res;
   try {
