@@ -1,13 +1,19 @@
 const test=require('node:test');const assert=require('node:assert/strict');
 const fs=require('node:fs');const path=require('node:path');const cp=require('node:child_process');
 const root=path.join(__dirname,'..','public','garcom-pwa');
+const adminHtml=fs.readFileSync(path.join(__dirname,'..','public','admin.html'),'utf8');
+const pixJs=fs.readFileSync(path.join(__dirname,'..','public','js','pix.js'),'utf8');
+const caixaHtml=fs.readFileSync(path.join(__dirname,'..','public','caixa.html'),'utf8');
 const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const qrGenerator=require(path.join(root,'qrcode-generator.js'));
 const server=fs.readFileSync(path.join(__dirname,'..','server.js'),'utf8');
 const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
 const manifest=JSON.parse(fs.readFileSync(path.join(root,'manifest.webmanifest'),'utf8'));
 test('PWA JavaScript e Service Worker têm sintaxe válida',()=>{
  cp.execFileSync(process.execPath,['--check',path.join(root,'app.js')]);
  cp.execFileSync(process.execPath,['--check',path.join(root,'sw.js')]);
+ cp.execFileSync(process.execPath,['--check',path.join(root,'qrcode-generator.js')]);
 });
 test('Rotas de assumir mesa e criar pedido aceitam números reais de mesa',()=>{
  assert.ok(server.includes('mesas\\/(\\d+)\\/assumir'),'rota assumir usa \\d+, não barra invertida literal');
@@ -28,6 +34,30 @@ test('Fila de sincronização preserva uma chave por operação e isola garçom'
  assert.match(app,/ownerToken:waiterToken/);
  assert.match(app,/o\.ownerToken===waiterToken/);
  assert.match(app,/err\.status&&err\.status<500\?'conflict'/);
+});
+test('QR PIX não envia payload financeiro a serviço externo',()=>{
+ assert.doesNotMatch(pixJs,/api\.qrserver\.com/);
+ assert.match(pixJs,/global\.qrcode/);
+ assert.match(pixJs,/data:image\/svg\+xml/);
+ assert.match(caixaHtml,/garcom-pwa\/qrcode-generator\.js/);
+});
+test('QR da tela administrativa é gerado localmente sem enviar token a serviço externo',()=>{
+ assert.doesNotMatch(adminHtml,/api\.qrserver\.com/);
+ assert.match(adminHtml,/qrcode-generator\.js/);
+ assert.match(adminHtml,/window\.qrcode\(0,'M'\)/);
+ assert.match(adminHtml,/qr\.addData\(host\+'\/mesa\/'\+mesa\.token\)/);
+ assert.match(adminHtml,/createSvgTag/);
+});
+test('QR da mesa é gerado localmente e nunca envia o token a um serviço externo',()=>{
+ assert.doesNotMatch(app,/api\.qrserver\.com/);
+ assert.match(app,/window\.qrcode\(0,'M'\)/);
+ assert.match(html,/qrcode-generator\.js/);
+ assert.match(sw,/qrcode-generator\.js/);
+ const qr=qrGenerator(0,'M');
+ qr.addData('https://example.test/#/mesa/token-de-teste');
+ qr.make();
+ assert.ok(qr.getModuleCount()>0);
+ assert.match(qr.createSvgTag({cellSize:4,margin:2,scalable:true}),/<svg/);
 });
 test('QR usa token da mesa e não o número no endereço do cliente',()=>{
  assert.match(app,/mesa\.token/);

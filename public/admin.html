@@ -162,6 +162,7 @@
 <script src="/js/safe-dom.js"></script>
 <script src="/js/realtime.js"></script>
 <script src="/js/admin-relatorio.js"></script>
+<script src="/garcom-pwa/qrcode-generator.js"></script>
 <script>
 (function(){const _f=window.fetch;window.fetch=async function(...a){const r=await _f(...a);if(r.status===401)location.href='/login?next='+encodeURIComponent(location.pathname);return r;};})();
 document.getElementById('btnSair').addEventListener('click',async()=>{try{await fetch('/api/logout',{method:'POST'});}catch(e){}location.href='/login';});
@@ -218,12 +219,19 @@ async function loadMesas(){
   const mesas=await(await fetch('/api/admin/mesas')).json();
   const el=document.getElementById('mesas');
   if(!mesas.length){el.innerHTML='<div class="panel">Nenhuma mesa.</div>';return;}
-  el.innerHTML=mesas.map(m=>{
+  el.innerHTML=mesas.map((m,index)=>{
     const url=host+'/mesa/'+m.token;
-    const qr='https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(url);
     const badge=m.sessaoAberta?'<span class="badge badge-ocupada">ocupada</span>':'<span class="badge badge-livre">livre</span>';
-    return '<article class="panel"><div class="row"><h2 style="margin:0">Mesa '+m.numero+'</h2>'+badge+'</div><img src="'+qr+'" width="160" height="160" alt="QR"><button class="btn primary" type="button" style="width:100%;margin-top:8px" onclick="navigator.clipboard.writeText(\''+url+'\').then(()=>toast(\'Copiado\'))">Copiar link</button></article>';
+    return '<article class="panel"><div class="row"><h2 style="margin:0">Mesa '+m.numero+'</h2>'+badge+'</div><div class="mesa-qr" data-qr-index="'+index+'" role="img" aria-label="QR Code da mesa '+m.numero+'" style="width:160px;height:160px;margin:8px auto"></div><button class="btn primary" type="button" style="width:100%;margin-top:8px" onclick="navigator.clipboard.writeText(\\''+url+'\\').then(()=>toast(\\'Copiado\\'))">Copiar link</button></article>';
   }).join('');
+  el.querySelectorAll('.mesa-qr[data-qr-index]').forEach(node=>{
+    const mesa=mesas[Number(node.dataset.qrIndex)];
+    if(!mesa||!window.qrcode)return;
+    const qr=window.qrcode(0,'M');
+    qr.addData(host+'/mesa/'+mesa.token);
+    qr.make();
+    node.innerHTML=qr.createSvgTag({cellSize:4,margin:2,scalable:true});
+  });
 }
 let cardapioCache=[];
 async function loadCardapio(){
