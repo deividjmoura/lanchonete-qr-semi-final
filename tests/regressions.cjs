@@ -597,3 +597,19 @@ test('SSE público é coalescido (1 aviso/janela); staff recebe tudo na hora', a
   publico.emit('close');
   assert.equal(clientCount(), 0);
 });
+
+
+test('seed de garçom não imprime nem retorna token bearer', () => {
+  const seed = fs.readFileSync('db/seed.js', 'utf8');
+  assert.doesNotMatch(
+    seed,
+    /console\.log\([^;]*token[^;]*ins\[0\]\.token/i,
+    'o seed não deve imprimir o token de garçom'
+  );
+  assert.doesNotMatch(seed, /RETURNING id, nome, token/i, 'o seed não deve buscar o token sem necessidade');
+  assert.doesNotMatch(
+    seed,
+    /return\s*\{\s*created:\s*true,\s*count:\s*1,\s*token:\s*ins\[0\]\.token\s*\}/,
+    'o seed não deve propagar o token em seu resultado'
+  );
+});
