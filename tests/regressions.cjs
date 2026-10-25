@@ -15,7 +15,7 @@ const { verificarOrigemRequisicao } = require('../db/auth');
 const { ErroValidacao, numeroFinito, numeroInteiroPositivo } = require('../db/validacao');
 const { getOuAbrirSessao, getProdutoComRegras } = require('../db/queries');
 const { ErroGarcom, removerGarcom, setGarcomAtivo, entregarComoGarcom } = require('../db/garcons');
-const { ErroPedido, setStatusPedido, setStatusItem } = require('../db/pedidos');
+const { ErroPedido, criarPedido, setStatusPedido, setStatusItem } = require('../db/pedidos');
 const { sanitizarAlvoRequisicao, sanitizarDetalheErro } = require('../db/log-sanitizer');
 
 /* Mock mínimo de <html> que espelha o DOM real:
@@ -259,6 +259,73 @@ test('produto com id inválido não dispara consulta ao PostgreSQL', async () =>
   assert.equal(await getProdutoComRegras(client, Infinity), null);
   assert.equal(await getProdutoComRegras(client, 0), null);
   assert.equal(called, false);
+});
+
+test('criação de pedido rejeita carrinho malformado antes de abrir conexão', async () => {
+  const pool = require('../db/pool');
+  const originalConnect = pool.connect;
+  let connections = 0;
+  pool.connect = async () => { connections += 1; throw new Error('não deveria conectar'); };
+  try {
+    for (const items of [
+      [{ id: 1, qty: 1 }, null],
+      [{ id: 1, qty: 1 }, { id: 'abc', qty: 1 }],
+      [{ id: 1, qty: 1 }, []],
+    ]) {
+      await assert.rejects(
+        () => criarPedido('12345678-1234-4234-8234-123456789abc', { items }),
+        (e) => e instanceof ErroPedido && e.status === 400
+      );
+    }
+    assert.equal(connections, 0);
+  } finally {
+    pool.connect = originalConnect;
+  }
+});
+
+test('criação de pedido rejeita produto inexistente sem persistir subconjunto do carrinho', async () => {
+  const pool = require('../db/pool');
+  const originalConnect = pool.connect;
+  const calls = [];
+  let released = false;
+  const client = {
+    async query(sql, params = []) {
+      calls.push({ sql, params });
+      if (sql.includes('SELECT id, numero, status FROM mesas WHERE token')) {
+        return { rows: [{ id: 7, numero: 3, status: 'ocupada' }] };
+      }
+      if (sql.includes('SELECT id FROM mesas WHERE id = $1 FOR UPDATE')) {
+        return { rows: [{ id: 7 }] };
+      }
+      if (sql.includes("SELECT id FROM mesa_sessoes WHERE mesa_id = $1 AND status = 'aberta'")) {
+        return { rows: [{ id: 42 }] };
+      }
+      if (sql.includes('INSERT INTO pedidos')) {
+        return { rows: [{ id: 99, status: 'recebido', criado_em: new Date(), cliente_nome: null, editado_em: null }] };
+      }
+      if (sql.includes('SELECT id, nome, preco, disponivel, pede_ponto_carne, controla_estoque, estoque FROM produtos')) {
+        return { rows: [] };
+      }
+      return { rows: [], rowCount: 1 };
+    },
+    release() { released = true; },
+  };
+  pool.connect = async () => client;
+  try {
+    await assert.rejects(
+      () => criarPedido('12345678-1234-4234-8234-123456789abc', {
+        items: [{ id: 1, qty: 1 }, { id: 999999, qty: 1 }],
+      }),
+      (e) => e instanceof ErroPedido && e.status === 409
+    );
+    assert.ok(calls.some((c) => c.sql === 'ROLLBACK'), 'a transação inteira deve ser desfeita');
+    assert.equal(calls.some((c) => c.sql.includes('INSERT INTO itens_pedido ')), false);
+    assert.equal(calls.some((c) => c.sql.includes('UPDATE produtos')), false);
+    assert.equal(calls.some((c) => c.sql === 'COMMIT'), false);
+    assert.equal(released, true);
+  } finally {
+    pool.connect = originalConnect;
+  }
 });
 
 test('admin de garçom rejeita IDs não inteiros antes do banco', async () => {
