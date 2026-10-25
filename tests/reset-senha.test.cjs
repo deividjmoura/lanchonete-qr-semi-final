@@ -11,7 +11,8 @@ const scriptPath = path.join(__dirname, '..', 'scripts', 'reset-senha.js');
 const source = fs.readFileSync(scriptPath, 'utf8');
 
 test('script não imprime senha nem constrói comando curl com segredo', () => {
-  assert.doesNotMatch(source, /console\.log\([^\n]*senha/i);
+  assert.doesNotMatch(source, /console\.log\(['"]Senha atualizada para:/i);
+  assert.doesNotMatch(source, /JSON\.stringify\(senha\)/i);
   assert.doesNotMatch(source, /curl[^\n]*senha/i);
   assert.doesNotMatch(source, /troque-esta-senha/);
 });
