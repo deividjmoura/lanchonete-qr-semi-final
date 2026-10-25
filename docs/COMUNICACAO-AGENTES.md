@@ -22,7 +22,7 @@ Escopo:
 - Diferenciar claramente pedido pronto, entregue, pagamento parcial/integral e sessão fechada.
 - Permitir adicionar novos itens a uma sessão existente sem editar pedido já concluído pela cozinha/bar.
 - Permitir ao garçom autorizado registrar/cobrar pagamentos, com as mesmas regras de cálculo e auditoria do caixa. Não confiar em totais enviados pelo cliente.
-- PIX: gerar QR dinâmico por valor usando a chave configurada. A configuração fornecida pelo proprietário é chave PIX telefone `07374955960`, nome do recebedor `QRADMIN` e cidade `PENHA SC`. Preferir configuração por variáveis de ambiente (`PIX_CHAVE`, `PIX_NOME`, `PIX_CIDADE`); nunca duplicar a chave em vários componentes. Validar limites/formato exigidos pelo payload BR Code e acrescentar identificador da transação quando suportado.
+- PIX: gerar QR dinâmico por valor usando a chave configurada. O proprietário forneceu uma chave PIX que deve ser configurada apenas no ambiente privado do servidor; não copie a chave real para o repositório. Nome do recebedor: `QRADMIN`; cidade: `PENHA SC`. Preferir configuração por variáveis de ambiente (`PIX_CHAVE`, `PIX_NOME`, `PIX_CIDADE`); nunca duplicar a chave em vários componentes. Validar limites/formato exigidos pelo payload BR Code e acrescentar identificador da transação quando suportado.
 - Para dinheiro, crédito e débito, registrar a forma selecionada, valor, operador, horário e sessão. Para PIX, registrar também a referência/identificador da cobrança quando disponível. Gerar QR não é confirmação de liquidação; a equipe deve conferir o recebimento.
 - Histórico e comprovante de consumo não fiscal devem incluir dados do estabelecimento, mesa/sessão, data/hora, operador, itens e descrições, quantidades, preço unitário, adicionais quando aplicável, subtotais, descontos, taxas, pagamentos por forma, total pago e saldo. Não chamar o documento de nota fiscal nem sugerir validade fiscal.
 - Corrigir a página inicial pública para não listar mesas; manter acesso do cliente pelo QR individual.
@@ -68,7 +68,7 @@ Escopo:
 
 ## Configuração PIX e segurança
 Configure a chave PIX no ambiente do servidor, não no código cliente nem em commits. Valores iniciais informados pelo proprietário:
-- `PIX_CHAVE=07374955960`
+- `PIX_CHAVE` = valor fornecido pelo proprietário (configurar privadamente no Railway)
 - `PIX_NOME=QRADMIN`
 - `PIX_CIDADE=PENHA SC`
 
