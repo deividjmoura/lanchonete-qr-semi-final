@@ -14,6 +14,7 @@ async function loadMesas(){
  populateTables();updateQr();renderTableGrid();
  $('#identity').textContent='Garçom: '+data.garcom.nome;
  renderMyTables();
+ renderBillingSessions();
 }
 async function loadProducts(){try{const data=await getJson('/api/cardapio');products=data.flatMap(c=>(c.produtos||[]).map(p=>({...p,name:p.nome,price:Number(p.preco),description:p.descricao})));localStorage.setItem('waiter-menu-cache',JSON.stringify(products));}catch(e){try{products=JSON.parse(localStorage.getItem('waiter-menu-cache')||'[]')}catch{products=[]}if(!products.length)$('#connection').textContent='Sem cardápio offline: conecte-se ao menos uma vez.';}renderProducts()}
 function renderProducts(){const q=$('#search').value.toLocaleLowerCase('pt-BR');const root=$('#products');root.replaceChildren();products.filter(p=>q.length>=2&&(p.name||p.nome||'').toLocaleLowerCase('pt-BR').includes(q)).slice(0,12).forEach(p=>{const name=p.name||p.nome;const price=Number(p.price??p.preco??0);const card=document.createElement('article');card.className='product';card.innerHTML='<h3></h3><p></p><div class="product-foot"><span class="price"></span><button>Adicionar</button></div>';card.querySelector('h3').textContent=name;card.querySelector('p').textContent=p.description||p.descricao||'Produto do cardápio';card.querySelector('.price').textContent=money(price);card.querySelector('button').onclick=()=>{const old=cart.get(String(p.id));cart.set(String(p.id),{product:p,qty:(old?.qty||0)+1,additions:old?.additions||[],removals:old?.removals||[],note:old?.note||''});renderCart()};root.append(card)});if(!root.children.length)root.innerHTML=q.length<2?'<p class="muted">Digite ao menos 2 letras para buscar um produto.</p>':'<p class="empty">Nenhum produto encontrado.</p>'}function renderCart(){const root=$('#cart');root.replaceChildren();let total=0;if(!cart.size)root.innerHTML='<p class="muted">Adicione produtos ao pedido.</p>';for(const [id,item] of cart){const p=item.product;const name=p.name||p.nome;const price=Number(p.price??p.preco??0);const adicionaisPreco=(item.additions||[]).reduce((sum,sel)=>sum+Number((p.adicionais||[]).find(a=>Number(a.id)===Number(sel.id||sel))?.preco||0),0);const precoComAdicionais=price+adicionaisPreco;total+=precoComAdicionais*item.qty;const row=document.createElement('div');row.className='cart-item';row.innerHTML='<div class="cart-row"><strong class="item-name"></strong><div class="qty"><button data-act="minus" aria-label="Diminuir quantidade">−</button><span></span><button data-act="plus" aria-label="Aumentar quantidade">+</button></div><strong class="line-price"></strong></div><div class="cart-details"><label>Adicionais<input data-field="additions" placeholder="Ex.: bacon, queijo extra"></label><label>Remover ingredientes<input data-field="removals" placeholder="Ex.: sem cebola"></label><label>Observação do item<input data-field="note" placeholder="Ponto da carne, etc."></label></div>';row.querySelector('.item-name').textContent=name;row.querySelector('.qty span').textContent=item.qty;row.querySelector('.line-price').textContent=money(precoComAdicionais*item.qty);row.querySelector('[data-act="minus"]').onclick=()=>{if(item.qty<=1)cart.delete(id);else item.qty--;renderCart()};row.querySelector('[data-act="plus"]').onclick=()=>{item.qty=Math.min(99,item.qty+1);renderCart()};const opts=p.adicionais||[];
@@ -140,6 +141,9 @@ $('#qrModal').addEventListener('click',e=>{if(e.target===$('#qrModal'))$('#qrMod
 /* Acompanhamento de todas as mesas sob responsabilidade deste garçom. */
 let currentWaiterId=null;
 let activeWaiters=[];
+const pendingPaymentStorageKey='garcom-pending-payment-'+waiterToken;
+let pendingWaiterPayment=null;
+try{pendingWaiterPayment=JSON.parse(localStorage.getItem(pendingPaymentStorageKey)||'null')}catch{}
 let liveOrders=[];
 let editingServerId=null;
 let firstLiveLoad=true;
@@ -159,6 +163,7 @@ function renderMyTables(){
   btn.append(title,info);btn.onclick=()=>openOrder(m.numero);root.append(btn);
   const actions=document.createElement('div');actions.className='table-actions';
   const detail=document.createElement('button');detail.className='secondary small';detail.textContent='Ver pedidos';detail.onclick=()=>openOrdersModal(m.numero);
+  const charge=document.createElement('button');charge.className='secondary small';charge.textContent='Cobrar';charge.onclick=()=>openBillingForSession(m.sessaoId,m.numero);
   const transferLabel=document.createElement('label');transferLabel.className='small-copy';transferLabel.textContent='Transferir para';
   const select=document.createElement('select');select.className='secondary small';select.setAttribute('aria-label','Garçom de destino da mesa '+m.numero);
   const options=activeWaiters.filter(g=>Number(g.id)!==currentWaiterId);
@@ -167,9 +172,102 @@ function renderMyTables(){
   const transfer=document.createElement('button');transfer.className='secondary small';transfer.textContent='Transferir';transfer.disabled=!options.length;
   transfer.onclick=()=>transferTable(m.numero,Number(select.value),select.options[select.selectedIndex]?.textContent||'');
   const leave=document.createElement('button');leave.className='secondary small leave-table';leave.textContent='Deixar mesa';leave.onclick=()=>leaveTable(m.numero);
-  actions.append(detail,transferLabel,select,transfer,leave);root.append(actions);
+  actions.append(detail,charge,transferLabel,select,transfer,leave);root.append(actions);
  }
 }
+function renderBillingSessions(){
+ const select=$('#billingSession');if(!select)return;
+ const previous=select.value;
+ const mine=mesas.filter(m=>Number(m.garcomResponsavelId)===currentWaiterId&&m.sessaoId);
+ select.replaceChildren();
+ if(!mine.length){
+  const option=document.createElement('option');option.value='';option.textContent='Nenhuma mesa sob sua responsabilidade';select.append(option);
+  $('#billingSummary').textContent='Inicie ou receba uma transferência de mesa para registrar recebimentos.';
+  $('#registerPayment').disabled=true;
+  if(pendingWaiterPayment)$('#billingMessage').textContent='Existe uma tentativa anterior pendente para a mesa '+pendingWaiterPayment.mesa+'. Confira o estado no Caixa antes de registrar outro pagamento.';
+  return;
+ }
+ for(const m of mine){const option=document.createElement('option');option.value=String(m.sessaoId);option.textContent='Mesa '+m.numero+(m.clienteNome?' · '+m.clienteNome:'');select.append(option);}
+ const pendingOption=pendingWaiterPayment&&mine.find(m=>Number(m.sessaoId)===Number(pendingWaiterPayment.sessaoId));
+ select.value=pendingOption?String(pendingWaiterPayment.sessaoId):(mine.some(m=>String(m.sessaoId)===previous)?previous:String(mine[0].sessaoId));
+ $('#registerPayment').disabled=false;
+ if(pendingWaiterPayment){
+  if(pendingOption){
+   $('#billingAmount').value=String(pendingWaiterPayment.valor);
+   $('#billingMethod').value=pendingWaiterPayment.formaPagamento;
+   $('#billingMessage').textContent='Há uma tentativa anterior que pode ter sido registrada. Reenvie exatamente os mesmos dados para reutilizar a mesma chave idempotente.';
+  }else{
+   $('#billingMessage').textContent='Existe uma tentativa pendente para a mesa '+pendingWaiterPayment.mesa+'. Ela não está mais sob sua responsabilidade; confira o Caixa antes de registrar outro pagamento.';
+   $('#registerPayment').disabled=true;
+  }
+ }
+ updateBillingConfirmation();
+ void loadBillingSummary();
+}
+function openBillingForSession(sessaoId,mesaNumero){
+ switchTab('billing');
+ renderBillingSessions();
+ const select=$('#billingSession');
+ if([...select.options].some(o=>o.value===String(sessaoId)))select.value=String(sessaoId);
+ $('#billingMessage').textContent='Mesa '+mesaNumero+' selecionada. Consulte o saldo antes de registrar o recebimento.';
+ void loadBillingSummary();
+}
+async function loadBillingSummary(){
+ const sessionId=Number($('#billingSession')?.value);
+ if(!Number.isSafeInteger(sessionId)||sessionId<1){$('#billingSummary').textContent='Selecione uma mesa sob sua responsabilidade.';return}
+ if(!navigator.onLine){$('#billingSummary').textContent='Conecte-se para consultar o saldo no servidor.';return}
+ try{
+  const data=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/sessoes/'+sessionId+'/resumo-pagamento');
+  $('#billingSummary').textContent='Mesa '+data.mesa+' · Total entregue: '+money(Number(data.valorTotal))+' · Já recebido: '+money(Number(data.valorPago))+' · Saldo: '+money(Number(data.valorRestante));
+  $('#registerPayment').disabled=Number(data.valorRestante)<=0||!!(pendingWaiterPayment&&Number(pendingWaiterPayment.sessaoId)!==sessionId);
+ }catch(e){
+  $('#billingSummary').textContent=e.message||'Não foi possível consultar o saldo.';
+  $('#registerPayment').disabled=true;
+ }
+}
+function updateBillingConfirmation(){
+ const pix=$('#billingMethod').value==='pix';
+ $('#pixPaymentNote').hidden=!pix;
+ $('#billingConfirmLabel').textContent=pix?'Confirmei o crédito PIX no aplicativo bancário.':'Confirmo que recebi o valor informado.';
+}
+async function submitWaiterPayment(){
+ const sessionId=Number($('#billingSession').value);
+ const valor=Number($('#billingAmount').value);
+ const formaPagamento=$('#billingMethod').value;
+ if(!Number.isSafeInteger(sessionId)||sessionId<1){$('#billingMessage').textContent='Selecione uma mesa sob sua responsabilidade.';return}
+ if(!Number.isFinite(valor)||valor<=0){$('#billingMessage').textContent='Informe um valor maior que zero.';return}
+ if(!$('#billingReceivedConfirm').checked){$('#billingMessage').textContent='Confirme o recebimento antes de registrar.';return}
+ const valorArredondado=Number(valor.toFixed(2));
+ if(pendingWaiterPayment){
+  if(Number(pendingWaiterPayment.sessaoId)!==sessionId||Number(pendingWaiterPayment.valor)!==valorArredondado||pendingWaiterPayment.formaPagamento!==formaPagamento){
+   $('#billingMessage').textContent='Há uma tentativa anterior possivelmente registrada. Reenvie os mesmos dados para reutilizar a chave idempotente; consulte o Caixa antes de iniciar outra cobrança.';
+   return;
+  }
+ }else{
+  const mesa=mesas.find(m=>Number(m.sessaoId)===sessionId);
+  pendingWaiterPayment={sessaoId,mesa:mesa?.numero||'?',valor:valorArredondado,formaPagamento,key:uid()};
+  localStorage.setItem(pendingPaymentStorageKey,JSON.stringify(pendingWaiterPayment));
+ }
+ const button=$('#registerPayment');button.disabled=true;
+ try{
+  const out=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/sessoes/'+sessionId+'/pagamentos',{
+   method:'POST',headers:{'content-type':'application/json'},
+   body:JSON.stringify({valor:valorArredondado,formaPagamento,idempotencyKey:pendingWaiterPayment.key})
+  });
+  pendingWaiterPayment=null;localStorage.removeItem(pendingPaymentStorageKey);
+  $('#billingAmount').value='';$('#billingReceivedConfirm').checked=false;
+  $('#billingMessage').textContent='Recebimento registrado: '+money(Number(out.pagamento.valor))+'. Saldo restante: '+money(Number(out.valorRestante))+(out.idempotentReplay?' (confirmação recuperada após repetição segura).':'');
+  await loadBillingSummary();
+  await loadMesas();
+ }catch(e){
+  if(e.status&&e.status<500){pendingWaiterPayment=null;localStorage.removeItem(pendingPaymentStorageKey);}
+  $('#billingMessage').textContent=(e.message||'Não foi possível registrar o recebimento.')+(pendingWaiterPayment?' Se houve timeout, tente novamente sem alterar mesa, valor ou forma para reutilizar a mesma chave.':'');
+ }finally{button.disabled=false;void loadBillingSummary();}
+}
+$('#billingSession').addEventListener('change',()=>{if(pendingWaiterPayment&&Number($('#billingSession').value)!==Number(pendingWaiterPayment.sessaoId)){const mine=mesas.find(m=>Number(m.sessaoId)===Number(pendingWaiterPayment.sessaoId)&&Number(m.garcomResponsavelId)===currentWaiterId);if(mine)$('#billingSession').value=String(pendingWaiterPayment.sessaoId);$('#billingMessage').textContent='Resolva a tentativa pendente com os mesmos dados antes de selecionar outra mesa.';}void loadBillingSummary()});
+$('#refreshBilling').addEventListener('click',()=>loadBillingSummary());
+$('#billingMethod').addEventListener('change',updateBillingConfirmation);
+$('#registerPayment').addEventListener('click',submitWaiterPayment);
 async function transferTable(table,targetId,targetName){
  if(!Number.isSafeInteger(targetId)||targetId<1){alert('Escolha um garçom ativo para receber a mesa.');return;}
  if(!confirm('Transferir a mesa '+table+' para '+targetName+'? Pedidos já prontos continuarão prontos e passarão para a fila do novo responsável.'))return;
