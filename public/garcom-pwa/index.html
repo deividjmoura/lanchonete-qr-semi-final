@@ -148,7 +148,8 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
 </dialog>
 <dialog id="qrModal" class="sheet small-sheet" aria-labelledby="qrTitle">
  <div class="sheet-top"><div><span class="section-eyebrow">AUTOATENDIMENTO</span><h2 id="qrTitle">QR da mesa</h2></div><button type="button" id="closeQr" class="close-button" aria-label="Fechar">×</button></div>
- <div class="sheet-body center-content"><p class="muted">Mostre este QR para o cliente pedir pelo celular.</p><label class="field">Mesa<select id="qrTable"></select></label><div class="qr-row"><img id="qrImage" alt="Código QR do cliente" width="200" height="200"></div><label class="field">Link da mesa<input id="qrUrl" readonly></label><button class="primary full" id="copyQr" type="button">Copiar link</button><p class="hint">O endereço continua disponível offline. A imagem do QR requer conexão para carregar.</p></div>
+ <div class="sheet-body center-content"><p class="muted">Mostre este QR para o cliente pedir pelo celular.</p><label class="field">Mesa<select id="qrTable"></select></label><div class="qr-row"><div id="qrImage" role="img" aria-label="Código QR do cliente"></div></div><label class="field">Link da mesa<input id="qrUrl" readonly></label><button class="primary full" id="copyQr" type="button">Copiar link</button><p class="hint">O endereço e o QR são gerados neste aparelho, inclusive sem conexão.</p></div>
 </dialog>
+<script src="./qrcode-generator.js" defer></script>
 <script type="module" src="./app.js"></script>
 </body></html>
