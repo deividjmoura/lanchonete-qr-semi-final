@@ -29,8 +29,15 @@ O endpoint já existente `POST /api/garcom/:token/pedidos/:pedidoId/entregar` co
 - Transferências ficam registradas em `mesa_atendimento_historico`, com `alterado_por_id` e `alterado_em`. Garçons desativados mantêm o histórico.
 - Uma sessão atribuída pela primeira vez depois de pedidos do cliente passa a creditar a venda ao garçom responsável, conforme o modelo comercial definido para esta versão.
 
+## Cobrança parcial pelo garçom
+- `GET /api/garcom/:token/sessoes/:sessaoId/resumo-pagamento` devolve total dos itens entregues, valor já pago e saldo. Exige que a sessão esteja aberta e pertença ao garçom autenticado.
+- `POST /api/garcom/:token/sessoes/:sessaoId/pagamentos` é implementado pela Frente 1 no PR #85 e usa o mesmo motor financeiro do caixa. O servidor verifica a responsabilidade novamente dentro da transação que registra o pagamento; não confiar apenas na conferência feita pela interface/rota.
+- O PWA envia uma chave de idempotência estável e exige confirmação explícita do recebimento. Em caso de timeout, deve-se reenviar os mesmos dados para reutilizar a chave; não iniciar outra cobrança até resolver a tentativa anterior.
+- PIX exige confirmação manual do crédito no aplicativo bancário. O formulário do garçom não gera QR dinâmico nem confirma liquidação automaticamente.
+- O garçom pode registrar pagamentos parciais; não pode fechar a sessão nem liberar a mesa. O fechamento final continua no Caixa.
+
 ## Fora deste PR
-Não há neste trabalho confirmação de PIX, captura offline, service worker/PWA nem fechamento pelo garçom. Esses fluxos exigem API específica com validação de recebimento **online**, auditoria e controle de concorrência; não usar o endpoint público de cliente para registrar pagamento.
+Não há captura de pagamento offline nem Web Push funcional com o aplicativo fechado. A interface de cobrança exige conexão; o servidor valida o saldo, a sessão aberta e o responsável atual. Não usar o endpoint público de cliente para registrar pagamento.
 
 ## Testes necessários antes de produção
 Executar migrations 0019 em banco isolado; teste admin/garçom ativo/inativo, tentativa de atuar em mesa de outro garçom, transferência, idempotência, reconciliação de faturamento, data local e histórico depois de desativar funcionário. Testar frontend e endpoints das outras branches somente após integrar sem conflitos.
