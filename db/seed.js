@@ -21,7 +21,7 @@ if (!Number.isSafeInteger(numeroConfigurado) || numeroConfigurado < 1 || numeroC
 const NUM_MESAS = numeroConfigurado;
 
 function normFoto(s) {
-  return String(s || '').toLowerCase().normalize('NFD').replace(/\\p{M}/gu, '');
+  return String(s || '').toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
 }
 
 // Reutiliza o conjunto de imagens do cardápio Lanchonete QR.
@@ -29,16 +29,16 @@ function normFoto(s) {
 function fotoPara(nomeRaw, catRaw) {
   const nome = normFoto(nomeRaw);
   const cat = normFoto(catRaw);
-  if (/\\bcombo\\b/.test(nome)) return '/assets/demo/combo.webp';
+  if (/\bcombo\b/.test(nome)) return '/assets/demo/combo.webp';
   if (/dog/.test(nome) && /bacon/.test(nome)) return '/assets/demo/dog-bacon.webp';
   if (/dog/.test(nome) && /especial/.test(nome)) return '/assets/demo/dog-especial.webp';
   if (/dog/.test(nome) && /(vegetariano|vegano)/.test(nome)) return '/assets/demo/dog-veg.webp';
   if (/dog/.test(nome) && /duplo/.test(nome)) return '/assets/demo/dog-duplo.webp';
-  if (/dog/.test(nome) || /hot\\s*dogs?/.test(cat)) return '/assets/demo/dog-classic.webp';
-  if (/x-?\\s*bacon|xbacon/.test(nome)) return '/assets/demo/xbacon.webp';
-  if (/x-?\\s*salada/.test(nome)) return '/assets/demo/salad.webp';
-  if (/x-?\\s*tudo/.test(nome)) return '/assets/demo/burger.webp';
-  if (/frango grelhado|x-?\\s*frango/.test(nome)) return '/assets/demo/chicken.webp';
+  if (/dog/.test(nome) || /hot\s*dogs?/.test(cat)) return '/assets/demo/dog-classic.webp';
+  if (/x-?\s*bacon|xbacon/.test(nome)) return '/assets/demo/xbacon.webp';
+  if (/x-?\s*salada/.test(nome)) return '/assets/demo/salad.webp';
+  if (/x-?\s*tudo/.test(nome)) return '/assets/demo/burger.webp';
+  if (/frango grelhado|x-?\s*frango/.test(nome)) return '/assets/demo/chicken.webp';
   if (/misto/.test(nome)) return '/assets/demo/misto.webp';
   if (/natural de frango|sanduiche natural|sanduíche natural/.test(nome)) return '/assets/demo/natural.webp';
   if (/sandu|x-|burger|hamb/.test(nome) || /sandu/.test(cat)) return '/assets/demo/burger.webp';
@@ -48,13 +48,13 @@ function fotoPara(nomeRaw, catRaw) {
   if (/polenta/.test(nome)) return '/assets/demo/polenta.webp';
   if (/mandioca|aipim|cassava/.test(nome)) return '/assets/demo/mandioca.webp';
   if (/suco/.test(nome)) return '/assets/demo/juice.webp';
-  if (/milk\\s*shake|milkshake|shake/.test(nome)) return '/assets/demo/milkshake.webp';
-  if (/agua de coco|\\bcoco\\b/.test(nome)) return '/assets/demo/water.webp';
-  if (/\\bagua\\b/.test(nome)) return '/assets/demo/water.webp';
+  if (/milk\s*shake|milkshake|shake/.test(nome)) return '/assets/demo/milkshake.webp';
+  if (/agua de coco|\bcoco\b/.test(nome)) return '/assets/demo/water.webp';
+  if (/\bagua\b/.test(nome)) return '/assets/demo/water.webp';
   if (/refrigerante|refri|coca|cola|schweppes/.test(nome)) return '/assets/demo/soda-cola.webp';
   if (/caipi/.test(nome)) return '/assets/demo/caipi.webp';
-  if (/red\\s*bull|monster|tnt|baly|energ/.test(nome)) return '/assets/demo/energy.webp';
-  if (/long\\s*neck|cerveja|chopp|pilsen|malte|\\bipa\\b|balde|amstel|brahma|heineken|original/.test(nome))
+  if (/red\s*bull|monster|tnt|baly|energ/.test(nome)) return '/assets/demo/energy.webp';
+  if (/long\s*neck|cerveja|chopp|pilsen|malte|\bipa\b|balde|amstel|brahma|heineken|original/.test(nome))
     return '/assets/demo/beer.webp';
   if (/gin|moscow|mule|vodka|drink|aperol|martini|smirnoff|licor|tanqueray|steinhaeger|jagermeister|campari|bacardi|jack daniels|jose cuervo/.test(nome))
     return '/assets/demo/cocktail.webp';
@@ -62,7 +62,7 @@ function fotoPara(nomeRaw, catRaw) {
   if (/brownie/.test(nome)) return '/assets/demo/brownie.webp';
   if (/petit|gateau/.test(nome)) return '/assets/demo/petit.webp';
   if (/sobremesa|sorvete|doce/.test(nome) || /sobremesa/.test(cat)) return '/assets/demo/dessert.webp';
-  if (/hot\\s*dog|dog/.test(cat)) return '/assets/demo/dog-classic.webp';
+  if (/hot\s*dog|dog/.test(cat)) return '/assets/demo/dog-classic.webp';
   if (/sandu/.test(cat)) return '/assets/demo/burger.webp';
   if (/porc/.test(cat)) return '/assets/demo/fries.webp';
   if (/cerveja|chopp|bar/.test(cat)) return '/assets/demo/beer.webp';
