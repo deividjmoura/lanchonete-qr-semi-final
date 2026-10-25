@@ -11,8 +11,8 @@ const { entregarComoGarcom } = require('../db/garcons');
 const originalQuery = pool.query;
 const originalConnect = pool.connect;
 const tokens = {
-  'token-waiter-a': { id: 1, nome: 'Ana', token: 'token-waiter-a', ativo: true },
-  'token-waiter-b': { id: 2, nome: 'Bruno', token: 'token-waiter-b', ativo: true },
+  '00000000-0000-4000-8000-000000000001': { id: 1, nome: 'Ana', token: '00000000-0000-4000-8000-000000000001', ativo: true },
+  '00000000-0000-4000-8000-000000000002': { id: 2, nome: 'Bruno', token: '00000000-0000-4000-8000-000000000002', ativo: true },
 };
 
 function stubTokenLookup() {
@@ -52,8 +52,8 @@ test('dois garçons em dispositivos distintos recebem somente a fila de suas pr�
   };
 
   const [ana, bruno] = await Promise.all([
-    listarPedidosProntosGarcom('token-waiter-a'),
-    listarPedidosProntosGarcom('token-waiter-b'),
+    listarPedidosProntosGarcom('00000000-0000-4000-8000-000000000001'),
+    listarPedidosProntosGarcom('00000000-0000-4000-8000-000000000002'),
   ]);
 
   assert.deepEqual(ana.map(p => p.id), [501]);
@@ -77,7 +77,7 @@ test('transferência grava origem, destino e ator; pedidos prontos não são alt
     release() {},
   });
 
-  const result = await transferirMesa('token-waiter-a', 4, 2);
+  const result = await transferirMesa('00000000-0000-4000-8000-000000000001', 4, 2);
   assert.equal(result.transferida, true);
   assert.equal(result.pedidosProntosMantidos, true);
   assert.deepEqual(result.de, { id: 1, nome: 'Ana' });
@@ -102,7 +102,7 @@ test('transferência é recusada se o solicitante não for o responsável atual'
     },
     release() {},
   });
-  await assert.rejects(() => transferirMesa('token-waiter-a', 4, 2), err => err.status === 403);
+  await assert.rejects(() => transferirMesa('00000000-0000-4000-8000-000000000001', 4, 2), err => err.status === 403);
   assert.equal(calls.some(sql => /UPDATE mesa_sessoes SET garcom_responsavel_id/i.test(sql)), false);
   assert.equal(calls.some(sql => /INSERT INTO mesa_atendimento_historico/i.test(sql)), false);
 });
@@ -122,7 +122,7 @@ test('iniciar atendimento não permite tomar mesa já atribuída, mesmo com tran
     },
     release() {},
   });
-  await assert.rejects(() => assumirMesa('token-waiter-a', 4, { transferir: true }), err => err.status === 409);
+  await assert.rejects(() => assumirMesa('00000000-0000-4000-8000-000000000001', 4, { transferir: true }), err => err.status === 409);
   assert.equal(calls.some(c => /UPDATE mesa_sessoes SET garcom_responsavel_id/i.test(c.sql)), false);
   assert.equal(calls.some(c => /INSERT INTO mesa_atendimento_historico/i.test(c.sql)), false);
 });
@@ -139,7 +139,7 @@ test('garçom anterior recebe 403 ao tentar entregar após a transferência', as
     },
     release() {},
   });
-  await assert.rejects(() => entregarComoGarcom(501, 'token-waiter-a'), err => err.status === 403);
+  await assert.rejects(() => entregarComoGarcom(501, '00000000-0000-4000-8000-000000000001'), err => err.status === 403);
   assert.equal(calls.some(sql => /UPDATE itens_pedido/i.test(sql)), false);
   assert.equal(calls.some(sql => /COMMIT/i.test(sql)), false);
 });
