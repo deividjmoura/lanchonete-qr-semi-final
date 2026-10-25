@@ -300,7 +300,7 @@ $('#billingSession').addEventListener('change',()=>{if(pendingWaiterPayment&&Num
 $('#refreshBilling').addEventListener('click',()=>loadBillingSummary());
 $('#billingMethod').addEventListener('change',updateBillingConfirmation);
 $('#registerPayment').addEventListener('click',submitWaiterPayment);
-async function transferTable(table,targetId,targetName){
+async async function transferTable(table,targetId,targetName){
  if(!Number.isSafeInteger(targetId)||targetId<1){alert('Escolha um garçom ativo para receber a mesa.');return;}
  if(!confirm('Transferir a mesa '+table+' para '+targetName+'? Pedidos já prontos continuarão prontos e passarão para a fila do novo responsável.'))return;
  try{
