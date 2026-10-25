@@ -133,3 +133,30 @@ A meta de hoje é fechar as três entregas em PRs revisáveis, com CI verde e co
 2. Revisar juntos endpoints/contratos e executar a suíte de regressão integrada, incluindo os testes de PostgreSQL descartável quando disponíveis.
 3. Conferir que pagamentos não fecham sessões com pendências, transferência muda o destinatário sem duplicar tarefas e o PWA não promete notificações de background que o servidor ainda não entrega.
 4. Só depois solicitar autorização para merge/deploy. Nenhuma frente altera Railway, secrets, dados de produção ou configuração externa sem autorização explícita.
+
+
+## Atualização do coordenador — situação integrada e Railway (2026-10-25)
+
+Esta atualização registra o estado observado após revisar os PRs e o ambiente de produção. A autorização operacional do proprietário para ajustes rotineiros no Railway foi dada diretamente na conversa em 2026-10-25; portanto, não é necessário pedir confirmação a cada alteração de configuração reversível. Continuam proibidos segredos no Git, logs e documentação, e deploy de código incompleto.
+
+### Railway — estado observado
+- Projeto `exquisite-nurturing`, serviço `lanchonete-qr-semi-final`, ambiente `production`.
+- A fonte do serviço permanece `deividjmoura/lanchonete-qr-semi-final` / branch `main`; build `npm run build`; start `npm run start:prod`; pre-deploy `npm run db:migrate && npm run db:seed`.
+- Domínio Railway observado: `qradminn.up.railway.app`. Nenhum domínio customizado aparece anexado ao serviço.
+- Deploy da integração da Frente 3, commit `daf1b2aab6df6c656b18d27059cf03f766f80237`, terminou `SUCCESS`; serviço online com uma réplica, sem falhas recentes ou alertas ativos.
+- `PIX_CHAVE`, `PIX_NOME`, `PIX_CIDADE` e as variáveis `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` estão configuradas no serviço de produção. Não registrar nem copiar valores secretos aqui.
+- A configuração VAPID foi aplicada com skip-deploy. Durante a revisão, `VAPID_SUBJECT` foi alinhado ao domínio realmente anexado ao serviço (`https://qradminn.up.railway.app`), também com skip-deploy. A configuração não comprova que Web Push funcione; o código ainda precisa consumir as variáveis após a integração/deploy apropriados.
+
+### Estado dos PRs e bloqueios
+- **PR #84 / Frente 3:** mergeado na `main`; deploy correspondente confirmado como `SUCCESS`. Isso entrega UX/consentimento, não Web Push em segundo plano.
+- **PR #85 / Frente 1:** draft, aberto, head `9d093ad68b8434b4c58e1f90f70557e5efb1998d`; CI associado ao head observado como `SUCCESS`. Ainda faltam validações integradas e PostgreSQL real para os fluxos financeiros.
+- **PR #86 / Frente 2:** draft, aberto, head `90471c46b7f566ec40aa8b02e1a9bf22f0e81b6e); o GitHub reporta `mergeable=false` e não foi localizado run de CI para esse head exato. O run verde citado anteriormente pertencia a um SHA anterior; não reutilizar essa evidência como se validasse o head atual.
+- **Colisão de migrations confirmada:** a Frente 1 contém `0022_sessao_pagamentos_operador.sql` e a Frente 2 contém `0022_atendimento_transferencia_actor.sql`. Como a sequência de integração prioriza Frente 1 antes da Frente 2, manter `0022` na Frente 1 e renumerar a migration da Frente 2 para `0023_atendimento_transferencia_actor.sql`, conferindo o runner e os testes antes de atualizar o PR. Não executar migration manualmente em produção.
+- O contrato operacional da Frente 2 continua sem exigir VAPID/Web Push por si só. VAPID pertence à implementação de notificações da Frente 3; não confundir a preparação de variáveis com requisito concluído da Frente 2.
+
+### Próximos passos coordenados
+1. Frente 2: resolver conflitos do PR, renumerar a migration para `0023`, confirmar autorização/histórico e executar CI no head novo.
+2. Frente 1: revisar o CI verde do head atual e concluir testes integrados dos pagamentos, sem confiar em valores enviados pelo cliente.
+3. Integração: validar a sequência completa de migrations em PostgreSQL descartável e executar testes de transferência/entrega e pagamentos com os contratos combinados.
+4. Depois de revisão e CI verde, promover a integração em `main`; acompanhar o deploy automático e validar em produção com smoke tests não destrutivos. Não executar `test:dia` ou qualquer teste mutável contra produção sem avaliar seu impacto primeiro.
+5. Frente 3: só reabrir o escopo de Web Push quando houver implementação completa de subscrição, persistência, autorização, envio, limpeza HTTP 410 e teste real com o PWA encerrado.
