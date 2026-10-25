@@ -283,6 +283,7 @@ export function mapCaixaSessoes(rows: any[]): { sessoes: Sessao[]; pedidos: Pedi
       valor: Number(p.valor),
       forma: formaFromApi(p.formaPagamento || p.forma_pagamento || p.forma),
       criadoEm: p.criadoEm || p.criado_em ? new Date(p.criadoEm || p.criado_em).getTime() : Date.now(),
+      operadorNome: p.operadorNome || p.operador_nome || null,
     }));
 
     const valorTotal = Number(s.valorTotal ?? s.valor_total ?? 0);
