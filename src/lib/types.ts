@@ -83,6 +83,7 @@ export interface Pagamento {
   valor: number;
   forma: FormaPagamento;
   criadoEm: number;
+  operadorNome?: string | null;
 }
 
 export type SessaoStatus = "aberta" | "fechada";
