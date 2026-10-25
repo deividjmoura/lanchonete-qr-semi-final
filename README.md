@@ -37,6 +37,51 @@ Caixa confere os itens entregues, registra pagamento e fecha a comanda
 
 A comanda da mesa é acumulativa: a mesa pode receber vários pedidos durante a visita. O total cobrável é calculado no servidor a partir dos itens entregues, não do total enviado pelo navegador.
 
+## Fluxo de pagamento e encerramento da comanda
+
+O pagamento deve seguir o fluxo abaixo. O PostgreSQL e as validações do servidor são a fonte de verdade; a interface não deve considerar uma comanda fechada só porque o operador clicou no botão.
+
+```mermaid
+flowchart TD
+    A[Cliente solicita a conta] --> B[Garçom ou caixa abre a comanda]
+    B --> C[Servidor calcula itens entregues, descontos e taxa]
+    C --> D{Há pedidos ou itens pendentes?}
+    D -- Sim --> E[Informar pendências e concluir entregas]
+    E --> C
+    D -- Não --> F[Escolher forma e valor do pagamento]
+    F --> G{Forma escolhida}
+    G -- PIX --> H[Gerar QR dinâmico com o valor informado]
+    H --> I[Equipe verifica o recebimento no banco]
+    G -- Dinheiro / débito / crédito --> J[Equipe confirma o recebimento]
+    I --> K[Registrar lançamento no servidor]
+    J --> K
+    K --> L{Saldo restante maior que zero?}
+    L -- Sim --> M[Manter comanda aberta e atualizar o saldo]
+    M --> F
+    L -- Não --> N[Servidor valida total, pendências e estado da sessão]
+    N --> O{Pode encerrar?}
+    O -- Não --> P[Mostrar motivo e manter comanda aberta]
+    P --> B
+    O -- Sim --> Q[Fechar sessão em transação]
+    Q --> R[Atualizar caixa, mesas e filas]
+    R --> S[Disponibilizar comprovante de consumo não fiscal]
+    S --> T[Fim]
+```
+
+### Regras operacionais para cobrança
+
+1. **Confira a comanda:** o total é calculado no servidor a partir dos itens entregues, com os descontos e a taxa de serviço aplicáveis. Não confie em totais calculados somente no navegador.
+2. **Verifique pendências:** pedidos ou itens que ainda não foram concluídos devem ser resolvidos antes do encerramento. A interface deve explicar o que está impedindo fechar a conta.
+3. **PIX não é confirmação de pagamento:** gere o QR com o valor que será cobrado, mas confirme o crédito no aplicativo bancário antes de registrar o recebimento. Esta versão não tem confirmação automática por banco/gateway.
+4. **Pagamentos parciais:** registre cada parcela com sua forma e valor; mantenha a comanda aberta enquanto houver saldo. Atualize a lista e o saldo após cada lançamento.
+5. **Evite duplicidade:** operações financeiras devem respeitar a idempotência do servidor. Em caso de timeout, consulte o estado atualizado antes de tentar lançar o mesmo pagamento novamente.
+6. **Fechamento consistente:** só considere a mesa livre depois que o servidor confirmar o encerramento. Se o pagamento for registrado, mas o fechamento falhar, informe os dois estados explicitamente e não esconda a comanda.
+7. **Histórico e comprovante:** preserve os lançamentos e apresente os itens, quantidades, valores unitários, adicionais, descontos, taxas, formas de pagamento e total. O comprovante de consumo não substitui documento fiscal.
+
+### Validação obrigatória antes de publicar
+
+Teste em banco isolado pelo menos estes cenários: pagamento parcial seguido de quitação; PIX e confirmação manual; dinheiro e cartões; toque duplo/repetição de requisição; tentativa de fechar com itens pendentes; sessão já fechada; falha entre o registro do pagamento e a atualização da interface; descontos e taxa de serviço; e atualização da lista de mesas após o encerramento. Não execute testes mutáveis no banco de produção.
+
 ## Funcionalidades
 
 ### Cliente — QR da mesa
