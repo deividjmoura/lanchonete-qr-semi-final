@@ -647,8 +647,48 @@ export const usePub = create<PubState>((set, get) => ({
 
   registrarPagamento: (sessaoId, valor, forma) => {
     void (async () => {
+      const sessao = get().sessoes.find((x) => x.id === sessaoId);
+      const totalAntes = sessao
+        ? Math.max(0, consumoSessao(sessao, get().pedidos) - sessao.desconto + sessao.taxa)
+        : 0;
+      const pagoAntes = sessao
+        ? (sessao.valorPago != null ? Number(sessao.valorPago) : pagoSessao(sessao))
+        : 0;
+      const saldoAntes = Math.max(0, Math.round((totalAntes - pagoAntes) * 100) / 100);
+      const pagamentoFinalSimples = Boolean(
+        sessao &&
+        sessao.status === "aberta" &&
+        sessao.pedidosPendentes === 0 &&
+        sessao.desconto <= 0.005 &&
+        sessao.taxa <= 0.005 &&
+        valor >= saldoAntes - 0.005
+      );
+
       try {
         await api.registrarPagamento(sessaoId, valor, formaToApi(forma));
+
+        // No caso simples de quitação integral, fecha a sessão logo após o
+        // lançamento. Evita deixar mesa e pedidos como se ainda estivessem
+        // pendentes só porque o operador precisou acionar dois botões.
+        if (pagamentoFinalSimples) {
+          try {
+            await api.fecharSessao(sessaoId, {
+              formaPagamento: formaToApi(forma),
+              desconto: 0,
+              taxaServico: 0,
+            });
+            ajustesCaixaLocais.delete(sessaoId);
+            emit(get, set, "sessao-fechada", `Sessão #${sessaoId} quitada e fechada`);
+            await get().hydrateCaixa();
+            await get().hydrateMesas().catch(() => null);
+            return;
+          } catch (e: any) {
+            await get().hydrateCaixa();
+            alert(`Pagamento registrado, mas a mesa continua aberta: ${e.message || "não foi possível fechar a conta"}`);
+            return;
+          }
+        }
+
         await get().hydrateCaixa();
       } catch (e: any) {
         alert(e.message || "Erro no pagamento");
