@@ -121,10 +121,40 @@ function renderTableGrid(){
   const card=document.createElement('button');card.type='button';card.className='table-tile';
   if(m.garcomResponsavelId&&m.garcomResponsavelNome)card.classList.add('taken');
   const title=document.createElement('strong');title.textContent='Mesa '+String(m.numero).padStart(2,'0');
-  const desc=document.createElement('small');desc.textContent=m.garcomResponsavelNome?('Atendimento: '+m.garcomResponsavelNome):(m.sessaoId?'Cliente na mesa':'Pronta para atender');
-  card.append(title,desc);card.onclick=()=>{$('#tableSelect').value=String(m.numero);$('#modalTable').value=String(m.numero);$('#qrTable').value=String(m.numero);$('#tableMessage').textContent='Mesa '+m.numero+' selecionada.'};
+  const desc=document.createElement('small');
+  desc.textContent=m.garcomResponsavelNome?('Atendimento: '+m.garcomResponsavelNome):(m.pedidoClienteQr?'Pedido recebido pelo QR':(m.sessaoId?'Sessão aberta':'Pronta para atender'));
+  card.append(title,desc);card.onclick=()=>openTableDetails(m.numero);
   root.append(card);
  }
+}
+function openTableDetails(tableNumber){
+ const m=mesas.find(x=>Number(x.numero)===Number(tableNumber));if(!m)return;
+ const root=$('#tableDetailsActions');root.replaceChildren();
+ $('#tableDetailsTitle').textContent='Mesa '+m.numero;
+ $('#tableDetailsStatus').textContent=m.garcomResponsavelNome
+   ?'Responsável atual: '+m.garcomResponsavelNome
+   :(m.pedidoClienteQr?'O cliente já fez um pedido pelo QR.':'Mesa livre para novos pedidos.');
+ const qr=document.createElement('button');qr.type='button';qr.className='secondary';qr.textContent='Mostrar QR da mesa';qr.onclick=()=>openQr(m.numero);root.append(qr);
+ if(!m.garcomResponsavelId&&m.pedidoClienteQr){
+   const nameLabel=document.createElement('label');nameLabel.className='field';nameLabel.textContent='Nome do cliente (opcional)';
+   const name=document.createElement('input');name.maxLength=100;name.autocomplete='off';name.placeholder=m.clienteNome||'Nome do cliente';name.value=m.clienteNome||'';nameLabel.append(name);root.append(nameLabel);
+   const assume=document.createElement('button');assume.type='button';assume.className='primary';assume.textContent='Assumir mesa';
+   assume.onclick=async()=>{assume.disabled=true;try{await iniciarAtendimento(m.numero,name.value.trim());$('#tableDetailsStatus').textContent='Mesa assumida. Você é o responsável pelo atendimento.';await loadMesas();$('#tableDetailsModal').close();}catch(e){alert(e.message||'Não foi possível assumir a mesa.');assume.disabled=false;}};root.append(assume);
+ }else if(Number(m.garcomResponsavelId)===Number(currentWaiterId)&&m.sessaoId){
+   const label=document.createElement('label');label.className='field';label.textContent='Transferir para outro garçom';
+   const select=document.createElement('select');select.setAttribute('aria-label','Garçom de destino da mesa '+m.numero);
+   const options=activeWaiters.filter(g=>Number(g.id)!==Number(currentWaiterId));
+   const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent=options.length?'Escolha o garçom':'Nenhum outro garçom ativo';select.append(placeholder);
+   for(const g of options){const option=document.createElement('option');option.value=String(g.id);option.textContent=g.nome;select.append(option);}
+   label.append(select);root.append(label);
+   const transfer=document.createElement('button');transfer.type='button';transfer.className='primary';transfer.textContent='Transferir mesa';transfer.disabled=!options.length;
+   transfer.onclick=async()=>{const targetId=Number(select.value);const targetName=select.options[select.selectedIndex]?.textContent||'';transfer.disabled=true;try{await transferTable(m.numero,targetId,targetName);$('#tableDetailsModal').close();}finally{transfer.disabled=!options.length;}};root.append(transfer);
+ }else if(m.garcomResponsavelId){
+   const note=document.createElement('p');note.className='muted';note.textContent='Somente o garçom responsável atual pode transferir esta mesa.';root.append(note);
+ }else{
+   const note=document.createElement('p');note.className='muted';note.textContent='A opção de assumir só aparece quando existe um pedido iniciado pelo cliente via QR.';root.append(note);
+ }
+ $('#tableDetailsModal').showModal();
 }
 document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.dataset.tab)));
 for(const id of ['newOrderTables','newOrderOrders'])$('#'+id).addEventListener('click',()=>openOrder());
