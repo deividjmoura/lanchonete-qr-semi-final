@@ -603,3 +603,11 @@ Nenhum merge foi realizado por esta atualização. Não executar migrations/test
 - PRs abertas incluem #110, #107, #106, #100, #92, #89, #82/#79, #81, #73, #71, #67, #58/#57/#56, #38 e #108. Várias estão em draft e/ou concorrem em `server.js`, workflows, migrações e PWA.
 - **Nenhuma PR é considerada integrada por este plano.** O estado de checks e mergeability deve ser consultado novamente para o HEAD atual de cada PR antes de executar qualquer merge. Esta atualização é uma ordem de integração, não uma certificação de segurança ou produção.
 - A próxima ação não é abrir novas branches de feature: é reconciliar as PRs de segurança independentes em sequência, fechar duplicatas e validar a integração Frente 1 + Frente 2 no mesmo PostgreSQL descartável.
+
+### Execução do plano — primeiro merge concluído (2026-10-25)
+- **PR #110 integrada:** https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/110 — correção de segurança para impedir vazamento na redefinição de senha (#49).
+- **Evidência pré-merge:** HEAD `e0974939a7a788665475d7b5e3fa1496d74444bf`, `mergeable=true`, estado GitHub `clean`; checks `verify` e `postgres-integration` concluídos SUCCESS no mesmo HEAD.
+- **Commit de merge (squash):** `1c40b62d169068c15b61465c87fb184e8b1fe2a3`. GitHub confirmou `merged=true`.
+- **Próximo passo obrigatório:** agentes com PRs que alteram `server.js` devem atualizar a base após esse merge e revalidar checks no novo HEAD; não reutilizar checks de SHA anterior.
+- **PR #92:** check `verify` passou no HEAD antigo `2f654a086cbe0092a2b458648fdc43cec14dbb4c`, mas o estado de mergeabilidade está `unknown` e o HEAD precisa ser reconciliado com a `main` que acabou de avançar. **Não integrada**; reexecutar CI completo e adicionar teste de autorização negativa antes de promover.
+- O merge #110 é a primeira execução do plano; não significa que as demais PRs ou o produto estejam prontos para produção.
