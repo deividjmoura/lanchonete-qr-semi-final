@@ -4,12 +4,11 @@ import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "../utils/cn";
 import { alternarTema, temaAtual, EVENTO_TEMA, type Tema } from "../lib/tema";
 
-/* Identidade da casa: logotipo tipográfico + selo da cozinheira.
-   As imagens de referência são preservadas como direção visual do produto. */
+/* Marca provisória do produto: QR Admin. */
 export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   return (
-    <span className={cn("brand-logo inline-flex shrink-0 items-center overflow-hidden rounded-xl bg-[#f05e4a] shadow-sm",size === "sm" ? "h-10 w-[90px] sm:w-[118px]" : size === "lg" ? "h-[118px] w-[270px] sm:h-[145px] sm:w-[330px]" : "h-16 w-[150px]")}>
-      <img src="/branding/delicias/logo-original.svg" alt="Delicia’s São Miguel" className="w-full h-full object-contain" draggable={false}/>
+    <span className={cn("brand-logo inline-flex shrink-0 items-center overflow-hidden rounded-xl bg-white",size === "sm" ? "h-10 w-[90px] sm:w-[118px]" : size === "lg" ? "h-[118px] w-[270px] sm:h-[145px] sm:w-[330px]" : "h-16 w-[150px]")}>
+      <img src="/logo/qradmin-horizontal.png" alt="QR Admin" className="w-full h-full object-contain" draggable={false}/>
     </span>
   );
 }

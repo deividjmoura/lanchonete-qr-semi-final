@@ -1,5 +1,38 @@
 const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const cp=require('node:child_process');
 const root=path.join(__dirname,'..');const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+test('Qualquer garçom ativo pode criar pedido na sessão aberta sem transferir a mesa',()=>{
+ const api=read('db/atendimento.js'),ped=read('db/pedidos.js');
+ assert.match(api,/permitirResponsavelDiferente:true/);
+ assert.match(api,/sessaoIdEsperada/);
+ assert.match(ped,/!atendimento\.permitirResponsavelDiferente/);
+ assert.match(ped,/Number\(atendimento\.sessaoIdEsperada\)/);
+});
+test('Ao tocar numa mesa a PWA oferece novo pedido ou acréscimo sem assumir mesa alheia',()=>{
+ const pwa=read('public/garcom-pwa/app.js'),html=read('public/garcom-pwa/index.html'),server=read('server.js');
+ assert.match(pwa,/openTableActions\(m\.numero\)/);
+ assert.match(html,/Novo pedido/);
+ assert.match(html,/Acrescentar itens ao pedido atual/);
+ assert.match(pwa,/pedidos-ativos/);
+ assert.match(server,/listarPedidosAtivosMesaGarcom/);
+ assert.match(pwa,/if\(!tableInfo\?\.sessaoId\|\|!tableInfo\.garcomResponsavelId\)/);
+});
+test('Fila e entrega ficam restritas ao responsável da mesa ou ao garçom atribuído ao pedido',()=>{
+ const api=read('db/atendimento.js'),garcons=read('db/garcons.js'),pedidos=read('db/pedidos.js'),server=read('server.js');
+ assert.match(api,/s\.garcom_responsavel_id=\$1 OR p\.garcom_id=\$1/);
+ assert.match(garcons,/Este pedido está atribuído a outro garçom/);
+ assert.match(pedidos,/s\.garcom_responsavel_id=\$1 OR p\.garcom_id=\$1/);
+ assert.match(server,/getFilaGarcom\(g\.id\)/);
+});
+test('Caixa fecha quitação simples só quando não há pedidos ou avisos PIX pendentes',()=>{
+ const caixa=read('db/caixa.js');
+ assert.match(caixa,/Math\.abs\(total - valorPago\) <= 0\.009/);
+ assert.match(caixa,/pedidosPendentes\[0\].*=== 0/);
+ assert.match(caixa,/avisosPixPendentes\[0\].*=== 0/);
+ assert.match(caixa,/SET status='fechada', fechada_em=now\(\)/);
+ assert.match(caixa,/UPDATE mesas SET status='livre'/);
+ assert.match(caixa,/const vazia = semPedidos/);
+ assert.match(caixa,/const quitada = sessao\.pedidosPendentes === 0/);
+});
 test('PWA tem JavaScript valido apos edicao de pedidos e notificacoes',()=>{cp.execFileSync(process.execPath,['--check',path.join(root,'public/garcom-pwa/app.js')]);});
 test('Garcom consulta status de todas as suas mesas, nao apenas entregas',()=>{
  const api=read('db/atendimento.js');const pwa=read('public/garcom-pwa/app.js');

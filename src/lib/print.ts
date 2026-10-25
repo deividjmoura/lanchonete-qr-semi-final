@@ -639,7 +639,7 @@ export function imprimirComprovanteConsumo(c: {
       ${i.adicionaisNomes?`<div class="item-extra">+ ${esc(i.adicionaisNomes)}</div>`:""}</div>`).join("");
   const pagamentos=c.pagamentos.map(p=>`<div class="meta" style="display:flex;justify-content:space-between;gap:8px">
     <span>${esc(formaLabel(p.forma))}</span><b>${esc(BRL(p.valor))}</b></div>`).join("");
-  const body=`<div class="center"><p class="title">DELÍCIA'S SÃO MIGUEL</p>
+  const body=`<div class="center"><p class="title">QR ADMIN</p>
     <p class="sub">COMPROVANTE DE CONSUMO<br><b>DOCUMENTO NÃO FISCAL</b></p></div>
     <hr class="line-solid"/>
     <div class="center"><div class="mesa">MESA ${esc(c.mesa)}</div><b>CONTA #${esc(c.id)}</b></div>
