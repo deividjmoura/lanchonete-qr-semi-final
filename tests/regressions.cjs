@@ -11,7 +11,7 @@ const { EventEmitter } = require('node:events');
 const { eventAccess } = require('../db/event-access');
 const { subscribe, broadcast, clientCount } = require('../db/events');
 const { validarDestinoRemoto } = require('../db/foto');
-const { verificarOrigemRequisicao } = require('../db/auth');
+const { verificarOrigemRequisicao, csrfTokenParaSessao, verificarProtecaoCSRF } = require('../db/auth');
 const { ErroValidacao, numeroFinito, numeroInteiroPositivo } = require('../db/validacao');
 const { getOuAbrirSessao, getProdutoComRegras } = require('../db/queries');
 const { ErroGarcom, removerGarcom, setGarcomAtivo, entregarComoGarcom } = require('../db/garcons');
@@ -695,4 +695,66 @@ test('seed de garçom não imprime nem retorna token bearer', () => {
     /return\s*\{\s*created:\s*true,\s*count:\s*1,\s*token:\s*ins\[0\]\.token\s*\}/,
     'o seed não deve propagar o token em seu resultado'
   );
+});
+
+test('mutacoes autenticadas exigem token CSRF vinculado ao cookie de sessão', () => {
+  const session = 'session-canary-not-a-real-credential';
+  const csrf = csrfTokenParaSessao(session);
+  assert.match(csrf, /^[a-f0-9]{64}$/);
+
+  assert.doesNotThrow(() => verificarProtecaoCSRF({
+    method: 'POST',
+    headers: { cookie: 'lqr_session=' + session, 'x-csrf-token': csrf },
+  }));
+
+  assert.throws(() => verificarProtecaoCSRF({
+    method: 'POST',
+    headers: { cookie: 'lqr_session=' + session },
+  }), /Token CSRF ausente ou inválido/);
+
+  assert.throws(() => verificarProtecaoCSRF({
+    method: 'PATCH',
+    headers: { cookie: 'lqr_session=' + session, 'x-csrf-token': '0'.repeat(64) },
+  }), /Token CSRF ausente ou inválido/);
+
+  assert.throws(() => verificarProtecaoCSRF({
+    method: 'DELETE',
+    headers: { 'x-csrf-token': csrf },
+  }), /Token CSRF ausente ou inválido/);
+});
+
+test('token CSRF varia por sessão e métodos somente de leitura não o exigem', () => {
+  assert.notEqual(csrfTokenParaSessao('session-a'), csrfTokenParaSessao('session-b'));
+  assert.doesNotThrow(() => verificarProtecaoCSRF({ method: 'GET', headers: {} }));
+  assert.doesNotThrow(() => verificarProtecaoCSRF({ method: 'OPTIONS', headers: {} }));
+});
+
+test('CSRF integra emissao de token, validacao de rotas staff e cliente HTTP', () => {
+  const serverSource = fs.readFileSync('server.js', 'utf8');
+  const apiSource = fs.readFileSync('src/lib/api.ts', 'utf8');
+  assert.match(serverSource, /csrfToken: csrfTokenParaSessao\(token\)/);
+  assert.match(serverSource, /csrfToken: csrfTokenParaSessao\(sessionToken\)/);
+  assert.match(serverSource, /verificarProtecaoCSRF\(req\);/);
+  assert.match(apiSource, /headers\["X-CSRF-Token"\] = csrfToken/);
+  assert.match(apiSource, /await apiGet\("\/api\/me"\)/);
+});
+
+
+test('páginas legadas só usam fallback CSRF com origem same-origin validada', () => {
+  const session = 'legacy-session-canary';
+  assert.doesNotThrow(() => verificarProtecaoCSRF({
+    method: 'POST',
+    headers: { cookie: 'lqr_session=' + session, origin: 'http://app.local', host: 'app.local' },
+    socket: { encrypted: false },
+  }));
+  assert.throws(() => verificarProtecaoCSRF({
+    method: 'POST',
+    headers: { cookie: 'lqr_session=' + session, origin: 'https://evil.example', host: 'app.local' },
+    socket: { encrypted: false },
+  }), /Origem da requisição não permitida/);
+  assert.throws(() => verificarProtecaoCSRF({
+    method: 'POST',
+    headers: { cookie: 'lqr_session=' + session, referer: 'not-a-url', host: 'app.local' },
+    socket: { encrypted: false },
+  }), /Token CSRF ausente ou inválido/);
 });

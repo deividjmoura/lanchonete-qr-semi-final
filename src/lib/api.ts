@@ -1,5 +1,17 @@
 /** Cliente HTTP para a API Node (server.js). credentials: include para cookie de staff. */
 
+let csrfToken: string | null = null;
+
+function requiresStaffCsrf(path: string, method: string) {
+  if (["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase())) return false;
+  return path === "/api/logout" ||
+    path.startsWith("/api/admin/") ||
+    path.startsWith("/api/caixa/") ||
+    path.startsWith("/api/cozinha/") ||
+    path.startsWith("/api/bar/") ||
+    /^\/api\/pedidos\/\d+\/status$/.test(path);
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) {
@@ -18,7 +30,9 @@ async function parse(res: Response) {
 
 export async function apiGet<T = unknown>(path: string): Promise<T> {
   const res = await fetch(path, { credentials: "include" });
-  return parse(res) as Promise<T>;
+  const data: any = await parse(res);
+  if (path === "/api/me" && typeof data?.csrfToken === "string") csrfToken = data.csrfToken;
+  return data as T;
 }
 
 export async function apiSend<T = unknown>(
@@ -26,25 +40,38 @@ export async function apiSend<T = unknown>(
   method: string,
   body?: unknown
 ): Promise<T> {
+  const upperMethod = method.toUpperCase();
+  const needsCsrf = requiresStaffCsrf(path, upperMethod);
+  if (needsCsrf && !csrfToken) {
+    await apiGet("/api/me");
+  }
+
+  const headers: Record<string, string> = {};
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (needsCsrf && csrfToken) headers["X-CSRF-Token"] = csrfToken;
+
   const res = await fetch(path, {
     method,
     credentials: "include",
-    headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
+    headers: Object.keys(headers).length ? headers : undefined,
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
-  return parse(res) as Promise<T>;
+  const data: any = await parse(res);
+  if (path === "/api/login" && typeof data?.csrfToken === "string") csrfToken = data.csrfToken;
+  if (path === "/api/logout") csrfToken = null;
+  return data as T;
 }
 
 export const api = {
   cardapio: () => apiGet<any[]>("/api/cardapio"),
   login: (usuario: string, senha: string) =>
-    apiSend<{ ok?: boolean; staff?: { papel: string; nome?: string; login?: string }; home?: string }>(
+    apiSend<{ ok?: boolean; staff?: { papel: string; nome?: string; login?: string }; home?: string; csrfToken?: string }>(
       "/api/login",
       "POST",
       { usuario, senha }
     ),
   logout: () => apiSend("/api/logout", "POST"),
-  me: () => apiGet<{ id?: number; papel?: string; nome?: string; login?: string }>("/api/me"),
+  me: () => apiGet<{ id?: number; papel?: string; nome?: string; login?: string; csrfToken?: string }>("/api/me"),
 
   mesaSessao: (token: string) => apiGet<any>(`/api/mesas/${token}/sessao`),
   checkin: (token: string, clienteNome: string) =>
