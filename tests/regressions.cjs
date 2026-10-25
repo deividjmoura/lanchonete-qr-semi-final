@@ -622,3 +622,23 @@ test('CSRF integra emissao de token, validacao de rotas staff e cliente HTTP', (
   assert.match(apiSource, /headers\["X-CSRF-Token"\] = csrfToken/);
   assert.match(apiSource, /await apiGet\("\/api\/me"\)/);
 });
+
+
+test('páginas legadas só usam fallback CSRF com origem same-origin validada', () => {
+  const session = 'legacy-session-canary';
+  assert.doesNotThrow(() => verificarProtecaoCSRF({
+    method: 'POST',
+    headers: { cookie: 'lqr_session=' + session, origin: 'http://app.local', host: 'app.local' },
+    socket: { encrypted: false },
+  }));
+  assert.throws(() => verificarProtecaoCSRF({
+    method: 'POST',
+    headers: { cookie: 'lqr_session=' + session, origin: 'https://evil.example', host: 'app.local' },
+    socket: { encrypted: false },
+  }), /Origem da requisição não permitida/);
+  assert.throws(() => verificarProtecaoCSRF({
+    method: 'POST',
+    headers: { cookie: 'lqr_session=' + session, referer: 'not-a-url', host: 'app.local' },
+    socket: { encrypted: false },
+  }), /Token CSRF ausente ou inválido/);
+});
