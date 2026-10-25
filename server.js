@@ -499,7 +499,7 @@ const server = http.createServer(async (req, res) => {
     // Pagamento pelo PWA do garçom: o token identifica o garçom, mas a
     // autorização financeira é sempre conferida contra o responsável atual
     // persistido na sessão. Nunca aceitar operador/garçom informado no body.
-    if ((m = p.match(/^\\/api\\/garcom\\/([^/]+)\\/sessoes\\/(\\d+)\\/pagamentos$/)) && req.method === 'POST') {
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/sessoes\/(\d+)\/pagamentos$/)) && req.method === 'POST') {
       try {
         const garcom = await getGarcomPorToken(m[1]);
         if (!garcom || !garcom.ativo) {
