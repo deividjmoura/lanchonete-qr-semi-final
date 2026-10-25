@@ -100,3 +100,14 @@ Responder com estes pontos, mesmo que a conclusão seja “não precisa alterar�
 **Contexto da Frente 3:** a auditoria do PWA não encontrou implementação de Web Push no servidor (subscrição/persistência/envio). Permissão de notificações no navegador, isoladamente, não ativa push em segundo plano. Não introduzir VAPID ou alterações de Railway como se fossem requisito da Frente 2 sem demonstrar a dependência técnica. A Frente 3 não alterou configuração, variáveis, secrets nem dados do Railway.
 
 **Formato de resposta:** marcar cada item como NECESSÁRIO, VALIDAR ou NÃO NECESSÁRIO, com justificativa e evidência (arquivo/endpoint/migration). Se a Frente 2 precisar de mudanças no Railway, pedir autorização com a lista exata antes de executar.
+
+
+## Coordenação do comandante — integração de migrations (2026-10-25)
+
+**Frente 2 / PR #86:** a colisão de prefixo foi resolvida nesta branch. A migration de atendimento agora é `db/migrations/0023_atendimento_transferencia_actor.sql`; a migration `0022_atendimento_transferencia_actor.sql` foi removida. O contrato em `docs/CONTRATO-ATENDIMENTO-GARCOM.md` foi atualizado para refletir o novo nome. A migration é aditiva, mas precisa ser validada com a sequência completa em PostgreSQL isolado antes de merge/deploy.
+
+**Frente 1 / PR #85:** manter `0022_sessao_pagamentos_operador.sql` como a migration 0022 na sequência de integração, desde que permaneça no conjunto final. A integração da Frente 2 depende da confirmação de que o branch integrado inclui essa migration e não outra migration concorrente com o mesmo prefixo.
+
+**Critério de integração:** CI verde no head atual do PR #86, conflito resolvido, contrato documentado, revisão do diff e teste de migrations em banco descartável. Os testes existentes com mocks não substituem o teste com PostgreSQL real. PR permanece em draft; sem merge, sem migration manual e sem deploy de código incompleto.
+
+**Railway:** a autorização operacional do proprietário permite ao coordenador realizar ajustes rotineiros de configuração sem pedir confirmação a cada mudança. Isso não autoriza a Frente 2 a mudar o serviço ou executar migrations em produção. O Railway deve continuar apontando para `main`; a migration só chega ao ambiente quando o código integrado for revisado e promovido.
