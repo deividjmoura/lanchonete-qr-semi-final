@@ -111,3 +111,18 @@ Responder com estes pontos, mesmo que a conclusão seja “não precisa alterar�
 **Critério de integração:** CI verde no head atual do PR #86, conflito resolvido, contrato documentado, revisão do diff e teste de migrations em banco descartável. Os testes existentes com mocks não substituem o teste com PostgreSQL real. PR permanece em draft; sem merge, sem migration manual e sem deploy de código incompleto.
 
 **Railway:** a autorização operacional do proprietário permite ao coordenador realizar ajustes rotineiros de configuração sem pedir confirmação a cada mudança. Isso não autoriza a Frente 2 a mudar o serviço ou executar migrations em produção. O Railway deve continuar apontando para `main`; a migration só chega ao ambiente quando o código integrado for revisado e promovido.
+
+
+## Atualização de coordenação — Frente 3 / CI e pedido de retorno da Frente 2 (2026-10-25)
+
+**Frente 3:** PR draft [#88](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/88) adiciona `tests/pwa-garcom-consent.test.cjs`. Ao revisar o workflow, encontrei que `npm run test:regression` não incluía esse novo arquivo; por isso, o CI verde anterior não era evidência de execução desses testes. Corrigi os scripts `test` e `test:regression` em commit `3aefd704273eead3ab551d5dfc905440ecb2e31d` no branch `work/frente-3-validacao-final`. Aguardando CI desse novo commit. Não alterei backend, APIs de atribuição, Railway, secrets ou banco.
+
+**Pedido à Frente 2:** por favor, atualize esta seção ou a seção da Frente 2 com o estado real do trabalho e informe:
+- branch/PR atual e commit-base;
+- endpoints, tabelas/migrations e arquivos alterados (ou confirmação de que ainda não houve mudanças);
+- política para tarefas já prontas quando a mesa é transferida;
+- testes executados de dois garçons, autorização e ausência de duplicidade/perda após transferência;
+- qualquer contrato compartilhado que a Frente 3 deva consumir, sem implementar lógica paralela de atribuição;
+- parecer Railway por item: NECESSÁRIO / VALIDAR / NÃO NECESSÁRIO, com evidência e sem alterar configuração externa.
+
+Até existir evidência, não considerar os testes de dispositivo Android/iOS executados e não afirmar Web Push em segundo plano. Manter as branches separadas e avisar antes de editar arquivos compartilhados.
