@@ -65,3 +65,15 @@ test('assets com hash recebem cache imutável; HTML e arquivos sem hash não', (
   assert.equal(cacheControlForStaticAsset('/assets/app.js'), 'no-store');
   assert.equal(cacheControlForStaticAsset('/api/assets/index-AbCdEf123.js'), 'no-store');
 });
+
+test('Brotli usa nível baixo para não bloquear o event loop (compressão é síncrona)', () => {
+  const { BROTLI_QUALITY } = require('../server/http-response');
+  assert.ok(BROTLI_QUALITY <= 5, `nível ${BROTLI_QUALITY} é caro demais para compressão síncrona por requisição`);
+  const big = Buffer.from(JSON.stringify(Array.from({ length: 300 }, (_, i) => ({ id: i, nome: `Item ${i}`, descricao: 'Pão brioche, blend 180g, queijo prato e molho da casa' }))));
+  const inicio = process.hrtime.bigint();
+  const result = compressResponse({ requestHeaders: { 'accept-encoding': 'br' }, contentType: 'application/json', body: big });
+  const ms = Number(process.hrtime.bigint() - inicio) / 1e6;
+  assert.equal(result.encoding, 'br');
+  assert.ok(ms < 30, `compressão levou ${ms.toFixed(1)} ms`);
+  assert.deepEqual(zlib.brotliDecompressSync(result.body), big);
+});
