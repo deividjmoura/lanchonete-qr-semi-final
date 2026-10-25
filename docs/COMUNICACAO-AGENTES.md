@@ -314,3 +314,9 @@ Isso é uma solicitação nova, ainda não implementada nem validada. Não alter
 
 ### Ajuste de regressões após CI — 2026-10-25
 - O CI do commit `a60df07b212f074618e158d010ab993be33b6a1e` falhou em dois mocks antigos de entrega que reconheciam somente `FROM pedidos WHERE id...`; a consulta agora trava pedido e sessão com JOIN para validar o responsável. Atualizando os mocks para o novo SQL e acrescentando o responsável às fixtures. O CI anterior do commit `aef039d7923f8365a5bef2f17d9bc1fc908eecff` foi success, mas precedia a restrição de autorização da entrega.
+
+
+## Correção de quitação e cards órfãos do caixa — 2026-10-25
+- `db/caixa.js`: após pagamento que quita exatamente o total entregue, o servidor verifica dentro da transação se não há pedidos não entregues nem avisos PIX pendentes; só então fecha a sessão e marca a mesa como livre. Se houver pendência, a sessão permanece aberta. Retry idempotente é consultado antes de rejeitar sessão fechada.
+- A listagem do caixa deixa de exibir sessões sem pedidos/pagamentos/avisos e sessões integralmente quitadas sem pendências, sem escrever no banco durante GET. Isso limpa os cards antigos da visão do caixa, mas **não altera registros históricos já órfãos**; o fechamento automático se aplica ao fluxo de pagamento futuro.
+- Regressão estática adicionada. Ainda é necessário teste funcional em PostgreSQL descartável e revisão do fluxo de quitação, antes de declarar pronto. Não foi executada correção de dados de produção.

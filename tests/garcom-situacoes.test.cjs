@@ -23,6 +23,16 @@ test('Fila e entrega ficam restritas ao responsável da mesa ou ao garçom atrib
  assert.match(pedidos,/s\.garcom_responsavel_id=\$1 OR p\.garcom_id=\$1/);
  assert.match(server,/getFilaGarcom\(g\.id\)/);
 });
+test('Caixa fecha quitação simples só quando não há pedidos ou avisos PIX pendentes',()=>{
+ const caixa=read('db/caixa.js');
+ assert.match(caixa,/Math\.abs\(total - valorPago\) <= 0\.009/);
+ assert.match(caixa,/pedidosPendentes\[0\].*=== 0/);
+ assert.match(caixa,/avisosPixPendentes\[0\].*=== 0/);
+ assert.match(caixa,/SET status='fechada', fechada_em=now\(\)/);
+ assert.match(caixa,/UPDATE mesas SET status='livre'/);
+ assert.match(caixa,/const vazia = semPedidos/);
+ assert.match(caixa,/const quitada = sessao\.pedidosPendentes === 0/);
+});
 test('PWA tem JavaScript valido apos edicao de pedidos e notificacoes',()=>{cp.execFileSync(process.execPath,['--check',path.join(root,'public/garcom-pwa/app.js')]);});
 test('Garcom consulta status de todas as suas mesas, nao apenas entregas',()=>{
  const api=read('db/atendimento.js');const pwa=read('public/garcom-pwa/app.js');
