@@ -47,9 +47,14 @@ A PR deixa corretamente pendente a prova de backups reais do provedor, retençã
 - `npm run build:check` — typecheck e build concluídos.
 - O build alterou arquivos gerados em `dist/`; eles foram revertidos/removidos para não incluir artefatos de build nesta entrega.
 
-## Limites
+## Estado da integração e limites
 
-Essas alterações são propostas para revisão. Não fecharam issues nem alteraram PRs no GitHub, não foram publicadas, e não provam configuração/estado de produção. Revise especialmente a mudança de `npm start`, o comportamento de troca obrigatória de senha, a política de proxy e as instruções de restore antes de qualquer merge/deploy.
+- A integração está registrada no [PR #118](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/118), mantido em draft. A criação do PR não significa que as issues foram fechadas ou que as alterações foram aprovadas.
+- O head `6155bffa18f022fbfd21149298205eec5d4f60e6` passou CI #547 e PostgreSQL integration #122. Após esses checks, foi adicionada uma revisão extra para credenciais compartilhadas, concorrência entre trocas e comentário de startup; **os checks desse novo head precisam terminar antes de declarar a validação completa**.
+- Nenhum merge, deploy, migration em produção ou acesso a dados reais foi realizado.
+- O sucesso em PostgreSQL descartável valida o código e as migrations nesse ambiente de teste, mas não prova configuração/estado de produção nem backup operacional real.
+
+Revise especialmente o impacto da troca obrigatória de senha, o comando de inicialização do provedor, a política de proxy e as instruções de restore antes de qualquer merge/deploy.
 
 ## Revisão adicional de segurança — credenciais compartilhadas
 
