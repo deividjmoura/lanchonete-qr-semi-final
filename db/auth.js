@@ -134,8 +134,8 @@ function staffPublico(row) {
   };
 }
 
-// Colunas lidas via to_jsonb para que o login continue funcionando mesmo se a migration 0024
-// ainda não foi aplicada (ver #6: o auto-migrate do `npm start` é best-effort).
+// Colunas lidas via to_jsonb para tolerar execução de testes/ferramentas fora do entrypoint
+// de produção. O startup oficial é fail-closed e exige migrations aplicadas antes de iniciar.
 const SQL_FLAGS_SENHA = `
   COALESCE((to_jsonb(s)->>'deve_trocar_senha')::boolean, FALSE) AS deve_trocar_senha,
   (SELECT COUNT(*) FROM staff o WHERE o.ativo AND o.senha_hash = s.senha_hash) > 1 AS senha_compartilhada`;
