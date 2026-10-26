@@ -36,6 +36,9 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgres://qradmin:qradmin_test@localhost:5432/qradmin_test
+      # Os testes de integração herdam o mesmo contrato do workflow dedicado:
+      # rodam sempre em modo de teste, nunca com atalhos de produção.
+      NODE_ENV: test
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -62,6 +65,14 @@ jobs:
       - name: Waiter ownership integration on clean PostgreSQL
         if: ${{ hashFiles('tests/postgres-waiter-integration.test.cjs') != '' }}
         run: node --test tests/postgres-waiter-integration.test.cjs
+
+      - name: QR/session lifecycle integration on clean PostgreSQL
+        if: ${{ hashFiles('tests/postgres-qr-session.test.cjs') != '' }}
+        run: node --test tests/postgres-qr-session.test.cjs
+
+      - name: Financial concurrency integration on clean PostgreSQL
+        if: ${{ hashFiles('tests/postgres-financial-concurrency.test.cjs') != '' }}
+        run: node --test tests/postgres-financial-concurrency.test.cjs
 
       - name: Typecheck
         run: npm run typecheck

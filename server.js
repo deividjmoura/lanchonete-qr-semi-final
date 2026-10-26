@@ -63,7 +63,7 @@ const {
   verificarProtecaoCSRF,
 } = require('./db/auth');
 const { golpePermitido } = require('./db/rateLimit');
-const { resolveClientIp } = require('./security/client-ip');
+const { resolveClientIp, loginUserRateLimitKey } = require('./security/client-ip');
 const { ErroAtendimento, listarMesasGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
 const { normalizarChavePix, inspecionarChavePix } = require('./db/pix-normaliza');
 const { subscribe, broadcast } = require('./db/events');
@@ -85,6 +85,7 @@ const { resumoDia, topProdutosHoje } = require('./db/dashboard');
 const { relatorioVendas } = require('./db/relatorio');
 const { purgeHistorico, ErroPurge } = require('./db/purge');
 const { processarUploadFoto, ErroFoto } = require('./db/foto');
+const { carregarFotoProduto } = require('./db/foto-serve');
 
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
@@ -136,6 +137,7 @@ function applySecurityHeaders(res) {
 }
 
 const { compressResponse, cacheControlForStaticAsset } = require('./server/http-response');
+const { requestIdDaRequisicao, linhaDeLog } = require('./server/request-context');
 
 function send(res, status, type, body, extraHeaders) {
   applySecurityHeaders(res);
@@ -222,6 +224,8 @@ const mime = {
 };
 
 const server = http.createServer(async (req, res) => {
+  // Declarado fora do try para o catch de erros conseguir correlacionar o log.
+  let reqId = null;
   try {
     // Railway encerra TLS no proxy. A conexao Node interna permanece HTTP,
     // mas clientes publicos nunca devem navegar em HTTP.
@@ -238,6 +242,11 @@ const server = http.createServer(async (req, res) => {
     const u = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
     const p = u.pathname;
 
+    // Correlação de logs (#43): toda resposta carrega o identificador da
+    // requisição, inclusive erros, para o atendimento reportar com precisão.
+    reqId = requestIdDaRequisicao(req);
+    res.setHeader('X-Request-Id', reqId);
+
     // Liveness check: confirma apenas que o processo HTTP está respondendo.
     // Intencionalmente não consulta o banco nem expõe versão/configuração.
     if (p === '/healthz' && req.method === 'GET') {
@@ -253,6 +262,30 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/cardapio/destaques' && req.method === 'GET') {
       const limit = Number(u.searchParams.get('limit') || 6);
       return json(res, 200, { itens: await topProdutosHoje(limit) });
+    }
+
+    // Issue #53: serve a foto do cardápio fora do JSON. É read-only, público
+    // (o cardápio da mesa também é), não expõe metadados e responde 404 para
+    // id inválido, produto sem foto ou representação desconhecida.
+    const fotoMatch = p.match(/^\/api\/cardapio\/fotos\/(\d+)$/);
+    if (fotoMatch && req.method === 'GET') {
+      const foto = await carregarFotoProduto(fotoMatch[1]);
+      if (!foto) return json(res, 404, { error: 'Foto não encontrada' });
+      if (foto.kind === 'redirect') {
+        res.writeHead(302, {
+          Location: foto.location,
+          'Cache-Control': 'public, max-age=300',
+          'X-Content-Type-Options': 'nosniff',
+        });
+        return res.end();
+      }
+      res.writeHead(200, {
+        'Content-Type': foto.contentType,
+        'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+        'X-Content-Type-Options': 'nosniff',
+        Vary: 'Accept-Encoding',
+      });
+      return res.end(foto.buffer);
     }
 
     let m;
@@ -357,7 +390,7 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/mesas\/([^/]+)\/pedidos\/(\d+)$/)) && req.method === 'DELETE') {
       try {
-        const out = await cancelarPedidoCliente(m[1], Number(m[2]));
+        const out = await cancelarPedidoCliente(m[1], Number(m[2]), null, { requestId: reqId });
         broadcast('update', { type: 'pedido_cancelado', pedidoId: Number(m[2]), mesaToken: m[1] });
         return json(res, 200, out);
       } catch (e) {
@@ -496,13 +529,22 @@ const server = http.createServer(async (req, res) => {
     }
     if (p === '/api/login' && req.method === 'POST') {
       const ip = clientIp(req);
+      // O corpo precisa ser lido antes do limite por conta; o limite por IP
+      // continua protegendo inclusive tentativas sem login identificável.
+      const b = await body(req);
+      const loginInformado = b.usuario || b.login || b.user || '';
+      // Duas chaves independentes (#50): IP protege o patrimônio geral e não
+      // dispara sozinho para a equipe atrás de um NAT compartilhado; a chave
+      // por conta impede varredura de senha contra um login específico.
       if (!golpePermitido(`login:${ip}`, { janelaMs: 5 * 60 * 1000, max: 8 })) {
         return json(res, 429, { error: 'Muitos tentativas. Aguarde alguns minutos.' });
       }
+      if (!golpePermitido(loginUserRateLimitKey(loginInformado), { janelaMs: 5 * 60 * 1000, max: 10 })) {
+        return json(res, 429, { error: 'Muitas tentativas para esta conta. Aguarde alguns minutos.' });
+      }
       try {
         await garantirStaffSeed();
-        const b = await body(req);
-        const staff = await autenticar(b.usuario || b.login || b.user, b.senha);
+        const staff = await autenticar(loginInformado, b.senha);
         const token = await criarSessao(staff.id);
         res.setHeader('Set-Cookie', cookieDeSessao(token));
         return json(res, 200, {
@@ -687,7 +729,10 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/caixa\/sessoes\/(\d+)\/pix-avisos\/(\d+)\/confirmar$/)) && req.method === 'POST') {
       try {
-        const out = await confirmarPixAviso(Number(m[1]), Number(m[2]));
+        const operador = await getStaffDaRequisicao(req);
+        const out = await confirmarPixAviso(
+          Number(m[1]), Number(m[2]), operador?.nome || null, { requestId: reqId }
+        );
         broadcast('update', {
           type: 'pix_confirmado',
           sessaoId: Number(m[1]),
@@ -701,7 +746,8 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/caixa\/sessoes\/(\d+)\/fechar$/)) && req.method === 'POST') {
       try {
-        const out = await fecharSessao(Number(m[1]), await body(req));
+        const operador = await getStaffDaRequisicao(req);
+        const out = await fecharSessao(Number(m[1]), await body(req), operador?.nome || null);
         broadcast('update', { type: 'sessao_fechada', sessaoId: Number(m[1]) });
         return json(res, 200, out);
       } catch (e) {
@@ -1107,10 +1153,22 @@ const server = http.createServer(async (req, res) => {
        ATENÇÃO: `p` (u.pathname) é declarado DENTRO do try; aqui só existe
        req.url, e usá-lo sem esse cuidado derruba o processo. */
     if (e && e.status && e.status >= 400 && e.status < 500) {
-      console.warn(`[http ${e.status}] ${req.method} ${sanitizarAlvoRequisicao(req.url)} — ${sanitizarDetalheErro(e.message || 'rejeitado')}`);
+      console.warn(linhaDeLog('warn', {
+        reqId,
+        method: req.method,
+        alvo: sanitizarAlvoRequisicao(req.url),
+        status: e.status,
+        mensagem: sanitizarDetalheErro(e.message || 'rejeitado'),
+      }));
       return json(res, e.status, e.code ? { error: e.message || 'Erro', code: e.code } : { error: e.message || 'Erro' });
     }
-    console.error('[http interno]', sanitizarDetalheErro(e));
+    console.error(linhaDeLog('error', {
+      reqId,
+      method: req.method,
+      alvo: sanitizarAlvoRequisicao(req.url),
+      status: (e && e.status) || 500,
+      mensagem: sanitizarDetalheErro(e),
+    }));
     if (e && e.status) {
       return json(res, e.status, { error: e.message || 'Erro' });
     }

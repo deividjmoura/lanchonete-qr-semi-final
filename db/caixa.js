@@ -10,6 +10,7 @@ const {
   colunaExiste,
 } = require('./conta');
 const { comRetryConcorrencia } = require('./retry');
+const { registrarEvento } = require('./auditoria');
 
 const pagamentosTemIdempotencyKey = colunaExiste('sessao_pagamentos', 'idempotency_key');
 const pagamentosTemPixAviso = colunaExiste('sessao_pagamentos', 'pix_aviso_id');
@@ -576,6 +577,22 @@ async function fecharSessao(sessaoIdBruto, body, operadorNome = null) {
           [forma, desconto, taxaServico, valorCobrado, sessaoId, valorTotal]
         );
 
+    await registrarEvento(client, {
+      atorTipo: operadorNome ? 'staff' : 'sistema',
+      atorNome: operadorNome,
+      acao: 'sessao_fechada',
+      alvoTipo: 'sessao',
+      alvoId: String(sessaoId),
+      contexto: {
+        mesaNumero: sessao.mesa,
+        valorTotal,
+        valorCobrado,
+        desconto,
+        taxaServico,
+        formaPagamento: forma,
+      },
+    });
+
     await client.query("UPDATE mesas SET status = 'livre' WHERE id = $1", [sessao.mesa_id]);
     await client.query('COMMIT');
 
@@ -606,7 +623,7 @@ async function fecharSessao(sessaoIdBruto, body, operadorNome = null) {
 
 
 /** Caixa confirma aviso PIX do cliente → registra pagamento parcial e quita o aviso. */
-async function confirmarPixAviso(sessaoIdBruto, avisoIdBruto) {
+async function confirmarPixAviso(sessaoIdBruto, avisoIdBruto, operadorNome = null, opcoes = {}) {
   const sessaoId = validarSessaoId(sessaoIdBruto);
   const avisoIdNum = Number(avisoIdBruto);
   if (!Number.isInteger(avisoIdNum) || avisoIdNum < 1) {
@@ -711,6 +728,15 @@ async function confirmarPixAviso(sessaoIdBruto, avisoIdBruto) {
     }
 
     const valorPago = Number((jaPago + valor).toFixed(2));
+    await registrarEvento(client, {
+      atorTipo: operadorNome ? 'staff' : 'sistema',
+      atorNome: operadorNome,
+      acao: 'pix_confirmado',
+      alvoTipo: 'sessao',
+      alvoId: String(sessaoId),
+      contexto: { avisoId, valor, formaPagamento: 'pix' },
+      requestId: opcoes && opcoes.requestId ? String(opcoes.requestId) : null,
+    });
     await client.query('COMMIT');
     return {
       ok: true,

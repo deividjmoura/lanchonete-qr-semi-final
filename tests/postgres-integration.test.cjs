@@ -180,6 +180,27 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
     stock = await pool.query('SELECT estoque FROM produtos WHERE id = $1', [produtoId]);
     assert.equal(stock.rows[0].estoque, 3, 'cancelamento deve restaurar exatamente uma unidade');
 
+    // Issue #48: o cancelamento deixa evidência persistente mesmo com o
+    // pedido e seus itens excluídos, e não carrega segredos no contexto.
+    const eventosCancelamento = await pool.query(
+      `SELECT ator_tipo, ator_id, acao, alvo_tipo, alvo_id, resultado, contexto
+       FROM auditoria_eventos
+       WHERE acao = 'pedido_cancelado' AND alvo_id = $1
+       ORDER BY id`,
+      [String(pedidoParaCancelar.id)]
+    );
+    assert.equal(eventosCancelamento.rowCount, 1, 'cancelamento precisa registrar exatamente um evento');
+    const evento = eventosCancelamento.rows[0];
+    assert.equal(evento.ator_tipo, 'cliente_mesa');
+    assert.equal(evento.ator_id, mesaId);
+    assert.equal(evento.alvo_tipo, 'pedido');
+    assert.equal(evento.resultado, 'sucesso');
+    const mesaNumeroReal = (
+      await pool.query('SELECT numero FROM mesas WHERE id = $1', [mesaId])
+    ).rows[0].numero;
+    assert.equal(Number(evento.contexto.mesaNumero), Number(mesaNumeroReal));
+    assert.doesNotMatch(JSON.stringify(evento), /senha|token|segredo/i);
+
     await assert.rejects(
       () => pedidos.cancelarPedidoCliente(token, pedidoParaCancelar.id),
       /Pedido não encontrado nesta mesa/
@@ -279,7 +300,9 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
       for (const row of ids.rows) {
         await pool.query('DELETE FROM sessao_pagamentos WHERE sessao_id = $1', [row.id]);
         await pool.query('DELETE FROM pedidos WHERE sessao_id = $1', [row.id]);
+        await pool.query('DELETE FROM auditoria_eventos WHERE alvo_id = $1', [String(row.id)]);
       }
+      await pool.query('DELETE FROM auditoria_eventos WHERE ator_id = $1', [mesaId]);
       await pool.query('DELETE FROM mesa_sessoes WHERE mesa_id = $1', [mesaId]);
     }
     if (garcomId) await pool.query('DELETE FROM garcons WHERE id = $1', [garcomId]);

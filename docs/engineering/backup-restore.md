@@ -80,6 +80,37 @@ Nada abaixo foi verificado. Preencher **sem credenciais** e anexar o `restore.js
 | Responsável operacional e acesso de recuperação (quem/como, sem segredos) | _pendente_ | |
 | Confirmação de que nada foi restaurado sobre a produção | _pendente_ | |
 
+### 4.1 Checklist para fechar a evidência com o provedor (Railway)
+
+A issue #41 só pode ser fechada depois que um operador com acesso ao Railway
+preencher a tabela da seção 4. Passos exatos, sem necessidade de expor segredos:
+
+1. No painel do serviço PostgreSQL do projeto, identificar **plano**, tipo de
+   backup oferecido (backup diário lógico, snapshot e/ou PITR), frequência e
+   retenção. Registrar nomes, nunca credenciais.
+2. Baixar o backup mais recente para uma estação de trabalho controlada e
+   anotar seu identificador e horário (UTC).
+3. Provisionar um banco **novo e vazio** cujo nome contenha `restore_drill`
+   (as travas da ferramenta exigem um marcador isolado).
+4. Rodar o modo arquivo da ferramenta:
+   ```bash
+   RESTORE_DATABASE_URL='<url-do-banco-isolado>' \
+   RESTORE_DRILL_CONFIRM=isolated-target \
+   node scripts/backup-restore-drill.js \
+     --dump-file backup-baixado.dump \
+     --backup-at 2026-10-26T03:00:00Z \
+     --report evidencias/restore-$(date +%F).json
+   ```
+5. Salvar o `restore.json` (não contém URL nem senha) como evidência e
+   preencher RPO (`rpo_observado_s`) e RTO (tempo medido do início do
+   provisionamento até a verificação OK).
+6. Conectar uma instância de staging no banco restaurado e checar login,
+   cardápio e uma comanda sintética; em seguida destruir o banco isolado.
+7. Registrar tudo na tabela da seção 4 e na issue #41, com o responsável.
+
+Enquanto esse exercício não for executado com um backup real do provedor, a
+issue permanece aberta mesmo com o drill automatizado do CI verde.
+
 ## 5. Limites conhecidos
 
 - O drill valida integridade lógica (schema, contagens, constraints, sequences, conexão). Não valida desempenho do

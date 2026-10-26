@@ -56,3 +56,35 @@ Não substituir Postgres por disco efêmero nem adicionar dependência de fornec
 ## Limites desta RFC
 
 Este documento não muda a aplicação, o schema, o banco, secrets, o Railway ou os dados. Não afirma que o tamanho real do payload foi medido. O código atual já otimiza as imagens; o problema que resta aqui é a representação/entrega no cardápio e a decisão sobre armazenamento durável fora do JSON.
+
+## Implementação entregue (2026-10-26) — etapa 1 sem novo fornecedor
+
+Antes da escolha de um storage de objetos, a issue #53 foi endereçada sem
+adicionar infraestrutura nem mudar o armazenamento durável:
+
+- `db/foto-serve.js` resolve a representação pública: data-URLs em
+  `produtos.foto_url` passam a ser expostas apenas como a URL de mesma origem
+  `/api/cardapio/fotos/:id`; URLs HTTPS externas e caminhos `/uploads/...`
+  legados permanecem inalterados.
+- `GET /api/cardapio/fotos/:id` é read-only e público (o cardápio da mesa já
+  é público), serve a imagem com `Cache-Control` e `nosniff`, responde 404
+  para id inválido/foto ausente e 302 para representações externas. Não
+  expõe preço, estoque nem qualquer metadado.
+- O cardápio público (`db/cardapio.js`) não transporta mais bytes em Base64.
+  O admin (`/api/admin/cardapio`) mantém a data-URL para prévia imediata no
+  editor; é uma rota autenticada e de baixo volume.
+- Medida com fixture sintética de 40 fotos no tote de 320 KiB
+  (`tests/cardapio-foto-url.test.cjs`): o JSON legado supera 12 MB e a nova
+  representação fica em poucos KB (redução acima de 99,9%).
+- Nenhuma migração de dados foi necessária: a leitura compatível convive com
+  os três formatos históricos. O upload continua otimizando para WebP e
+  gravando no Postgres, que segue durável contra redeploy de disco efêmero.
+
+### O que permanece como etapa 2 (decisão do responsável)
+
+A migração do binário para armazenamento de objetos/volume persistente
+(opções 1–3 acima) continua pendente de decisão de fornecedor e custo. O
+desenho atual é compatível com ela: quando houver storage durável, basta o
+backfill gravar URLs/ chaves no lugar das data-URLs — o endpoint e o contrato
+do cardápio não mudam. Os critérios de backfill, rollback e backup do storage
+escolhido seguem aplicáveis.

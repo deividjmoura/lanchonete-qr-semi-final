@@ -1,6 +1,7 @@
 // Cardápio público, lido do Postgres, com cache em memória de curto prazo.
 // Invalidar após qualquer mutação no admin (ver invalidarCardapio).
 const pool = require('./pool');
+const { resolverFotoUrl } = require('./foto-serve');
 
 const CARDAPIO_TTL_MS = Number(process.env.CARDAPIO_CACHE_TTL_MS || 30_000);
 
@@ -61,7 +62,9 @@ async function carregarCardapio() {
         nome: p.nome,
         descricao: p.descricao,
         preco: Number(p.preco),
-        fotoUrl: p.foto_url,
+        // Issue #53: o JSON nunca carrega bytes em Base64; data-URLs viram
+        // URL de mesma origem servida e cacheada por /api/cardapio/fotos/:id.
+        fotoUrl: resolverFotoUrl(p.foto_url, p.id),
         pedePontoCarne: p.pede_ponto_carne,
         ordem: p.ordem != null ? Number(p.ordem) : 0,
         adicionais: adicionais
