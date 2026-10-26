@@ -622,3 +622,12 @@ Nenhum merge foi realizado por esta atualização. Não executar migrations/test
 - **Não confundir evidências:** o teste de backup/restore em CI valida a ferramenta em banco descartável, mas não comprova existência, retenção nem restauração de backups reais do provedor; RPO/RTO operacional seguem pendentes. 2FA continua apenas proposta/documentada. Issues de fotos/storage, autoria/auditoria, política de QR, licença, retenção, alertas e concorrência financeira mantêm os bloqueios descritos no relatório da branch.
 - **Segurança de integração:** nenhum merge, deploy, migration em produção ou acesso a dados reais foi realizado. Manter PR #118 em draft até concluir a revisão de código e os bloqueios operacionais; não fechar issues apenas com base nos testes de CI.
 - **Próxima ação:** terminar revisão de rotas/auth, conferir cadeia de migrations e comandos alternativos de startup; registrar findings no PR e só então propor plano de integração coordenado com as branches de migrations/financeiro/garçom.
+
+
+## Achados adicionais da revisão de segurança — PR #118
+
+- Corrigido um caso-limite na troca obrigatória: quando uma credencial era compartilhada por várias contas, a última conta podia perder o sinal derivado de compartilhamento depois que as demais trocassem a senha. Agora a transação marca persistentemente as outras contas ativas com o mesmo hash para troca obrigatória.
+- Corrigida uma corrida de concorrência: duas contas poderiam tentar definir a mesma nova senha simultaneamente, pois a validação de reutilização era feita em transações independentes. Um advisory transaction lock serializa as trocas de senha; como é uma operação rara, o custo operacional é limitado à mudança de credenciais.
+- Testes PostgreSQL de regressão adicionados/atualizados para ambos os cenários em `tests/postgres-password-change.test.cjs`.
+- Commit da revisão documental: `4cf20f6464094e56ecb9046f855d2008897b48a6`; os commits de código e testes estão no histórico imediatamente anterior da mesma branch.
+- **Estado de validação:** aguardar CI e integração PostgreSQL no head atualizado da PR #118. Não aprovar/mesclar até os dois workflows terminarem com sucesso e os bloqueios operacionais já listados continuarem endereçados.
