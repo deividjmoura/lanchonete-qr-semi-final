@@ -666,3 +666,20 @@ Nenhum merge foi realizado por esta atualização. Não executar migrations/test
 - PRs de origem ainda abertas: [#116 backup/restore](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/116) e [#117 troca de senha](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/117). Não apagar suas branches nem mesclá-las separadamente sem reconciliar a integração #118.
 - As branches associadas a PRs já mergeadas que foram conferidas não constam entre as branches remotas atuais. Antes de remover qualquer outra branch, confirmar se tem PR aberta e se o conteúdo está incorporado a `main`.
 - Nenhum merge ou deploy foi realizado. Pendências de backup real do provedor/RPO-RTO, configuração do proxy e procedimento operacional da troca obrigatória de senha permanecem abertas.
+
+
+## Revalidação operacional e inventário conservador de branches — 2026-10-26
+
+Consulta direta ao GitHub em 2026-10-26:
+
+- `main` aponta para `50c26bcc211cb88b6958361531d98ce8363d1a24`.
+- PR [#118](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/118) permanece aberta em **draft**, head `00327cacace69a16bb7348f166b45f05cd3cc176`, `mergeable=true`. Os workflows **CI** e **PostgreSQL integration** desse SHA estão concluídos com `success`.
+- PR [#116](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/116) permanece aberta e não-draft, branch `ops/issue-41-backup-restore-drill`, head `2a329d731509ece2799eb4531a8a332268beccab`.
+- PR [#117](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/117) permanece aberta e não-draft, branch `feat/issue-55-password-change`, head `09cbd70a2ce5140117b9b7775e105216cbf62fec`.
+- A consulta de branches remotas mostra também branches de auditoria, documentação e trabalho que não são PRs #116/#117. A presença de uma branch remota sem PR visível não prova que possa ser removida: antes de exclusão, comparar o SHA com `main`, verificar PRs fechadas/mergeadas e procurar commits/conteúdo exclusivo.
+- Os comentários antigos de coordenação em #116/#117 diziam que os checks ainda estavam em execução; esta revalidação confirma que a integração #118 passou CI e PostgreSQL no head indicado. Isso **não** prova que cada branch de origem, isoladamente, passou nos checks atuais, nem autoriza merge separado.
+- **Ordem vigente:** revisão do diff combinado de #118; confirmar os bloqueios operacionais já listados; somente então pedir aprovação explícita para tirar de draft/mesclar. Não fazer merge de #116/#117 em paralelo, não apagar suas branches e não realizar deploy/alterações no Railway como parte desta tarefa.
+
+### Limpeza local segura (não exclui branches remotas)
+
+Para a limpeza no computador do mantenedor, usar somente `git branch --merged origin/main` depois de `git fetch origin --prune`. Excluir branches locais uma por vez com `git branch -d`; nunca usar `-D` em lote. Manter protegidas `main`, `arena/3a803cb3-lanchonete-qr-semi-final`, `feat/issue-55-password-change` e `ops/issue-41-backup-restore-drill`. O `--prune` remove apenas referências remotas locais que já não existem no servidor; não é autorização para apagar branches no GitHub.
