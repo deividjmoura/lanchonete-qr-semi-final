@@ -7,6 +7,7 @@ const {
   CONFIRM_VALUE,
   parseDbUrl,
   sameDatabase,
+  connectionForCli,
   assertSafeTarget,
   parseArgs,
   compareSnapshots,
@@ -22,6 +23,19 @@ test('parseDbUrl extrai host/porta/banco e nunca expõe a senha', () => {
   assert.throws(() => parseDbUrl('', 'x'), DrillError);
   assert.throws(() => parseDbUrl('mysql://h/db', 'x'), DrillError);
   assert.throws(() => parseDbUrl('postgres://h/', 'x'), DrillError);
+});
+
+test('connectionForCli remove a senha da URI de argv e passa a credencial por ambiente', () => {
+  const uri = connectionForCli('postgres://operador:p%40ss%3Aword@db.example:5432/qradmin?sslmode=require', 'DB');
+  assert.ok(!uri.connectionString.includes('p%40ss'));
+  assert.ok(!uri.connectionString.includes('ss:word'));
+  assert.equal(new URL(uri.connectionString).password, '');
+  assert.equal(uri.env.PGPASSWORD, 'p@ss:word');
+  assert.match(uri.connectionString, /sslmode=require/);
+
+  const queryPassword = connectionForCli('postgres://operador@db.example:5432/qradmin?password=segredo&sslmode=require', 'DB');
+  assert.ok(!queryPassword.connectionString.includes('password='));
+  assert.equal(queryPassword.env.PGPASSWORD, 'segredo');
 });
 
 test('sameDatabase compara host, porta e banco', () => {
