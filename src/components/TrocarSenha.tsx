@@ -13,6 +13,8 @@ function dica(nova: string, confirmar: string): string | null {
 
 export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; onClose: () => void }) {
   const trocarSenhaApi = usePub((s) => s.trocarSenhaApi);
+  // Usuário da sessão: o gerenciador de senhas do navegador salva a nova senha vinculada a ele.
+  const login = usePub((s) => s.auth?.login || s.auth?.role || "");
   const [atual, setAtual] = useState("");
   const [nova, setNova] = useState("");
   const [confirmar, setConfirmar] = useState("");
@@ -29,10 +31,10 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
     setErro(null);
     const msg = await trocarSenhaApi(atual, nova);
     setBusy(false);
-    setAtual("");
-    setNova("");
-    setConfirmar("");
     if (msg) {
+      setAtual("");
+      setNova("");
+      setConfirmar("");
       setErro(msg);
       return;
     }
@@ -83,17 +85,29 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
               void enviar();
             }}
           >
+            {/* Campo de usuário invisível: sem ele o navegador oferece salvar a senha sem nome de usuário. */}
+            <input
+              type="text"
+              name="username"
+              id="trocar-senha-usuario"
+              autoComplete="username"
+              value={login}
+              readOnly
+              tabIndex={-1}
+              aria-hidden="true"
+              className="sr-only"
+            />
             <label className="block text-xs font-semibold text-slate-600">
               Senha atual
-              <input type="password" autoComplete="current-password" autoFocus value={atual} onChange={(e) => setAtual(e.target.value)} className={campo} />
+              <input type="password" name="current-password" autoComplete="current-password" autoFocus value={atual} onChange={(e) => setAtual(e.target.value)} className={campo} />
             </label>
             <label className="block text-xs font-semibold text-slate-600">
               Nova senha (mín. {MIN} caracteres)
-              <input type="password" autoComplete="new-password" value={nova} onChange={(e) => setNova(e.target.value)} className={campo} />
+              <input type="password" name="new-password" autoComplete="new-password" value={nova} onChange={(e) => setNova(e.target.value)} className={campo} />
             </label>
             <label className="block text-xs font-semibold text-slate-600">
               Confirmar nova senha
-              <input type="password" autoComplete="new-password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} className={campo} />
+              <input type="password" name="confirm-password" autoComplete="new-password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} className={campo} />
             </label>
 
             {(erro || aviso) && (
