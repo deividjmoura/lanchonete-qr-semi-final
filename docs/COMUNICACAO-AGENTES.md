@@ -699,3 +699,12 @@ Consulta somente leitura à configuração e aos logs do ambiente `production` d
 - Atualizar a revisão da PR #118 para registrar que o comando real do provedor foi confirmado e que o gate está sendo usado no deployment atual.
 - Manter como hardening recomendado que o caminho alternativo `node server.js` não possa abrir tráfego de produção antes das migrations; isso é uma proteção contra configuração futura/alternativa, não evidência de que o comando atual do Railway contorne o gate.
 - Continuam bloqueadores separados: decisão operacional sobre troca obrigatória de senha no primeiro acesso; evidência de backup/restore real do provedor e RPO/RTO; revisão final do diff e aprovação explícita. Não mesclar #116/#117 isoladamente, não promover #118 a ready e não fazer deploy sem autorização.
+
+### Diagnóstico das duas falhas de deploy recentes (2026-10-26)
+
+Leitura dos metadados de falha do Railway, sem executar novo deploy:
+
+- Deployment `78c5eadb-8842-4f1a-a24f-e4a3ebc58be0`, commit `323c42b76a8cf84f3e5c7ecdfe85be40016b8e5c`: falhou em `CREATE_CONTAINER` porque o host de registry `railway.storage.dev` não pôde ser resolvido. Os logs mostram migration e seed concluídos antes da tentativa de criar o container. Evidência aponta para falha de resolução/acesso ao registry, não para falha da migration.
+- Deployment `475a3941-51a2-47d5-974c-cca4ed635a09`, commit `a82fdc29c504d353ed4bbdd44046026c91e85485`: falhou na etapa `BUILD_IMAGE`; o log reporta erro do daemon BuildKit/socket indisponível ao listar workers.
+- Ambos são erros de infraestrutura/build registrados em deploys anteriores; não são evidência suficiente de defeito no código da PR #118. O deployment atual `423f48e7-4927-4b0a-bdef-6c73a399bec7` está `SUCCESS` e o serviço está online.
+- Não tentei reexecutar deploys nem alterar configuração do Railway.
