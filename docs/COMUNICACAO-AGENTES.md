@@ -639,3 +639,12 @@ Nenhum merge foi realizado por esta atualização. Não executar migrations/test
 - Head atual de #118: `76c60e42cd90388ef94a9ff4305305a39474b4c1`.
 - [PostgreSQL integration #131](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40251161438) está queued e [CI #561](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40251161442) está pending. A revisão adicional dos casos de senha compartilhada e concorrência só deve ser considerada validada depois de ambos concluírem com sucesso.
 - PR #118 permanece draft. Não houve merge, deploy nem acesso a produção.
+
+
+## Novo achado: credencial PostgreSQL nos argumentos do drill
+
+- A revisão da ferramenta de backup encontrou que `pg_dump` e `pg_restore` recebiam a URI completa com senha como argumento do processo, o que pode expor credenciais em listagens de processos/diagnóstico. Corrigi a ferramenta para remover a senha da URI em argv e passá-la por `PGPASSWORD` no ambiente do subprocesso; adicionei testes para senhas codificadas e senha na query string.
+- Arquivos: `scripts/backup-restore-drill.js`, `tests/backup-restore-drill.test.cjs`, `docs/engineering/backup-restore.md`.
+- Head atual da PR #118: `23e631c5d4c0f3df85d8938dddee67e11f68a360`.
+- CI #568 está pending e PostgreSQL integration #135 está em execução. Aguardar conclusão de ambos; os checks verdes do head anterior não cobrem esta correção.
+- PR #118 continua draft; nenhuma produção foi acessada e não houve merge/deploy.
