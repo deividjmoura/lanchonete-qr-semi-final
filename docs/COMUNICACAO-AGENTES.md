@@ -724,3 +724,40 @@ Commits da correção:
 - `d474711f` — alinhar mensagem de erro.
 
 Os workflows CI e PostgreSQL foram disparados para o SHA `b4da23e559f51d303950dcb08799dc090c1fe2e7` e estavam pendentes/em execução na última consulta; a última atualização da mensagem de erro gerou um SHA posterior, portanto a validação final deve ser feita no HEAD atualizado. Não foi executado reset de senha contra banco algum, nem houve merge ou deploy. PR #118 permanece draft.
+
+## Auditoria de consolidação (2026-10-26)
+
+Auditoria somente leitura, feita clonando o repositório e fazendo merge de teste local do #118 sobre a `main` (`3480b4c`). Nenhuma branch foi mesclada ou fechada, nenhum deploy foi executado e nenhuma configuração de produção foi alterada.
+
+### Estado verificado
+
+- **Frente 2 já está na `main`:** o #107 ("Integrar Frente 1 + Frente 2 com autorização transacional") foi mesclado. A migration `0023_atendimento_transferencia_actor.sql`, `db/atendimento.js`, `db/garcons.js` e os testes `garcom-responsavel-mesa` e `postgres-waiter-integration` estão na `main`. `db/atendimento.js` e `db/garcons.js` não têm diferença em relação ao antigo #89. Não é necessário recuperar a Frente 2 em PR nova; falta apenas revisar as diferenças residuais do #89 em `db/pedidos.js`, `server.js` e `public/garcom-pwa/app.js` (podem ser evolução posterior da `main`).
+- **#118 mescla sem conflito na `main`:** base `05edc86c`; a `main` avançou só em `docs/COMUNICACAO-AGENTES.md`. O #118 adiciona a migration `0024_staff_troca_senha.sql`.
+- **Validação local do merge de teste:** `typecheck` OK, `build` OK, `npm test` 207/207, `npm audit --omit=dev` com 0 vulnerabilidades. PostgreSQL não foi executado localmente; vale o CI do GitHub (verde no HEAD `dd9ef76f` do #118 e na `main`).
+- **#116 e #117:** os arquivos novos (migration `0024`, `TrocarSenha.tsx`, runbook e testes de backup/restore) são idênticos aos do #118. Restam divergências pequenas (2 a 35 linhas) em `db/auth.js`, `server.js`, `scripts/backup-restore-drill.js`, `package.json` e testes; confirmar na revisão final que o #118 contém o que importa antes de fechá-los como substituídos.
+
+### Correção e achados da revisão do #118
+
+- **`dist/` não é bloqueio:** a CI já assume que os nomes com hash do `dist/` commitado podem diferir do build (`ci.yml`, passo "dist/ integrity"), e não há Dockerfile ou config do Railway no repositório, então o build roda no deploy. Corrige a pendência registrada anteriormente nesta auditoria. Rebuildar o `dist/` commitado é higiene opcional.
+- **A Frente 2 não precisa de PR de recuperação:** o que resta de diferença do #89 em `db/pedidos.js`, `server.js` e `garcom-pwa/app.js` é código anterior à `main` (a `main` tem CSRF, `/healthz`, log sanitizado, validação estrita de carrinho e rota de pagamento do garçom, que o #89 não tinha). O #89 pode ser formalmente descartado.
+- **Risco de rollout (P0-1):** a troca obrigatória é calculada em tempo de execução pelo hash compartilhado das 4 contas. Ao fazer deploy do #118 com `NODE_ENV=production` e sem `STAFF_FORCE_PASSWORD_CHANGE=false`, **as sessões já abertas de admin, cozinha, bar e caixa passam a receber 403 `SENHA_TROCA_OBRIGATORIA` imediatamente**, inclusive durante o expediente. Caminho seguro: definir `STAFF_FORCE_PASSWORD_CHANGE=false` no Railway antes do merge e ligar a troca (remover a variável ou `true`) só na janela combinada com os operadores.
+- **Risco de rate limit (P1-6):** com `TRUSTED_PROXY_HOPS` ausente (padrão 0), o IP do cliente passa a ser o do proxy do provedor. O limite de login (`login:${ip}`, 8 por 5 min) e o de troca de senha por IP (20 por 15 min) deixam de ser por usuário e viram globais: poucas falhas de login travam a equipe toda por alguns minutos, e quem digitar senha errada de propósito consegue travar todos. Antes do #118 o X-Forwarded-For era confiado cegamente (burlável, mas sem trava global). Não configurar `TRUSTED_PROXY_HOPS` por suposição; confirmar a topologia real (ver P1-6 do plano) e só então definir o valor.
+
+### Continuam bloqueios P0 (dependem do responsável)
+
+- Troca de senha das quatro contas de bootstrap (admin, cozinha, bar, caixa) com janela e responsável definidos.
+- Evidência real de backup/restore do provedor com RPO/RTO (issue #41).
+- Confirmação do startup e da ordem das migrations no Railway.
+
+Itens P0 e P1 do plano de revisão continuam valendo; nenhum deles foi dado como concluído por esta auditoria.
+
+### Execução (2026-10-26)
+
+- Variável `STAFF_FORCE_PASSWORD_CHANGE=false` aplicada no Railway antes do merge (redeploy `c6af8315`, SUCCESS). A troca obrigatória **está desligada em produção** até a janela combinada com os operadores.
+- Confirmado no Railway: build `npm run build`, start `npm run start:prod`, pre-deploy `db:migrate && db:seed` (seed não destrutivo sem `FORCE_SEED`; a variável não existe no serviço).
+- #120 (`CLIENT_IP_HEADER` opt-in, `X-Real-IP` do Railway) mesclado no branch do #118. #118 mesclado na `main` em `a48fd6e` com CI verde no SHA final `690afedc` e na `main`.
+- Deploy `f54a3aa9` SUCCESS; migration `0024` aplicada; startup passou pelo gate.
+- #116 e #117 fechados como substituídos; #89 descartado formalmente (já na `main` via #107).
+- **Sem tráfego na primeira hora pós-deploy:** o smoke funcional de login e atendimento ainda precisa ser feito por quem opera.
+- `CLIENT_IP_HEADER` **não** está ativo: sem ele o rate limit de login ainda usa o IP do proxy (global). Ativar `x-real-ip` só após validar que o edge sobrescreve o cabeçalho enviado pelo cliente.
+- Pendentes P0: janela de troca de senha das 4 contas e evidência de backup/restore real (#41).
