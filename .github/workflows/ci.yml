@@ -36,6 +36,9 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgres://qradmin:qradmin_test@localhost:5432/qradmin_test
+      # Os testes de integração herdam o mesmo contrato do workflow dedicado:
+      # rodam sempre em modo de teste, nunca com atalhos de produção.
+      NODE_ENV: test
     steps:
       - name: Checkout
         uses: actions/checkout@v4

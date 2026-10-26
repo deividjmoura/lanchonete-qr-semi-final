@@ -195,7 +195,10 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
     assert.equal(evento.ator_id, mesaId);
     assert.equal(evento.alvo_tipo, 'pedido');
     assert.equal(evento.resultado, 'sucesso');
-    assert.equal(Number(evento.contexto.mesaNumero), Number(mesa.numero));
+    const mesaNumeroReal = (
+      await pool.query('SELECT numero FROM mesas WHERE id = $1', [mesaId])
+    ).rows[0].numero;
+    assert.equal(Number(evento.contexto.mesaNumero), Number(mesaNumeroReal));
     assert.doesNotMatch(JSON.stringify(evento), /senha|token|segredo/i);
 
     await assert.rejects(

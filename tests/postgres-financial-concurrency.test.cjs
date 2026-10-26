@@ -56,7 +56,9 @@ test('duas compras concorrentes da última unidade: só uma confirma e o estoque
     const rejeitados = resultados.filter((r) => r.status === 'rejected');
     assert.equal(aceitos.length, 1, 'exatamente um pedido deve ser aceito');
     assert.equal(rejeitados.length, 1);
-    assert.match(String(rejeitados[0].reason && rejeitados[0].reason.message), /Estoque insuficiente/);
+    // Cobre os dois caminhos possíveis de perda da corrida: a checagem
+    // preventiva ("Estoque insuficiente") ou o UPDATE com guarda ("esgotou").
+    assert.match(String(rejeitados[0].reason && rejeitados[0].reason.message), /[Ee]stoque/);
     aceitos.forEach((r) => sessoes.push(r.value.sessaoId));
 
     const estoque = await pool.query('SELECT estoque, disponivel FROM produtos WHERE id = $1', [base.produto]);
