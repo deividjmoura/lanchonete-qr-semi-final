@@ -145,8 +145,9 @@ test('PostgreSQL real: senha compartilhada entre contas ativas força troca; ao 
 
   await auth.trocarSenha(ids[0].id, 'senha-igual-para-todos-1', 'Exclusiva-Da-Conta-A#1');
   assert.equal((await auth.autenticar(ids[0].login, 'Exclusiva-Da-Conta-A#1')).deveTrocarSenha, false);
-  // a outra conta deixou de compartilhar hash com alguém, então a regra derivada também se desfaz
-  assert.equal((await auth.autenticar(ids[1].login, 'senha-igual-para-todos-1')).deveTrocarSenha, false);
+  // A obrigação fica persistida; a última conta remanescente não pode escapar
+  // só porque o hash deixou de aparecer em mais de uma conta ativa.
+  assert.equal((await auth.autenticar(ids[1].login, 'senha-igual-para-todos-1')).deveTrocarSenha, true);
 });
 
 test('PostgreSQL real: trocas concorrentes na mesma conta são serializadas (uma vence, a outra falha na senha atual)', async () => {
@@ -158,4 +159,21 @@ test('PostgreSQL real: trocas concorrentes na mesma conta são serializadas (uma
   assert.equal(resultados.filter((r) => r.status === 'fulfilled').length, 1);
   assert.equal(resultados.filter((r) => r.status === 'rejected').length, 1);
   assert.equal(await contagemEventos(u.id, 'senha_alterada'), 1);
+});
+
+
+test('PostgreSQL real: trocas concorrentes em contas diferentes não podem reutilizar a mesma senha nova', async () => {
+  const a = await criarStaff('reuse-conc-a', 'senha-inicial-conta-a-77');
+  const b = await criarStaff('reuse-conc-b', 'senha-inicial-conta-b-88');
+  const senhaCompartilhadaNova = 'Nova-Senha-Unica-Concor#2026';
+
+  const resultados = await Promise.allSettled([
+    auth.trocarSenha(a.id, 'senha-inicial-conta-a-77', senhaCompartilhadaNova),
+    auth.trocarSenha(b.id, 'senha-inicial-conta-b-88', senhaCompartilhadaNova),
+  ]);
+
+  assert.equal(resultados.filter((r) => r.status === 'fulfilled').length, 1);
+  assert.equal(resultados.filter((r) => r.status === 'rejected').length, 1);
+  const rejeitado = resultados.find((r) => r.status === 'rejected');
+  assert.match(String(rejeitado.reason?.message), /outra conta/);
 });
