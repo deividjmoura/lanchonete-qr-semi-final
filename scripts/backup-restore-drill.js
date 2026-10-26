@@ -36,7 +36,7 @@ const { spawnSync } = require('node:child_process');
 const { performance } = require('node:perf_hooks');
 
 const CONFIRM_VALUE = 'isolated-target';
-const SAFE_DB_NAME = /(restore|drill|test|tmp|scratch|sandbox)/i;
+const SAFE_DB_NAME = /(?:^|[_-])(restore|drill|test|tmp|scratch|sandbox)(?:$|[_-])/i;
 const MIGRATIONS_DIR = path.join(__dirname, '..', 'db', 'migrations');
 
 class DrillError extends Error {}
