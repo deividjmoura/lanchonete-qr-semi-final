@@ -64,6 +64,33 @@ function sameDatabase(a, b) {
   return a.host === b.host && a.port === b.port && a.database === b.database;
 }
 
+/**
+ * Remove a senha da URI passada como argumento de processo. O pg_* recebe a URI
+ * sem senha e a credencial vai por PGPASSWORD, evitando exposição em ps/proc argv.
+ */
+function connectionForCli(raw, label) {
+  let u;
+  try {
+    u = new URL(String(raw || '').trim());
+  } catch {
+    throw new DrillError(`${label}: URL inválida ou ausente.`);
+  }
+  let password = '';
+  try {
+    password = u.password ? decodeURIComponent(u.password) : '';
+  } catch {
+    throw new DrillError(`${label}: senha da URL tem encoding inválido.`);
+  }
+  const queryPassword = u.searchParams.get('password');
+  if (!password && queryPassword) password = queryPassword;
+  u.password = '';
+  u.searchParams.delete('password');
+  return {
+    connectionString: u.toString(),
+    env: { PGPASSWORD: password },
+  };
+}
+
 /** Valida alvo/origem antes de qualquer comando. Lança DrillError se inseguro. */
 function assertSafeTarget({ source, target, confirm }) {
   if (confirm !== CONFIRM_VALUE) {
@@ -284,7 +311,8 @@ async function main(argv = process.argv.slice(2), env = process.env) {
       } finally {
         await srcClient.end();
       }
-      run('pg_dump', ['--format=custom', '--no-owner', '--no-privileges', '--file', dumpPath, '--dbname', sourceUrl]);
+      const sourceCli = connectionForCli(sourceUrl, 'SOURCE_DATABASE_URL');
+      run('pg_dump', ['--format=custom', '--no-owner', '--no-privileges', '--file', dumpPath, '--dbname', sourceCli.connectionString], sourceCli.env);
       report.dump = { duracao_ms: ms(t0), tamanho_bytes: fs.statSync(dumpPath).size };
       report.backup_em = new Date().toISOString();
     } else {
@@ -293,7 +321,8 @@ async function main(argv = process.argv.slice(2), env = process.env) {
     }
 
     const t1 = performance.now();
-    run('pg_restore', ['--no-owner', '--no-privileges', '--exit-on-error', '--dbname', targetUrl, dumpPath]);
+    const targetCli = connectionForCli(targetUrl, 'RESTORE_DATABASE_URL');
+    run('pg_restore', ['--no-owner', '--no-privileges', '--exit-on-error', '--dbname', targetCli.connectionString, dumpPath], targetCli.env);
     report.restauracao = { duracao_ms: ms(t1) };
 
     const chk = new Client({ connectionString: targetUrl });
@@ -363,6 +392,7 @@ module.exports = {
   CONFIRM_VALUE,
   parseDbUrl,
   sameDatabase,
+  connectionForCli,
   assertSafeTarget,
   parseArgs,
   compareSnapshots,
