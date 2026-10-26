@@ -91,3 +91,9 @@ test('front: o cliente HTTP envia o CSRF na troca de senha e a UI não persiste 
   assert.match(ui, /autoComplete="current-password"/);
   assert.match(ui, /autoComplete="new-password"/);
 });
+
+test('reset de senha legado inclui todos os quatro perfis de bootstrap', () => {
+  const reset = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'reset-senha.js'), 'utf8');
+  assert.match(reset, /lower\(login\) IN \('admin', 'cozinha', 'bar', 'caixa'\)/);
+  assert.match(reset, /deve_trocar_senha = true/);
+});
