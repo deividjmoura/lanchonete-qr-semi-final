@@ -100,7 +100,7 @@ test('reset de senha legado inclui todos os quatro perfis de bootstrap', () => {
 
 test('SSE não mantém acesso operacional de staff com troca obrigatória pendente', () => {
   const i = server.indexOf("p === '/api/events'");
-  const fim = server.indexOf("if ((m = p.match(/^\\\\/api\\\\/mesas", i);
+  const fim = server.indexOf("if ((m = p.match(", i + 10);
   assert.ok(i >= 0 && fim > i, 'rota SSE não encontrada');
   const bloco = server.slice(i, fim);
   assert.match(bloco, /staff\.deveTrocarSenha/);
