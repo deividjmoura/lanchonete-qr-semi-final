@@ -78,3 +78,13 @@ test('nao inicia servidor se o runner de migrations e encerrado por sinal', () =
     process.exitCode = previousExitCode;
   }
 });
+
+
+test('aliases de inicialização de produção passam pelo gate de migrations', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+  for (const script of ['start', 'start:prod', 'start:api']) {
+    assert.equal(pkg.scripts[script], 'node scripts/start-production.js', `${script} deve impedir startup se migrations falharem`);
+  }
+});
