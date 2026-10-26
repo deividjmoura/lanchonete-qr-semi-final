@@ -86,3 +86,12 @@ test('rate limit atual é independente entre processos e recomeça após reiníc
   assert.equal(first.stdout, 'true');
   assert.equal(secondProcess.stdout, 'true');
 });
+
+test('server de produção usa resolver seguro e configuração explícita de hops confiáveis', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  assert.match(server, /require\(['"]\.\/security\/client-ip['"]\)/);
+  assert.match(server, /resolveClientIp\(req, \{ trustedProxyHops \}\)/);
+  assert.doesNotMatch(server, /xff\.split\(['"],['"]\)\[0\]/);
+});
