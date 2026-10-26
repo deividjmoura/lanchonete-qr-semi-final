@@ -96,7 +96,7 @@ test('reset de senha legado inclui todos os quatro perfis de bootstrap', () => {
   const reset = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'reset-senha.js'), 'utf8');
   assert.match(reset, /lower\(login\) IN \('admin', 'cozinha', 'bar', 'caixa'\)/);
   assert.match(reset, /deve_trocar_senha = true/);
-  assert.doesNotMatch(reset, /ativo\\s*=\\s*true/, 'reset de senha não pode reativar contas desabilitadas');
+  assert.doesNotMatch(reset, /ativo\s*=\s*true/, 'reset de senha não pode reativar contas desabilitadas');
 });
 
 test('SSE não mantém acesso operacional de staff com troca obrigatória pendente', () => {
