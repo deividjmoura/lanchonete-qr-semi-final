@@ -29,14 +29,14 @@ async function main() {
     const hash = await hashSenha(senha);
     const { rows } = await pool.query(
       `UPDATE staff
-       SET senha_hash = $1, ativo = true
-       WHERE lower(login) IN ('admin', 'cozinha', 'caixa')
+       SET senha_hash = $1, deve_trocar_senha = true
+       WHERE lower(login) IN ('admin', 'cozinha', 'bar', 'caixa')
        RETURNING login, papel, ativo`,
       [hash]
     );
 
     if (!rows.length) {
-      console.error('Nenhum usuário admin/cozinha/caixa encontrado na tabela staff.');
+      console.error('Nenhum usuário admin/cozinha/bar/caixa encontrado na tabela staff.');
       process.exitCode = 1;
       return;
     }

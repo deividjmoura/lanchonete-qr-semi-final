@@ -49,3 +49,9 @@ jobs:
         run: node --test tests/postgres-financial-integration.test.cjs
       - name: Run waiter ownership PostgreSQL integration tests
         run: node --test tests/postgres-waiter-integration.test.cjs
+      - name: Staff password change PostgreSQL integration tests
+        run: node --test tests/postgres-password-change.test.cjs
+      - name: Backup/restore drill (pg_dump + pg_restore em banco isolado)
+        run: |
+          pg_dump --version
+          node --test tests/postgres-backup-restore.test.cjs

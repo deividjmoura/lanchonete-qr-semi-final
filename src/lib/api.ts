@@ -5,6 +5,7 @@ let csrfToken: string | null = null;
 function requiresStaffCsrf(path: string, method: string) {
   if (["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase())) return false;
   return path === "/api/logout" ||
+    path === "/api/me/senha" ||
     path.startsWith("/api/admin/") ||
     path.startsWith("/api/caixa/") ||
     path.startsWith("/api/cozinha/") ||
@@ -14,16 +15,18 @@ function requiresStaffCsrf(path: string, method: string) {
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  code?: string;
+  constructor(status: number, message: string, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
 async function parse(res: Response) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new ApiError(res.status, (data && data.error) || res.statusText || "Erro na API");
+    throw new ApiError(res.status, (data && data.error) || res.statusText || "Erro na API", data && data.code);
   }
   return data;
 }
@@ -57,7 +60,7 @@ export async function apiSend<T = unknown>(
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   const data: any = await parse(res);
-  if (path === "/api/login" && typeof data?.csrfToken === "string") csrfToken = data.csrfToken;
+  if ((path === "/api/login" || path === "/api/me/senha") && typeof data?.csrfToken === "string") csrfToken = data.csrfToken;
   if (path === "/api/logout") csrfToken = null;
   return data as T;
 }
@@ -65,13 +68,20 @@ export async function apiSend<T = unknown>(
 export const api = {
   cardapio: () => apiGet<any[]>("/api/cardapio"),
   login: (usuario: string, senha: string) =>
-    apiSend<{ ok?: boolean; staff?: { papel: string; nome?: string; login?: string }; home?: string; csrfToken?: string }>(
+    apiSend<{ ok?: boolean; staff?: { papel: string; nome?: string; login?: string; deveTrocarSenha?: boolean }; home?: string; csrfToken?: string }>(
       "/api/login",
       "POST",
       { usuario, senha }
     ),
   logout: () => apiSend("/api/logout", "POST"),
-  me: () => apiGet<{ id?: number; papel?: string; nome?: string; login?: string; csrfToken?: string }>("/api/me"),
+  me: () =>
+    apiGet<{
+      staff?: { id?: number; papel?: string; nome?: string; login?: string; deveTrocarSenha?: boolean };
+      home?: string;
+      csrfToken?: string;
+    }>("/api/me"),
+  trocarSenha: (senhaAtual: string, senhaNova: string) =>
+    apiSend<{ ok: boolean; csrfToken?: string; sessoesRevogadas?: number }>("/api/me/senha", "POST", { senhaAtual, senhaNova }),
 
   mesaSessao: (token: string) => apiGet<any>(`/api/mesas/${token}/sessao`),
   checkin: (token: string, clienteNome: string) =>

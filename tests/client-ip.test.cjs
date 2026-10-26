@@ -86,3 +86,47 @@ test('rate limit atual é independente entre processos e recomeça após reiníc
   assert.equal(first.stdout, 'true');
   assert.equal(secondProcess.stdout, 'true');
 });
+
+test('server de produção usa resolver seguro e configuração explícita de hops confiáveis', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  assert.match(server, /require\(['"]\.\/security\/client-ip['"]\)/);
+  assert.match(server, /resolveClientIp\(req, \{ trustedProxyHops, clientIpHeader \}\)/);
+  assert.match(server, /process\.env\.CLIENT_IP_HEADER/);
+  assert.doesNotMatch(server, /xff\.split\(['"],['"]\)\[0\]/);
+});
+
+function requestWith(remoteAddress, headers) {
+  return { socket: { remoteAddress }, headers };
+}
+
+test('ignores X-Real-IP unless a client IP header is configured', () => {
+  assert.equal(resolveClientIp(requestWith('10.0.0.8', { 'x-real-ip': '198.51.100.7' })), '10.0.0.8');
+});
+
+test('uses the configured single-IP header when it holds a valid address', () => {
+  assert.equal(
+    resolveClientIp(requestWith('10.0.0.8', { 'x-real-ip': '198.51.100.7' }), { clientIpHeader: 'X-Real-IP' }),
+    '198.51.100.7'
+  );
+});
+
+test('falls back to the socket when the configured header is missing or malformed', () => {
+  assert.equal(resolveClientIp(requestWith('10.0.0.8', {}), { clientIpHeader: 'x-real-ip' }), '10.0.0.8');
+  assert.equal(
+    resolveClientIp(requestWith('10.0.0.8', { 'x-real-ip': 'not-an-ip, 1.2.3.4' }), { clientIpHeader: 'x-real-ip' }),
+    '10.0.0.8'
+  );
+});
+
+test('rejects unsafe header names and never reads XFF through the header option', () => {
+  assert.equal(
+    resolveClientIp(requestWith('10.0.0.8', { 'x-real-ip': '198.51.100.7' }), { clientIpHeader: 'x real ip' }),
+    '10.0.0.8'
+  );
+  assert.equal(
+    resolveClientIp(requestWith('10.0.0.8', { 'x-forwarded-for': '1.2.3.4, 5.6.7.8' }), { clientIpHeader: 'x-forwarded-for' }),
+    '10.0.0.8'
+  );
+});

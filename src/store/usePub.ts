@@ -29,7 +29,7 @@ interface PubState {
   sessoes: Sessao[];
   pedidos: Pedido[];
   eventos: Evento[];
-  auth: { role: Role; nome: string } | null;
+  auth: { role: Role; nome: string; deveTrocar?: boolean } | null;
   somLigado: boolean;
   loading: boolean;
   apiReady: boolean;
@@ -81,6 +81,8 @@ interface PubState {
   /* auth + som */
   login: (usuario: string, senha: string) => Role | null;
   loginApi: (usuario: string, senha: string) => Promise<Role | null>;
+  /** Troca a própria senha. Retorna null em sucesso ou a mensagem de erro. */
+  trocarSenhaApi: (senhaAtual: string, senhaNova: string) => Promise<string | null>;
   logout: () => void;
   toggleSom: () => void;
   limparEventos: () => void;
@@ -393,9 +395,10 @@ export const usePub = create<PubState>((set, get) => ({
 
   hydrateMe: async () => {
     try {
-      const me = await api.me();
+      const out = await api.me();
+      const me = out?.staff;
       if (me && me.papel) {
-        const auth = { role: me.papel as Role, nome: me.nome || me.papel };
+        const auth = { role: me.papel as Role, nome: me.nome || me.papel, deveTrocar: Boolean(me.deveTrocarSenha) };
         sessionStorage.setItem("pub-auth", JSON.stringify(auth));
         set({ auth });
       }
@@ -955,13 +958,27 @@ export const usePub = create<PubState>((set, get) => ({
       const out = await api.login(usuario, senha);
       const r = (out.staff?.papel || "") as Role;
       if (!r) return null;
-      const auth = { role: r, nome: out.staff?.nome || r };
+      const auth = { role: r, nome: out.staff?.nome || r, deveTrocar: Boolean(out.staff?.deveTrocarSenha) };
       sessionStorage.setItem("pub-auth", JSON.stringify(auth));
       set({ auth, lastError: null });
       return r;
     } catch (e: any) {
       set({ lastError: e.message || "Login inválido" });
       return null;
+    }
+  },
+  trocarSenhaApi: async (senhaAtual: string, senhaNova: string): Promise<string | null> => {
+    try {
+      await api.trocarSenha(senhaAtual, senhaNova);
+      const atual = get().auth;
+      if (atual) {
+        const auth = { ...atual, deveTrocar: false };
+        sessionStorage.setItem("pub-auth", JSON.stringify(auth));
+        set({ auth });
+      }
+      return null;
+    } catch (e: any) {
+      return e?.message || "Não foi possível alterar a senha.";
     }
   },
 

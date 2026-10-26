@@ -9,7 +9,7 @@
     "build:check": "npm run typecheck && vite build",
     "preview": "vite preview",
     "server": "node server.js",
-    "start": "node server.js",
+    "start": "node scripts/start-production.js",
     "db:migrate": "node db/migrate.js",
     "db:seed": "node db/seed.js",
     "db:reset-senha": "node scripts/reset-senha.js",
@@ -24,14 +24,15 @@
     "fotos:dry": "node scripts/fix-fotos-cardapio.js --dry-run",
     "dev:api": "node server.js",
     "dev:ui": "vite",
-    "start:api": "node server.js",
+    "start:api": "node scripts/start-production.js",
     "start:prod": "node scripts/start-production.js",
-    "postbuild": "node -e \"console.log('SPA em dist/ — npm start serve o design React se dist/ existir')\"",
+    "postbuild": "node -e \"console.log('Build concluído; npm start inicia o servidor após validar migrations.')\"",
     "setup": "node scripts/setup-local.js",
     "typecheck": "tsc --noEmit",
     "test": "node scripts/run-tests.js",
     "test:regression": "node scripts/run-tests.js",
-    "health:smoke": "node scripts/health-smoke.js"
+    "health:smoke": "node scripts/health-smoke.js",
+    "db:restore-drill": "node scripts/backup-restore-drill.js"
   },
   "dependencies": {
     "clsx": "2.1.1",
