@@ -107,6 +107,7 @@ test('PostgreSQL real: pagamento parcial é idempotente e quitação registra o 
     const mesaFinal = await pool.query('SELECT status FROM mesas WHERE id = $1', [ids.mesa]);
     assert.equal(mesaFinal.rows[0].status, 'livre');
   } finally {
+    if (ids.sessao) await pool.query('DELETE FROM auditoria_eventos WHERE alvo_id = $1', [String(ids.sessao)]).catch(() => {});
     if (ids.pedido) await pool.query('DELETE FROM itens_pedido WHERE pedido_id = $1', [ids.pedido]).catch(() => {});
     if (ids.pedido) await pool.query('DELETE FROM pedidos WHERE id = $1', [ids.pedido]).catch(() => {});
     if (ids.sessao) await pool.query('DELETE FROM mesa_sessoes WHERE id = $1', [ids.sessao]).catch(() => {});

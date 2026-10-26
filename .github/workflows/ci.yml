@@ -63,6 +63,14 @@ jobs:
         if: ${{ hashFiles('tests/postgres-waiter-integration.test.cjs') != '' }}
         run: node --test tests/postgres-waiter-integration.test.cjs
 
+      - name: QR/session lifecycle integration on clean PostgreSQL
+        if: ${{ hashFiles('tests/postgres-qr-session.test.cjs') != '' }}
+        run: node --test tests/postgres-qr-session.test.cjs
+
+      - name: Financial concurrency integration on clean PostgreSQL
+        if: ${{ hashFiles('tests/postgres-financial-concurrency.test.cjs') != '' }}
+        run: node --test tests/postgres-financial-concurrency.test.cjs
+
       - name: Typecheck
         run: npm run typecheck
 

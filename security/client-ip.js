@@ -62,9 +62,31 @@ function loginRateLimitKey(ip) {
   return `login:${normalizeIp(ip) || 'unknown'}`;
 }
 
+/**
+ * Chave de rate limit por CONTA de staff, independente do IP. Fecha a lacuna
+ * de quem tenta burlar o limite por IP variando X-Forwarded-For ou usando
+ * redes diferentes, sem transformar o limite global de IP em trava geral da
+ * equipe atrás do mesmo NAT/Wi-Fi (issue #50). O login é normalizado de forma
+ * restritiva para nunca virar chave aberta nem registrar segredos.
+ */
+function loginUserRateLimitKey(login) {
+  const normalizado = String(login || '')
+    .trim()
+    .toLowerCase()
+    .slice(0, 64)
+    .replace(/[^a-z0-9_.-]/g, '');
+  return `login-user:${normalizado || 'desconhecido'}`;
+}
+
 function orderRateLimitKey(ip, mesaToken) {
   // Mesa tokens are opaque path credentials; do not log or normalize them here.
   return `pedido:${normalizeIp(ip) || 'unknown'}:${String(mesaToken)}`;
 }
 
-module.exports = { normalizeIp, resolveClientIp, loginRateLimitKey, orderRateLimitKey };
+module.exports = {
+  normalizeIp,
+  resolveClientIp,
+  loginRateLimitKey,
+  loginUserRateLimitKey,
+  orderRateLimitKey,
+};

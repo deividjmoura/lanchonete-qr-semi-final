@@ -10,6 +10,7 @@ const {
 const { idempotencyKeyDoCorpo, colunaExiste, sincronizarValorTotalSessao } = require('./conta');
 const { comRetryConcorrencia } = require('./retry');
 const { invalidarCardapio } = require('./cardapio');
+const { registrarEvento } = require('./auditoria');
 
 const pedidosTemIdempotencyKey = colunaExiste('pedidos', 'idempotency_key');
 
@@ -415,8 +416,13 @@ async function criarPedido(token, body, atendimento = null) {
   }
 }
 
-/** Cliente cancela pedido só enquanto status = recebido (ainda não em preparo). */
-async function cancelarPedidoCliente(token, pedidoId, garcomResponsavelId = null) {
+/**
+ * Cliente cancela pedido só enquanto status = recebido (ainda não em preparo).
+ * O cancelamento deixa evidência persistente na mesma transação (#48): o
+ * pedido e seus itens são removidos, mas o evento registra mesa, pedido e
+ * motivo antes da exclusão.
+ */
+async function cancelarPedidoCliente(token, pedidoId, garcomResponsavelId = null, opcoes = {}) {
   const pedidoNumerico = Number(pedidoId);
   if (!Number.isInteger(pedidoNumerico) || pedidoNumerico < 1) {
     throw new ErroPedido(400, 'Pedido inválido');
@@ -446,6 +452,21 @@ async function cancelarPedidoCliente(token, pedidoId, garcomResponsavelId = null
     }
 
     const restaurou = await restaurarEstoqueDoPedido(client, pedido.id);
+
+    // Evidência persistente do cancelamento (#48): gravada antes da exclusão
+    // e na mesma transação — se o DELETE falhar, o evento também desfaz.
+    await registrarEvento(client, {
+      atorTipo: 'cliente_mesa',
+      atorId: mesa.id,
+      acao: 'pedido_cancelado',
+      alvoTipo: 'pedido',
+      alvoId: String(pedido.id),
+      contexto: {
+        mesaNumero: mesa.numero,
+        motivo: opcoes && opcoes.motivo ? String(opcoes.motivo) : null,
+      },
+      requestId: opcoes && opcoes.requestId ? String(opcoes.requestId) : null,
+    });
 
     await client.query(
       `DELETE FROM itens_pedido_adicionais
