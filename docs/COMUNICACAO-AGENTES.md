@@ -724,3 +724,26 @@ Commits da correção:
 - `d474711f` — alinhar mensagem de erro.
 
 Os workflows CI e PostgreSQL foram disparados para o SHA `b4da23e559f51d303950dcb08799dc090c1fe2e7` e estavam pendentes/em execução na última consulta; a última atualização da mensagem de erro gerou um SHA posterior, portanto a validação final deve ser feita no HEAD atualizado. Não foi executado reset de senha contra banco algum, nem houve merge ou deploy. PR #118 permanece draft.
+
+## Auditoria de consolidação (2026-10-26)
+
+Auditoria somente leitura, feita clonando o repositório e fazendo merge de teste local do #118 sobre a `main` (`3480b4c`). Nenhuma branch foi mesclada ou fechada, nenhum deploy foi executado e nenhuma configuração de produção foi alterada.
+
+### Estado verificado
+
+- **Frente 2 já está na `main`:** o #107 ("Integrar Frente 1 + Frente 2 com autorização transacional") foi mesclado. A migration `0023_atendimento_transferencia_actor.sql`, `db/atendimento.js`, `db/garcons.js` e os testes `garcom-responsavel-mesa` e `postgres-waiter-integration` estão na `main`. `db/atendimento.js` e `db/garcons.js` não têm diferença em relação ao antigo #89. Não é necessário recuperar a Frente 2 em PR nova; falta apenas revisar as diferenças residuais do #89 em `db/pedidos.js`, `server.js` e `public/garcom-pwa/app.js` (podem ser evolução posterior da `main`).
+- **#118 mescla sem conflito na `main`:** base `05edc86c`; a `main` avançou só em `docs/COMUNICACAO-AGENTES.md`. O #118 adiciona a migration `0024_staff_troca_senha.sql`.
+- **Validação local do merge de teste:** `typecheck` OK, `build` OK, `npm test` 207/207, `npm audit --omit=dev` com 0 vulnerabilidades. PostgreSQL não foi executado localmente; vale o CI do GitHub (verde no HEAD `dd9ef76f` do #118 e na `main`).
+- **#116 e #117:** os arquivos novos (migration `0024`, `TrocarSenha.tsx`, runbook e testes de backup/restore) são idênticos aos do #118. Restam divergências pequenas (2 a 35 linhas) em `db/auth.js`, `server.js`, `scripts/backup-restore-drill.js`, `package.json` e testes; confirmar na revisão final que o #118 contém o que importa antes de fechá-los como substituídos.
+
+### Pendência encontrada
+
+- `dist/` é versionado e está desatualizado em relação ao código-fonte, inclusive na `main` sozinha (`index.html`, `admin.html`, `caixa.html`, `js/pix.js`, assets com hash e `dist/garcom-pwa/` ausente). Confirmar se o Railway faz `npm run build` no deploy; se servir o `dist/` commitado, rebuildar e commitar **depois** do merge do #118.
+
+### Continuam bloqueios P0 (dependem do responsável)
+
+- Troca de senha das quatro contas de bootstrap (admin, cozinha, bar, caixa) com janela e responsável definidos.
+- Evidência real de backup/restore do provedor com RPO/RTO (issue #41).
+- Confirmação do startup e da ordem das migrations no Railway.
+
+Itens P0 e P1 do plano de revisão continuam valendo; nenhum deles foi dado como concluído por esta auditoria.
