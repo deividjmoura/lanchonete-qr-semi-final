@@ -683,3 +683,19 @@ Consulta direta ao GitHub em 2026-10-26:
 ### Limpeza local segura (não exclui branches remotas)
 
 Para a limpeza no computador do mantenedor, usar somente `git branch --merged origin/main` depois de `git fetch origin --prune`. Excluir branches locais uma por vez com `git branch -d`; nunca usar `-D` em lote. Manter protegidas `main`, `arena/3a803cb3-lanchonete-qr-semi-final`, `feat/issue-55-password-change` e `ops/issue-41-backup-restore-drill`. O `--prune` remove apenas referências remotas locais que já não existem no servidor; não é autorização para apagar branches no GitHub.
+
+## Verificação direta do startup no Railway — 2026-10-26
+
+Consulta somente leitura à configuração e aos logs do ambiente `production` do projeto Railway `exquisite-nurturing`:
+
+- Serviço `lanchonete-qr-semi-final` está configurado para acompanhar o repositório `deividjmoura/lanchonete-qr-semi-final`, branch `main`.
+- O comando de startup configurado no provedor é `npm run start:prod`; o pre-deploy executa `npm run db:migrate && npm run db:seed`.
+- A versão atualmente em `main` define `start:prod` como `node scripts/start-production.js`. Os logs do deployment bem-sucedido `423f48e7-4927-4b0a-bdef-6c73a399bec7` confirmam a execução do gate: migrations verificadas e, em seguida, servidor iniciado. Portanto, o risco levantado sobre o alias alternativo `node server.js` **não é o caminho de startup configurado atualmente no Railway**.
+- O serviço e o Postgres estavam online na consulta; não havia trabalho/configuração staged pendente. O serviço da aplicação, porém, registrava duas falhas de deploy recentes. Uma delas tem erro explícito de infraestrutura de build (daemon BuildKit indisponível); não inferir que todas as falhas sejam causadas pelo código sem análise individual.
+- A PR #118 continua draft e **não está implantada**: Railway segue ligado a `main`. Não alterei configuração, variáveis, banco, deploy nem dados de produção.
+
+### Encaminhamento
+
+- Atualizar a revisão da PR #118 para registrar que o comando real do provedor foi confirmado e que o gate está sendo usado no deployment atual.
+- Manter como hardening recomendado que o caminho alternativo `node server.js` não possa abrir tráfego de produção antes das migrations; isso é uma proteção contra configuração futura/alternativa, não evidência de que o comando atual do Railway contorne o gate.
+- Continuam bloqueadores separados: decisão operacional sobre troca obrigatória de senha no primeiro acesso; evidência de backup/restore real do provedor e RPO/RTO; revisão final do diff e aprovação explícita. Não mesclar #116/#117 isoladamente, não promover #118 a ready e não fazer deploy sem autorização.
