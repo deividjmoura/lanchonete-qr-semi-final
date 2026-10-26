@@ -110,18 +110,38 @@ export default function Login() {
                 transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                 className="overflow-hidden"
               >
-                <div className="pt-6 space-y-3">
+                <form
+                  className="pt-6 space-y-3"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void entrar();
+                  }}
+                >
+                  {/* Usuário = perfil escolhido (admin, cozinha, bar, caixa); permite ao navegador salvar a senha com o usuário certo. */}
+                  <input
+                    type="text"
+                    name="username"
+                    id="login-usuario"
+                    autoComplete="username"
+                    value={papel}
+                    readOnly
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    className="sr-only"
+                  />
                   <div className={cn("flex items-center gap-3 rounded-2xl border bg-slate-100 px-4 h-13 transition-colors", erro ? "border-rose-500/60" : "border-slate-200 focus-within:border-brand-500/60")}>
                     <KeyRound className={cn("size-4.5", erro ? "text-rose-600" : "text-slate-500")} />
                     <input
                       type="password"
+                      name="password"
+                      id="login-senha"
+                      autoComplete="current-password"
                       autoFocus
                       value={senha}
                       onChange={(e) => {
                         setSenha(e.target.value);
                         setErro(false);
                       }}
-                      onKeyDown={(e) => e.key === "Enter" && entrar()}
                       placeholder={`Senha da ${ativo.nome.toLowerCase()}`}
                       className="flex-1 bg-transparent text-sm text-navy-900 placeholder:text-slate-400 focus:outline-none h-full"
                     />
@@ -139,13 +159,13 @@ export default function Login() {
                     )}
                   </AnimatePresence>
                   <motion.button
+                    type="submit"
                     whileTap={{ scale: 0.97 }}
-                    onClick={entrar}
                     className="btn-press w-full h-13 rounded-2xl bg-gradient-to-br from-brand-500 to-teal-600 text-white font-bold text-sm inline-flex items-center justify-center gap-2 shadow-[0_14px_38px_-8px_rgba(0,196,180,0.55)] cursor-pointer"
                   >
                     <LogIn className="size-4.5" /> Entrar como {ativo.nome}
                   </motion.button>
-                </div>
+                </form>
               </motion.div>
             )}
           </AnimatePresence>

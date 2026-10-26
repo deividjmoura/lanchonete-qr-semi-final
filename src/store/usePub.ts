@@ -29,7 +29,7 @@ interface PubState {
   sessoes: Sessao[];
   pedidos: Pedido[];
   eventos: Evento[];
-  auth: { role: Role; nome: string; deveTrocar?: boolean } | null;
+  auth: { role: Role; nome: string; login?: string; deveTrocar?: boolean } | null;
   somLigado: boolean;
   loading: boolean;
   apiReady: boolean;
@@ -398,7 +398,7 @@ export const usePub = create<PubState>((set, get) => ({
       const out = await api.me();
       const me = out?.staff;
       if (me && me.papel) {
-        const auth = { role: me.papel as Role, nome: me.nome || me.papel, deveTrocar: Boolean(me.deveTrocarSenha) };
+        const auth = { role: me.papel as Role, nome: me.nome || me.papel, login: me.login || undefined, deveTrocar: Boolean(me.deveTrocarSenha) };
         sessionStorage.setItem("pub-auth", JSON.stringify(auth));
         set({ auth });
       }
@@ -958,7 +958,7 @@ export const usePub = create<PubState>((set, get) => ({
       const out = await api.login(usuario, senha);
       const r = (out.staff?.papel || "") as Role;
       if (!r) return null;
-      const auth = { role: r, nome: out.staff?.nome || r, deveTrocar: Boolean(out.staff?.deveTrocarSenha) };
+      const auth = { role: r, nome: out.staff?.nome || r, login: out.staff?.login || usuario, deveTrocar: Boolean(out.staff?.deveTrocarSenha) };
       sessionStorage.setItem("pub-auth", JSON.stringify(auth));
       set({ auth, lastError: null });
       return r;
