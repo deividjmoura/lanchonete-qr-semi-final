@@ -56,9 +56,12 @@ test('duas compras concorrentes da última unidade: só uma confirma e o estoque
     const rejeitados = resultados.filter((r) => r.status === 'rejected');
     assert.equal(aceitos.length, 1, 'exatamente um pedido deve ser aceito');
     assert.equal(rejeitados.length, 1);
-    // Cobre os dois caminhos possíveis de perda da corrida: a checagem
-    // preventiva ("Estoque insuficiente") ou o UPDATE com guarda ("esgotou").
-    assert.match(String(rejeitados[0].reason && rejeitados[0].reason.message), /[Ee]stoque/);
+    // A perda da corrida pode se manifestar por três caminhos legítimos,
+    // dependendo de qual trava a transação perdedora encontra primeiro:
+    // produto marcado indisponível, checagem preventiva de estoque ou o
+    // UPDATE com guarda. O invariante importante é "uma aceita, uma rejeita".
+    const motivo = String(rejeitados[0].reason && rejeitados[0].reason.message);
+    assert.match(motivo, /[Ee]stoque|indisponível|inexistente/);
     aceitos.forEach((r) => sessoes.push(r.value.sessaoId));
 
     const estoque = await pool.query('SELECT estoque, disponivel FROM produtos WHERE id = $1', [base.produto]);
