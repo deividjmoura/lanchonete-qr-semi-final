@@ -24,7 +24,7 @@
     "fotos:dry": "node scripts/fix-fotos-cardapio.js --dry-run",
     "dev:api": "node server.js",
     "dev:ui": "vite",
-    "start:api": "node server.js",
+    "start:api": "node scripts/start-production.js",
     "start:prod": "node scripts/start-production.js",
     "postbuild": "node -e \"console.log('Build concluído; npm start inicia o servidor após validar migrations.')\"",
     "setup": "node scripts/setup-local.js",
