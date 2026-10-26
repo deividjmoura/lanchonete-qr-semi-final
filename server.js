@@ -255,8 +255,17 @@ const server = http.createServer(async (req, res) => {
 
     let m;
     if (p === '/api/events' && req.method === 'GET') {
+      const staff = await getStaffDaRequisicao(req);
+      // A sessão pode continuar válida para abrir /api/me e trocar a senha,
+      // mas não deve manter acesso ao stream operacional durante a troca obrigatória.
+      if (staff && staff.deveTrocarSenha) {
+        return json(res, 403, {
+          error: 'Troca de senha obrigatória antes de continuar.',
+          code: 'SENHA_TROCA_OBRIGATORIA',
+        });
+      }
       const access = await eventAccess(u.searchParams, {
-        staff: await getStaffDaRequisicao(req),
+        staff,
         findMesa: (token) => getMesaPorToken(pool, token),
         findGarcom: getGarcomPorToken,
       });
