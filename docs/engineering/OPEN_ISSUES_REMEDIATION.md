@@ -21,7 +21,7 @@ A PR deixa corretamente pendente a prova de backups reais do provedor, retençã
 ## Correções adicionais realizadas nesta branch
 
 - **#50 — confiança no proxy:** `server.js` agora usa `security/client-ip.js`, que por padrão ignora `X-Forwarded-For`. `TRUSTED_PROXY_HOPS` só deve ser configurado depois de confirmar o número de proxies, que eles acrescentam o IP observado à direita e que a origem da aplicação não é acessível diretamente. Os limites por IP continuam em memória e por processo; não são globais nem persistentes.
-- **#6 / #40 — migrations no startup:** `npm start` agora usa `scripts/start-production.js`, que falha fechado e não inicia o servidor se a migration falhar, exceder o timeout ou não puder executar. A configuração real do provedor e o comando de release ainda precisam ser verificados antes de considerar isso evidência de produção. `node server.js` continua sendo um caminho direto que não deve ser usado como comando de produção.
+- **#6 / #40 — migrations no startup:** `npm start` agora usa `scripts/start-production.js`, que falha fechado e não inicia o servidor se a migration falhar, exceder o timeout ou não puder executar. A configuração real do provedor e o comando de release ainda precisam ser verificados antes de considerar isso evidência de produção. `node server.js` e `npm run server` continuam sendo caminhos diretos para desenvolvimento/testes e não devem ser usados como comando de produção. `npm run start:api` também foi alinhado ao gate fail-closed (`scripts/start-production.js`) para não oferecer um alias de inicialização de produção que pule migrations.
 
 ## Situação das demais issues abertas
 
