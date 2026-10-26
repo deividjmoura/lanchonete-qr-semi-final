@@ -97,7 +97,9 @@ function clientIp(req) {
   const trustedProxyHops = Number.isSafeInteger(configuredHops) && configuredHops > 0
     ? configuredHops
     : 0;
-  return resolveClientIp(req, { trustedProxyHops });
+  // Opt-in: cabeçalho de IP único do provedor (Railway: X-Real-IP). Vazio = ignora.
+  const clientIpHeader = process.env.CLIENT_IP_HEADER || '';
+  return resolveClientIp(req, { trustedProxyHops, clientIpHeader });
 }
 
 /** Corpo JSON de um ErroAuth; inclui `code` quando existe (ex.: SENHA_TROCA_OBRIGATORIA). */
