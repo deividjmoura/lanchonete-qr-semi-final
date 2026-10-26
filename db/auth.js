@@ -27,10 +27,43 @@ const HOME_POR_PAPEL = Object.freeze({
 });
 
 class ErroAuth extends Error {
-  constructor(status, message) {
+  constructor(status, message, code) {
     super(message);
     this.status = status;
+    if (code) this.code = code;
   }
+}
+
+const CODIGO_TROCA_OBRIGATORIA = 'SENHA_TROCA_OBRIGATORIA';
+
+/**
+ * Troca obrigatória ativa por padrão em produção. `STAFF_FORCE_PASSWORD_CHANGE=true|false`
+ * força o comportamento em qualquer ambiente (útil para testar/ desligar conscientemente).
+ */
+function trocaObrigatoriaAtiva(env = process.env) {
+  const v = String(env.STAFF_FORCE_PASSWORD_CHANGE || '').trim().toLowerCase();
+  if (v === 'true') return true;
+  if (v === 'false') return false;
+  return env.NODE_ENV === 'production';
+}
+
+const SENHA_MIN = 12;
+const SENHA_MAX = 128;
+const SENHAS_FRACAS = new Set([
+  'senha123456', 'password1234', '123456789012', 'qwertyuiop12', 'admin1234567', 'lanchonete123',
+]);
+
+/** Política de senha (função pura). Retorna mensagem de erro ou null se aceita. */
+function validarPoliticaSenha(nova, { login = '' } = {}) {
+  if (typeof nova !== 'string') return 'Informe a nova senha.';
+  if (nova.length < SENHA_MIN) return `A nova senha deve ter pelo menos ${SENHA_MIN} caracteres.`;
+  if (nova.length > SENHA_MAX) return `A nova senha deve ter no máximo ${SENHA_MAX} caracteres.`;
+  if (new Set(nova).size < 5) return 'A nova senha é repetitiva demais. Use caracteres variados.';
+  const baixa = nova.toLowerCase();
+  if (SENHAS_FRACAS.has(baixa)) return 'Essa senha é muito comum. Escolha outra.';
+  const l = String(login || '').trim().toLowerCase();
+  if (l.length >= 3 && baixa.includes(l)) return 'A nova senha não pode conter o seu usuário.';
+  return null;
 }
 
 function parseCookies(req) {
@@ -84,6 +117,12 @@ async function verificarSenha(senha, stored) {
   }
 }
 
+/** Senha inicial/temporária marcada, ou hash idêntico ao de outra conta ativa (senha compartilhada). */
+function exigeTrocaDeSenha(row, env = process.env) {
+  if (!row || !trocaObrigatoriaAtiva(env)) return false;
+  return Boolean(row.deve_trocar_senha) || Boolean(row.senha_compartilhada);
+}
+
 function staffPublico(row) {
   if (!row) return null;
   return {
@@ -91,8 +130,15 @@ function staffPublico(row) {
     nome: row.nome,
     login: row.login,
     papel: row.papel,
+    deveTrocarSenha: exigeTrocaDeSenha(row),
   };
 }
+
+// Colunas lidas via to_jsonb para tolerar execução de testes/ferramentas fora do entrypoint
+// de produção. O startup oficial é fail-closed e exige migrations aplicadas antes de iniciar.
+const SQL_FLAGS_SENHA = `
+  COALESCE((to_jsonb(s)->>'deve_trocar_senha')::boolean, FALSE) AS deve_trocar_senha,
+  (SELECT COUNT(*) FROM staff o WHERE o.ativo AND o.senha_hash = s.senha_hash) > 1 AS senha_compartilhada`;
 
 async function contarStaff() {
   const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM staff');
@@ -125,9 +171,10 @@ async function garantirStaffSeed() {
     { nome: 'Caixa', login: 'caixa', papel: 'caixa' },
   ];
   for (const u of users) {
+    // Credencial de bootstrap é temporária: marcada para troca obrigatória (#55).
     await pool.query(
-      `INSERT INTO staff (nome, login, senha_hash, papel)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO staff (nome, login, senha_hash, papel, deve_trocar_senha)
+       VALUES ($1, $2, $3, $4, TRUE)
        ON CONFLICT (login) DO NOTHING`,
       [u.nome, u.login, hash, u.papel]
     );
@@ -142,8 +189,8 @@ async function autenticar(login, senha) {
   }
 
   const { rows } = await pool.query(
-    `SELECT id, nome, login, senha_hash, papel, ativo
-     FROM staff WHERE lower(login) = $1 LIMIT 1`,
+    `SELECT s.id, s.nome, s.login, s.senha_hash, s.papel, s.ativo, ${SQL_FLAGS_SENHA}
+     FROM staff s WHERE lower(s.login) = $1 LIMIT 1`,
     [user]
   );
   const row = rows[0];
@@ -178,7 +225,7 @@ async function getStaffDaRequisicao(req) {
   if (!token) return null;
 
   const { rows } = await pool.query(
-    `SELECT s.id, s.nome, s.login, s.papel, s.ativo, ss.expira_em
+    `SELECT s.id, s.nome, s.login, s.papel, s.ativo, ss.expira_em, ${SQL_FLAGS_SENHA}
      FROM staff_sessoes ss
      JOIN staff s ON s.id = ss.staff_id
      WHERE ss.token = $1`,
@@ -288,10 +335,127 @@ async function exigirAcesso(req, recurso) {
   }
   verificarOrigemRequisicao(req);
   verificarProtecaoCSRF(req);
+  if (staff.deveTrocarSenha) {
+    throw new ErroAuth(403, 'Troca de senha obrigatória antes de continuar.', CODIGO_TROCA_OBRIGATORIA);
+  }
   if (!papelPodeAcessar(staff.papel, recurso)) {
     throw new ErroAuth(403, 'Sem permissão para esta área');
   }
   return staff;
+}
+
+/** Sessão válida + origem + CSRF, sem checar papel nem troca obrigatória (usada para trocar a própria senha). */
+async function exigirSessao(req) {
+  const staff = await getStaffDaRequisicao(req);
+  if (!staff) throw new ErroAuth(401, 'Não autenticado');
+  verificarOrigemRequisicao(req);
+  verificarProtecaoCSRF(req);
+  return staff;
+}
+
+async function registrarEventoCredencial(db, { staffId, login, evento, sessoesRevogadas = 0 }) {
+  await db.query(
+    `INSERT INTO staff_credencial_eventos (staff_id, login, evento, sessoes_revogadas)
+     VALUES ($1, $2, $3, $4)`,
+    [staffId, login, evento, sessoesRevogadas]
+  );
+}
+
+/**
+ * Troca a PRÓPRIA senha do staff autenticado.
+ *  - exige a senha atual (reautenticação);
+ *  - aplica a política de senha, recusa repetir a atual e recusa senha já usada por outra conta ativa;
+ *  - tudo (novo hash, limpeza da troca obrigatória, revogação de TODAS as sessões do usuário e auditoria)
+ *    acontece em UMA transação;
+ *  - emite uma sessão nova (token rotacionado) para o dispositivo que trocou.
+ * Nunca registra senhas, hashes ou tokens.
+ */
+async function trocarSenha(staffId, senhaAtual, senhaNova) {
+  if (typeof senhaAtual !== 'string' || !senhaAtual) throw new ErroAuth(400, 'Informe a senha atual.');
+  if (typeof senhaNova !== 'string' || !senhaNova) throw new ErroAuth(400, 'Informe a nova senha.');
+
+  const client = await pool.connect();
+  let rejeicao = null; // { evento, erro }
+  try {
+    await client.query('BEGIN');
+    // Serializa trocas entre contas diferentes: a checagem de reutilização de senha
+    // não pode ser burlada por duas trocas concorrentes que escolham a mesma senha.
+    await client.query("SELECT pg_advisory_xact_lock(741928350112)");
+    const { rows } = await client.query(
+      'SELECT id, login, senha_hash, ativo FROM staff WHERE id = $1 FOR UPDATE',
+      [staffId]
+    );
+    const row = rows[0];
+    if (!row || !row.ativo) {
+      await client.query('ROLLBACK');
+      throw new ErroAuth(401, 'Não autenticado');
+    }
+
+    if (!(await verificarSenha(senhaAtual, row.senha_hash))) {
+      rejeicao = { evento: 'senha_troca_falhou', erro: new ErroAuth(400, 'Senha atual incorreta.') };
+    } else {
+      const politica = validarPoliticaSenha(senhaNova, { login: row.login });
+      if (politica) {
+        rejeicao = { evento: 'senha_troca_rejeitada', erro: new ErroAuth(400, politica) };
+      } else if (senhaNova === senhaAtual) {
+        rejeicao = { evento: 'senha_troca_rejeitada', erro: new ErroAuth(400, 'A nova senha deve ser diferente da atual.') };
+      } else {
+        const { rows: outros } = await client.query(
+          'SELECT senha_hash FROM staff WHERE ativo AND id <> $1',
+          [staffId]
+        );
+        for (const o of outros) {
+          if (await verificarSenha(senhaNova, o.senha_hash)) {
+            rejeicao = {
+              evento: 'senha_troca_rejeitada',
+              erro: new ErroAuth(400, 'Essa senha já é usada por outra conta. Escolha uma senha exclusiva.'),
+            };
+            break;
+          }
+        }
+      }
+    }
+
+    if (rejeicao) {
+      await registrarEventoCredencial(client, { staffId, login: row.login, evento: rejeicao.evento });
+      await client.query('COMMIT'); // mantém a trilha da tentativa recusada; nada mais foi alterado
+      throw rejeicao.erro;
+    }
+
+    // Se esta credencial era compartilhada, persistir a obrigação nas outras
+    // contas antes de trocar o hash. Sem isso, a última conta remanescente deixaria
+    // de parecer compartilhada e poderia escapar da troca obrigatória.
+    await client.query(
+      `UPDATE staff
+          SET deve_trocar_senha = TRUE
+        WHERE ativo AND id <> $1 AND senha_hash = $2`,
+      [staffId, row.senha_hash]
+    );
+
+    const novoHash = await hashSenha(senhaNova);
+    await client.query(
+      `UPDATE staff
+          SET senha_hash = $2, senha_alterada_em = now(), deve_trocar_senha = FALSE
+        WHERE id = $1`,
+      [staffId, novoHash]
+    );
+    const revogadas = await client.query('DELETE FROM staff_sessoes WHERE staff_id = $1', [staffId]);
+    await registrarEventoCredencial(client, {
+      staffId,
+      login: row.login,
+      evento: 'senha_alterada',
+      sessoesRevogadas: revogadas.rowCount,
+    });
+    await client.query('COMMIT');
+
+    const token = await criarSessao(staffId);
+    return { token, csrfToken: csrfTokenParaSessao(token), sessoesRevogadas: revogadas.rowCount };
+  } catch (e) {
+    if (!rejeicao) await client.query('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
 function homeDoPapel(papel) {
@@ -320,6 +484,12 @@ module.exports = {
   getStaffDaRequisicao,
   estaAutenticado,
   exigirAcesso,
+  exigirSessao,
+  trocarSenha,
+  validarPoliticaSenha,
+  trocaObrigatoriaAtiva,
+  exigeTrocaDeSenha,
+  CODIGO_TROCA_OBRIGATORIA,
   papelPodeAcessar,
   homeDoPapel,
   garantirStaffSeed,

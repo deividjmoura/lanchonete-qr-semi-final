@@ -21,8 +21,24 @@ function normalizeIp(value) {
   return ip.toLowerCase();
 }
 
-function resolveClientIp(req, { trustedProxyHops = 0 } = {}) {
+/**
+ * Cabeçalho de IP único definido pelo provedor (ex.: `x-real-ip` no Railway).
+ * Só é lido quando configurado explicitamente e somente se o valor for um IP
+ * válido; qualquer outra coisa cai para o IP do socket (fail closed).
+ * Seguro apenas se a origem não for alcançável sem passar pelo edge do
+ * provedor, que deve sobrescrever o cabeçalho enviado pelo cliente.
+ */
+const HEADER_PERMITIDO = /^[a-z0-9-]{1,64}$/;
+
+function resolveClientIp(req, { trustedProxyHops = 0, clientIpHeader = '' } = {}) {
   const socketIp = normalizeIp(req?.socket?.remoteAddress) || 'unknown';
+
+  const headerName = String(clientIpHeader || '').trim().toLowerCase();
+  if (headerName && HEADER_PERMITIDO.test(headerName)) {
+    const raw = req?.headers?.[headerName];
+    const viaHeader = typeof raw === 'string' ? normalizeIp(raw) : null;
+    return viaHeader || socketIp;
+  }
 
   if (!Number.isSafeInteger(trustedProxyHops) || trustedProxyHops < 1) {
     return socketIp;
