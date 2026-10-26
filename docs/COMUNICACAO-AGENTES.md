@@ -631,3 +631,11 @@ Nenhum merge foi realizado por esta atualização. Não executar migrations/test
 - Testes PostgreSQL de regressão adicionados/atualizados para ambos os cenários em `tests/postgres-password-change.test.cjs`.
 - Commit da revisão documental: `4cf20f6464094e56ecb9046f855d2008897b48a6`; os commits de código e testes estão no histórico imediatamente anterior da mesma branch.
 - **Estado de validação:** aguardar CI e integração PostgreSQL no head atualizado da PR #118. Não aprovar/mesclar até os dois workflows terminarem com sucesso e os bloqueios operacionais já listados continuarem endereçados.
+
+
+## Coordenação das PRs de origem #116/#117
+
+- Em 2026-10-25, deixei comentários em [PR #116](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/116) e [PR #117](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/117) pedindo que não sejam mescladas isoladamente enquanto a integração conjunta #118 estiver em draft, para evitar duplicação e ordem incorreta de migrations/auth/startup/backup.
+- Head atual de #118: `76c60e42cd90388ef94a9ff4305305a39474b4c1`.
+- [PostgreSQL integration #131](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40251161438) está queued e [CI #561](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40251161442) está pending. A revisão adicional dos casos de senha compartilhada e concorrência só deve ser considerada validada depois de ambos concluírem com sucesso.
+- PR #118 permanece draft. Não houve merge, deploy nem acesso a produção.
