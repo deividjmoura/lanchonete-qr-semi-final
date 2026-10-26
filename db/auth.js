@@ -378,6 +378,9 @@ async function trocarSenha(staffId, senhaAtual, senhaNova) {
   let rejeicao = null; // { evento, erro }
   try {
     await client.query('BEGIN');
+    // Serializa trocas entre contas diferentes: a checagem de reutilização de senha
+    // não pode ser burlada por duas trocas concorrentes que escolham a mesma senha.
+    await client.query("SELECT pg_advisory_xact_lock(741928350112)");
     const { rows } = await client.query(
       'SELECT id, login, senha_hash, ativo FROM staff WHERE id = $1 FOR UPDATE',
       [staffId]
@@ -418,6 +421,16 @@ async function trocarSenha(staffId, senhaAtual, senhaNova) {
       await client.query('COMMIT'); // mantém a trilha da tentativa recusada; nada mais foi alterado
       throw rejeicao.erro;
     }
+
+    // Se esta credencial era compartilhada, persistir a obrigação nas outras
+    // contas antes de trocar o hash. Sem isso, a última conta remanescente deixaria
+    // de parecer compartilhada e poderia escapar da troca obrigatória.
+    await client.query(
+      `UPDATE staff
+          SET deve_trocar_senha = TRUE
+        WHERE ativo AND id <> $1 AND senha_hash = $2`,
+      [staffId, row.senha_hash]
+    );
 
     const novoHash = await hashSenha(senhaNova);
     await client.query(
