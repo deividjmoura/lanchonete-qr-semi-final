@@ -55,6 +55,18 @@ test('assertSafeTarget recusa destino igual à origem, mesmo com confirmação',
   );
 });
 
+test('assertSafeTarget não aceita marcador incidental dentro de nome de produção', () => {
+  const accidental = parseDbUrl('postgres://u:p@other.host/latestproduction', 'dst');
+  assert.throws(
+    () => assertSafeTarget({ source: null, target: accidental, confirm: CONFIRM_VALUE }),
+    /descartável/
+  );
+  const explicitlyIsolated = parseDbUrl('postgres://u:p@other.host/qradmin_restore_drill', 'dst');
+  assert.doesNotThrow(() => assertSafeTarget({
+    source: null, target: explicitlyIsolated, confirm: CONFIRM_VALUE,
+  }));
+});
+
 test('assertSafeTarget recusa nome de banco que não indica ambiente descartável', () => {
   const prodLike = parseDbUrl('postgres://u:p@other.host/railway', 'dst');
   assert.throws(() => assertSafeTarget({ source: src, target: prodLike, confirm: CONFIRM_VALUE }), /descartável/);
