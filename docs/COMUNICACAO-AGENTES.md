@@ -761,3 +761,25 @@ Itens P0 e P1 do plano de revisão continuam valendo; nenhum deles foi dado como
 - **Sem tráfego na primeira hora pós-deploy:** o smoke funcional de login e atendimento ainda precisa ser feito por quem opera.
 - `CLIENT_IP_HEADER` **não** está ativo: sem ele o rate limit de login ainda usa o IP do proxy (global). Ativar `x-real-ip` só após validar que o edge sobrescreve o cabeçalho enviado pelo cliente.
 - Pendentes P0: janela de troca de senha das 4 contas e evidência de backup/restore real (#41).
+
+## Lote de hardening, auditoria e governança — PR #123 (2026-10-26)
+
+Branch `arena/008a0cdb-lanchonete-qr-semi-final`, PR [#123](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/123), head `db26972`. **Não integrado à `main` até o merge ser autorizado.** Nenhuma mudança em Railway, secrets, produção ou dados reais.
+
+### Entregas e evidências
+- **#50 (rate limit):** chave `login-user:<login>` independente do IP no login, além do limite por IP; `tests/rate-limit-keys.test.cjs` (8 casos) e runbook `docs/engineering/rate-limit-and-proxy.md`. Ativar `CLIENT_IP_HEADER=x-real-ip` segue dependendo de validação do edge e autorização.
+- **#43 (correlação/logs):** `X-Request-Id` em todas as respostas e logs JSON estruturados com sanitização; `server/request-context.js` + 6 testes; `docs/engineering/observabilidade-alertas.md` propõe limiares/canais (alertas reais não configurados).
+- **#48 (auditoria):** migration `0025_auditoria_eventos` (aditiva) e `db/auditoria.js`; `pedido_cancelado`, `pix_confirmado` e `sessao_fechada` gravam ator/contexto/request_id na mesma transação; sem segredos (teste trava o contrato). Matriz completa em `docs/engineering/auditoria-operacional.md`.
+- **#53 (fotos):** `GET /api/cardapio/fotos/:id` read-only e cacheável; cardápio público sem Base64; compat total com data-URL/URL externa/caminho legado; RFC atualizada. Object storage continua como etapa 2.
+- **#47/#39/#15:** `tests/postgres-qr-session.test.cjs` (ciclo do QR fixo), `tests/postgres-financial-concurrency.test.cjs` (4 testes: corrida de estoque, idempotência, centavos 0,01+0,10+10,25, pagamentos concorrentes e rollback) e `tests/timezone-operational-day.test.cjs` (3 herméticos); workflows `ci.yml` e `postgres-integration.yml` executam tudo. Políticas em `qr-session-policy.md`; cutoff às 05:00 não implementado (decisão de negócio).
+- **#40/#6:** `docs/engineering/migration-gate-runbook.md` com o fluxo real do Railway, matriz de validação do gate, expand/contract e rollback.
+- **#44/#45/#41:** propostas de retenção (`data-policy-proposal.md`), inventário de licenças/ativos (`asset-provenance.md`) e checklist do drill de backup no Railway (seção 4.1 de `backup-restore.md`). Nenhuma política foi aplicada automaticamente.
+
+### Evidência de testes
+- Herméticos locais: `npm test` **245/245** (baseline 217); `typecheck` e `build` OK; `node --check` em todos os JS de runtime OK; smoke HTTP local confirmou `X-Request-Id` e logs estruturados.
+- **PostgreSQL 16.2 real descartável (executado em sandbox local, não só mocks):** as 6 suítes PG passaram inteiras — `postgres-integration` 1/1, `postgres-financial-integration` 1/1, `postgres-waiter-integration` 2/2, `postgres-qr-session` 1/1, `postgres-financial-concurrency` 4/4, `postgres-password-change` 7/7 — e o drill `postgres-backup-restore` 2/2 com `pg_dump`/`pg_restore` 16.2.
+- CI do GitHub no head `db26972`: `verify`, `postgres-migrations` e `postgres-integration` **SUCCESS** (runs 40396107103 e 40396106989).
+
+### Limitações e decisões que continuam com o responsável
+- Janela operacional da troca obrigatória de senha (#55; `STAFF_FORCE_PASSWORD_CHANGE=false` em produção), `CLIENT_IP_HEADER` (#50), drill real de backup no Railway (#41), aprovação da política de retenção (#44), decisões de licença/visibilidade (#45), política formal do QR (#47), contas individuais/PIN e alçada de desconto (#48), 2FA e canais de alerta (#43).
+- PR #122 (gerenciador de senhas do navegador) segue aberta e sem conflito com este lote; ambos aguardam autorização explícita de merge.
