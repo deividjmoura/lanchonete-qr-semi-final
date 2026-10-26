@@ -36,7 +36,7 @@ async function main() {
     );
 
     if (!rows.length) {
-      console.error('Nenhum usuário admin/cozinha/caixa encontrado na tabela staff.');
+      console.error('Nenhum usuário admin/cozinha/bar/caixa encontrado na tabela staff.');
       process.exitCode = 1;
       return;
     }
