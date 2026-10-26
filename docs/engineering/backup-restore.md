@@ -40,7 +40,7 @@ Travas (não há flag para desligá-las):
 3. recusa destino cujo nome de banco não contenha `restore`, `drill`, `test`, `tmp`, `scratch` ou `sandbox`;
 4. recusa destino que já tenha tabelas — **nunca sobrescreve**;
 5. a origem só é lida (`pg_dump` + `SELECT` em transação `READ ONLY`);
-6. URLs e senhas nunca são impressas nem gravadas no relatório.
+6. URLs e senhas nunca são impressas nem gravadas no relatório; nas chamadas a `pg_dump`/`pg_restore`, a URI sem senha vai em argv e a senha é passada por `PGPASSWORD` no ambiente do subprocesso para evitar exposição na listagem de processos.
 
 Saída: JSON com `resultado` (`OK`/`FALHA`), durações de dump e restauração, `rto_observado_ms` (restauração +
 verificação), `rpo_observado_s` (quando `--backup-at` é informado: diferença entre o horário do backup e o último
