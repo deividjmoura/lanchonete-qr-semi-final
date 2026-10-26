@@ -105,5 +105,5 @@ test('SSE não mantém acesso operacional de staff com troca obrigatória penden
   const bloco = server.slice(i, fim);
   assert.match(bloco, /staff\.deveTrocarSenha/);
   assert.match(bloco, /SENHA_TROCA_OBRIGATORIA/);
-  assert.match(bloco, /status/);
+  assert.match(bloco, /json\(res, 403/);
 });
