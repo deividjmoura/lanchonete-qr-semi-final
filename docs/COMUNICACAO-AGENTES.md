@@ -708,3 +708,19 @@ Leitura dos metadados de falha do Railway, sem executar novo deploy:
 - Deployment `475a3941-51a2-47d5-974c-cca4ed635a09`, commit `a82fdc29c504d353ed4bbdd44046026c91e85485`: falhou na etapa `BUILD_IMAGE`; o log reporta erro do daemon BuildKit/socket indisponível ao listar workers.
 - Ambos são erros de infraestrutura/build registrados em deploys anteriores; não são evidência suficiente de defeito no código da PR #118. O deployment atual `423f48e7-4927-4b0a-bdef-6c73a399bec7` está `SUCCESS` e o serviço está online.
 - Não tentei reexecutar deploys nem alterar configuração do Railway.
+
+## Revisão integrada #118 — correção de reset de senha (2026-10-26)
+
+Na revisão do diff integrado, encontrei e corrigi na branch da PR #118 um defeito no script `scripts/reset-senha.js`: ele redefinia as credenciais e marcava para troca obrigatória apenas `admin`, `cozinha` e `caixa`, omitindo `bar`. Como o fluxo de produção depende de obrigar a troca das credenciais iniciais/compartilhadas, o perfil `bar` poderia manter a senha legada sem ser marcado se seu hash deixasse de ser compartilhado pelos demais perfis.
+
+Correção aplicada na branch `arena/3a803cb3-lanchonete-qr-semi-final`:
+- Incluir `bar` no conjunto de logins redefinidos e marcados com `deve_trocar_senha = true`.
+- Alinhar a mensagem de erro para citar os quatro perfis.
+- Adicionar regressão em `tests/password-change.test.cjs` para garantir que o reset inclua os quatro perfis e marque a troca obrigatória.
+
+Commits da correção:
+- `3ac3016a` — incluir perfil bar no reset.
+- `b4da23e5` — teste de regressão.
+- `d474711f` — alinhar mensagem de erro.
+
+Os workflows CI e PostgreSQL foram disparados para o SHA `b4da23e559f51d303950dcb08799dc090c1fe2e7` e estavam pendentes/em execução na última consulta; a última atualização da mensagem de erro gerou um SHA posterior, portanto a validação final deve ser feita no HEAD atualizado. Não foi executado reset de senha contra banco algum, nem houve merge ou deploy. PR #118 permanece draft.
