@@ -750,3 +750,14 @@ Auditoria somente leitura, feita clonando o repositório e fazendo merge de test
 - Confirmação do startup e da ordem das migrations no Railway.
 
 Itens P0 e P1 do plano de revisão continuam valendo; nenhum deles foi dado como concluído por esta auditoria.
+
+### Execução (2026-10-26)
+
+- Variável `STAFF_FORCE_PASSWORD_CHANGE=false` aplicada no Railway antes do merge (redeploy `c6af8315`, SUCCESS). A troca obrigatória **está desligada em produção** até a janela combinada com os operadores.
+- Confirmado no Railway: build `npm run build`, start `npm run start:prod`, pre-deploy `db:migrate && db:seed` (seed não destrutivo sem `FORCE_SEED`; a variável não existe no serviço).
+- #120 (`CLIENT_IP_HEADER` opt-in, `X-Real-IP` do Railway) mesclado no branch do #118. #118 mesclado na `main` em `a48fd6e` com CI verde no SHA final `690afedc` e na `main`.
+- Deploy `f54a3aa9` SUCCESS; migration `0024` aplicada; startup passou pelo gate.
+- #116 e #117 fechados como substituídos; #89 descartado formalmente (já na `main` via #107).
+- **Sem tráfego na primeira hora pós-deploy:** o smoke funcional de login e atendimento ainda precisa ser feito por quem opera.
+- `CLIENT_IP_HEADER` **não** está ativo: sem ele o rate limit de login ainda usa o IP do proxy (global). Ativar `x-real-ip` só após validar que o edge sobrescreve o cabeçalho enviado pelo cliente.
+- Pendentes P0: janela de troca de senha das 4 contas e evidência de backup/restore real (#41).
