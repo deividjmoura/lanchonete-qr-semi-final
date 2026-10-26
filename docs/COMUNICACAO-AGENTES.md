@@ -655,3 +655,14 @@ Nenhum merge foi realizado por esta atualização. Não executar migrations/test
 - Encontrei um falso positivo na regex original da ferramenta de restore: o nome `latestproduction` contém a sequência `test` incidentalmente e poderia passar pela trava de “banco descartável”. Corrigi a validação para exigir marcador isolado por início/fim, `_` ou `-`.
 - Adicionei teste garantindo que `latestproduction` seja recusado e `qradmin_restore_drill` seja aceito; atualizei a documentação operacional.
 - Head da PR #118: `00327cacace69a16bb7348f166b45f05cd3cc176`; [CI #574](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40251310533) está pending. Aguardar o resultado no head atual.
+
+
+## Atualização final de validação da PR #118 (2026-10-25/26)
+
+- Head validado: `00327cacace69a16bb7348f166b45f05cd3cc176`.
+- [CI #575](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40251314875): **success**.
+- [PostgreSQL integration #139](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40251314880): **success**.
+- GitHub reporta `mergeable=true` na PR #118. A PR permanece aberta e em draft; CI verde não substitui revisão de código e aprovação operacional.
+- PRs de origem ainda abertas: [#116 backup/restore](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/116) e [#117 troca de senha](https://github.com/deividjmoura/lanchonete-qr-semi-final/pull/117). Não apagar suas branches nem mesclá-las separadamente sem reconciliar a integração #118.
+- As branches associadas a PRs já mergeadas que foram conferidas não constam entre as branches remotas atuais. Antes de remover qualquer outra branch, confirmar se tem PR aberta e se o conteúdo está incorporado a `main`.
+- Nenhum merge ou deploy foi realizado. Pendências de backup real do provedor/RPO-RTO, configuração do proxy e procedimento operacional da troca obrigatória de senha permanecem abertas.
