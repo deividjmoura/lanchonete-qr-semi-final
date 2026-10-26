@@ -648,3 +648,10 @@ Nenhum merge foi realizado por esta atualização. Não executar migrations/test
 - Head atual da PR #118: `23e631c5d4c0f3df85d8938dddee67e11f68a360`.
 - CI #568 está pending e PostgreSQL integration #135 está em execução. Aguardar conclusão de ambos; os checks verdes do head anterior não cobrem esta correção.
 - PR #118 continua draft; nenhuma produção foi acessada e não houve merge/deploy.
+
+
+## Endurecimento adicional da trava do banco de destino
+
+- Encontrei um falso positivo na regex original da ferramenta de restore: o nome `latestproduction` contém a sequência `test` incidentalmente e poderia passar pela trava de “banco descartável”. Corrigi a validação para exigir marcador isolado por início/fim, `_` ou `-`.
+- Adicionei teste garantindo que `latestproduction` seja recusado e `qradmin_restore_drill` seja aceito; atualizei a documentação operacional.
+- Head da PR #118: `00327cacace69a16bb7348f166b45f05cd3cc176`; [CI #574](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40251310533) está pending. Aguardar o resultado no head atual.
