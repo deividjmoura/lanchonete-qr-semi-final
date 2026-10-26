@@ -97,3 +97,13 @@ test('reset de senha legado inclui todos os quatro perfis de bootstrap', () => {
   assert.match(reset, /lower\(login\) IN \('admin', 'cozinha', 'bar', 'caixa'\)/);
   assert.match(reset, /deve_trocar_senha = true/);
 });
+
+test('SSE não mantém acesso operacional de staff com troca obrigatória pendente', () => {
+  const i = server.indexOf("p === '/api/events'");
+  const fim = server.indexOf("if (p === '/api/cardapio'", i);
+  assert.ok(i >= 0 && fim > i, 'rota SSE não encontrada');
+  const bloco = server.slice(i, fim);
+  assert.match(bloco, /staff\.deveTrocarSenha/);
+  assert.match(bloco, /SENHA_TROCA_OBRIGATORIA/);
+  assert.match(bloco, /status/);
+});
