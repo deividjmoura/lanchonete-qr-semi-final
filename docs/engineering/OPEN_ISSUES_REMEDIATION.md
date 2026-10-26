@@ -50,3 +50,13 @@ A PR deixa corretamente pendente a prova de backups reais do provedor, retençã
 ## Limites
 
 Essas alterações são propostas para revisão. Não fecharam issues nem alteraram PRs no GitHub, não foram publicadas, e não provam configuração/estado de produção. Revise especialmente a mudança de `npm start`, o comportamento de troca obrigatória de senha, a política de proxy e as instruções de restore antes de qualquer merge/deploy.
+
+## Revisão adicional de segurança — credenciais compartilhadas
+
+Durante a revisão do fluxo de troca de senha, encontrei dois casos-limite e corrigi-os nesta branch:
+
+- **Persistência da troca obrigatória:** antes, a exigência para uma conta era inferida dinamicamente quando o hash aparecia em mais de uma conta ativa. Quando a penúltima conta trocava a senha, a última conta podia deixar de parecer compartilhada e escapar da exigência. Agora, ao trocar uma senha compartilhada, a transação marca as outras contas ativas com o mesmo hash para troca obrigatória antes de alterar a credencial da conta atual.
+- **Trocas simultâneas em contas diferentes:** a verificação de reutilização de senha ocorria dentro de transações independentes e duas contas poderiam escolher a mesma senha ao mesmo tempo. Agora, as trocas usam um advisory transaction lock para serializar a verificação de reutilização. Isso tem custo de serialização nas trocas de senha, operação de baixa frequência, e evita essa corrida.
+- **Regressões adicionadas:** o teste PostgreSQL de senha compartilhada agora exige que a última conta permaneça marcada; outro teste tenta definir a mesma nova senha em duas contas concorrentes e exige que apenas uma troca seja aceita.
+
+Esses ajustes passaram a fazer parte do head da PR #118. Aguardar os workflows CI e PostgreSQL do novo head antes de declarar a revisão validada. Nenhuma produção foi acessada.
