@@ -37,7 +37,7 @@ Travas (não há flag para desligá-las):
 
 1. exige `RESTORE_DRILL_CONFIRM=isolated-target`;
 2. recusa destino com mesmo host/porta/banco da origem;
-3. recusa destino cujo nome de banco não contenha `restore`, `drill`, `test`, `tmp`, `scratch` ou `sandbox`;
+3. recusa destino cujo nome de banco não contenha um marcador isolado (`restore`, `drill`, `test`, `tmp`, `scratch` ou `sandbox`, delimitado por início/fim, `_` ou `-`);
 4. recusa destino que já tenha tabelas — **nunca sobrescreve**;
 5. a origem só é lida (`pg_dump` + `SELECT` em transação `READ ONLY`);
 6. URLs e senhas nunca são impressas nem gravadas no relatório; nas chamadas a `pg_dump`/`pg_restore`, a URI sem senha vai em argv e a senha é passada por `PGPASSWORD` no ambiente do subprocesso para evitar exposição na listagem de processos.
