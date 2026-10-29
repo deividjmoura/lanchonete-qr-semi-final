@@ -3,7 +3,7 @@
 > **Objetivo:** orientar diagnóstico seguro e recuperação controlada da instalação em produção.
 >
 > **Aplicação:** QR Admin / Lanchonete QR, atualmente documentado como instalação single-tenant.
-> **URL de produção documentada:** https://qradmin.up.railway.app/
+> **URL de produção documentada:** https://qradminn.up.railway.app/
 >
 > **Limite importante:** este documento não comprova que backups, alertas, rollback automático ou acesso ao PostgreSQL estejam configurados. Confirme essas capacidades no Railway e no provedor do banco antes de depender delas.
 
