@@ -1104,6 +1104,28 @@ const server = http.createServer(async (req, res) => {
       return res.end();
     }
 
+    /*
+     * Fotos locais do cardápio: sirva diretamente de public/ antes do fallback da SPA.
+     * Isso evita que uma publicação com build parcial/antigo deixe os caminhos
+     * /assets/demo/*.webp sem imagem, mesmo que o HTML do cardápio esteja acessível.
+     * O nome do arquivo é allowlisted para impedir traversal e extensões arbitrárias.
+     */
+    const demoAssetMatch = p.match(/^\/assets\/demo\/([a-z0-9][a-z0-9._-]*\.(?:webp|jpe?g|png))$/i);
+    if (demoAssetMatch) {
+      const demoRoot = path.resolve(ROOT, 'public', 'assets', 'demo');
+      const demoPath = path.resolve(demoRoot, demoAssetMatch[1]);
+      if (demoPath.startsWith(demoRoot + path.sep)) {
+        try {
+          const data = await fs.promises.readFile(demoPath);
+          return send(res, 200, mime[path.extname(demoPath).toLowerCase()] || 'application/octet-stream', data, {
+            'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
+          });
+        } catch (_) {
+          // Deixa a rota de assets do build tentar servir o arquivo, se houver.
+        }
+      }
+    }
+
     /* assets da SPA (se build multi-file no futuro) */
     if (hasSpa && (p.startsWith('/assets/') || p === '/index.html')) {
       const distRoot = path.resolve(ROOT, 'dist');
