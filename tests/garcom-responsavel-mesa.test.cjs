@@ -5,7 +5,7 @@ if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = 'postgres://regress:regress@127.0.0.1:5432/regress';
 }
 const pool = require('../db/pool');
-const { transferirMesa, assumirMesa, listarPedidosProntosGarcom } = require('../db/atendimento');
+const { transferirMesa, assumirMesa, iniciarAtendimentoGarcom, listarPedidosProntosGarcom } = require('../db/atendimento');
 const { entregarComoGarcom } = require('../db/garcons');
 
 const originalQuery = pool.query;
@@ -167,4 +167,58 @@ test('A lista de mesas identifica pedido iniciado pelo cliente via QR', () => {
   const source = require('node:fs').readFileSync(require('node:path').join(__dirname, '../db/atendimento.js'), 'utf8');
   assert.match(source, /p\.origem_pedido = 'cliente'/);
   assert.match(source, /pedidoClienteQr: r\.pedido_cliente_qr === true/);
+});
+
+test('garçom consegue iniciar sessão de mesa vazia com atribuição e auditoria atômicas', async () => {
+  stubTokenLookup();
+  const calls = [];
+  pool.connect = async () => ({
+    async query(sql, params = []) {
+      calls.push({ sql, params });
+      if (/SELECT quantidade FROM configuracao_mesas/i.test(sql)) return { rows: [{ quantidade: 20 }] };
+      if (/SELECT id, numero FROM mesas WHERE numero/i.test(sql)) return { rows: [{ id: 40, numero: 4 }] };
+      if (/SELECT id, garcom_responsavel_id, cliente_nome[\\s\\S]*FROM mesa_sessoes/i.test(sql)) return { rows: [] };
+      if (/INSERT INTO mesa_sessoes/i.test(sql)) return { rows: [{ id: 91 }] };
+      if (/INSERT INTO auditoria_eventos/i.test(sql)) return { rows: [{ id: 1 }] };
+      return { rows: [] };
+    },
+    release() {},
+  });
+  const result = await iniciarAtendimentoGarcom(
+    '00000000-0000-4000-8000-000000000001', 4, { clienteNome: 'Cliente balcão' }, 'req-start-empty'
+  );
+  assert.equal(result.mesa, 4);
+  assert.equal(result.sessaoId, 91);
+  assert.equal(result.iniciada, true);
+  assert.equal(result.idempotentReplay, false);
+  const create = calls.find(c => /INSERT INTO mesa_sessoes/i.test(c.sql));
+  assert.deepEqual(create.params, [40, 'Cliente balcão', 1]);
+  const history = calls.find(c => /INSERT INTO mesa_atendimento_historico/i.test(c.sql));
+  assert.deepEqual(history.params, [91, null, 1, 1]);
+  assert.ok(calls.some(c => /UPDATE mesas SET status='ocupada'/i.test(c.sql)));
+  assert.ok(calls.some(c => /INSERT INTO auditoria_eventos/i.test(c.sql)));
+  assert.ok(calls.some(c => /COMMIT/i.test(c.sql)));
+});
+
+test('iniciar atendimento não toma sessão que já pertence a outro garçom', async () => {
+  stubTokenLookup();
+  const calls = [];
+  pool.connect = async () => ({
+    async query(sql, params = []) {
+      calls.push({ sql, params });
+      if (/SELECT quantidade FROM configuracao_mesas/i.test(sql)) return { rows: [{ quantidade: 20 }] };
+      if (/SELECT id, numero FROM mesas WHERE numero/i.test(sql)) return { rows: [{ id: 40, numero: 4 }] };
+      if (/SELECT id, garcom_responsavel_id, cliente_nome[\\s\\S]*FROM mesa_sessoes/i.test(sql)) return { rows: [{ id: 91, garcom_responsavel_id: 2, cliente_nome: 'Cliente' }] };
+      return { rows: [] };
+    },
+    release() {},
+  });
+  await assert.rejects(
+    () => iniciarAtendimentoGarcom('00000000-0000-4000-8000-000000000001', 4, {}),
+    err => err.status === 409
+  );
+  assert.equal(calls.some(c => /UPDATE mesa_sessoes/i.test(c.sql)), false);
+  assert.equal(calls.some(c => /INSERT INTO mesa_sessoes/i.test(c.sql)), false);
+  assert.equal(calls.some(c => /INSERT INTO mesa_atendimento_historico/i.test(c.sql)), false);
+  assert.ok(calls.some(c => /ROLLBACK/i.test(c.sql)));
 });
