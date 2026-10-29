@@ -200,7 +200,7 @@ async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null, request
       resultado: 'sucesso', requestId,
       contexto: {
         sessaoId: Number(pedido.sessao_id),
-        itensEntregues: idsEntregar,
+        quantidadeItensEntregues: idsEntregar.length,
         valorEntregue,
         parcial: atualizado ? atualizado.status !== 'entregue' : true,
       },
