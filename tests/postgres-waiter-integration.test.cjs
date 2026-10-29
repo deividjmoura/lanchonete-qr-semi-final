@@ -10,7 +10,7 @@ assert.strictEqual(
 );
 
 const pool = require('../db/pool');
-const { assumirMesa, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao } = require('../db/atendimento');
+const { assumirMesa, transferirMesa, criarPedidoGarcom, listarAtendimentosGarcom, listarPedidosProntosGarcom, resumoPagamentoSessao } = require('../db/atendimento');
 const { registrarPagamento } = require('../db/caixa');
 const { entregarComoGarcom } = require('../db/garcons');
 
@@ -149,6 +149,87 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
     if (ids.garcomB) await pool.query('DELETE FROM garcons WHERE id = $1', [ids.garcomB]).catch(() => {});
     if (ids.produto) await pool.query('DELETE FROM produtos WHERE id = $1', [ids.produto]).catch(() => {});
     if (ids.categoria) await pool.query('DELETE FROM categorias WHERE id = $1', [ids.categoria]).catch(() => {});
+  }
+});
+
+test('PostgreSQL real: outro garçom pode acrescentar pedido sem tomar a responsabilidade da mesa', async () => {
+  const ids = { categoria: null, produto: null, garcomA: null, garcomB: null, mesa: null, sessao: null };
+  const mesaNumero = 8;
+  const tokenA = '00000000-0000-4000-8000-000000000211';
+  const tokenB = '00000000-0000-4000-8000-000000000212';
+
+  try {
+    ids.categoria = (await pool.query(
+      'INSERT INTO categorias (nome, ordem) VALUES ($1, 0) RETURNING id',
+      ['CI pedido cruzado ' + process.pid]
+    )).rows[0].id;
+    ids.produto = (await pool.query(
+      'INSERT INTO produtos (categoria_id, nome, preco, disponivel) VALUES ($1, $2, 8.5, TRUE) RETURNING id',
+      [ids.categoria, 'Produto pedido cruzado ' + process.pid]
+    )).rows[0].id;
+    ids.garcomA = (await pool.query(
+      'INSERT INTO garcons (nome, token, ativo) VALUES ($1, $2, TRUE) RETURNING id',
+      ['Responsável CI ' + process.pid, tokenA]
+    )).rows[0].id;
+    ids.garcomB = (await pool.query(
+      'INSERT INTO garcons (nome, token, ativo) VALUES ($1, $2, TRUE) RETURNING id',
+      ['Apoio CI ' + process.pid, tokenB]
+    )).rows[0].id;
+    ids.mesa = (await pool.query(
+      "INSERT INTO mesas (numero, status) VALUES ($1, 'ocupada') RETURNING id",
+      [mesaNumero]
+    )).rows[0].id;
+    ids.sessao = (await pool.query(
+      "INSERT INTO mesa_sessoes (mesa_id, status, cliente_nome, valor_total) VALUES ($1, 'aberta', 'Teste cruzado', 0) RETURNING id",
+      [ids.mesa]
+    )).rows[0].id;
+    await pool.query(
+      "INSERT INTO pedidos (sessao_id, status, cliente_nome, observacao_geral, origem_pedido) VALUES ($1, 'recebido', 'Teste cruzado', 'Pedido QR inicial', 'cliente')",
+      [ids.sessao]
+    );
+
+    await assumirMesa(tokenA, mesaNumero, { clienteNome: 'Teste cruzado' });
+    const pedidoNovo = await criarPedidoGarcom(tokenB, mesaNumero, {
+      idempotencyKey: '00000000-0000-4000-8000-000000000213',
+      clienteNome: 'Teste cruzado',
+      items: [{ productId: ids.produto, qty: 1 }],
+    });
+
+    const sessaoAtual = await pool.query(
+      'SELECT garcom_responsavel_id FROM mesa_sessoes WHERE id=$1',
+      [ids.sessao]
+    );
+    assert.equal(Number(sessaoAtual.rows[0].garcom_responsavel_id), Number(ids.garcomA),
+      'acrescentar pedido não pode transferir a responsabilidade');
+    const pedidosResponsavel = await listarAtendimentosGarcom(tokenA);
+    const pedidosOutroGarcom = await listarAtendimentosGarcom(tokenB);
+    assert.ok(pedidosResponsavel.some((p) => Number(p.id) === Number(pedidoNovo.id)),
+      'o pedido adicional deve permanecer no atendimento do responsável atual');
+    assert.equal(pedidosOutroGarcom.some((p) => Number(p.id) === Number(pedidoNovo.id)), false,
+      'o pedido adicional não deve mover a mesa para quem o lançou');
+  } finally {
+    if (ids.sessao) {
+      await pool.query(
+        'DELETE FROM itens_pedido_adicionais WHERE item_pedido_id IN (SELECT id FROM itens_pedido WHERE pedido_id IN (SELECT id FROM pedidos WHERE sessao_id=$1))',
+        [ids.sessao]
+      ).catch(() => {});
+      await pool.query(
+        'DELETE FROM itens_pedido_remocoes WHERE item_pedido_id IN (SELECT id FROM itens_pedido WHERE pedido_id IN (SELECT id FROM pedidos WHERE sessao_id=$1))',
+        [ids.sessao]
+      ).catch(() => {});
+      await pool.query(
+        'DELETE FROM itens_pedido WHERE pedido_id IN (SELECT id FROM pedidos WHERE sessao_id=$1)',
+        [ids.sessao]
+      ).catch(() => {});
+      await pool.query('DELETE FROM pedidos WHERE sessao_id=$1', [ids.sessao]).catch(() => {});
+      await pool.query('DELETE FROM mesa_atendimento_historico WHERE sessao_id=$1', [ids.sessao]).catch(() => {});
+      await pool.query('DELETE FROM mesa_sessoes WHERE id=$1', [ids.sessao]).catch(() => {});
+    }
+    if (ids.mesa) await pool.query('DELETE FROM mesas WHERE id=$1', [ids.mesa]).catch(() => {});
+    if (ids.garcomA) await pool.query('DELETE FROM garcons WHERE id=$1', [ids.garcomA]).catch(() => {});
+    if (ids.garcomB) await pool.query('DELETE FROM garcons WHERE id=$1', [ids.garcomB]).catch(() => {});
+    if (ids.produto) await pool.query('DELETE FROM produtos WHERE id=$1', [ids.produto]).catch(() => {});
+    if (ids.categoria) await pool.query('DELETE FROM categorias WHERE id=$1', [ids.categoria]).catch(() => {});
   }
 });
 
