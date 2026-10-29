@@ -64,7 +64,7 @@ const {
 } = require('./db/auth');
 const { golpePermitido } = require('./db/rateLimit');
 const { resolveClientIp, loginUserRateLimitKey } = require('./security/client-ip');
-const { ErroAtendimento, listarMesasGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
+const { ErroAtendimento, listarMesasGarcom, iniciarAtendimentoGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
 const { normalizarChavePix, inspecionarChavePix } = require('./db/pix-normaliza');
 const { subscribe, broadcast } = require('./db/events');
 const pool = require('./db/pool');
@@ -508,6 +508,17 @@ const server = http.createServer(async (req, res) => {
         broadcast('update',{type:'mesa_liberada',mesa:out.mesa});
         return json(res,200,out);
       }catch(e){if(e instanceof ErroAtendimento)return json(res,e.status,{error:e.message});throw e}
+    }
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/iniciar$/)) && req.method === 'POST') {
+      try {
+        const out = await iniciarAtendimentoGarcom(m[1], m[2], await body(req), reqId);
+        broadcast('update', { type: 'mesa_iniciada', mesa: out.mesa });
+        return json(res, out.idempotentReplay ? 200 : 201, out);
+      } catch (e) {
+        if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message });
+        if (e && (e.status === 400 || e.status === 413)) return json(res, e.status, { error: e.message });
+        throw e;
+      }
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/assumir$/)) && req.method === 'POST') {
       try {
