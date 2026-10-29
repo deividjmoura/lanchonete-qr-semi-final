@@ -136,7 +136,7 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
     assert.equal(Number(auditDelivery.rows[0].ator_id), Number(ids.garcomB));
     assert.equal(auditDelivery.rows[0].acao, 'itens_entregues');
     assert.equal(String(auditDelivery.rows[0].alvo_id), String(ids.pedido));
-    assert.deepEqual(auditDelivery.rows[0].contexto.itensEntregues.map(Number), [Number(ids.item)]);
+    assert.equal(Number(auditDelivery.rows[0].contexto.quantidadeItensEntregues), 1);
 
     const paymentBody = {
       valor: 1,
