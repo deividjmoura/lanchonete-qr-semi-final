@@ -57,6 +57,19 @@ test('401 do link de garçom permanece visível no estado de conexão',()=>{
  assert.match(app,/waiterAuthInvalid=true;setConnection\(\)/);
  assert.match(app,/if\(waiterAuthInvalid\)\{/);
 });
+test('fila de pedidos não quebra quando o contador visual não existe',()=>{
+ assert.match(app,/const queueCount=\$\('#queueCount'\);if\(queueCount\)queueCount\.textContent/);
+});
+test('pedidos diretos prontos ficam visíveis para todos e são assumidos uma única vez',()=>{
+ const pedidos=fs.readFileSync(path.join(root,'db/pedidos.js'),'utf8');
+ const garcons=fs.readFileSync(path.join(root,'db/garcons.js'),'utf8');
+ assert.match(pedidos,/p\.origem_pedido = 'cliente' AND \(p\.garcom_id IS NULL OR p\.garcom_id = \$1\)/);
+ assert.match(garcons,/async function assumirEntregaComoGarcom/);
+ assert.match(garcons,/Outro garçom já assumiu esta entrega/);
+ assert.match(server,/pedidos\\\/\(\\d\+\\)\\\/assumir-entrega/);
+ assert.match(app,/Assumir entrega/);
+ assert.match(app,/Confirmar entrega/);
+});
 test('Service Worker não reaproveita shell anterior às correções',()=>{
  assert.match(sw,/garcom-pwa-shell-v15/);
  assert.match(sw,/pathname\.startsWith\('\/api\/'\)/);
