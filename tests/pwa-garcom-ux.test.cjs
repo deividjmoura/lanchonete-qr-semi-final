@@ -34,5 +34,7 @@ test('Ações de mesa ficam no modal e respeitam origem do pedido e responsável
  assert.match(js,/if\(!m\.garcomResponsavelId&&m\.pedidoClienteQr\)/);
  assert.match(js,/Number\(m\.garcomResponsavelId\)===Number\(currentWaiterId\)/);
  assert.match(js,/function openTableDetails\(/);
+ assert.match(js,/if\(m\.token\)/);
+ assert.match(js,/QR só pode ser exibido pelo garçom responsável atual/);
  assert.match(js,/async function transferTable\(/);
 });
