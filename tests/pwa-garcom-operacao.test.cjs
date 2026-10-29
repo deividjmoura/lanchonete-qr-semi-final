@@ -71,6 +71,6 @@ test('pedidos diretos prontos ficam visíveis para todos e são assumidos uma ú
  assert.match(app,/Confirmar entrega/);
 });
 test('Service Worker não reaproveita shell anterior às correções',()=>{
- assert.match(sw,/garcom-pwa-shell-v15/);
+ assert.match(sw,/garcom-pwa-shell-v16/);
  assert.match(sw,/pathname\.startsWith\('\/api\/'\)/);
 });
