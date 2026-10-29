@@ -46,6 +46,17 @@ test('salvar pedido evita duplo clique e falha de armazenamento sem confirmaçã
  assert.match(save,/finally\{savingOrder=false;saveButton\.disabled=false;\}/);
  assert.match(save,/idempotencyKey:uid\(\)/);
 });
+test('carregamento de mesas não depende de IndexedDB nem da recuperação da fila',()=>{
+ const boot=app.slice(app.indexOf('void loadProducts();'),app.indexOf('let deferredInstall=null'));
+ assert.ok(boot.indexOf('void loadMesas()')<boot.indexOf('openDb().then'));
+ assert.match(boot,/recoverInterruptedSync\(\)/);
+ assert.match(app,/if\(!navigator\.onLine\|\|!db\)\{setConnection\(\);return\}/);
+});
+test('401 do link de garçom permanece visível no estado de conexão',()=>{
+ assert.match(app,/let waiterAuthInvalid=false/);
+ assert.match(app,/waiterAuthInvalid=true;setConnection\(\)/);
+ assert.match(app,/if\(waiterAuthInvalid\)\{/);
+});
 test('Service Worker não reaproveita shell anterior às correções',()=>{
  assert.match(sw,/garcom-pwa-shell-v15/);
  assert.match(sw,/pathname\.startsWith\('\/api\/'\)/);
