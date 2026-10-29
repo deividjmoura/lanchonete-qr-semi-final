@@ -479,6 +479,21 @@ async function cancelarPedidoCliente(token, pedidoId, garcomResponsavelId = null
       );
     }
 
+    const { rows: totalAnteriorRows } = await client.query(
+      `SELECT COALESCE(SUM(
+         ip.quantidade * (ip.preco_unitario + COALESCE(ad.total_adicionais, 0))
+       ), 0)::numeric(12,2) AS total,
+       COUNT(ip.id)::int AS quantidade
+       FROM itens_pedido ip
+       LEFT JOIN (
+         SELECT item_pedido_id, SUM(preco_unitario) AS total_adicionais
+         FROM itens_pedido_adicionais GROUP BY item_pedido_id
+       ) ad ON ad.item_pedido_id = ip.id
+       WHERE ip.pedido_id = $1`,
+      [pedido.id]
+    );
+    const totalAnterior = Number(totalAnteriorRows[0]?.total) || 0;
+    const quantidadeAnterior = Number(totalAnteriorRows[0]?.quantidade) || 0;
     const restaurou = await restaurarEstoqueDoPedido(client, pedido.id);
 
     // Evidência persistente do cancelamento (#48): gravada antes da exclusão
@@ -523,7 +538,7 @@ async function cancelarPedidoCliente(token, pedidoId, garcomResponsavelId = null
 }
 
 /** Cliente edita itens do pedido só enquanto status = recebido. Marca editado_em. */
-async function editarPedidoCliente(token, pedidoId, body, garcomResponsavelId = null) {
+async function editarPedidoCliente(token, pedidoId, body, garcomResponsavelId = null, requestId = null) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new ErroPedido(400, 'Dados do pedido inválidos');
   }
@@ -589,6 +604,28 @@ async function editarPedidoCliente(token, pedidoId, body, garcomResponsavelId = 
       [pedido.id, observacaoGeral]
     );
 
+    if (garcomResponsavelId) {
+      const { rows: atores } = await client.query('SELECT id, nome FROM garcons WHERE id=$1', [garcomResponsavelId]);
+      await registrarEvento(client, {
+        atorTipo: 'garcom',
+        atorId: Number(garcomResponsavelId),
+        atorNome: atores[0]?.nome || null,
+        acao: 'pedido_editado',
+        alvoTipo: 'pedido',
+        alvoId: pedido.id,
+        resultado: 'sucesso',
+        requestId,
+        contexto: {
+          sessaoId: Number(pedido.sessao_id),
+          mesa: mesa.numero,
+          totalAnterior,
+          totalNovo: total,
+          itensAnteriores: quantidadeAnterior,
+          itensNovos: itensGravados.length,
+          observacaoAlterada: body.note !== undefined,
+        },
+      });
+    }
     await client.query('COMMIT');
     if (mudouDisponibilidade || restaurou.mudouDisponibilidade) invalidarCardapio();
 
