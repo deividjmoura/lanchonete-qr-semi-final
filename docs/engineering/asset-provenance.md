@@ -26,7 +26,7 @@ para o canônico, após decisão do proprietário.
 |---|---|---|---|---|
 | Fotos de demonstração | `public/assets/demo/*.{jpg,webp}` | 70 arquivos (35 temas × 2 formatos) | Herdados de `lanchonete-qr`; origem original não documentada no repositório | **Pendente**: confirmar licença (banco de imagens, autoria própria ou outra) |
 | Fundos de tela | `public/assets/bg-*.{jpg,webp}` | 14 | Mesma origem das demos | Pendente |
-| Logos QR Admin | `public/logo/*.png`, `public/assets/logo-cliente.*` | 6 | Identidade criada no projeto; README informa que a marca é provisória | Confirmar autoria/uso interno |
+| Logos QR Admin | `public/logo/*.png` | 6 | Marca provisória do produto; confirmar autoria e direito de uso antes de distribuição comercial | Confirmar autoria/uso interno |
 | Ícones/PWA | `public/garcom-pwa/icon*`, manifestos | ~10 | Derivados da marca QR Admin | Confirmar autoria/uso interno |
 | Biblioteca QR | `public/garcom-pwa/qrcode-generator.js` | 2 arquivos | Projeto terceiro, MIT (`qrcode-generator.LICENSE` no mesmo diretório) | Coberto por MIT; manter o arquivo de licença |
 | Dependências npm | `package.json` | Ver `npm ls` | Registro público, licenças próprias | Sempre verificar `npm audit`/licenças antes de distribuir |
