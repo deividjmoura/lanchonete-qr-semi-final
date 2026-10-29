@@ -451,7 +451,7 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/pedidos\/(\d+)$/)) && req.method === 'PUT') {
       try {
-        const out=await editarPedidoGarcom(m[1],m[2],await body(req));
+        const out=await editarPedidoGarcom(m[1],m[2],await body(req),reqId);
         broadcast('update',{type:'pedido_editado',pedidoId:out.id,mesa:out.mesa});
         return json(res,200,out);
       }catch(e){
