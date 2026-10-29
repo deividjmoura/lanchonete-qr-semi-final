@@ -427,7 +427,7 @@ const server = http.createServer(async (req, res) => {
            JSON quebrado em "entregar tudo". Sem ele, 400 honesto. */
         const payload = await body(req);
         const itemIds = payload && (payload.itemIds || payload.itens || payload.ids);
-        const out = await entregarComoGarcom(Number(m[2]), m[1], itemIds || null);
+        const out = await entregarComoGarcom(Number(m[2]), m[1], itemIds || null, reqId);
         broadcast('update', {
           type: 'status_alterado',
           pedidoId: Number(m[2]),
