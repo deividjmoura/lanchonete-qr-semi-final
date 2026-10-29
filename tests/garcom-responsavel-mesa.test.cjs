@@ -177,7 +177,7 @@ test('garçom consegue iniciar sessão de mesa vazia com atribuição e auditori
       calls.push({ sql, params });
       if (/SELECT quantidade FROM configuracao_mesas/i.test(sql)) return { rows: [{ quantidade: 20 }] };
       if (/SELECT id, numero FROM mesas WHERE numero/i.test(sql)) return { rows: [{ id: 40, numero: 4 }] };
-      if (/SELECT id, garcom_responsavel_id, cliente_nome[\\s\\S]*FROM mesa_sessoes/i.test(sql)) return { rows: [] };
+      if (/SELECT id, garcom_responsavel_id, cliente_nome/i.test(sql)) return { rows: [] };
       if (/INSERT INTO mesa_sessoes/i.test(sql)) return { rows: [{ id: 91 }] };
       if (/INSERT INTO auditoria_eventos/i.test(sql)) return { rows: [{ id: 1 }] };
       return { rows: [] };
@@ -208,7 +208,7 @@ test('iniciar atendimento não toma sessão que já pertence a outro garçom', a
       calls.push({ sql, params });
       if (/SELECT quantidade FROM configuracao_mesas/i.test(sql)) return { rows: [{ quantidade: 20 }] };
       if (/SELECT id, numero FROM mesas WHERE numero/i.test(sql)) return { rows: [{ id: 40, numero: 4 }] };
-      if (/SELECT id, garcom_responsavel_id, cliente_nome[\\s\\S]*FROM mesa_sessoes/i.test(sql)) return { rows: [{ id: 91, garcom_responsavel_id: 2, cliente_nome: 'Cliente' }] };
+      if (/SELECT id, garcom_responsavel_id, cliente_nome/i.test(sql)) return { rows: [{ id: 91, garcom_responsavel_id: 2, cliente_nome: 'Cliente' }] };
       return { rows: [] };
     },
     release() {},
