@@ -161,10 +161,13 @@ async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null, request
     }
 
     const { rows } = await client.query(
-      'SELECT id, status, sessao_id, garcom_id, origem_pedido FROM pedidos WHERE id = $1 FOR UPDATE',
+      'SELECT id, status, sessao_id, garcom_id FROM pedidos WHERE id = $1 FOR UPDATE',
       [pid]);
     const pedido = rows[0];
     if (!pedido) throw new ErroGarcom(404, 'Pedido não encontrado');
+    const { rows: origemRows } = await client.query(
+      'SELECT origem_pedido FROM pedidos WHERE id = $1', [pid]);
+    pedido.origem_pedido = origemRows[0]?.origem_pedido || 'garcom';
     if (Number(pedido.sessao_id) !== Number(sessao.id)) {
       throw new ErroGarcom(409, 'A sessão do pedido mudou; atualize a fila');
     }
