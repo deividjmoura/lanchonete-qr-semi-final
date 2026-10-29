@@ -157,7 +157,7 @@ async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null, request
     );
     const sessao = sessoes[0];
     if (!sessao || sessao.status !== 'aberta') {
-      throw new ErroGarcom(409, 'A sessão desta mesa não está mais aberta');
+      throw new ErroGarcom(403, 'Este pedido não pertence a uma mesa sob sua responsabilidade atual');
     }
 
     const { rows } = await client.query(
