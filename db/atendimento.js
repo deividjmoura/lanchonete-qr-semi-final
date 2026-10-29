@@ -253,13 +253,16 @@ async function criarPedidoGarcom(token, numeroBruto, body) {
   if (!Number.isSafeInteger(numero) || numero < 1 || numero > 70) {
     throw new ErroAtendimento(400, 'Número de mesa inválido');
   }
+  // Qualquer garçom ativo pode acrescentar itens a uma sessão aberta que
+  // já tem responsável. A responsabilidade da mesa continua com o titular;
+  // assumir/transferir é uma ação separada e nunca deve ocorrer implicitamente.
   const { rows } = await pool.query(
     `SELECT m.token FROM mesas m
       JOIN mesa_sessoes s ON s.mesa_id=m.id AND s.status='aberta'
-      WHERE m.numero=$1 AND s.garcom_responsavel_id=$2`,
-    [numero, garcom.id]
+      WHERE m.numero=$1 AND s.garcom_responsavel_id IS NOT NULL`,
+    [numero]
   );
-  if (!rows[0]) throw new ErroAtendimento(409, 'Assuma a mesa antes de enviar o pedido');
+  if (!rows[0]) throw new ErroAtendimento(409, 'A mesa precisa ter um atendimento aberto com garçom responsável');
   const { criarPedido } = require('./pedidos');
   return criarPedido(rows[0].token, body, { garcomId:garcom.id, garcomNome:garcom.nome });
 }
