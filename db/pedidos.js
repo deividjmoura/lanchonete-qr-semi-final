@@ -320,8 +320,12 @@ async function criarPedido(token, body, atendimento = null) {
         'SELECT garcom_responsavel_id FROM mesa_sessoes WHERE id = $1 FOR UPDATE',
         [sessaoId]
       );
-      if (atribuidos[0]?.garcom_responsavel_id !== atendimento.garcomId) {
-        throw new ErroPedido(409, 'Assuma a mesa antes de enviar o pedido');
+      // Um garçom pode lançar um pedido adicional para a mesa de outro
+      // responsável, mas nunca pode assumir a mesa implicitamente. Exigimos
+      // que exista um responsável no instante da transação; se a mesa foi
+      // liberada/fechada em paralelo, o pedido não cria sessão órfã.
+      if (!atribuidos[0]?.garcom_responsavel_id) {
+        throw new ErroPedido(409, 'A mesa precisa ter um atendimento aberto com garçom responsável');
       }
     }
 
