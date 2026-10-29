@@ -88,6 +88,42 @@ interface PubState {
   limparEventos: () => void;
 }
 
+type PendingPaymentAttempt = { valor: number; formaPagamento: string; idempotencyKey: string };
+const pendingPaymentAttempts = new Map<number, PendingPaymentAttempt>();
+const paymentAttemptStorageKey = (sessaoId: number) => 'qradmin:caixa:pagamento-parcial:' + sessaoId;
+function paymentAttemptKey() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  return 'pay-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+}
+function getPendingPaymentAttempt(sessaoId: number, valor: number, formaPagamento: string): PendingPaymentAttempt {
+  let existing = pendingPaymentAttempts.get(sessaoId);
+  if (!existing && typeof window !== 'undefined') {
+    try {
+      const raw = window.localStorage.getItem(paymentAttemptStorageKey(sessaoId));
+      if (raw) existing = JSON.parse(raw) as PendingPaymentAttempt;
+    } catch (_) {}
+  }
+  if (existing) {
+    if (Number(existing.valor) !== Number(valor) || existing.formaPagamento !== formaPagamento) {
+      throw new Error('Há uma tentativa de pagamento pendente. Reenvie o mesmo valor e a mesma forma para resolver antes de alterar os dados.');
+    }
+    pendingPaymentAttempts.set(sessaoId, existing);
+    return existing;
+  }
+  const attempt = { valor: Number(valor.toFixed(2)), formaPagamento, idempotencyKey: paymentAttemptKey() };
+  pendingPaymentAttempts.set(sessaoId, attempt);
+  if (typeof window !== 'undefined') {
+    try { window.localStorage.setItem(paymentAttemptStorageKey(sessaoId), JSON.stringify(attempt)); } catch (_) {}
+  }
+  return attempt;
+}
+function clearPendingPaymentAttempt(sessaoId: number) {
+  pendingPaymentAttempts.delete(sessaoId);
+  if (typeof window !== 'undefined') {
+    try { window.localStorage.removeItem(paymentAttemptStorageKey(sessaoId)); } catch (_) {}
+  }
+}
+
 const emit = (get: () => PubState, set: (p: Partial<PubState>) => void, tipo: EventoTipo, texto: string, mesaNome?: string) => {
   const seqEvento = get().seqEvento + 1;
   const eventos = [...get().eventos, { seq: seqEvento, tipo, texto, mesaNome, em: Date.now() }].slice(-40);
@@ -651,12 +687,22 @@ export const usePub = create<PubState>((set, get) => ({
 
   registrarPagamento: (sessaoId, valor, forma) => {
     void (async () => {
+      let attempt: PendingPaymentAttempt | null = null;
       try {
-        await api.registrarPagamento(sessaoId, valor, formaToApi(forma));
-        await get().hydrateCaixa();
-        // A quitação simples pode liberar a mesa no servidor dentro da mesma transação.
-        await get().hydrateMesas().catch(() => null);
+        attempt = getPendingPaymentAttempt(sessaoId, valor, formaToApi(forma));
+        await api.registrarPagamento(sessaoId, valor, formaToApi(forma), attempt.idempotencyKey);
+        clearPendingPaymentAttempt(sessaoId);
+        try {
+          await get().hydrateCaixa();
+          // A quitação simples pode liberar a mesa no servidor dentro da mesma transação.
+          await get().hydrateMesas().catch(() => null);
+        } catch (_) {
+          alert("Pagamento registrado, mas a tela não atualizou. Atualize o Caixa; não registre o mesmo valor novamente.");
+        }
       } catch (e: any) {
+        // 4xx é rejeição conhecida; rede/5xx pode ocorrer depois do commit e
+        // deve manter a mesma chave para que o próximo envio seja idempotente.
+        if (attempt && e.status >= 400 && e.status < 500) clearPendingPaymentAttempt(sessaoId);
         alert(e.message || "Erro no pagamento");
       }
     })();
