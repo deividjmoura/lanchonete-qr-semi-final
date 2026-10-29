@@ -689,8 +689,9 @@ export const usePub = create<PubState>((set, get) => ({
     void (async () => {
       let attempt: PendingPaymentAttempt | null = null;
       try {
-        attempt = getPendingPaymentAttempt(sessaoId, valor, formaToApi(forma));
-        await api.registrarPagamento(sessaoId, valor, formaToApi(forma), attempt.idempotencyKey);
+        const valorArredondado = Number(Number(valor).toFixed(2));
+        attempt = getPendingPaymentAttempt(sessaoId, valorArredondado, formaToApi(forma));
+        await api.registrarPagamento(sessaoId, valorArredondado, formaToApi(forma), attempt.idempotencyKey);
         clearPendingPaymentAttempt(sessaoId);
         try {
           await get().hydrateCaixa();
