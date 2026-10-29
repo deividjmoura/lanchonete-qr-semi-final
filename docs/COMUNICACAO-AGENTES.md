@@ -4,7 +4,7 @@
 
 - **Branch:** `fix/auditoria-integral-pwa-garcom-20261029`
 - **Base:** `main` no commit `d886b7b8e75865083bfcd9ee5328de6afbce8be4`
-- **Status:** correções implementadas na branch; CI/PR/deploy ainda precisam ser verificados.
+- **Status:** PR #136 aberta; CI em execução; ainda sem merge/deploy. Head atual registrado pelo GitHub: `79ad86c9b76426f31f856a6ca9fb606a1b682729`.
 - **Escopo:** `public/garcom-pwa/app.js`, `public/garcom-pwa/sw.js`, `db/atendimento.js`, `server.js`, testes e documentação.
 
 ### Achado principal
