@@ -10,7 +10,7 @@ assert.strictEqual(
 );
 
 const pool = require('../db/pool');
-const { assumirMesa, transferirMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, listarPedidosProntosGarcom, resumoPagamentoSessao } = require('../db/atendimento');
+const { assumirMesa, transferirMesa, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, listarPedidosProntosGarcom, resumoPagamentoSessao } = require('../db/atendimento');
 const { registrarPagamento } = require('../db/caixa');
 const { entregarComoGarcom } = require('../db/garcons');
 
@@ -63,8 +63,18 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
     );
     ids.pedido = pedido.rows[0].id;
 
-    const inicio = await assumirMesa(tokenA, mesaNumero, { clienteNome: 'Teste CI' });
+    const inicio = await assumirMesa(tokenA, mesaNumero, { clienteNome: 'Teste CI' }, 'req-assume-ci');
     assert.equal(Number(inicio.garcom.id), Number(ids.garcomA));
+    const auditAssume = await pool.query(
+      'SELECT ator_tipo,ator_id,acao,alvo_id,request_id,contexto FROM auditoria_eventos WHERE request_id=$1',
+      ['req-assume-ci']
+    );
+    assert.equal(auditAssume.rows[0].ator_tipo, 'garcom');
+    assert.equal(Number(auditAssume.rows[0].ator_id), Number(ids.garcomA));
+    assert.equal(auditAssume.rows[0].acao, 'mesa_assumida');
+    assert.equal(String(auditAssume.rows[0].alvo_id), String(ids.sessao));
+    assert.equal(auditAssume.rows[0].contexto.mesa, mesaNumero);
+
     const item = await pool.query(
       "INSERT INTO itens_pedido (pedido_id, produto_id, quantidade, preco_unitario, status) VALUES ($1, $2, 1, 12, 'concluido') RETURNING id",
       [ids.pedido, ids.produto]
@@ -74,10 +84,19 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
     const filaA = await listarPedidosProntosGarcom(tokenA);
     assert.ok(filaA.some((row) => Number(row.id) === Number(ids.pedido)));
 
-    const transfer = await transferirMesa(tokenA, mesaNumero, ids.garcomB);
+    const transfer = await transferirMesa(tokenA, mesaNumero, ids.garcomB, 'req-transfer-ci');
     assert.equal(transfer.transferida, true);
     assert.equal(Number(transfer.de.id), Number(ids.garcomA));
     assert.equal(Number(transfer.para.id), Number(ids.garcomB));
+    const auditTransfer = await pool.query(
+      'SELECT ator_tipo,ator_id,acao,alvo_id,request_id,contexto FROM auditoria_eventos WHERE request_id=$1',
+      ['req-transfer-ci']
+    );
+    assert.equal(auditTransfer.rows[0].ator_tipo, 'garcom');
+    assert.equal(Number(auditTransfer.rows[0].ator_id), Number(ids.garcomA));
+    assert.equal(auditTransfer.rows[0].acao, 'mesa_transferida');
+    assert.equal(String(auditTransfer.rows[0].alvo_id), String(ids.sessao));
+    assert.equal(auditTransfer.rows[0].contexto.garcomNovoId, Number(ids.garcomB));
 
     const [filaDepoisA, filaDepoisB] = await Promise.all([
       listarPedidosProntosGarcom(tokenA),
@@ -140,6 +159,17 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
 
     const aindaExiste = await pool.query('SELECT COUNT(*)::int AS n FROM pedidos WHERE sessao_id = $1', [ids.sessao]);
     assert.equal(aindaExiste.rows[0].n, 1);
+
+    const liberacao = await deixarMesa(tokenB, mesaNumero, 'req-leave-ci');
+    assert.equal(liberacao.liberada, true);
+    const auditLeave = await pool.query(
+      'SELECT ator_tipo,ator_id,acao,alvo_id,request_id,contexto FROM auditoria_eventos WHERE request_id=$1',
+      ['req-leave-ci']
+    );
+    assert.equal(auditLeave.rows[0].ator_tipo, 'garcom');
+    assert.equal(Number(auditLeave.rows[0].ator_id), Number(ids.garcomB));
+    assert.equal(auditLeave.rows[0].acao, 'mesa_liberada');
+    assert.equal(String(auditLeave.rows[0].alvo_id), String(ids.sessao));
   } finally {
     if (ids.item) await pool.query('DELETE FROM itens_pedido WHERE id = $1', [ids.item]).catch(() => {});
     if (ids.pedido) await pool.query('DELETE FROM pedidos WHERE id = $1', [ids.pedido]).catch(() => {});
