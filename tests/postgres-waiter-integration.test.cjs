@@ -205,6 +205,26 @@ test('PostgreSQL real: outro garçom pode acrescentar pedido sem tomar a respons
     assert.equal(Number(pedidoRelacionado.rows[0].pedido_pai_id), Number(ids.pedidoPai));
     assert.equal(Number(pedidoRelacionado.rows[0].garcom_id), Number(ids.garcomB));
 
+    await assert.rejects(
+      () => criarPedidoGarcom(tokenB, mesaNumero, {
+        idempotencyKey: '00000000-0000-4000-8000-000000000214',
+        pedidoPaiId: 99999999,
+        clienteNome: 'Teste cruzado',
+        items: [{ productId: ids.produto, qty: 1 }],
+      }),
+      (error) => error.status === 404
+    );
+    await pool.query("UPDATE pedidos SET status='entregue' WHERE id=$1", [ids.pedidoPai]);
+    await assert.rejects(
+      () => criarPedidoGarcom(tokenB, mesaNumero, {
+        idempotencyKey: '00000000-0000-4000-8000-000000000215',
+        pedidoPaiId: ids.pedidoPai,
+        clienteNome: 'Teste cruzado',
+        items: [{ productId: ids.produto, qty: 1 }],
+      }),
+      (error) => error.status === 409
+    );
+
     const sessaoAtual = await pool.query(
       'SELECT garcom_responsavel_id FROM mesa_sessoes WHERE id=$1',
       [ids.sessao]
