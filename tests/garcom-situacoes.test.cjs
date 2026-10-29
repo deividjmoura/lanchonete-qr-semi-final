@@ -4,6 +4,10 @@ test('Pedido adicional exige responsável atribuído e não transfere a mesa par
  const api=read('db/atendimento.js'),ped=read('db/pedidos.js');
  assert.match(api,/s\.garcom_responsavel_id IS NOT NULL/);
  assert.match(api,/token: Number\(r\.garcom_responsavel_id\) === Number\(garcom\.id\) \? r\.token : null/);
+ assert.match(api,/async function listarPedidosAtivosMesa/);
+ assert.match(api,/pedidoPaiId: body && body\.pedidoPaiId/);
+ assert.match(read('server.js'),/pedidos-ativos/);
+ assert.match(read('db/migrations/0026_pedido_pai_id.sql'),/ADD COLUMN IF NOT EXISTS pedido_pai_id/);
  assert.match(api,/A mesa precisa ter um atendimento aberto com garçom responsável/);
  assert.match(ped,/if \(!atribuidos\[0\]\?\.garcom_responsavel_id\)/);
  assert.doesNotMatch(ped,/garcom_responsavel_id !== atendimento\.garcomId/);
