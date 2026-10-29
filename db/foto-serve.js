@@ -8,7 +8,10 @@
 
 const pool = require('./pool');
 
-const DATA_URL_RE = /^data:([a-z0-9.+-]+\/[a-z0-9.+-]+)?(;base64)?,/i;
+// Nunca servir SVG/HTML/JavaScript pelo mesmo origin. O upload normaliza em
+// WebP, mas fotos legadas podem ser PNG/JPEG/GIF; só aceitamos formatos raster.
+const DATA_URL_RE = /^data:(image\/(?:jpeg|png|webp|gif));base64,/i;
+const MAX_DATA_URL_BYTES = Number(process.env.FOTO_MAX_SERVE_BYTES || 6 * 1024 * 1024);
 
 function resolverFotoUrl(fotoUrl, produtoId) {
   if (fotoUrl === null || fotoUrl === undefined) return null;
@@ -23,18 +26,23 @@ function resolverFotoUrl(fotoUrl, produtoId) {
 }
 
 function parseDataUrl(dataUrl) {
-  const match = String(dataUrl || '').match(DATA_URL_RE);
+  const raw = String(dataUrl || '');
+  const match = raw.match(DATA_URL_RE);
   if (!match) return null;
-  const headerEnd = dataUrl.indexOf(',');
-  const base64 = dataUrl.slice(headerEnd + 1);
+  const headerEnd = raw.indexOf(',');
+  if (headerEnd < 0) return null;
+  const base64 = raw.slice(headerEnd + 1);
+  // Buffer.from(..., 'base64') tolera caracteres inválidos; rejeitar em vez
+  // de servir conteúdo ambíguo e limitar bytes antes de responder HTTP.
+  if (!base64 || !/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) return null;
   let buf;
   try {
     buf = Buffer.from(base64, 'base64');
   } catch {
     return null;
   }
-  if (!buf.length) return null;
-  return { contentType: match[1] || 'application/octet-stream', buffer: buf };
+  if (!buf.length || buf.length > MAX_DATA_URL_BYTES) return null;
+  return { contentType: match[1].toLowerCase(), buffer: buf };
 }
 
 /**
@@ -62,4 +70,4 @@ async function carregarFotoProduto(produtoId) {
   return null;
 }
 
-module.exports = { resolverFotoUrl, parseDataUrl, carregarFotoProduto, DATA_URL_RE };
+module.exports = { resolverFotoUrl, parseDataUrl, carregarFotoProduto, DATA_URL_RE, MAX_DATA_URL_BYTES };

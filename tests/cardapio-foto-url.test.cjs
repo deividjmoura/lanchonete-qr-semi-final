@@ -31,6 +31,11 @@ test('parseDataUrl devolve tipo de conteúdo e bytes sem rede', () => {
   assert.equal(parsed.contentType, 'image/png');
   assert.ok(parsed.buffer.length > 0);
   assert.equal(parseDataUrl('nao-e-data-url'), null);
+  assert.equal(parseDataUrl('data:text/html;base64,PGh0bWw+'), null);
+  assert.equal(parseDataUrl('data:image/svg+xml;base64,PHN2Zy8+'), null);
+  assert.equal(parseDataUrl('data:application/javascript;base64,YWxlcnQoMSk='), null);
+  assert.equal(parseDataUrl('data:image/png,AAAA'), null);
+  assert.equal(parseDataUrl('data:image/png;base64,%%%'), null);
 });
 
 test('payload de 40 produtos encolhe drasticamente ao trocar Base64 por URL', () => {
@@ -62,6 +67,7 @@ test('carregarFotoProduto trata data-URL, URL externa, caminho legado e ausênci
     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
   const casos = [
     { foto_url: png1px },
+    { foto_url: 'data:image/svg+xml;base64,PHN2Zy8+' },
     { foto_url: 'https://cdn.externo.com/f.webp' },
     { foto_url: '/uploads/legado.webp' },
     { foto_url: null },
@@ -74,13 +80,15 @@ test('carregarFotoProduto trata data-URL, URL externa, caminho legado e ausênci
     assert.equal(data.contentType, 'image/png');
     assert.ok(data.buffer.length > 0);
 
-    const externa = await carregarFotoProduto(2);
+    assert.equal(await carregarFotoProduto(2), null, 'SVG legado não deve ser servido no mesmo origin');
+
+    const externa = await carregarFotoProduto(3);
     assert.deepEqual(externa, { kind: 'redirect', location: 'https://cdn.externo.com/f.webp' });
 
-    const legado = await carregarFotoProduto(3);
+    const legado = await carregarFotoProduto(4);
     assert.deepEqual(legado, { kind: 'redirect', location: '/uploads/legado.webp' });
 
-    assert.equal(await carregarFotoProduto(4), null);
+    assert.equal(await carregarFotoProduto(5), null);
     assert.equal(await carregarFotoProduto(0), null);
     assert.equal(await carregarFotoProduto('abc'), null);
   } finally {
