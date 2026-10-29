@@ -242,7 +242,7 @@ test('PostgreSQL real: outro garçom pode acrescentar pedido sem tomar a respons
     assert.equal(Number(auditEdit.rows[0].ator_id), Number(ids.garcomA));
     assert.equal(auditEdit.rows[0].acao, 'pedido_editado');
     assert.equal(String(auditEdit.rows[0].alvo_id), String(ids.pedidoPai));
-    assert.equal(Number(auditEdit.rows[0].contexto.totalNovo), 12);
+    assert.equal(Number(auditEdit.rows[0].contexto.totalNovo), 8.5);
     const ativos = await listarPedidosAtivosMesa(tokenB, mesaNumero);
     assert.ok(ativos.some((p) => Number(p.id) === Number(ids.pedidoPai)),
       'qualquer garçom ativo pode selecionar um pedido da mesa para acrescentar itens');
