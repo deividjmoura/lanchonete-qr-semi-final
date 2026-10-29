@@ -2,6 +2,7 @@ const pool = require('./pool');
 const { numeroInteiroPositivo } = require('./validacao');
 const { sincronizarValorTotalSessao } = require('./conta');
 const { comRetryConcorrencia } = require('./retry');
+const { registrarEvento } = require('./auditoria');
 
 class ErroGarcom extends Error {
   constructor(status, message) {
@@ -77,7 +78,7 @@ async function getGarcomPorToken(token) {
  * sessão (db/conta.js) — nunca incrementado às cegas, para uma entrega
  * repetida/regressão histórica não poder somar o mesmo item duas vezes.
  */
-async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null) {
+async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null, requestId = null) {
   const pid = numeroInteiroPositivo(pedidoId, 'id do pedido');
   const garcom = await getGarcomPorToken(garcomToken);
   if (!garcom || !garcom.ativo) {
@@ -193,6 +194,17 @@ async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null) {
     );
 
     const atualizado = await sincronizarStatusPedido(client, pedido.id);
+    await registrarEvento(client, {
+      atorTipo: 'garcom', atorId: Number(garcom.id), atorNome: garcom.nome,
+      acao: 'itens_entregues', alvoTipo: 'pedido', alvoId: pedido.id,
+      resultado: 'sucesso', requestId,
+      contexto: {
+        sessaoId: Number(pedido.sessao_id),
+        itensEntregues: idsEntregar,
+        valorEntregue,
+        parcial: atualizado ? atualizado.status !== 'entregue' : true,
+      },
+    });
     await client.query('COMMIT');
     return {
       id: pedido.id,
