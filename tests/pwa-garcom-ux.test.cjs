@@ -36,5 +36,8 @@ test('Ações de mesa ficam no modal e respeitam origem do pedido e responsável
  assert.match(js,/function openTableDetails\(/);
  assert.match(js,/if\(m\.token\)/);
  assert.match(js,/QR só pode ser exibido pelo garçom responsável atual/);
+ assert.match(js,/Acrescentar itens ao pedido atual/);
+ assert.match(js,/pedidoPaiId:order\.parentOrderId\|\|undefined/);
+ assert.match(js,/pedidos-ativos/);
  assert.match(js,/async function transferTable\(/);
 });
