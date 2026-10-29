@@ -356,7 +356,7 @@ async function listarAtendimentosGarcom(token) {
     note:x.observacao_geral,itens:x.itens,
     podeEditar:x.status==='recebido'&&x.itens.every(i=>i.status==='recebido')}));
 }
-async function editarPedidoGarcom(token,pedidoId,body){
+async function editarPedidoGarcom(token,pedidoId,body,requestId=null){
   const garcom=await validarGarcom(token);
   const id=Number(pedidoId);
   if(!Number.isSafeInteger(id)||id<1)throw new ErroAtendimento(400,'Pedido inválido');
@@ -367,7 +367,7 @@ async function editarPedidoGarcom(token,pedidoId,body){
     WHERE p.id=$1 AND s.status='aberta' AND s.garcom_responsavel_id=$2`,[id,garcom.id]);
   if(!rows[0])throw new ErroAtendimento(403,'Pedido não pertence às suas mesas em atendimento');
   const {editarPedidoCliente}=require('./pedidos');
-  return editarPedidoCliente(rows[0].token,id,body,garcom.id);
+  return editarPedidoCliente(rows[0].token,id,body,garcom.id,requestId);
 }
 async function metricasGarcons({ data } = {}) {
   const dia = data || new Intl.DateTimeFormat('en-CA', { timeZone: process.env.APP_TIMEZONE || 'America/Sao_Paulo',
