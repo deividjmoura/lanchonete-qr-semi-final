@@ -10,7 +10,7 @@ assert.strictEqual(
 );
 
 const pool = require('../db/pool');
-const { assumirMesa, transferirMesa, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, listarPedidosProntosGarcom, resumoPagamentoSessao } = require('../db/atendimento');
+const { assumirMesa, transferirMesa, deixarMesa, editarPedidoGarcom, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, listarPedidosProntosGarcom, resumoPagamentoSessao } = require('../db/atendimento');
 const { registrarPagamento } = require('../db/caixa');
 const { entregarComoGarcom } = require('../db/garcons');
 
@@ -227,7 +227,22 @@ test('PostgreSQL real: outro garçom pode acrescentar pedido sem tomar a respons
       [ids.sessao]
     )).rows[0].id;
 
-    await assumirMesa(tokenA, mesaNumero, { clienteNome: 'Teste cruzado' });
+    await assumirMesa(tokenA, mesaNumero, { clienteNome: 'Teste cruzado' }, 'req-assume-additional-ci');
+    const editadoPai = await editarPedidoGarcom(tokenA, ids.pedidoPai, {
+      clienteNome: 'Teste cruzado',
+      note: 'Auditoria de edição',
+      items: [{ productId: ids.produto, qty: 1 }],
+    }, 'req-edit-ci');
+    assert.equal(editadoPai.editado, true);
+    const auditEdit = await pool.query(
+      'SELECT ator_tipo,ator_id,acao,alvo_id,request_id,contexto FROM auditoria_eventos WHERE request_id=$1',
+      ['req-edit-ci']
+    );
+    assert.equal(auditEdit.rows[0].ator_tipo, 'garcom');
+    assert.equal(Number(auditEdit.rows[0].ator_id), Number(ids.garcomA));
+    assert.equal(auditEdit.rows[0].acao, 'pedido_editado');
+    assert.equal(String(auditEdit.rows[0].alvo_id), String(ids.pedidoPai));
+    assert.equal(Number(auditEdit.rows[0].contexto.totalNovo), 12);
     const ativos = await listarPedidosAtivosMesa(tokenB, mesaNumero);
     assert.ok(ativos.some((p) => Number(p.id) === Number(ids.pedidoPai)),
       'qualquer garçom ativo pode selecionar um pedido da mesa para acrescentar itens');
