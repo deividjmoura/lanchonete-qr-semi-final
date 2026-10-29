@@ -8,6 +8,45 @@
     const n = Number(String(el.value || '0').replace(',', '.'));
     return Number.isFinite(n) && n >= 0 ? Number(n.toFixed(2)) : 0;
   }
+  const pendingAttempts = new Map();
+  function attemptStorageKey(id) { return 'qradmin:caixa:pagamento-parcial:' + String(id); }
+  function newIdempotencyKey() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+    return 'pay-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+  }
+  function readAttempt(id) {
+    const key = String(id);
+    if (pendingAttempts.has(key)) return pendingAttempts.get(key);
+    try {
+      const raw = localStorage.getItem(attemptStorageKey(id));
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && Number.isFinite(parsed.valor) && parsed.formaPagamento && parsed.idempotencyKey) {
+          pendingAttempts.set(key, parsed);
+          return parsed;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+  function getAttempt(id, valor, formaPagamento) {
+    const existing = readAttempt(id);
+    if (existing) {
+      if (Number(existing.valor) === Number(valor) && existing.formaPagamento === formaPagamento) return existing;
+      if (typeof toast === 'function') {
+        toast('Há uma tentativa de pagamento pendente (' + money(existing.valor) + ' · ' + existing.formaPagamento + '). Reenvie os mesmos dados para resolver antes de alterar o valor.', 'err');
+      }
+      return null;
+    }
+    const attempt = { valor: Number(valor), formaPagamento, idempotencyKey: newIdempotencyKey() };
+    pendingAttempts.set(String(id), attempt);
+    try { localStorage.setItem(attemptStorageKey(id), JSON.stringify(attempt)); } catch (_) {}
+    return attempt;
+  }
+  function clearAttempt(id) {
+    pendingAttempts.delete(String(id));
+    try { localStorage.removeItem(attemptStorageKey(id)); } catch (_) {}
+  }
   function refreshSplitHint(id) {
     const nEl = document.getElementById('split-n-' + id);
     const out = document.getElementById('split-each-' + id);
@@ -29,22 +68,37 @@
       if (typeof toast === 'function') toast('Informe o valor', 'err');
       return;
     }
+    const attempt = getAttempt(id, valor, radio.value);
+    if (!attempt) return;
+    const button = document.querySelector('[data-pay-partial="' + id + '"]');
+    if (button) button.disabled = true;
     try {
       const res = await fetch('/api/caixa/sessoes/' + id + '/pagamentos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ valor: valor, formaPagamento: radio.value }),
+        body: JSON.stringify({ valor: valor, formaPagamento: radio.value, idempotencyKey: attempt.idempotencyKey }),
       });
       const data = await res.json().catch(function () { return {}; });
       if (!res.ok) {
+        // Erros 4xx são rejeições conhecidas; rede/5xx podem ocorrer depois do
+        // commit, então preservamos a chave para reconciliar pelo mesmo retry.
+        if (res.status >= 400 && res.status < 500) clearAttempt(id);
         if (typeof toast === 'function') toast(data.error || 'Falha', 'err');
         return;
       }
+      clearAttempt(id);
       if (typeof toast === 'function')
         toast('Pago ' + money(valor) + ' · resta ' + money(data.valorRestante), 'ok');
-      if (typeof load === 'function') await load();
+      if (typeof load === 'function') {
+        try { await load(); }
+        catch (_) {
+          if (typeof toast === 'function') toast('Pagamento registrado, mas a tela não atualizou. Atualize a lista; não registre o mesmo valor novamente.', 'err');
+        }
+      }
     } catch (e) {
-      if (typeof toast === 'function') toast('Erro de rede', 'err');
+      if (typeof toast === 'function') toast('Erro de rede. Reenvie os mesmos dados para reutilizar a tentativa.', 'err');
+    } finally {
+      if (button) button.disabled = false;
     }
   }
   const _obs = new MutationObserver(function () {
