@@ -25,7 +25,10 @@ async function listarMesasGarcom(token) {
      WHERE m.numero <= COALESCE((SELECT quantidade FROM configuracao_mesas WHERE id=1), 20)
      ORDER BY m.numero`);
   return { garcom: { id: garcom.id, nome: garcom.nome }, mesas: rows.map(r => ({
-    id: r.id, numero: r.numero, token: r.token,
+    id: r.id, numero: r.numero,
+    // O token QR é uma credencial bearer. Um garçom só recebe o token das
+    // mesas sob sua responsabilidade atual, não de todas as mesas do salão.
+    token: Number(r.garcom_responsavel_id) === Number(garcom.id) ? r.token : null,
     sessaoId: r.sessao_id, clienteNome: r.cliente_nome,
     garcomResponsavelId: r.garcom_responsavel_id,
     garcomResponsavelNome: r.garcom_responsavel_nome,
