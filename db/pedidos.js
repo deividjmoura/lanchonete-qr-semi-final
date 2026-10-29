@@ -332,6 +332,24 @@ async function criarPedido(token, body, atendimento = null) {
       }
     }
 
+    // Idempotência: a mesa está travada (getOuAbrirSessao) desde o início da
+    // transação, então "verifica e insere" aqui é livre de corrida para esta
+    // sessão; o índice único parcial da migration 0018 é a segunda trava.
+    // Um retry (timeout no celular, duplo toque) devolve o pedido original
+    // em vez de criar um segundo pedido e baixar o estoque de novo.
+    const usarChave = chaveIdempotencia ? await pedidosTemIdempotencyKey(client) : false;
+    if (usarChave) {
+      const { rows: existentes } = await client.query(
+        'SELECT id FROM pedidos WHERE sessao_id = $1 AND idempotency_key = $2 LIMIT 1',
+        [sessaoId, chaveIdempotencia]
+      );
+      if (existentes[0]) {
+        const replay = await carregarPedidoGravado(client, existentes[0].id);
+        await client.query('COMMIT');
+        return { ...replay, sessaoId, mesa: mesa.numero, idempotentReplay: true };
+      }
+    }
+
     let pedidoPaiId = null;
     if (atendimento && atendimento.pedidoPaiId !== undefined && atendimento.pedidoPaiId !== null) {
       const paiId = Number(atendimento.pedidoPaiId);
@@ -350,24 +368,6 @@ async function criarPedido(token, body, atendimento = null) {
         throw new ErroPedido(409, 'O pedido selecionado já foi entregue; atualize a mesa e escolha um pedido ativo');
       }
       pedidoPaiId = Number(pai.id);
-    }
-
-    // Idempotência: a mesa está travada (getOuAbrirSessao) desde o início da
-    // transação, então "verifica e insere" aqui é livre de corrida para esta
-    // sessão; o índice único parcial da migration 0018 é a segunda trava.
-    // Um retry (timeout no celular, duplo toque) devolve o pedido original
-    // em vez de criar um segundo pedido e baixar o estoque de novo.
-    const usarChave = chaveIdempotencia ? await pedidosTemIdempotencyKey(client) : false;
-    if (usarChave) {
-      const { rows: existentes } = await client.query(
-        'SELECT id FROM pedidos WHERE sessao_id = $1 AND idempotency_key = $2 LIMIT 1',
-        [sessaoId, chaveIdempotencia]
-      );
-      if (existentes[0]) {
-        const replay = await carregarPedidoGravado(client, existentes[0].id);
-        await client.query('COMMIT');
-        return { ...replay, sessaoId, mesa: mesa.numero, idempotentReplay: true };
-      }
     }
 
     const clienteNome = String(body.clienteNome || body.cliente_nome || '')
