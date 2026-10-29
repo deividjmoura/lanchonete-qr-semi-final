@@ -30,7 +30,9 @@ test('Instalação contextual preserva instruções manuais e detecta PWA instal
 test('Ações de mesa ficam no modal e respeitam origem do pedido e responsável atual',()=>{
  assert.match(html,/id="tableDetailsModal"/);
  assert.doesNotMatch(html,/Escolha uma mesa<select id="tableSelect"/);
- assert.match(js,/pedidoClienteQr/);
+ assert.match(js,/if\(!m\.garcomResponsavelId\)/);
+ assert.match(js,/start\.textContent=m\.pedidoClienteQr\?'Assumir mesa':'Iniciar atendimento'/);
+ assert.match(js,/iniciarAtendimento\(m\.numero,m\.clienteNome/);
  assert.match(js,/if\(!m\.garcomResponsavelId&&m\.pedidoClienteQr\)/);
  assert.match(js,/Number\(m\.garcomResponsavelId\)===Number\(currentWaiterId\)/);
  assert.match(js,/function openTableDetails\(/);
