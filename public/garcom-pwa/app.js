@@ -157,7 +157,7 @@ function openTableDetails(tableNumber){
      getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/mesas/'+m.numero+'/pedidos-ativos').then(rows=>{
        appendSelect.replaceChildren();const empty=document.createElement('option');empty.value='';empty.textContent=rows.length?'Selecione o pedido ativo':'Nenhum pedido ativo — use “Novo pedido”';appendSelect.append(empty);
        for(const o of rows){const option=document.createElement('option');option.value=String(o.id);option.textContent='Pedido #'+o.id+' · '+(o.label||o.status);appendSelect.append(option);}
-       appendSelect.disabled=!rows.length;appendButton.disabled=!rows.length;
+       appendSelect.disabled=!rows.length;appendButton.disabled=true;
      }).catch(()=>{appendSelect.replaceChildren();const error=document.createElement('option');error.value='';error.textContent='Não foi possível carregar pedidos ativos';appendSelect.append(error);});
    }else{
      appendSelect.replaceChildren();const unavailable=document.createElement('option');unavailable.value='';unavailable.textContent=navigator.onLine?'Assuma a mesa e atualize antes de acrescentar itens':'Conecte-se para selecionar um pedido ativo';appendSelect.append(unavailable);
