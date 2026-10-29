@@ -487,7 +487,9 @@ const server = http.createServer(async (req, res) => {
         const garcom = await getGarcomPorToken(m[1]);
         if (!garcom || !garcom.ativo) return json(res, 401, { error: 'Link do garçom inválido ou desativado' });
         const payload = await body(req);
-        const out = await registrarPagamento(Number(m[2]), payload, garcom.nome, garcom.id);
+        const out = await registrarPagamento(Number(m[2]), payload, garcom.nome, garcom.id, {
+          atorTipo: 'garcom', atorId: garcom.id, requestId: reqId,
+        });
         if (!out.idempotentReplay) broadcast('update', { type: 'pagamento_parcial', sessaoId: Number(m[2]) });
         return json(res, out.idempotentReplay ? 200 : 201, out);
       } catch (e) {
@@ -719,7 +721,9 @@ const server = http.createServer(async (req, res) => {
     if ((m = p.match(/^\/api\/caixa\/sessoes\/(\d+)\/pagamentos$/)) && req.method === 'POST') {
       try {
         const operador = await getStaffDaRequisicao(req);
-        const out = await registrarPagamento(Number(m[1]), await body(req), operador?.nome || null);
+        const out = await registrarPagamento(Number(m[1]), await body(req), operador?.nome || null, null, {
+          atorTipo: 'staff', atorId: Number.isInteger(operador?.id) ? operador.id : null, requestId: reqId,
+        });
         if (!out.idempotentReplay) broadcast('update', { type: 'pagamento_parcial', sessaoId: Number(m[1]) });
         return json(res, 201, out);
       } catch (e) {
@@ -731,7 +735,9 @@ const server = http.createServer(async (req, res) => {
       try {
         const operador = await getStaffDaRequisicao(req);
         const out = await confirmarPixAviso(
-          Number(m[1]), Number(m[2]), operador?.nome || null, { requestId: reqId }
+          Number(m[1]), Number(m[2]), operador?.nome || null, {
+            atorTipo: 'staff', atorId: Number.isInteger(operador?.id) ? operador.id : null, requestId: reqId,
+          }
         );
         broadcast('update', {
           type: 'pix_confirmado',
@@ -747,7 +753,9 @@ const server = http.createServer(async (req, res) => {
     if ((m = p.match(/^\/api\/caixa\/sessoes\/(\d+)\/fechar$/)) && req.method === 'POST') {
       try {
         const operador = await getStaffDaRequisicao(req);
-        const out = await fecharSessao(Number(m[1]), await body(req), operador?.nome || null);
+        const out = await fecharSessao(Number(m[1]), await body(req), operador?.nome || null, {
+          atorTipo: 'staff', atorId: Number.isInteger(operador?.id) ? operador.id : null, requestId: reqId,
+        });
         broadcast('update', { type: 'sessao_fechada', sessaoId: Number(m[1]) });
         return json(res, 200, out);
       } catch (e) {
