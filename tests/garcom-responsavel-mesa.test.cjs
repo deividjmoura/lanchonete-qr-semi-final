@@ -72,6 +72,7 @@ test('transferência grava origem, destino e ator; pedidos prontos não são alt
       if (/SELECT id FROM mesas WHERE numero/i.test(sql)) return { rows: [{ id: 40, numero: 4 }] };
       if (/SELECT id, garcom_responsavel_id FROM mesa_sessoes/i.test(sql)) return { rows: [{ id: 90, garcom_responsavel_id: 1 }] };
       if (/SELECT id, nome, ativo FROM garcons/i.test(sql)) return { rows: [{ id: 2, nome: 'Bruno', ativo: true }] };
+      if (/INSERT INTO auditoria_eventos/i.test(sql)) return { rows: [{ id: 1 }] };
       return { rows: [] };
     },
     release() {},
