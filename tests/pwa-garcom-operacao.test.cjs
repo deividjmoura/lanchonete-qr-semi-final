@@ -10,7 +10,7 @@ const sw=fs.readFileSync(path.join(root,'public/garcom-pwa/sw.js'),'utf8');
 
 test('PWA e backend têm rota explícita para iniciar mesa vazia',()=>{
  assert.match(backend,/async function iniciarAtendimentoGarcom/);
- assert.match(server,/mesas\\\\\/(\\\\d+)\\\\/iniciar/);
+ assert.ok(server.includes('mesas\\/(\\d+)\\/iniciar'));
  assert.match(app,/base\+'\/iniciar'/);
  assert.match(backend,/INSERT INTO mesa_sessoes \(mesa_id, cliente_nome, garcom_responsavel_id\)/);
 });
