@@ -61,6 +61,13 @@ A entrega de push em segundo plano depende de implementação no backend e confi
 - Logs Railway analisados: consultas de mesas, cardápio, pedidos e atendimentos responderam 200 em parte da amostra; também houve 401 para alguns links de garçom. Na amostra de 501 requisições HTTP, não foi observado POST para a rota de criação de pedido do garçom. Isso é evidência limitada à janela consultada, não prova de que nenhum pedido tenha sido enviado em outros horários.
 - A fila de cozinha/bar usa os itens persistidos por setor e não filtra pela origem do pedido; portanto, pedidos com origem garçom devem entrar nas mesmas filas após persistência correta.
 
+
+- A inicialização das mesas foi desacoplada da abertura/recuperação do IndexedDB; uma falha da fila local não bloqueia mais a consulta operacional das mesas.
+- O sincronizador aguarda IndexedDB pronto antes de processar pendências; erro de armazenamento impede salvar e informa claramente que o pedido não foi enviado.
+- O botão de salvar agora bloqueia submissões simultâneas e mantém uma única chave de idempotência por pedido.
+- O estado de conexão mantém o aviso de link 401 inválido/desativado, sem ser sobrescrito pelo indicador “Online”.
+- Foi acrescentado teste PostgreSQL real para mesa vazia → atribuição → pedido com origem garçom → filas de cozinha e bar, além de replay idempotente.
+
 ### Limitações e riscos ainda abertos
 
 - Tokens bearer de garçom aparecem nos caminhos das rotas e podem ser registrados pelo proxy HTTP. Não expor valores em relatórios. Planejar migração para credencial de sessão curta e avaliar rotação de links potencialmente expostos.
