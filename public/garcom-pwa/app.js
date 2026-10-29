@@ -17,7 +17,33 @@ async function loadMesas(){
  renderBillingSessions();
 }
 async function loadProducts(){try{const data=await getJson('/api/cardapio');products=data.flatMap(c=>(c.produtos||[]).map(p=>({...p,name:p.nome,price:Number(p.preco),description:p.descricao})));localStorage.setItem('waiter-menu-cache',JSON.stringify(products));}catch(e){try{products=JSON.parse(localStorage.getItem('waiter-menu-cache')||'[]')}catch{products=[]}if(!products.length)$('#connection').textContent='Sem cardápio offline: conecte-se ao menos uma vez.';}renderProducts()}
-function renderProducts(){const q=$('#search').value.toLocaleLowerCase('pt-BR');const root=$('#products');root.replaceChildren();products.filter(p=>q.length>=2&&(p.name||p.nome||'').toLocaleLowerCase('pt-BR').includes(q)).slice(0,12).forEach(p=>{const name=p.name||p.nome;const price=Number(p.price??p.preco??0);const card=document.createElement('article');card.className='product';card.innerHTML='<h3></h3><p></p><div class="product-foot"><span class="price"></span><button>Adicionar</button></div>';card.querySelector('h3').textContent=name;card.querySelector('p').textContent=p.description||p.descricao||'Produto do cardápio';card.querySelector('.price').textContent=money(price);card.querySelector('button').onclick=()=>{const old=cart.get(String(p.id));cart.set(String(p.id),{product:p,qty:(old?.qty||0)+1,additions:old?.additions||[],removals:old?.removals||[],note:old?.note||''});renderCart()};root.append(card)});if(!root.children.length)root.innerHTML=q.length<2?'<p class="muted">Digite ao menos 2 letras para buscar um produto.</p>':'<p class="empty">Nenhum produto encontrado.</p>'}function renderCart(){const root=$('#cart');root.replaceChildren();let total=0;if(!cart.size)root.innerHTML='<p class="muted">Adicione produtos ao pedido.</p>';for(const [id,item] of cart){const p=item.product;const name=p.name||p.nome;const price=Number(p.price??p.preco??0);const adicionaisPreco=(item.additions||[]).reduce((sum,sel)=>sum+Number((p.adicionais||[]).find(a=>Number(a.id)===Number(sel.id||sel))?.preco||0),0);const precoComAdicionais=price+adicionaisPreco;total+=precoComAdicionais*item.qty;const row=document.createElement('div');row.className='cart-item';row.innerHTML='<div class="cart-row"><strong class="item-name"></strong><div class="qty"><button data-act="minus" aria-label="Diminuir quantidade">−</button><span></span><button data-act="plus" aria-label="Aumentar quantidade">+</button></div><strong class="line-price"></strong></div><div class="cart-details"><label>Adicionais<input data-field="additions" placeholder="Ex.: bacon, queijo extra"></label><label>Remover ingredientes<input data-field="removals" placeholder="Ex.: sem cebola"></label><label>Observação do item<input data-field="note" placeholder="Ponto da carne, etc."></label></div>';row.querySelector('.item-name').textContent=name;row.querySelector('.qty span').textContent=item.qty;row.querySelector('.line-price').textContent=money(precoComAdicionais*item.qty);row.querySelector('[data-act="minus"]').onclick=()=>{if(item.qty<=1)cart.delete(id);else item.qty--;renderCart()};row.querySelector('[data-act="plus"]').onclick=()=>{item.qty=Math.min(99,item.qty+1);renderCart()};const opts=p.adicionais||[];
+function normalizarBusca(value){return String(value||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLocaleLowerCase('pt-BR').trim()}
+function renderProducts(){
+ const q=normalizarBusca($('#search').value);
+ const root=$('#products');root.replaceChildren();
+ const filtrados=products.filter(p=>{
+  if(!q)return false;
+  const texto=normalizarBusca([p.name||p.nome,p.description||p.descricao,p.categoria||p.categoriaNome].filter(Boolean).join(' '));
+  return texto.includes(q);
+ }).slice(0,20);
+ filtrados.forEach(p=>{
+  const name=p.name||p.nome;
+  const price=Number(p.price??p.preco??0);
+  const card=document.createElement('article');card.className='product';
+  card.innerHTML='<h3></h3><p></p><div class="product-foot"><span class="price"></span><button type="button">Adicionar</button></div>';
+  card.querySelector('h3').textContent=name;
+  card.querySelector('p').textContent=p.description||p.descricao||p.categoria||'Produto do cardápio';
+  card.querySelector('.price').textContent=money(price);
+  card.querySelector('button').onclick=()=>{
+   const old=cart.get(String(p.id));
+   cart.set(String(p.id),{product:p,qty:(old?.qty||0)+1,additions:old?.additions||[],removals:old?.removals||[],note:old?.note||''});
+   renderCart();
+  };
+  root.append(card);
+ });
+ if(!root.children.length)root.innerHTML=!q?'<p class="muted">Digite o nome ou a categoria para buscar produtos.</p>':'<p class="empty">Nenhum produto encontrado. Tente outro nome.</p>';
+}
+function renderCart(){const root=$('#cart');root.replaceChildren();let total=0;if(!cart.size)root.innerHTML='<p class="muted">Adicione produtos ao pedido.</p>';for(const [id,item] of cart){const p=item.product;const name=p.name||p.nome;const price=Number(p.price??p.preco??0);const adicionaisPreco=(item.additions||[]).reduce((sum,sel)=>sum+Number((p.adicionais||[]).find(a=>Number(a.id)===Number(sel.id||sel))?.preco||0),0);const precoComAdicionais=price+adicionaisPreco;total+=precoComAdicionais*item.qty;const row=document.createElement('div');row.className='cart-item';row.innerHTML='<div class="cart-row"><strong class="item-name"></strong><div class="qty"><button data-act="minus" aria-label="Diminuir quantidade">−</button><span></span><button data-act="plus" aria-label="Aumentar quantidade">+</button></div><strong class="line-price"></strong></div><div class="cart-details"><label>Adicionais<input data-field="additions" placeholder="Ex.: bacon, queijo extra"></label><label>Remover ingredientes<input data-field="removals" placeholder="Ex.: sem cebola"></label><label>Observação do item<input data-field="note" placeholder="Ponto da carne, etc."></label></div>';row.querySelector('.item-name').textContent=name;row.querySelector('.qty span').textContent=item.qty;row.querySelector('.line-price').textContent=money(precoComAdicionais*item.qty);row.querySelector('[data-act="minus"]').onclick=()=>{if(item.qty<=1)cart.delete(id);else item.qty--;renderCart()};row.querySelector('[data-act="plus"]').onclick=()=>{item.qty=Math.min(99,item.qty+1);renderCart()};const opts=p.adicionais||[];
 const addInput=row.querySelector('[data-field="additions"]');
 const addWrap=document.createElement('div');addWrap.className='addon-options';
 if(opts.length){const caption=document.createElement('span');caption.textContent='Adicionais (opcionais)';addWrap.append(caption);for(const a of opts){const label=document.createElement('label');label.className='addon-choice';const cb=document.createElement('input');cb.type='checkbox';cb.checked=(item.additions||[]).some(x=>Number(x.id||x)===Number(a.id));cb.onchange=()=>{const selected=new Set((item.additions||[]).map(x=>Number(x.id||x)));if(cb.checked)selected.add(Number(a.id));else selected.delete(Number(a.id));item.additions=[...selected].map(id=>({id}));renderCart();};const title=document.createElement('span');title.textContent=a.nome+' · '+money(Number(a.preco||0));label.append(cb,title);addWrap.append(label);}}else addWrap.textContent='Sem adicionais disponíveis';
@@ -289,10 +315,38 @@ async function loadBillingSummary(){
   $('#registerPayment').disabled=true;
  }
 }
+function renderPixPaymentQr(){
+ const panel=$('#pixQrPanel');
+ const pix=$('#billingMethod').value==='pix';
+ panel.hidden=!pix;
+ if(!pix)return;
+ const img=$('#pixQrImage'),payloadField=$('#pixCopyPaste'),status=$('#pixQrMessage');
+ const valor=Number($('#billingAmount').value);
+ if(!window.LQRPix||!LQRPix.disponivel()){
+  img.removeAttribute('src');payloadField.value='';
+  status.textContent='PIX não configurado: confira PIX_CHAVE nas variáveis da Railway.';
+  return;
+ }
+ if(!Number.isFinite(valor)||valor<=0){
+  img.removeAttribute('src');payloadField.value='';
+  status.textContent='Informe o valor que o cliente vai pagar para gerar o QR Code.';
+  return;
+ }
+ const payload=LQRPix.montarPayload(valor);
+ const src=LQRPix.qrUrl(valor);
+ if(!payload||!src){
+  img.removeAttribute('src');payloadField.value='';
+  status.textContent='Não foi possível gerar o QR Code PIX. Confira a configuração e tente novamente.';
+  return;
+ }
+ img.src=src;payloadField.value=payload;
+ status.textContent='PIX de '+money(Number(valor.toFixed(2)))+'. Mostre o QR ao cliente; só confirme depois de conferir o crédito no aplicativo bancário.';
+}
 function updateBillingConfirmation(){
  const pix=$('#billingMethod').value==='pix';
  $('#pixPaymentNote').hidden=!pix;
  $('#billingConfirmLabel').textContent=pix?'Confirmei o crédito PIX no aplicativo bancário.':'Confirmo que recebi o valor informado.';
+ renderPixPaymentQr();
 }
 async function submitWaiterPayment(){
  const sessionId=Number($('#billingSession').value);
@@ -332,6 +386,14 @@ $('#billingSession').addEventListener('change',()=>{if(pendingWaiterPayment&&Num
 $('#refreshBilling').addEventListener('click',()=>loadBillingSummary());
 $('#billingMethod').addEventListener('change',updateBillingConfirmation);
 $('#registerPayment').addEventListener('click',submitWaiterPayment);
+$('#billingAmount').addEventListener('input',renderPixPaymentQr);
+$('#copyPixPayload').addEventListener('click',async()=>{
+ const payload=$('#pixCopyPaste').value;
+ if(!payload){$('#pixQrMessage').textContent='Gere o QR informando um valor válido primeiro.';return;}
+ try{await navigator.clipboard.writeText(payload);$('#copyPixPayload').textContent='PIX copia e cola copiado';setTimeout(()=>$('#copyPixPayload').textContent='Copiar PIX copia e cola',1800);}
+ catch(_){$('#pixCopyPaste').focus();$('#pixCopyPaste').select();try{document.execCommand('copy');$('#pixQrMessage').textContent='Código selecionado/copiar manualmente se necessário.';}catch(__){}}
+});
+if(window.LQRPix){void LQRPix.loadConfig().then(()=>{updateBillingConfirmation();}).catch(()=>updateBillingConfirmation());}
 async function transferTable(table,targetId,targetName){
  if(!Number.isSafeInteger(targetId)||targetId<1){alert('Escolha um garçom ativo para receber a mesa.');return;}
  if(!confirm('Transferir a mesa '+table+' para '+targetName+'? Pedidos já prontos continuarão prontos e passarão para a fila do novo responsável.'))return;
