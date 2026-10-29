@@ -287,6 +287,9 @@ async function criarPedido(token, body, atendimento = null) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new ErroPedido(400, 'Dados do pedido inválidos');
   }
+  if (!atendimento && body.pedidoPaiId !== undefined && body.pedidoPaiId !== null) {
+    throw new ErroPedido(400, 'Pedido relacionado só pode ser informado pelo atendimento do garçom');
+  }
   const chaveIdempotencia = idempotencyKeyDoCorpo(body);
   if (chaveIdempotencia === false) throw new ErroPedido(400, 'Chave de idempotência inválida');
   const itensInput = Array.isArray(body.items) ? body.items : [];
@@ -329,6 +332,26 @@ async function criarPedido(token, body, atendimento = null) {
       }
     }
 
+    let pedidoPaiId = null;
+    if (atendimento && atendimento.pedidoPaiId !== undefined && atendimento.pedidoPaiId !== null) {
+      const paiId = Number(atendimento.pedidoPaiId);
+      if (!Number.isSafeInteger(paiId) || paiId < 1) {
+        throw new ErroPedido(400, 'Pedido de referência inválido');
+      }
+      const { rows: pais } = await client.query(
+        'SELECT id, sessao_id, status FROM pedidos WHERE id = $1',
+        [paiId]
+      );
+      const pai = pais[0];
+      if (!pai || Number(pai.sessao_id) !== Number(sessaoId)) {
+        throw new ErroPedido(404, 'Pedido selecionado não pertence à comanda desta mesa');
+      }
+      if (pai.status === 'entregue') {
+        throw new ErroPedido(409, 'O pedido selecionado já foi entregue; atualize a mesa e escolha um pedido ativo');
+      }
+      pedidoPaiId = Number(pai.id);
+    }
+
     // Idempotência: a mesa está travada (getOuAbrirSessao) desde o início da
     // transação, então "verifica e insere" aqui é livre de corrida para esta
     // sessão; o índice único parcial da migration 0018 é a segunda trava.
@@ -360,14 +383,14 @@ async function criarPedido(token, body, atendimento = null) {
     const observacaoGeral = String(body.note || '').trim().slice(0, 500) || null;
     const { rows: pedidoRows } = usarChave
       ? await client.query(
-          `INSERT INTO pedidos (sessao_id, observacao_geral, cliente_nome, idempotency_key)
-           VALUES ($1, $2, $3, $4) RETURNING id, status, criado_em, cliente_nome, editado_em`,
-          [sessaoId, observacaoGeral, clienteNome, chaveIdempotencia]
+          `INSERT INTO pedidos (sessao_id, observacao_geral, cliente_nome, idempotency_key, pedido_pai_id)
+           VALUES ($1, $2, $3, $4, $5) RETURNING id, status, criado_em, cliente_nome, editado_em, pedido_pai_id`,
+          [sessaoId, observacaoGeral, clienteNome, chaveIdempotencia, pedidoPaiId]
         )
       : await client.query(
-          `INSERT INTO pedidos (sessao_id, observacao_geral, cliente_nome)
-           VALUES ($1, $2, $3) RETURNING id, status, criado_em, cliente_nome, editado_em`,
-          [sessaoId, observacaoGeral, clienteNome]
+          `INSERT INTO pedidos (sessao_id, observacao_geral, cliente_nome, pedido_pai_id)
+           VALUES ($1, $2, $3, $4) RETURNING id, status, criado_em, cliente_nome, editado_em, pedido_pai_id`,
+          [sessaoId, observacaoGeral, clienteNome, pedidoPaiId]
         );
     const pedido = pedidoRows[0];
     if (atendimento) {
@@ -400,6 +423,7 @@ async function criarPedido(token, body, atendimento = null) {
     return {
       id: pedido.id,
       sessaoId,
+      pedidoPaiId,
       mesa: mesa.numero,
       status: pedido.status,
       criadoEm: pedido.criado_em,
