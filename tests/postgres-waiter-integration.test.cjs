@@ -10,8 +10,9 @@ assert.strictEqual(
 );
 
 const pool = require('../db/pool');
-const { assumirMesa, transferirMesa, deixarMesa, editarPedidoGarcom, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, listarPedidosProntosGarcom, resumoPagamentoSessao } = require('../db/atendimento');
+const { assumirMesa, iniciarAtendimentoGarcom, transferirMesa, deixarMesa, editarPedidoGarcom, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, listarPedidosProntosGarcom, resumoPagamentoSessao } = require('../db/atendimento');
 const { registrarPagamento } = require('../db/caixa');
+const { getFilaCozinha, getFilaBar } = require('../db/pedidos');
 const { entregarComoGarcom } = require('../db/garcons');
 
 test('PostgreSQL real: fila acompanha a transferência e só o novo responsável pode entregar', async () => {
@@ -374,6 +375,107 @@ test('PostgreSQL real: mesa sem pedido QR é rejeitada sem criar sessão nem his
       await pool.query('DELETE FROM mesas WHERE id=$1', [mesaId]).catch(() => {});
     }
     if (garcomId) await pool.query('DELETE FROM garcons WHERE id=$1', [garcomId]).catch(() => {});
+  }
+});
+
+
+test('PostgreSQL real: mesa vazia inicia atendimento e pedido do garçom chega às filas de cozinha e bar', async () => {
+  const ids = { categoria: null, cozinha: null, bar: null, garcom: null, mesa: null, sessao: null, pedido: null };
+  const mesaNumero = 10;
+  const token = '00000000-0000-4000-8000-000000000204';
+  const requestId = 'req-start-empty-pg-' + process.pid;
+  const idempotencyKey = '00000000-0000-4000-8000-000000000205';
+
+  try {
+    ids.categoria = (await pool.query(
+      'INSERT INTO categorias (nome, ordem) VALUES ($1, 0) RETURNING id',
+      ['CI início mesa vazia ' + process.pid]
+    )).rows[0].id;
+    ids.cozinha = (await pool.query(
+      'INSERT INTO produtos (categoria_id, nome, descricao, preco, disponivel) VALUES ($1,$2,$3,10,TRUE) RETURNING id',
+      [ids.categoria, 'Produto cozinha CI ' + process.pid, 'Fixture cozinha']
+    )).rows[0].id;
+    ids.bar = (await pool.query(
+      'INSERT INTO produtos (categoria_id, nome, descricao, preco, disponivel) VALUES ($1,$2,$3,7,TRUE) RETURNING id',
+      [ids.categoria, 'Produto bar CI ' + process.pid, 'Fixture bar']
+    )).rows[0].id;
+    await pool.query("UPDATE produtos SET setor='bar' WHERE id=$1", [ids.bar]);
+
+    ids.garcom = (await pool.query(
+      'INSERT INTO garcons (nome, token, ativo) VALUES ($1,$2,TRUE) RETURNING id',
+      ['Garçom início CI ' + process.pid, token]
+    )).rows[0].id;
+    ids.mesa = (await pool.query(
+      "INSERT INTO mesas (numero, status) VALUES ($1,'livre') RETURNING id",
+      [mesaNumero]
+    )).rows[0].id;
+
+    const inicio = await iniciarAtendimentoGarcom(token, mesaNumero, { clienteNome: 'Cliente presencial' }, requestId);
+    assert.equal(Number(inicio.garcom.id), Number(ids.garcom));
+    assert.equal(inicio.mesa, mesaNumero);
+    assert.ok(inicio.sessaoId);
+    const replayInicio = await iniciarAtendimentoGarcom(token, mesaNumero, { clienteNome: 'Cliente presencial' }, requestId);
+    assert.equal(replayInicio.idempotentReplay, true);
+    assert.equal(Number(replayInicio.sessaoId), Number(inicio.sessaoId));
+    ids.sessao = inicio.sessaoId;
+
+    const historico = await pool.query(
+      'SELECT garcom_anterior_id,garcom_novo_id,alterado_por_id FROM mesa_atendimento_historico WHERE sessao_id=$1',
+      [ids.sessao]
+    );
+    assert.equal(historico.rows.length, 1, 'repetir início não deve duplicar histórico');
+    assert.equal(historico.rows[0].garcom_anterior_id, null);
+    assert.equal(Number(historico.rows[0].garcom_novo_id), Number(ids.garcom));
+    assert.equal(Number(historico.rows[0].alterado_por_id), Number(ids.garcom));
+
+    const pedido = await criarPedidoGarcom(token, mesaNumero, {
+      idempotencyKey,
+      clienteNome: 'Cliente presencial',
+      items: [{ productId: ids.cozinha, qty: 1 }, { productId: ids.bar, qty: 1 }],
+    });
+    ids.pedido = pedido.id;
+    const origem = await pool.query(
+      'SELECT p.origem_pedido,p.garcom_registrou_id,s.garcom_responsavel_id FROM pedidos p JOIN mesa_sessoes s ON s.id=p.sessao_id WHERE p.id=$1',
+      [ids.pedido]
+    );
+    assert.equal(origem.rows[0].origem_pedido, 'garcom');
+    assert.equal(Number(origem.rows[0].garcom_registrou_id), Number(ids.garcom));
+    assert.equal(Number(origem.rows[0].garcom_responsavel_id), Number(ids.garcom));
+
+    const [filaCozinha, filaBar] = await Promise.all([getFilaCozinha(), getFilaBar()]);
+    const pedidoCozinha = filaCozinha.find(p => Number(p.id) === Number(ids.pedido));
+    const pedidoBar = filaBar.find(p => Number(p.id) === Number(ids.pedido));
+    assert.ok(pedidoCozinha, 'pedido do garçom deve aparecer na cozinha');
+    assert.ok(pedidoBar, 'pedido do garçom deve aparecer no bar');
+    assert.ok(pedidoCozinha.itens.some(i => Number(i.produto_id || i.produtoId) === Number(ids.cozinha) || i.nome === 'Produto cozinha CI ' + process.pid));
+    assert.ok(pedidoBar.itens.some(i => Number(i.produto_id || i.produtoId) === Number(ids.bar) || i.nome === 'Produto bar CI ' + process.pid));
+
+    const replayPedido = await criarPedidoGarcom(token, mesaNumero, {
+      idempotencyKey,
+      clienteNome: 'Cliente presencial',
+      items: [{ productId: ids.cozinha, qty: 1 }, { productId: ids.bar, qty: 1 }],
+    });
+    assert.equal(replayPedido.idempotentReplay, true);
+    assert.equal(Number(replayPedido.id), Number(ids.pedido));
+    const quantidade = await pool.query('SELECT COUNT(*)::int AS n FROM pedidos WHERE sessao_id=$1', [ids.sessao]);
+    assert.equal(quantidade.rows[0].n, 1, 'retry não deve duplicar pedido');
+  } finally {
+    if (ids.pedido) {
+      await pool.query('DELETE FROM itens_pedido_adicionais WHERE item_pedido_id IN (SELECT id FROM itens_pedido WHERE pedido_id=$1)', [ids.pedido]).catch(() => {});
+      await pool.query('DELETE FROM itens_pedido_remocoes WHERE item_pedido_id IN (SELECT id FROM itens_pedido WHERE pedido_id=$1)', [ids.pedido]).catch(() => {});
+      await pool.query('DELETE FROM itens_pedido WHERE pedido_id=$1', [ids.pedido]).catch(() => {});
+      await pool.query('DELETE FROM pedidos WHERE id=$1', [ids.pedido]).catch(() => {});
+    }
+    if (ids.sessao) {
+      await pool.query('DELETE FROM mesa_atendimento_historico WHERE sessao_id=$1', [ids.sessao]).catch(() => {});
+      await pool.query('DELETE FROM mesa_sessoes WHERE id=$1', [ids.sessao]).catch(() => {});
+    }
+    if (ids.mesa) await pool.query('DELETE FROM mesas WHERE id=$1', [ids.mesa]).catch(() => {});
+    if (ids.garcom) await pool.query('DELETE FROM garcons WHERE id=$1', [ids.garcom]).catch(() => {});
+    if (ids.cozinha) await pool.query('DELETE FROM produtos WHERE id=$1', [ids.cozinha]).catch(() => {});
+    if (ids.bar) await pool.query('DELETE FROM produtos WHERE id=$1', [ids.bar]).catch(() => {});
+    if (ids.categoria) await pool.query('DELETE FROM categorias WHERE id=$1', [ids.categoria]).catch(() => {});
+    await pool.query('DELETE FROM auditoria_eventos WHERE request_id=$1', [requestId]).catch(() => {});
   }
 });
 
