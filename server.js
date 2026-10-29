@@ -469,7 +469,7 @@ const server = http.createServer(async (req, res) => {
         if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
           return json(res, 400, { error: 'Corpo de transferência inválido' });
         }
-        const out = await transferirMesa(m[1], m[2], payload.garcomDestinoId);
+        const out = await transferirMesa(m[1], m[2], payload.garcomDestinoId, reqId);
         broadcast('update', { type: 'mesa_transferida', mesa: out.mesa, de: out.de.id, para: out.para.id });
         return json(res, 200, out);
       } catch (e) {
@@ -502,14 +502,14 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/deixar$/)) && req.method === 'POST') {
       try {
-        const out=await deixarMesa(m[1],m[2]);
+        const out=await deixarMesa(m[1],m[2],reqId);
         broadcast('update',{type:'mesa_liberada',mesa:out.mesa});
         return json(res,200,out);
       }catch(e){if(e instanceof ErroAtendimento)return json(res,e.status,{error:e.message});throw e}
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/assumir$/)) && req.method === 'POST') {
       try {
-        const out = await assumirMesa(m[1], m[2], await body(req));
+        const out = await assumirMesa(m[1], m[2], await body(req), reqId);
         broadcast('update', { type: 'mesa_assumida', mesa: out.mesa });
         return json(res, 200, out);
       } catch (e) {
