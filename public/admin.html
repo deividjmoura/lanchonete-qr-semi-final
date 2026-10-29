@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Admin · Major Pub</title>
+  <title>Admin · QR Admin</title>
   <link rel="icon" type="image/svg+xml" href="/favicons/admin.svg">
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/style-ops.css">
@@ -33,8 +33,8 @@
 <body class="page-admin">
 <main class="wrap">
   <div class="glass-nav">
-<div class="logo-mark" title="Major Pub">
-      <img src="/assets/logo-cliente.png" alt="Major Pub" width="64" height="64" style="width:88%;height:88%;object-fit:contain;border-radius:50%">
+<div class="logo-mark" title="QR Admin">
+      <img src="/logo/qradmin-mark.png" alt="QR Admin" width="64" height="64" style="width:88%;height:88%;object-fit:contain;border-radius:50%">
     </div>
     <div class="admin-tabs glass-tabs">
       <button type="button" class="active" data-tab="dashboard"><span class="i-dashboard ico" aria-hidden="true"></span>Dashboard</button>
@@ -349,7 +349,7 @@ function ticketHtmlAdmin(p){
     '<hr style="border:none;border-top:1px dashed #000;margin:10px 0">'+
     (linhas||'<div>Sem itens</div>')+
     (p.observacao_geral?'<hr style="border:none;border-top:1px dashed #000;margin:10px 0"><div><b>Obs.:</b> '+esc(p.observacao_geral)+'</div>':'')+
-    '<hr style="border:none;border-top:1px dashed #000;margin:10px 0"><div style="text-align:center;font-size:11px">Major Pub</div>';
+    '<hr style="border:none;border-top:1px dashed #000;margin:10px 0"><div style="text-align:center;font-size:11px">QR Admin</div>';
 }
 function imprimirPedidoAdmin(id){
   let p=pedidosAtivosCache.find(x=>Number(x.id)===Number(id));
