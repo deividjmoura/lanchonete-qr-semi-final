@@ -37,6 +37,15 @@ test('sincronização inicia sessão quando mesa está vazia e mantém chave ide
  assert.match(block,/await loadMesas\(\)/);
  assert.match(block,/'conflict':'offline'/);
 });
+test('salvar pedido evita duplo clique e falha de armazenamento sem confirmação falsa',()=>{
+ const start=app.indexOf('async function saveOrder()');
+ const end=app.indexOf('async function syncOne(',start);
+ const save=app.slice(start,end);
+ assert.match(save,/if\(savingOrder\)return/);
+ assert.match(save,/if\(!db\)/);
+ assert.match(save,/finally\{savingOrder=false;saveButton\.disabled=false;\}/);
+ assert.match(save,/idempotencyKey:uid\(\)/);
+});
 test('Service Worker não reaproveita shell anterior às correções',()=>{
  assert.match(sw,/garcom-pwa-shell-v15/);
  assert.match(sw,/pathname\.startsWith\('\/api\/'\)/);
