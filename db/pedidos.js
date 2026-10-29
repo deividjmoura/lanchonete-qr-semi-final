@@ -498,14 +498,26 @@ async function cancelarPedidoCliente(token, pedidoId, garcomResponsavelId = null
 
     // Evidência persistente do cancelamento (#48): gravada antes da exclusão
     // e na mesma transação — se o DELETE falhar, o evento também desfaz.
+    let atorTipoCancelamento = 'cliente_mesa';
+    let atorIdCancelamento = Number(mesa.id);
+    let atorNomeCancelamento = null;
+    if (garcomResponsavelId) {
+      const { rows: atores } = await client.query('SELECT id, nome FROM garcons WHERE id=$1', [garcomResponsavelId]);
+      atorTipoCancelamento = 'garcom';
+      atorIdCancelamento = Number(garcomResponsavelId);
+      atorNomeCancelamento = atores[0]?.nome || null;
+    }
     await registrarEvento(client, {
-      atorTipo: 'cliente_mesa',
-      atorId: mesa.id,
+      atorTipo: atorTipoCancelamento,
+      atorId: atorIdCancelamento,
+      atorNome: atorNomeCancelamento,
       acao: 'pedido_cancelado',
       alvoTipo: 'pedido',
       alvoId: String(pedido.id),
       contexto: {
         mesaNumero: mesa.numero,
+        totalAnterior,
+        quantidadeItens: quantidadeAnterior,
         motivo: opcoes && opcoes.motivo ? String(opcoes.motivo) : null,
       },
       requestId: opcoes && opcoes.requestId ? String(opcoes.requestId) : null,
@@ -572,6 +584,21 @@ async function editarPedidoCliente(token, pedidoId, body, garcomResponsavelId = 
       );
     }
 
+    const { rows: totalAnteriorRows } = await client.query(
+      `SELECT COALESCE(SUM(
+         ip.quantidade * (ip.preco_unitario + COALESCE(ad.total_adicionais, 0))
+       ), 0)::numeric(12,2) AS total,
+       COUNT(ip.id)::int AS quantidade
+       FROM itens_pedido ip
+       LEFT JOIN (
+         SELECT item_pedido_id, SUM(preco_unitario) AS total_adicionais
+         FROM itens_pedido_adicionais GROUP BY item_pedido_id
+       ) ad ON ad.item_pedido_id = ip.id
+       WHERE ip.pedido_id = $1`,
+      [pedido.id]
+    );
+    const totalAnterior = Number(totalAnteriorRows[0]?.total) || 0;
+    const quantidadeAnterior = Number(totalAnteriorRows[0]?.quantidade) || 0;
     const restaurou = await restaurarEstoqueDoPedido(client, pedido.id);
 
     await client.query(
