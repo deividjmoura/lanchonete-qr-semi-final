@@ -78,6 +78,59 @@ async function getGarcomPorToken(token) {
  * sessão (db/conta.js) — nunca incrementado às cegas, para uma entrega
  * repetida/regressão histórica não poder somar o mesmo item duas vezes.
  */
+async function assumirEntregaComoGarcom(pedidoId, garcomToken, requestId = null) {
+  const pid = numeroInteiroPositivo(pedidoId, 'id do pedido');
+  const garcom = await getGarcomPorToken(garcomToken);
+  if (!garcom || !garcom.ativo) throw new ErroGarcom(401, 'Link de garçom inválido ou desativado');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows: referencia } = await client.query(
+      'SELECT sessao_id FROM pedidos WHERE id = $1', [pid]);
+    if (!referencia[0]) throw new ErroGarcom(404, 'Pedido não encontrado');
+    const { rows: sessoes } = await client.query(
+      `SELECT id, status FROM mesa_sessoes WHERE id = $1 FOR UPDATE`,
+      [referencia[0].sessao_id]);
+    if (!sessoes[0] || sessoes[0].status !== 'aberta') {
+      throw new ErroGarcom(409, 'A sessão desta entrega não está mais aberta');
+    }
+    const { rows } = await client.query(
+      `SELECT id, status, origem_pedido, garcom_id, garcom_nome
+         FROM pedidos WHERE id = $1 FOR UPDATE`, [pid]);
+    const pedido = rows[0];
+    if (!pedido) throw new ErroGarcom(404, 'Pedido não encontrado');
+    if (pedido.status === 'entregue') throw new ErroGarcom(409, 'Pedido já foi entregue');
+    if (pedido.origem_pedido !== 'cliente') {
+      throw new ErroGarcom(403, 'Somente pedidos diretos do cliente entram na fila compartilhada');
+    }
+    if (pedido.garcom_id && Number(pedido.garcom_id) !== Number(garcom.id)) {
+      throw new ErroGarcom(409, 'Outro garçom já assumiu esta entrega');
+    }
+    const { rows: prontos } = await client.query(
+      `SELECT id FROM itens_pedido
+        WHERE pedido_id = $1 AND COALESCE(status, 'recebido') = 'concluido'
+        FOR UPDATE`, [pid]);
+    if (!prontos.length) throw new ErroGarcom(409, 'O pedido ainda não tem itens prontos para entrega');
+    if (!pedido.garcom_id) {
+      await client.query(
+        `UPDATE pedidos SET garcom_id = $2, garcom_nome = $3, claimed_at = now()
+          WHERE id = $1 AND garcom_id IS NULL`,
+        [pid, garcom.id, garcom.nome]);
+    }
+    await registrarEvento(client, {
+      atorTipo: 'garcom', atorId: Number(garcom.id), atorNome: garcom.nome,
+      acao: 'entrega_assumida', alvoTipo: 'pedido', alvoId: pid,
+      resultado: 'sucesso', requestId,
+      contexto: { origem: 'cliente', quantidadeItensProntos: prontos.length },
+    });
+    await client.query('COMMIT');
+    return { id: pid, assumido: true, garcom: { id: garcom.id, nome: garcom.nome } };
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    throw err;
+  } finally { client.release(); }
+}
+
 async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null, requestId = null) {
   const pid = numeroInteiroPositivo(pedidoId, 'id do pedido');
   const garcom = await getGarcomPorToken(garcomToken);
@@ -103,8 +156,7 @@ async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null, request
       [referencia[0].sessao_id]
     );
     const sessao = sessoes[0];
-    if (!sessao || sessao.status !== 'aberta' ||
-        Number(sessao.garcom_responsavel_id) !== Number(garcom.id)) {
+    if (!sessao || sessao.status !== 'aberta') {
       throw new ErroGarcom(403, 'Este pedido não pertence a uma mesa sob sua responsabilidade atual');
     }
 
@@ -113,8 +165,24 @@ async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null, request
       [pid]);
     const pedido = rows[0];
     if (!pedido) throw new ErroGarcom(404, 'Pedido não encontrado');
+    const { rows: origemRows } = await client.query(
+      'SELECT origem_pedido FROM pedidos WHERE id = $1', [pid]);
+    pedido.origem_pedido = origemRows[0]?.origem_pedido || 'garcom';
     if (Number(pedido.sessao_id) !== Number(sessao.id)) {
       throw new ErroGarcom(409, 'A sessão do pedido mudou; atualize a fila');
+    }
+    const responsavelAtual = Number(sessao.garcom_responsavel_id);
+    const entregaAtribuidaAoGarcom = Number(pedido.garcom_id) === Number(garcom.id);
+    const pedidoDiretoDoCliente = pedido.origem_pedido === 'cliente';
+    if (responsavelAtual !== Number(garcom.id) &&
+        !(pedidoDiretoDoCliente && entregaAtribuidaAoGarcom)) {
+      if (pedidoDiretoDoCliente) {
+        throw new ErroGarcom(403, 'Este pedido não pertence a uma entrega sob sua responsabilidade');
+      }
+      throw new ErroGarcom(403, 'Este pedido não pertence a uma mesa sob sua responsabilidade atual');
+    }
+    if (pedidoDiretoDoCliente && pedido.garcom_id && !entregaAtribuidaAoGarcom) {
+      throw new ErroGarcom(409, 'Outro garçom já assumiu esta entrega');
     }
     if (pedido.status === 'entregue') {
       throw new ErroGarcom(409, 'Pedido já foi totalmente entregue');
@@ -345,6 +413,8 @@ module.exports = {
   setGarcomAtivo,
   removerGarcom,
   getGarcomPorToken,
+  assumirEntregaComoGarcom: (...args) =>
+    comRetryConcorrencia(() => assumirEntregaComoGarcom(...args), { rotulo: 'assumirEntregaComoGarcom' }),
   entregarComoGarcom: (...args) =>
     comRetryConcorrencia(() => entregarComoGarcom(...args), { rotulo: 'entregarComoGarcom' }),
   listPedidosRecentes,

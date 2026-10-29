@@ -83,7 +83,7 @@ const addInput=row.querySelector('[data-field="additions"]');
 const addWrap=document.createElement('div');addWrap.className='addon-options';
 if(opts.length){const caption=document.createElement('span');caption.textContent='Adicionais (opcionais)';addWrap.append(caption);for(const a of opts){const label=document.createElement('label');label.className='addon-choice';const cb=document.createElement('input');cb.type='checkbox';cb.checked=(item.additions||[]).some(x=>Number(x.id||x)===Number(a.id));cb.onchange=()=>{const selected=new Set((item.additions||[]).map(x=>Number(x.id||x)));if(cb.checked)selected.add(Number(a.id));else selected.delete(Number(a.id));item.additions=[...selected].map(id=>({id}));renderCart();};const title=document.createElement('span');title.textContent=a.nome+' · '+money(Number(a.preco||0));label.append(cb,title);addWrap.append(label);}}else addWrap.textContent='Sem adicionais disponíveis';
 addInput.closest('label').replaceWith(addWrap);
-for(const f of ['removals','note']){const input=row.querySelector('[data-field="'+f+'"]');input.value=Array.isArray(item[f])?item[f].join(', '):item[f];input.onchange=()=>{item[f]=f==='note'?input.value:input.value.split(',').map(x=>x.trim()).filter(Boolean)}}root.append(row)}$('#total').textContent=money(total)}async function renderOrders(){const orders=await allOrders();$('#queueCount').textContent=orders.filter(o=>o.status!=='confirmed').length+' pendentes';const root=$('#orders');root.replaceChildren();if(!orders.length){root.innerHTML='<p class="muted">Nenhum pedido salvo neste aparelho.</p>';return}for(const o of orders){const card=document.createElement('article');card.className='order';const head=document.createElement('div');head.className='order-head';const title=document.createElement('strong');title.textContent='Mesa '+o.table+' · '+o.customerName;const badge=document.createElement('span');badge.className='status '+o.status;badge.textContent=statusText(o.status);head.append(title,badge);const details=document.createElement('p');details.className='muted';details.textContent=o.items.map(i=>i.qty+'× '+i.name).join(', ')+' · '+money(o.total);card.append(head,details);if(o.lastError){const error=document.createElement('p');error.className='muted';error.textContent='Não enviado: '+o.lastError;card.append(error);}if(o.status==='offline'||o.status==='conflict'){const retry=document.createElement('button');retry.className='secondary';retry.textContent=o.status==='conflict'?'Revisar conflito':'Tentar sincronizar';retry.onclick=()=>o.status==='conflict'?alert('O servidor informou conflito. Compare o pedido local com o retorno do backend antes de reenviar.'):syncOne(o.localId);card.append(retry)}if(o.status==='offline'){const edit=document.createElement('button');edit.className='secondary';edit.textContent='Editar rascunho';edit.onclick=()=>openEditDraft(o);card.append(edit)}root.append(card)}}let savingOrder=false;
+for(const f of ['removals','note']){const input=row.querySelector('[data-field="'+f+'"]');input.value=Array.isArray(item[f])?item[f].join(', '):item[f];input.onchange=()=>{item[f]=f==='note'?input.value:input.value.split(',').map(x=>x.trim()).filter(Boolean)}}root.append(row)}$('#total').textContent=money(total)}async function renderOrders(){const orders=await allOrders();const queueCount=$('#queueCount');if(queueCount)queueCount.textContent=orders.filter(o=>o.status!=='confirmed').length+' pendentes';const root=$('#orders');root.replaceChildren();if(!orders.length){root.innerHTML='<p class="muted">Nenhum pedido salvo neste aparelho.</p>';return}for(const o of orders){const card=document.createElement('article');card.className='order';const head=document.createElement('div');head.className='order-head';const title=document.createElement('strong');title.textContent='Mesa '+o.table+' · '+o.customerName;const badge=document.createElement('span');badge.className='status '+o.status;badge.textContent=statusText(o.status);head.append(title,badge);const details=document.createElement('p');details.className='muted';details.textContent=o.items.map(i=>i.qty+'× '+i.name).join(', ')+' · '+money(o.total);card.append(head,details);if(o.lastError){const error=document.createElement('p');error.className='muted';error.textContent='Não enviado: '+o.lastError;card.append(error);}if(o.status==='offline'||o.status==='conflict'){const retry=document.createElement('button');retry.className='secondary';retry.textContent=o.status==='conflict'?'Revisar conflito':'Tentar sincronizar';retry.onclick=()=>o.status==='conflict'?alert('O servidor informou conflito. Compare o pedido local com o retorno do backend antes de reenviar.'):syncOne(o.localId);card.append(retry)}if(o.status==='offline'){const edit=document.createElement('button');edit.className='secondary';edit.textContent='Editar rascunho';edit.onclick=()=>openEditDraft(o);card.append(edit)}root.append(card)}}let savingOrder=false;
 async function saveOrder(){
  if(savingOrder)return;
  savingOrder=true;
@@ -170,7 +170,44 @@ window.addEventListener('appinstalled',()=>{deferredInstall=null;refreshInstallS
 refreshInstallState();
 
 
-async function loadDeliveries(){if(!navigator.onLine||!waiterToken)return;const root=$('#readyOrders');try{const orders=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/pedidos');root.replaceChildren();const ready=(Array.isArray(orders)?orders:[]).filter(p=>(p.itens||[]).some(i=>i.status==='concluido'));if(!ready.length){root.innerHTML='<p class="muted">Nenhum pedido pronto para entrega.</p>';return;}for(const order of ready){const card=document.createElement('article');card.className='order';const name=document.createElement('strong');name.textContent='Mesa '+(order.mesa||order.mesaNumero||'?')+' · Pedido #'+order.id;card.append(name);const details=document.createElement('p');details.className='muted';details.textContent=(order.itens||[]).filter(i=>i.status==='concluido').map(i=>(i.quantidade||i.qtd||1)+'× '+i.nome).join(', ');card.append(details);const btn=document.createElement('button');btn.textContent='Confirmar entrega';btn.onclick=async()=>{if(!confirm('Confirmar que entregou os itens prontos do pedido #'+order.id+'?'))return;btn.disabled=true;try{await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/pedidos/'+order.id+'/entregar',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});await loadDeliveries();}catch(e){alert(e.message);btn.disabled=false;}};card.append(btn);root.append(card)}}catch(e){root.textContent='Não foi possível consultar as entregas: '+e.message;}}
+async function loadDeliveries(){
+ if(!navigator.onLine||!waiterToken)return;
+ const root=$('#readyOrders');
+ try{
+  const orders=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/pedidos');
+  root.replaceChildren();
+  const ready=(Array.isArray(orders)?orders:[]).filter(p=>(p.itens||[]).some(i=>i.status==='concluido'));
+  if(!ready.length){root.innerHTML='<p class="muted">Nenhum pedido pronto para entrega.</p>';return;}
+  for(const order of ready){
+   const assignedId=Number(order.garcom_id||0);
+   const mine=assignedId>0&&assignedId===Number(currentWaiterId);
+   const card=document.createElement('article');card.className='order';
+   const name=document.createElement('strong');
+   name.textContent='Mesa '+(order.mesa||order.mesaNumero||'?')+' · Pedido #'+order.id;
+   card.append(name);
+   const details=document.createElement('p');details.className='muted';
+   details.textContent=(order.itens||[]).filter(i=>i.status==='concluido').map(i=>(i.quantidade||i.qtd||1)+'× '+i.nome).join(', ');
+   card.append(details);
+   if(assignedId>0&&!mine)continue;
+   const btn=document.createElement('button');btn.type='button';
+   btn.textContent=mine?'Confirmar entrega':'Assumir entrega';
+   btn.onclick=async()=>{
+    btn.disabled=true;
+    try{
+     if(!mine){
+      await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/pedidos/'+order.id+'/assumir-entrega',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+      await loadDeliveries();
+      return;
+     }
+     if(!confirm('Confirmar que entregou os itens prontos do pedido #'+order.id+'?')){btn.disabled=false;return;}
+     await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/pedidos/'+order.id+'/entregar',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+     await loadDeliveries();
+    }catch(e){alert(e.message||'Não foi possível atualizar a entrega.');btn.disabled=false;void loadDeliveries();}
+   };
+   card.append(btn);root.append(card);
+  }
+ }catch(e){root.textContent='Não foi possível consultar as entregas: '+e.message;}
+}
 document.querySelector('#refreshDeliveries')?.addEventListener('click',loadDeliveries);
 window.addEventListener('online',loadDeliveries);
 setInterval(()=>{if(navigator.onLine){void loadDeliveries();void loadOrderStatuses()}},7000);

@@ -13,7 +13,7 @@ const pool = require('../db/pool');
 const { assumirMesa, iniciarAtendimentoGarcom, transferirMesa, deixarMesa, editarPedidoGarcom, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, listarPedidosProntosGarcom, resumoPagamentoSessao } = require('../db/atendimento');
 const { registrarPagamento } = require('../db/caixa');
 const { getFilaCozinha, getFilaBar } = require('../db/pedidos');
-const { entregarComoGarcom } = require('../db/garcons');
+const { entregarComoGarcom, assumirEntregaComoGarcom } = require('../db/garcons');
 
 test('PostgreSQL real: fila acompanha a transferência e só o novo responsável pode entregar', async () => {
   const ids = { categoria: null, produto: null, garcomA: null, garcomB: null, mesa: null, sessao: null, pedido: null, item: null };
@@ -99,6 +99,16 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
     assert.equal(String(auditTransfer.rows[0].alvo_id), String(ids.sessao));
     assert.equal(auditTransfer.rows[0].contexto.garcomNovoId, Number(ids.garcomB));
 
+    // Pedido direto do cliente aparece para todos mesmo após a mesa ser transferida,
+    // até que um garçom assuma explicitamente a entrega.
+    const [filaAntesClaimA, filaAntesClaimB] = await Promise.all([
+      listarPedidosProntosGarcom(tokenA),
+      listarPedidosProntosGarcom(tokenB),
+    ]);
+    assert.ok(filaAntesClaimA.some((row) => Number(row.id) === Number(ids.pedido)));
+    assert.ok(filaAntesClaimB.some((row) => Number(row.id) === Number(ids.pedido)));
+
+    await assumirEntregaComoGarcom(ids.pedido, tokenB, 'req-claim-ci');
     const [filaDepoisA, filaDepoisB] = await Promise.all([
       listarPedidosProntosGarcom(tokenA),
       listarPedidosProntosGarcom(tokenB),
