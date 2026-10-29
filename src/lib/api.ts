@@ -117,8 +117,8 @@ export const api = {
   comprovantesRecentes: () => apiGet<Array<{id:number;mesa:number;fechadaEm:string;clienteNome:string|null;total:number}>>("/api/caixa/comprovantes"),
   comprovanteSessao: (id: number) => apiGet<any>(`/api/caixa/sessoes/${id}/comprovante`),
   comprovanteSessaoAdmin: (id: number) => apiGet<any>(`/api/admin/sessoes/${id}/comprovante`),
-  registrarPagamento: (sessaoId: number, valor: number, formaPagamento: string) =>
-    apiSend(`/api/caixa/sessoes/${sessaoId}/pagamentos`, "POST", { valor, formaPagamento }),
+  registrarPagamento: (sessaoId: number, valor: number, formaPagamento: string, idempotencyKey: string) =>
+    apiSend(`/api/caixa/sessoes/${sessaoId}/pagamentos`, "POST", { valor, formaPagamento, idempotencyKey }),
   fecharSessao: (sessaoId: number, body?: unknown) =>
     apiSend(`/api/caixa/sessoes/${sessaoId}/fechar`, "POST", body || {}),
 
