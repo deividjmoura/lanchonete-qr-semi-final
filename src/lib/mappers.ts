@@ -21,10 +21,10 @@ export function fotoSrc(raw: string | null | undefined): string {
 
 /** Foto local por nome/categoria para substituir URLs externas quebradas ou itens sem foto. */
 export function fotoDemo(nome: string, categoria = ""): string {
-  const norm = (v: string) => String(v || "").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "");
+  const norm = (v: string) => String(v || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const n = norm(nome), c = norm(categoria);
-  if (/\\bcombo\\b/.test(n) || /combo/.test(c)) return "/assets/demo/combo.webp";
-  if (/dog/.test(n) || /hot\\s*dogs?/.test(c)) {
+  if (/\bcombo\b/.test(n) || /combo/.test(c)) return "/assets/demo/combo.webp";
+  if (/dog/.test(n) || /hot\s*dogs?/.test(c)) {
     if (/bacon/.test(n)) return "/assets/demo/dog-bacon.webp";
     if (/especial/.test(n)) return "/assets/demo/dog-especial.webp";
     if (/vegetariano|vegano/.test(n)) return "/assets/demo/dog-veg.webp";
@@ -42,12 +42,12 @@ export function fotoDemo(nome: string, categoria = ""): string {
   if (/polenta/.test(n)) return "/assets/demo/polenta.webp";
   if (/mandioca|aipim/.test(n)) return "/assets/demo/mandioca.webp";
   if (/suco|juice/.test(n)) return "/assets/demo/juice.webp";
-  if (/milk\\s*shake|milkshake|shake/.test(n)) return "/assets/demo/milkshake.webp";
+  if (/milk\s*shake|milkshake|shake/.test(n)) return "/assets/demo/milkshake.webp";
   if (/agua|coco/.test(n)) return "/assets/demo/water.webp";
   if (/refrigerante|refri|coca|cola/.test(n)) return "/assets/demo/soda-cola.webp";
   if (/caipi/.test(n)) return "/assets/demo/caipi.webp";
-  if (/red\\s*bull|monster|energ/.test(n)) return "/assets/demo/energy.webp";
-  if (/cerveja|chopp|pilsen|malte|\\bipa\\b|balde/.test(n) || /cerveja|chopp|bar/.test(c)) return "/assets/demo/beer.webp";
+  if (/red\s*bull|monster|energ/.test(n)) return "/assets/demo/energy.webp";
+  if (/cerveja|chopp|pilsen|malte|\bipa\b|balde/.test(n) || /cerveja|chopp|bar/.test(c)) return "/assets/demo/beer.webp";
   if (/gin|moscow|mule|vodka|drink/.test(n) || /drink/.test(c)) return "/assets/demo/cocktail.webp";
   if (/churros/.test(n)) return "/assets/demo/churros.webp";
   if (/brownie/.test(n)) return "/assets/demo/brownie.webp";
