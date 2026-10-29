@@ -35,7 +35,7 @@ test('sincronização inicia sessão quando mesa está vazia e mantém chave ide
  assert.match(block,/root\+'\/iniciar'/);
  assert.match(block,/idempotencyKey:order\.idempotencyKey/);
  assert.match(block,/await loadMesas\(\)/);
- assert.match(block,/status='conflict'/);
+ assert.match(block,/'conflict':'offline'/);
 });
 test('Service Worker não reaproveita shell anterior às correções',()=>{
  assert.match(sw,/garcom-pwa-shell-v15/);
