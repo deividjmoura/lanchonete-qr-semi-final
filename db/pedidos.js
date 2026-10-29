@@ -1015,22 +1015,27 @@ async function getFilaCozinha() {
 }
 
 async function getFilaGarcom(garcomId) {
-  /* Fila privada por responsável atual. Sem identidade válida, nunca devolve fila global. */
+  /* Pedidos diretos do cliente ficam visíveis a todos enquanto não houver responsável
+     pela entrega. Pedidos do garçom continuam privados à mesa/responsável. */
   const responsavelId = Number(garcomId);
   if (!Number.isSafeInteger(responsavelId) || responsavelId < 1) {
     throw new TypeError('É obrigatório informar um garçom válido para consultar a fila');
   }
   const { rows: pedidos } = await pool.query(
     `SELECT DISTINCT p.id, p.status, p.criado_em, p.observacao_geral, p.cliente_nome, p.garcom_nome,
-            p.editado_em, m.numero AS mesa
+            p.garcom_id, p.claimed_at, p.origem_pedido, p.editado_em, m.numero AS mesa
      FROM pedidos p
      JOIN mesa_sessoes s ON s.id = p.sessao_id
      JOIN mesas m ON m.id = s.mesa_id
      JOIN itens_pedido ip ON ip.pedido_id = p.id
      WHERE s.status = 'aberta'
-       AND s.garcom_responsavel_id = $1
        AND p.status <> 'entregue'
        AND COALESCE(ip.status, 'recebido') = 'concluido'
+       AND (
+         (p.origem_pedido = 'cliente' AND (p.garcom_id IS NULL OR p.garcom_id = $1))
+         OR
+         (s.garcom_responsavel_id = $1 AND (p.garcom_id IS NULL OR p.garcom_id = $1))
+       )
      ORDER BY p.criado_em`,
     [responsavelId]
   );
