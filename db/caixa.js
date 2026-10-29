@@ -279,7 +279,7 @@ async function lerSessoesAbertas(client) {
 }
 
 /** Registra pagamento parcial (divisão de conta). A quitação simples pode fechar a sessão. */
-async function registrarPagamento(sessaoIdBruto, body, operadorNome = null, garcomResponsavelId = null) {
+async function registrarPagamento(sessaoIdBruto, body, operadorNome = null, garcomResponsavelId = null, opcoes = {}) {
   const sessaoId = validarSessaoId(sessaoIdBruto);
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new ErroCaixa(400, 'Dados de pagamento inválidos');
@@ -409,6 +409,49 @@ async function registrarPagamento(sessaoIdBruto, body, operadorNome = null, garc
         sessaoFechada = true;
       }
     }
+    const atorTipoPagamento = opcoes.atorTipo || (
+      garcomResponsavelId !== null && garcomResponsavelId !== undefined
+        ? 'garcom'
+        : operadorNome ? 'staff' : 'sistema'
+    );
+    await registrarEvento(client, {
+      atorTipo: atorTipoPagamento,
+      atorId: Number.isInteger(opcoes.atorId) ? opcoes.atorId : null,
+      atorNome: operadorNome,
+      acao: 'pagamento_parcial',
+      alvoTipo: 'sessao',
+      alvoId: String(sessaoId),
+      contexto: {
+        mesaNumero: sessao.mesa,
+        pagamentoId: ins[0].id,
+        valor,
+        formaPagamento: forma,
+        valorPago,
+        valorRestante: Number(Math.max(0, total - valorPago).toFixed(2)),
+        sessaoFechada,
+      },
+      requestId: opcoes.requestId || null,
+    });
+    if (sessaoFechada) {
+      await registrarEvento(client, {
+        atorTipo: atorTipoPagamento,
+        atorId: Number.isInteger(opcoes.atorId) ? opcoes.atorId : null,
+        atorNome: operadorNome,
+        acao: 'sessao_fechada',
+        alvoTipo: 'sessao',
+        alvoId: String(sessaoId),
+        contexto: {
+          mesaNumero: sessao.mesa,
+          valorTotal: total,
+          valorCobrado: total,
+          desconto: 0,
+          taxaServico: 0,
+          formaPagamento: forma,
+          origem: 'pagamento_integral',
+        },
+        requestId: opcoes.requestId || null,
+      });
+    }
     await client.query('COMMIT');
     return {
       ok: true,
@@ -437,7 +480,7 @@ async function registrarPagamento(sessaoIdBruto, body, operadorNome = null, garc
   }
 }
 
-async function fecharSessao(sessaoIdBruto, body, operadorNome = null) {
+async function fecharSessao(sessaoIdBruto, body, operadorNome = null, opcoes = {}) {
   const sessaoId = validarSessaoId(sessaoIdBruto);
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new ErroCaixa(400, 'Dados de fechamento inválidos');
@@ -578,7 +621,8 @@ async function fecharSessao(sessaoIdBruto, body, operadorNome = null) {
         );
 
     await registrarEvento(client, {
-      atorTipo: operadorNome ? 'staff' : 'sistema',
+      atorTipo: opcoes.atorTipo || (operadorNome ? 'staff' : 'sistema'),
+      atorId: Number.isInteger(opcoes.atorId) ? opcoes.atorId : null,
       atorNome: operadorNome,
       acao: 'sessao_fechada',
       alvoTipo: 'sessao',
@@ -591,6 +635,7 @@ async function fecharSessao(sessaoIdBruto, body, operadorNome = null) {
         taxaServico,
         formaPagamento: forma,
       },
+      requestId: opcoes.requestId || null,
     });
 
     await client.query("UPDATE mesas SET status = 'livre' WHERE id = $1", [sessao.mesa_id]);
@@ -729,7 +774,8 @@ async function confirmarPixAviso(sessaoIdBruto, avisoIdBruto, operadorNome = nul
 
     const valorPago = Number((jaPago + valor).toFixed(2));
     await registrarEvento(client, {
-      atorTipo: operadorNome ? 'staff' : 'sistema',
+      atorTipo: opcoes.atorTipo || (operadorNome ? 'staff' : 'sistema'),
+      atorId: Number.isInteger(opcoes.atorId) ? opcoes.atorId : null,
       atorNome: operadorNome,
       acao: 'pix_confirmado',
       alvoTipo: 'sessao',
