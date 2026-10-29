@@ -18,11 +18,11 @@ import {
   UtensilsCrossed,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from "react";
 import { Badge, Btn, Input, Logo, Modal, Qtd, ThemeToggle } from "../components/ui";
 import type { Opcao, Pedido, Produto } from "../lib/types";
 import { usePub, sessaoDaMesa, totalSessao } from "../store/usePub";
-import { FOTO_PLACEHOLDER, fotoSrc } from "../lib/mappers";
+import { FOTO_PLACEHOLDER, fotoDemo, fotoSrc } from "../lib/mappers";
 import { descricaoExibida, isDoseProduto } from "../lib/descricao";
 import { connectEvents } from "../lib/api";
 import { BRL } from "../lib/utils";
@@ -38,6 +38,16 @@ interface CartItem {
   escolha: Opcao | null;
   obs: string;
 }
+function fallbackFoto(e: SyntheticEvent<HTMLImageElement>, nome: string, categoria: string) {
+  const img = e.currentTarget;
+  if (img.dataset.fallbackApplied === "true") {
+    img.src = FOTO_PLACEHOLDER;
+    return;
+  }
+  img.dataset.fallbackApplied = "true";
+  img.src = fotoDemo(nome, categoria);
+}
+
 const totalItem = (c: CartItem) =>
   (c.produto.preco + c.adicionais.reduce((a, b) => a + b.preco, 0) + (c.escolha?.preco ?? 0)) * c.qtd;
 
@@ -264,7 +274,7 @@ export default function Mesa({ token }: { token: string }) {
                   exit={{ opacity: 0, x: -20, height: 0, marginBottom: 0 }}
                   className="flex gap-3 rounded-2xl bg-slate-100/60 border border-slate-200 p-3"
                 >
-                  <img src={fotoSrc(c.produto.foto) || FOTO_PLACEHOLDER} alt="" className="size-14 rounded-xl object-cover" onError={(e) => { (e.target as HTMLImageElement).src = FOTO_PLACEHOLDER; }} />
+                  <img src={fotoSrc(c.produto.foto) || FOTO_PLACEHOLDER} alt="" className="size-14 rounded-xl object-cover" onError={(e) => fallbackFoto(e, c.produto.nome, c.produto.categoria)} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <p className="text-sm font-semibold text-navy-900 leading-tight">{c.produto.nome}</p>
@@ -801,7 +811,7 @@ function ItemCard({
           decoding="async"
           className="card-produto-foto transition-transform duration-500 group-hover:scale-105"
           onError={(e) => {
-            (e.target as HTMLImageElement).src = FOTO_PLACEHOLDER;
+            fallbackFoto(e, p.nome, p.categoria);
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-50/95 via-slate-50/20 to-transparent pointer-events-none" />
@@ -972,7 +982,7 @@ function ProdutoModal({
             alt={produto.nome}
             className="absolute inset-0 h-full w-full object-cover"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = FOTO_PLACEHOLDER;
+              fallbackFoto(e, produto.nome, produto.categoria);
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-50 via-slate-50/20 to-transparent pointer-events-none" />
