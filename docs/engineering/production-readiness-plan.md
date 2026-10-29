@@ -1,4 +1,4 @@
-# QRAdmin — Plano consolidado de prontidão de produção
+# QR Admin — Plano consolidado de prontidão de produção
 
 **Data da revisão:** 2026-10-25 (atualização de estado; auditoria estática original em 2026-10-24)  
 **Branch:** `work-issue-46-readiness-refresh-20261025`  
@@ -7,7 +7,7 @@
 
 ## 1. Resumo executivo
 
-O QRAdmin é documentado como instalação **single-tenant** para um estabelecimento. O README declara explicitamente que não há integração com gateway bancário/confirmacão automática PIX, que o comprovante é não fiscal e que a PWA ainda exige validação ponta a ponta. O produto não deve ser anunciado como emissor fiscal, conciliador bancário automático ou solução SaaS multi-loja.
+O QR Admin é documentado como instalação **single-tenant** para um estabelecimento. O README declara explicitamente que não há integração com gateway bancário/confirmacão automática PIX, que o comprovante é não fiscal e que a PWA ainda exige validação ponta a ponta. O produto não deve ser anunciado como emissor fiscal, conciliador bancário automático ou solução SaaS multi-loja.
 
 Há um risco operacional confirmado no código: `scripts/start-production.js` inicia `server.js` mesmo se o runner de migrations falhar ou exceder 30 segundos. Isso pode evitar um processo encerrado, mas também pode servir código que espera um schema que não foi atualizado. Não foi alterado porque a solução depende de conhecer o fluxo real de deploy, compatibilidade das migrations e rollback.
 
@@ -46,7 +46,7 @@ Status significa o que foi observado no repositório ou nas evidências disponí
 | 18 | Plano, pool, região, backup e restore | **Configuração parcial; provedor real não verificado** | `db/pool.js` define pool padrão 10, timeout de conexão 10s, statement/query 30s, lock 15s e idle transaction 30s; `.env.example` cita Neon/Render como exemplos, não prova qual provedor está conectado. Plano, região, pooler, limite real, política de backup e restauração bem-sucedida precisam de evidência do ambiente autorizado. |
 | 19 | Logs, erros, health e alertas | **Health local implementado; operação externa pendente** | `GET /healthz` e testes read-only existem na `main`, e há workflow de PostgreSQL descartável. Ainda falta smoke HTTP público independente e evidência de alertas com responsável; a issue #75 permanece aberta até confirmar o smoke. Sanitização de tokens nos logs e topologia do proxy também seguem pendentes de integração/validação. |
 | 20 | CI, PostgreSQL e E2E | **PostgreSQL real parcial; E2E e pós-deploy pendentes** | `.github/workflows/ci.yml` roda instalação, typecheck, build, regressões e sintaxe. O workflow separado `.github/workflows/postgres-integration.yml` provisiona PostgreSQL 16 descartável; a PR #104 integrada cobre invariantes selecionadas de pedidos/caixa. Isso não substitui E2E em navegador nem smoke pós-deploy. |
-| 21 | README, versionamento e fonte da verdade | **Inconsistência confirmada; decisão necessária** | `lanchonete-qr-semi-final` descreve QRAdmin single-tenant e PIX manual; `lanchonete-qr` tem README com badge v2.9 e documentação mais antiga. Ambos são públicos e receberam pushes recentes. `package.json` declara versão 3.1.0 e descrição genérica; a raiz de `lanchonete-qr-semi-final` não contém `LICENSE` na árvore consultada. Responsável deve declarar qual repo é canônico antes de alinhar badges/descrição/topics. |
+| 21 | README, versionamento e fonte da verdade | **Inconsistência confirmada; decisão necessária** | `lanchonete-qr-semi-final` descreve QR Admin single-tenant e PIX manual; `lanchonete-qr` tem README com badge v2.9 e documentação mais antiga. Ambos são públicos e receberam pushes recentes. `package.json` declara versão 3.1.0 e descrição genérica; a raiz de `lanchonete-qr-semi-final` não contém `LICENSE` na árvore consultada. Responsável deve declarar qual repo é canônico antes de alinhar badges/descrição/topics. |
 | 22 | Visibilidade, marca e imagens | **Visibilidade confirmada; direitos não verificados** | A API GitHub retornou `private=false` para `lanchonete-qr-semi-final`; `package.json` com `private:true` não altera isso. As páginas operacionais agora usam QR Admin; os ativos públicos da marca de cliente anterior foram removidos desta branch. A licença/proveniência dos ativos QR Admin e das fotos de demonstração ainda precisa de confirmação. Não alterar visibilidade do repositório sem aprovação expressa. |
 
 ### Medição de fotos: método e limite
