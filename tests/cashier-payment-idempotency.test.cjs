@@ -22,8 +22,8 @@ test('React Caixa API requires an idempotency key and store retains uncertain at
   const store = read('src/store/usePub.ts');
   assert.match(api, /registrarPagamento: \(sessaoId: number, valor: number, formaPagamento: string, idempotencyKey: string\)/);
   assert.match(api, /\{ valor, formaPagamento, idempotencyKey \}/);
-  assert.match(store, /getPendingPaymentAttempt\(sessaoId, valor, formaToApi\(forma\)\)/);
-  assert.match(store, /api\.registrarPagamento\(sessaoId, valor, formaToApi\(forma\), attempt\.idempotencyKey\)/);
+  assert.match(store, /getPendingPaymentAttempt\(sessaoId, valorArredondado, formaToApi\(forma\)\)/);
+  assert.match(store, /api\.registrarPagamento\(sessaoId, valorArredondado, formaToApi\(forma\), attempt\.idempotencyKey\)/);
   assert.match(store, /clearPendingPaymentAttempt\(sessaoId\)/);
   assert.match(store, /rede\/5xx pode ocorrer depois do commit/);
 });
