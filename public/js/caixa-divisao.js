@@ -89,7 +89,12 @@
       clearAttempt(id);
       if (typeof toast === 'function')
         toast('Pago ' + money(valor) + ' · resta ' + money(data.valorRestante), 'ok');
-      if (typeof load === 'function') await load();
+      if (typeof load === 'function') {
+        try { await load(); }
+        catch (_) {
+          if (typeof toast === 'function') toast('Pagamento registrado, mas a tela não atualizou. Atualize a lista; não registre o mesmo valor novamente.', 'err');
+        }
+      }
     } catch (e) {
       if (typeof toast === 'function') toast('Erro de rede. Reenvie os mesmos dados para reutilizar a tentativa.', 'err');
     } finally {
