@@ -6,6 +6,12 @@ test('Pedido adicional exige responsável atribuído e não transfere a mesa par
  assert.match(api,/token: Number\(r\.garcom_responsavel_id\) === Number\(garcom\.id\) \? r\.token : null/);
  assert.match(api,/async function listarPedidosAtivosMesa/);
  assert.match(api,/pedidoPaiId: body && body\.pedidoPaiId/);
+ assert.match(api,/acao: 'mesa_assumida'/);
+ assert.match(api,/acao: 'mesa_transferida'/);
+ assert.match(api,/acao: 'mesa_liberada'/);
+ assert.match(read('server.js'),/transferirMesa\(m\[1\], m\[2\], payload\.garcomDestinoId, reqId\)/);
+ assert.match(read('server.js'),/deixarMesa\(m\[1\],m\[2\],reqId\)/);
+ assert.match(read('server.js'),/assumirMesa\(m\[1\], m\[2\], await body\(req\), reqId\)/);
  assert.match(read('server.js'),/pedidos-ativos/);
  assert.match(read('db/migrations/0026_pedido_pai_id.sql'),/ADD COLUMN IF NOT EXISTS pedido_pai_id/);
  assert.match(api,/A mesa precisa ter um atendimento aberto com garçom responsável/);
