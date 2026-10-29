@@ -23,7 +23,7 @@ Uma tarefa só está pronta quando os critérios de aceitação são atendidos, 
 
 ---
 
-# Protocolo de Colaboração — Lanchonete QR / QRAdmin
+# Protocolo de Colaboração — Lanchonete QR / QR Admin
 
 **Repo:** https://github.com/deividjmoura/lanchonete-qr-semi-final  
 **Deploy:** https://qradmin.up.railway.app/  
