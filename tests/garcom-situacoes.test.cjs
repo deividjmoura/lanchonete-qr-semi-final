@@ -9,6 +9,8 @@ test('Pedido adicional exige responsável atribuído e não transfere a mesa par
  assert.match(api,/acao: 'mesa_assumida'/);
  assert.match(api,/acao: 'mesa_transferida'/);
  assert.match(api,/acao: 'mesa_liberada'/);
+ assert.match(read('db/garcons.js'),/acao: 'itens_entregues'/);
+ assert.match(read('server.js'),/entregarComoGarcom\(Number\(m\[2\]\), m\[1\], itemIds \|\| null, reqId\)/);
  assert.match(read('server.js'),/transferirMesa\(m\[1\], m\[2\], payload\.garcomDestinoId, reqId\)/);
  assert.match(read('server.js'),/deixarMesa\(m\[1\],m\[2\],reqId\)/);
  assert.match(read('server.js'),/assumirMesa\(m\[1\], m\[2\], await body\(req\), reqId\)/);
