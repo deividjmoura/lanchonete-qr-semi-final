@@ -102,17 +102,17 @@ async function resolverEstabelecimentoId(client) {
   // tenta colunas comuns de um cadastro mínimo
   try {
     const ins = await client.query(
-      `INSERT INTO estabelecimentos (nome) VALUES ('Major Pub') RETURNING id`
+      `INSERT INTO estabelecimentos (nome) VALUES ('QR Admin') RETURNING id`
     );
-    console.log('🏪 Estabelecimento "Major Pub" criado (id=' + ins.rows[0].id + ').');
+    console.log('🏪 Estabelecimento "QR Admin" criado (id=' + ins.rows[0].id + ').');
     return ins.rows[0].id;
   } catch (e) {
     // schema pode exigir mais campos — tenta slug/nome
     try {
       const ins = await client.query(
-        `INSERT INTO estabelecimentos (nome, slug) VALUES ('Major Pub', 'major-pub') RETURNING id`
+        `INSERT INTO estabelecimentos (nome, slug) VALUES ('QR Admin', 'qr-admin') RETURNING id`
       );
-      console.log('🏪 Estabelecimento "Major Pub" criado (id=' + ins.rows[0].id + ').');
+      console.log('🏪 Estabelecimento "QR Admin" criado (id=' + ins.rows[0].id + ').');
       return ins.rows[0].id;
     } catch (e2) {
       console.error('Não foi possível criar estabelecimento automaticamente:', e2.message);

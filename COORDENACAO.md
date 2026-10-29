@@ -3,7 +3,7 @@
 > **Branch oficial e de deploy:** `main`.  
 > **Documento canônico entre agentes:** [`docs/COMUNICACAO-AGENTES.md`](docs/COMUNICACAO-AGENTES.md).  
 > **Protocolo permanente:** [`AGENTS.md`](AGENTS.md).  
-> **Aplicação:** https://qradmin.up.railway.app/
+> **Aplicação:** https://qradminn.up.railway.app/
 
 ## Regras operacionais
 

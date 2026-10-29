@@ -23,10 +23,10 @@ Uma tarefa só está pronta quando os critérios de aceitação são atendidos, 
 
 ---
 
-# Protocolo de Colaboração — Lanchonete QR / QRAdmin
+# Protocolo de Colaboração — Lanchonete QR / QR Admin
 
 **Repo:** https://github.com/deividjmoura/lanchonete-qr-semi-final  
-**Deploy:** https://qradmin.up.railway.app/  
+**Deploy:** https://qradminn.up.railway.app/  
 **Branch de verdade:** **`main`** (única que deve ir para o Railway)
 
 ---
@@ -75,7 +75,7 @@ A tabela antiga de PRs #7/#8/#10 abaixo foi um retrato histórico de setembro de
 ## SUPER TESTE
 
 ```bash
-BASE_URL=https://qradmin.up.railway.app npm run test:dia
+BASE_URL=https://qradminn.up.railway.app npm run test:dia
 ```
 
 Arquivo: `scripts/dia-inteiro.js` — multi-mesa, concorrência, PIX, caixa, admin.
@@ -261,7 +261,7 @@ gate de migrations no Railway, e os 22 checks de Chromium que o #8 reportou (sem
 **Dependências / perguntas:**
 - Colego do #8: convido a revisar só o bloco de tema (`src/lib/tema.ts`, `src/index.css`, `index.html`) — está
   intocado; se preferir, o lote pode entrar como push seu na `main`.
-- Dono: aprovar o #10 → redeploy → rodar `BASE_URL=https://qradmin.up.railway.app npm run test:dia`.
+- Dono: aprovar o #10 → redeploy → rodar `BASE_URL=https://qradminn.up.railway.app npm run test:dia`.
 - Segurança: o PAT colado no chat precisa ser **revogado** (já vazou em log de conversa).
 
 ### [2026-09-16 02:20] Arena Agent (sessão 01a0a79b) · Papel: Orquestrador / Backend / Segurança

@@ -7,7 +7,7 @@
  * entrega e fechamento.
  *
  * Uso:
- *   BASE_URL=https://qradmin.up.railway.app npm run test:dia
+ *   BASE_URL=https://qradminn.up.railway.app npm run test:dia
  *   BASE_URL=http://127.0.0.1:3000 npm run test:dia
  *
  * Exit 0 = ok · Exit 1 = falha fatal

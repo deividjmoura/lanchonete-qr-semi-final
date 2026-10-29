@@ -1,10 +1,10 @@
-# Matriz de Evidências para Liberação — QRAdmin
+# Matriz de Evidências para Liberação — QR Admin
 
 **Atualização de evidências:** 2026-10-25. A matriz de liberação permanece em **NO-GO / PENDENTE** até que um SHA candidato único tenha as evidências críticas completas.
 
 > **Objetivo:** transformar a decisão de liberar uma versão em verificações observáveis, com evidências reproduzíveis. Esta matriz complementa a auditoria técnica e o runbook; não declara o sistema pronto nem substitui testes.
 >
-> **Escopo conhecido:** instalação single-tenant QRAdmin. Não usar como prova de isolamento multi-loja. Nenhuma verificação deve ser executada contra o banco operacional se puder criar, alterar ou apagar dados.
+> **Escopo conhecido:** instalação single-tenant QR Admin. Não usar como prova de isolamento multi-loja. Nenhuma verificação deve ser executada contra o banco operacional se puder criar, alterar ou apagar dados.
 
 ## Regras de preenchimento
 

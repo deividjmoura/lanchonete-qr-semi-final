@@ -6,7 +6,7 @@
 
 O QR Admin é apresentado como uma solução genérica de pedidos e operação por QR Code. A personalização visual e comercial de cada estabelecimento será feita posteriormente.
 
-[![Produção](https://img.shields.io/badge/Deploy-Railway-7B61FF?style=for-the-badge)](https://qradmin.up.railway.app/)
+[![Produção](https://img.shields.io/badge/Deploy-Railway-7B61FF?style=for-the-badge)](https://qradminn.up.railway.app/)
 
 </div>
 
@@ -14,7 +14,7 @@ O QR Admin é apresentado como uma solução genérica de pedidos e operação p
 
 ## Objetivo e escopo
 
-O QRAdmin é uma aplicação **single-tenant**: uma instalação representa um único estabelecimento. O foco atual é colocar o produto em operação em uma lanchonete real, com fluxo simples e dados consistentes.
+O QR Admin é uma aplicação **single-tenant**: uma instalação representa um único estabelecimento. O foco atual é colocar o produto em operação em uma lanchonete real, com fluxo simples e dados consistentes.
 
 - Não é, neste momento, um SaaS multi-loja.
 - Não existe isolamento de dados por estabelecimento em todas as consultas da aplicação; não reutilize esta instalação para outra empresa esperando separação automática.

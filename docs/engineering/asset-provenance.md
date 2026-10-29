@@ -1,9 +1,10 @@
 # Proveniência de ativos, licença e repositório canônico
 
 **Issue relacionada:** [#45](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/45).
-**Escopo:** inventário e recomendação para decisão do proprietário. Nenhuma
-visibilidade, histórico, marca ou arquivo foi alterado; nenhuma licença foi
-adicionada sem confirmação de titularidade.
+**Escopo:** inventário e recomendação para decisão do proprietário. Nesta branch,
+as páginas operacionais foram normalizadas para QR Admin e os ativos de marca
+do cliente anterior foram removidos de `public/` e `dist/`. Nenhuma visibilidade,
+histórico ou licença foi alterada sem confirmação de titularidade.
 
 ## 1. Repositórios
 
@@ -26,7 +27,7 @@ para o canônico, após decisão do proprietário.
 |---|---|---|---|---|
 | Fotos de demonstração | `public/assets/demo/*.{jpg,webp}` | 70 arquivos (35 temas × 2 formatos) | Herdados de `lanchonete-qr`; origem original não documentada no repositório | **Pendente**: confirmar licença (banco de imagens, autoria própria ou outra) |
 | Fundos de tela | `public/assets/bg-*.{jpg,webp}` | 14 | Mesma origem das demos | Pendente |
-| Logos QR Admin | `public/logo/*.png`, `public/assets/logo-cliente.*` | 6 | Identidade criada no projeto; README informa que a marca é provisória | Confirmar autoria/uso interno |
+| Logos QR Admin | `public/logo/*.png` | 6 | Marca provisória do produto; confirmar autoria e direito de uso antes de distribuição comercial | Confirmar autoria/uso interno |
 | Ícones/PWA | `public/garcom-pwa/icon*`, manifestos | ~10 | Derivados da marca QR Admin | Confirmar autoria/uso interno |
 | Biblioteca QR | `public/garcom-pwa/qrcode-generator.js` | 2 arquivos | Projeto terceiro, MIT (`qrcode-generator.LICENSE` no mesmo diretório) | Coberto por MIT; manter o arquivo de licença |
 | Dependências npm | `package.json` | Ver `npm ls` | Registro público, licenças próprias | Sempre verificar `npm audit`/licenças antes de distribuir |
@@ -53,9 +54,9 @@ impede publicação no registro npm; não muda a visibilidade pública do GitHub
    comprovação, não usar essas imagens em material comercial do
    estabelecimento real; substituí-las por fotos autorizadas no cardápio de
    produção é o caminho mais seguro.
-5. **Marca do estabelecimento:** a marca "Delicia's" e qualquer logo de
-   cliente precisam de autorização escrita de uso; não remover nem publicar
-   materiais sem esse consentimento.
+5. **Marca do estabelecimento:** os ativos de marca do cliente anterior foram
+   removidos das páginas e da distribuição pública nesta branch. Não os
+   reintroduzir nem publicar materiais de cliente sem autorização escrita.
 6. **Metadados do GitHub:** descrição, topics e badge de versão só devem ser
    alinhados depois das decisões acima.
 
