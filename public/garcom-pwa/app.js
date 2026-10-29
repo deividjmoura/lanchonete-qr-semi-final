@@ -16,7 +16,39 @@ async function loadMesas(){
  renderMyTables();
  renderBillingSessions();
 }
-async function loadProducts(){try{const data=await getJson('/api/cardapio');products=data.flatMap(c=>(c.produtos||[]).map(p=>({...p,name:p.nome,price:Number(p.preco),description:p.descricao})));localStorage.setItem('waiter-menu-cache',JSON.stringify(products));}catch(e){try{products=JSON.parse(localStorage.getItem('waiter-menu-cache')||'[]')}catch{products=[]}if(!products.length)$('#connection').textContent='Sem cardápio offline: conecte-se ao menos uma vez.';}renderProducts()}
+function extrairProdutosCardapio(data){
+ const categorias=Array.isArray(data)?data:Array.isArray(data?.categorias)?data.categorias:Array.isArray(data?.data)?data.data:Array.isArray(data?.itens)?data.itens:[];
+ const saida=[];
+ for(const cat of categorias){
+  const itens=Array.isArray(cat?.produtos)?cat.produtos:Array.isArray(cat?.items)?cat.items:[];
+  for(const p of itens){
+   if(!p||p.id==null)continue;
+   saida.push({...p,name:p.nome||p.name||'',price:Number(p.preco??p.price??0),description:p.descricao||p.description||'',categoria:cat.nome||cat.name||p.categoria||p.category||''});
+  }
+ }
+ // Compatibilidade com respostas que já entregam a lista plana.
+ if(!saida.length&&Array.isArray(data))for(const p of data){if(p&&p.id!=null&&(p.nome||p.name))saida.push({...p,name:p.nome||p.name,price:Number(p.preco??p.price??0),description:p.descricao||p.description||''});}
+ return saida;
+}
+async function loadProducts(){
+ let erro=null;
+ try{
+  const data=await getJson('/api/cardapio');
+  products=extrairProdutosCardapio(data);
+  if(products.length)localStorage.setItem('waiter-menu-cache',JSON.stringify(products));
+  else erro='O cardápio foi recebido, mas nenhum produto disponível foi encontrado.';
+ }catch(e){
+  erro=e.message||'Não foi possível carregar o cardápio.';
+  try{const cached=JSON.parse(localStorage.getItem('waiter-menu-cache')||'[]');products=Array.isArray(cached)?cached:[]}catch{products=[]}
+ }
+ renderProducts();
+ if(!products.length){
+  $('#products').innerHTML='<p class="empty">'+(erro||'Nenhum produto disponível no cardápio.')+'</p>';
+  $('#connection').textContent='Cardápio indisponível';
+  console.error('[garcom-pwa] Falha ao carregar produtos:',erro);
+ }
+ return products.length;
+}
 function normalizarBusca(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').trim()}
 function renderProducts(){
  const q=normalizarBusca($('#search').value);
@@ -63,7 +95,7 @@ const res=await fetch(root+'/pedidos',{method:'POST',headers:{'content-type':'ap
 const data=await res.json().catch(()=>({}));if(!res.ok){const e=new Error(data.error||'Falha ao enviar pedido');e.status=res.status;throw e;}
 order.status='confirmed';order.serverOrderId=data.id;order.confirmedAt=Date.now();order.lastError=null;
 }catch(err){order.status=err.status&&err.status<500?'conflict':'offline';order.lastError=String(err.message||err);}await putOrder(order);await renderOrders();if(order.status==='confirmed')void loadOrderStatuses();}
-async function syncPending(){if(!navigator.onLine){setConnection();return}const pending=(await allOrders()).filter(o=>o.status==='offline');for(const o of pending)await syncOne(o.localId);setConnection()}function setConnection(){$('#connection').textContent=navigator.onLine?'Online · sincronização disponível':'Offline · pedidos ficam neste aparelho';$('#connection').style.color=navigator.onLine?'#166534':'#a16207'}function updateQr(){const n=Number($('#qrTable').value);const mesa=mesas.find(x=>Number(x.numero)===n);if(!mesa?.token){$('#qrImage').textContent='QR disponível apenas para o responsável atual da mesa.';return;}const url=new URL('../',location.href).href+'#/mesa/'+mesa.token;$('#qrUrl').value=url;try{const qr=window.qrcode(0,'M');qr.addData(url);qr.make();$('#qrImage').innerHTML=qr.createSvgTag({cellSize:4,margin:2,scalable:true,title:'QR Code da mesa '+n})}catch(e){$('#qrImage').textContent='Não foi possível gerar o QR desta mesa';console.error('Falha ao gerar QR local',e)}}$('#search').addEventListener('input',renderProducts);$('#saveOrder').addEventListener('click',saveOrder);$('#syncBtn').addEventListener('click',syncPending);$('#qrTable').addEventListener('change',updateQr);$('#copyQr').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('#qrUrl').value);$('#copyQr').textContent='Endereço copiado';setTimeout(()=>$('#copyQr').textContent='Copiar endereço',1500)}catch{ $('#qrUrl').select();document.execCommand('copy')}});window.addEventListener('online',syncPending);window.addEventListener('offline',setConnection);setConnection();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});openDb().then(async d=>{db=d;await recoverInterruptedSync();await loadProducts();try{await loadMesas();if(navigator.onLine){syncPending();loadDeliveries();loadOrderStatuses()}}catch(e){$('#identity').textContent=e.message;if(!navigator.onLine){try{mesas=JSON.parse(localStorage.getItem('waiter-mesas-cache-'+waiterToken)||'[]');tables.splice(0,tables.length,...mesas.map(x=>Number(x.numero)));populateTables();updateQr();renderTableGrid();}catch{}}}}).catch(e=>{console.error(e);alert('Não foi possível abrir o armazenamento offline neste navegador.')});
+async function syncPending(){if(!navigator.onLine){setConnection();return}const pending=(await allOrders()).filter(o=>o.status==='offline');for(const o of pending)await syncOne(o.localId);setConnection()}function setConnection(){$('#connection').textContent=navigator.onLine?'Online · sincronização disponível':'Offline · pedidos ficam neste aparelho';$('#connection').style.color=navigator.onLine?'#166534':'#a16207'}function updateQr(){const n=Number($('#qrTable').value);const mesa=mesas.find(x=>Number(x.numero)===n);if(!mesa?.token){$('#qrImage').textContent='QR disponível apenas para o responsável atual da mesa.';return;}const url=new URL('../',location.href).href+'#/mesa/'+mesa.token;$('#qrUrl').value=url;try{const qr=window.qrcode(0,'M');qr.addData(url);qr.make();$('#qrImage').innerHTML=qr.createSvgTag({cellSize:4,margin:2,scalable:true,title:'QR Code da mesa '+n})}catch(e){$('#qrImage').textContent='Não foi possível gerar o QR desta mesa';console.error('Falha ao gerar QR local',e)}}$('#search').addEventListener('input',renderProducts);$('#saveOrder').addEventListener('click',saveOrder);$('#syncBtn').addEventListener('click',syncPending);$('#qrTable').addEventListener('change',updateQr);$('#copyQr').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('#qrUrl').value);$('#copyQr').textContent='Endereço copiado';setTimeout(()=>$('#copyQr').textContent='Copiar endereço',1500)}catch{ $('#qrUrl').select();document.execCommand('copy')}});window.addEventListener('online',syncPending);window.addEventListener('offline',setConnection);setConnection();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});void loadProducts();openDb().then(async d=>{db=d;await recoverInterruptedSync();try{await loadMesas();if(navigator.onLine){syncPending();loadDeliveries();loadOrderStatuses()}}catch(e){$('#identity').textContent=e.message;if(!navigator.onLine){try{mesas=JSON.parse(localStorage.getItem('waiter-mesas-cache-'+waiterToken)||'[]');tables.splice(0,tables.length,...mesas.map(x=>Number(x.numero)));populateTables();updateQr();renderTableGrid();}catch{}}}}).catch(e=>{console.error(e);alert('Não foi possível abrir o armazenamento offline neste navegador.')});
 let deferredInstall=null;
 const installBtn=$('#installAppBtn');
 const isStandalone=()=>window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
