@@ -23,18 +23,23 @@ function resolverFotoUrl(fotoUrl, produtoId) {
 }
 
 function parseDataUrl(dataUrl) {
-  const match = String(dataUrl || '').match(DATA_URL_RE);
+  const raw = String(dataUrl || '');
+  const match = raw.match(DATA_URL_RE);
   if (!match) return null;
-  const headerEnd = dataUrl.indexOf(',');
-  const base64 = dataUrl.slice(headerEnd + 1);
+  const headerEnd = raw.indexOf(',');
+  if (headerEnd < 0) return null;
+  const base64 = raw.slice(headerEnd + 1);
+  // Buffer.from(..., 'base64') tolera caracteres inválidos; rejeitar em vez
+  // de servir conteúdo ambíguo e limitar bytes antes de responder HTTP.
+  if (!base64 || !/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) return null;
   let buf;
   try {
     buf = Buffer.from(base64, 'base64');
   } catch {
     return null;
   }
-  if (!buf.length) return null;
-  return { contentType: match[1] || 'application/octet-stream', buffer: buf };
+  if (!buf.length || buf.length > MAX_DATA_URL_BYTES) return null;
+  return { contentType: match[1].toLowerCase(), buffer: buf };
 }
 
 /**
@@ -62,4 +67,4 @@ async function carregarFotoProduto(produtoId) {
   return null;
 }
 
-module.exports = { resolverFotoUrl, parseDataUrl, carregarFotoProduto, DATA_URL_RE };
+module.exports = { resolverFotoUrl, parseDataUrl, carregarFotoProduto, DATA_URL_RE, MAX_DATA_URL_BYTES };
