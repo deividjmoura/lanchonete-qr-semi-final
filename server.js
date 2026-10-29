@@ -64,7 +64,7 @@ const {
 } = require('./db/auth');
 const { golpePermitido } = require('./db/rateLimit');
 const { resolveClientIp, loginUserRateLimitKey } = require('./security/client-ip');
-const { ErroAtendimento, listarMesasGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
+const { ErroAtendimento, listarMesasGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
 const { normalizarChavePix, inspecionarChavePix } = require('./db/pix-normaliza');
 const { subscribe, broadcast } = require('./db/events');
 const pool = require('./db/pool');
@@ -427,7 +427,7 @@ const server = http.createServer(async (req, res) => {
            JSON quebrado em "entregar tudo". Sem ele, 400 honesto. */
         const payload = await body(req);
         const itemIds = payload && (payload.itemIds || payload.itens || payload.ids);
-        const out = await entregarComoGarcom(Number(m[2]), m[1], itemIds || null);
+        const out = await entregarComoGarcom(Number(m[2]), m[1], itemIds || null, reqId);
         broadcast('update', {
           type: 'status_alterado',
           pedidoId: Number(m[2]),
@@ -451,7 +451,7 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/pedidos\/(\d+)$/)) && req.method === 'PUT') {
       try {
-        const out=await editarPedidoGarcom(m[1],m[2],await body(req));
+        const out=await editarPedidoGarcom(m[1],m[2],await body(req),reqId);
         broadcast('update',{type:'pedido_editado',pedidoId:out.id,mesa:out.mesa});
         return json(res,200,out);
       }catch(e){
@@ -469,7 +469,7 @@ const server = http.createServer(async (req, res) => {
         if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
           return json(res, 400, { error: 'Corpo de transferência inválido' });
         }
-        const out = await transferirMesa(m[1], m[2], payload.garcomDestinoId);
+        const out = await transferirMesa(m[1], m[2], payload.garcomDestinoId, reqId);
         broadcast('update', { type: 'mesa_transferida', mesa: out.mesa, de: out.de.id, para: out.para.id });
         return json(res, 200, out);
       } catch (e) {
@@ -504,20 +504,24 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/deixar$/)) && req.method === 'POST') {
       try {
-        const out=await deixarMesa(m[1],m[2]);
+        const out=await deixarMesa(m[1],m[2],reqId);
         broadcast('update',{type:'mesa_liberada',mesa:out.mesa});
         return json(res,200,out);
       }catch(e){if(e instanceof ErroAtendimento)return json(res,e.status,{error:e.message});throw e}
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/assumir$/)) && req.method === 'POST') {
       try {
-        const out = await assumirMesa(m[1], m[2], await body(req));
+        const out = await assumirMesa(m[1], m[2], await body(req), reqId);
         broadcast('update', { type: 'mesa_assumida', mesa: out.mesa });
         return json(res, 200, out);
       } catch (e) {
         if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message });
         throw e;
       }
+    }
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/pedidos-ativos$/)) && req.method === 'GET') {
+      try { return json(res, 200, await listarPedidosAtivosMesa(m[1], m[2])); }
+      catch (e) { if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message }); throw e; }
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/pedidos$/)) && req.method === 'POST') {
       try {

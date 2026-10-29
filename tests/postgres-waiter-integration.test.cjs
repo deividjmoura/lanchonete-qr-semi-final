@@ -10,7 +10,7 @@ assert.strictEqual(
 );
 
 const pool = require('../db/pool');
-const { assumirMesa, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao } = require('../db/atendimento');
+const { assumirMesa, transferirMesa, deixarMesa, editarPedidoGarcom, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, listarPedidosProntosGarcom, resumoPagamentoSessao } = require('../db/atendimento');
 const { registrarPagamento } = require('../db/caixa');
 const { entregarComoGarcom } = require('../db/garcons');
 
@@ -63,8 +63,18 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
     );
     ids.pedido = pedido.rows[0].id;
 
-    const inicio = await assumirMesa(tokenA, mesaNumero, { clienteNome: 'Teste CI' });
+    const inicio = await assumirMesa(tokenA, mesaNumero, { clienteNome: 'Teste CI' }, 'req-assume-ci');
     assert.equal(Number(inicio.garcom.id), Number(ids.garcomA));
+    const auditAssume = await pool.query(
+      'SELECT ator_tipo,ator_id,acao,alvo_id,request_id,contexto FROM auditoria_eventos WHERE request_id=$1',
+      ['req-assume-ci']
+    );
+    assert.equal(auditAssume.rows[0].ator_tipo, 'garcom');
+    assert.equal(Number(auditAssume.rows[0].ator_id), Number(ids.garcomA));
+    assert.equal(auditAssume.rows[0].acao, 'mesa_assumida');
+    assert.equal(String(auditAssume.rows[0].alvo_id), String(ids.sessao));
+    assert.equal(auditAssume.rows[0].contexto.mesa, mesaNumero);
+
     const item = await pool.query(
       "INSERT INTO itens_pedido (pedido_id, produto_id, quantidade, preco_unitario, status) VALUES ($1, $2, 1, 12, 'concluido') RETURNING id",
       [ids.pedido, ids.produto]
@@ -74,10 +84,19 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
     const filaA = await listarPedidosProntosGarcom(tokenA);
     assert.ok(filaA.some((row) => Number(row.id) === Number(ids.pedido)));
 
-    const transfer = await transferirMesa(tokenA, mesaNumero, ids.garcomB);
+    const transfer = await transferirMesa(tokenA, mesaNumero, ids.garcomB, 'req-transfer-ci');
     assert.equal(transfer.transferida, true);
     assert.equal(Number(transfer.de.id), Number(ids.garcomA));
     assert.equal(Number(transfer.para.id), Number(ids.garcomB));
+    const auditTransfer = await pool.query(
+      'SELECT ator_tipo,ator_id,acao,alvo_id,request_id,contexto FROM auditoria_eventos WHERE request_id=$1',
+      ['req-transfer-ci']
+    );
+    assert.equal(auditTransfer.rows[0].ator_tipo, 'garcom');
+    assert.equal(Number(auditTransfer.rows[0].ator_id), Number(ids.garcomA));
+    assert.equal(auditTransfer.rows[0].acao, 'mesa_transferida');
+    assert.equal(String(auditTransfer.rows[0].alvo_id), String(ids.sessao));
+    assert.equal(auditTransfer.rows[0].contexto.garcomNovoId, Number(ids.garcomB));
 
     const [filaDepoisA, filaDepoisB] = await Promise.all([
       listarPedidosProntosGarcom(tokenA),
@@ -106,9 +125,18 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
       (error) => error.status === 403
     );
 
-    await entregarComoGarcom(ids.pedido, tokenB, [ids.item]);
+    await entregarComoGarcom(ids.pedido, tokenB, [ids.item], 'req-delivery-ci');
     const finalItem = await pool.query('SELECT status FROM itens_pedido WHERE id = $1', [ids.item]);
     assert.equal(finalItem.rows[0].status, 'entregue');
+    const auditDelivery = await pool.query(
+      'SELECT ator_tipo,ator_id,acao,alvo_id,request_id,contexto FROM auditoria_eventos WHERE request_id=$1',
+      ['req-delivery-ci']
+    );
+    assert.equal(auditDelivery.rows[0].ator_tipo, 'garcom');
+    assert.equal(Number(auditDelivery.rows[0].ator_id), Number(ids.garcomB));
+    assert.equal(auditDelivery.rows[0].acao, 'itens_entregues');
+    assert.equal(String(auditDelivery.rows[0].alvo_id), String(ids.pedido));
+    assert.equal(Number(auditDelivery.rows[0].contexto.quantidadeItensEntregues), 1);
 
     const paymentBody = {
       valor: 1,
@@ -140,6 +168,17 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
 
     const aindaExiste = await pool.query('SELECT COUNT(*)::int AS n FROM pedidos WHERE sessao_id = $1', [ids.sessao]);
     assert.equal(aindaExiste.rows[0].n, 1);
+
+    const liberacao = await deixarMesa(tokenB, mesaNumero, 'req-leave-ci');
+    assert.equal(liberacao.liberada, true);
+    const auditLeave = await pool.query(
+      'SELECT ator_tipo,ator_id,acao,alvo_id,request_id,contexto FROM auditoria_eventos WHERE request_id=$1',
+      ['req-leave-ci']
+    );
+    assert.equal(auditLeave.rows[0].ator_tipo, 'garcom');
+    assert.equal(Number(auditLeave.rows[0].ator_id), Number(ids.garcomB));
+    assert.equal(auditLeave.rows[0].acao, 'mesa_liberada');
+    assert.equal(String(auditLeave.rows[0].alvo_id), String(ids.sessao));
   } finally {
     if (ids.item) await pool.query('DELETE FROM itens_pedido WHERE id = $1', [ids.item]).catch(() => {});
     if (ids.pedido) await pool.query('DELETE FROM pedidos WHERE id = $1', [ids.pedido]).catch(() => {});
@@ -149,6 +188,142 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
     if (ids.garcomB) await pool.query('DELETE FROM garcons WHERE id = $1', [ids.garcomB]).catch(() => {});
     if (ids.produto) await pool.query('DELETE FROM produtos WHERE id = $1', [ids.produto]).catch(() => {});
     if (ids.categoria) await pool.query('DELETE FROM categorias WHERE id = $1', [ids.categoria]).catch(() => {});
+  }
+});
+
+test('PostgreSQL real: outro garçom pode acrescentar pedido sem tomar a responsabilidade da mesa', async () => {
+  const ids = { categoria: null, produto: null, garcomA: null, garcomB: null, mesa: null, sessao: null, pedidoPai: null };
+  const mesaNumero = 8;
+  const tokenA = '00000000-0000-4000-8000-000000000211';
+  const tokenB = '00000000-0000-4000-8000-000000000212';
+
+  try {
+    ids.categoria = (await pool.query(
+      'INSERT INTO categorias (nome, ordem) VALUES ($1, 0) RETURNING id',
+      ['CI pedido cruzado ' + process.pid]
+    )).rows[0].id;
+    ids.produto = (await pool.query(
+      'INSERT INTO produtos (categoria_id, nome, preco, disponivel) VALUES ($1, $2, 8.5, TRUE) RETURNING id',
+      [ids.categoria, 'Produto pedido cruzado ' + process.pid]
+    )).rows[0].id;
+    ids.garcomA = (await pool.query(
+      'INSERT INTO garcons (nome, token, ativo) VALUES ($1, $2, TRUE) RETURNING id',
+      ['Responsável CI ' + process.pid, tokenA]
+    )).rows[0].id;
+    ids.garcomB = (await pool.query(
+      'INSERT INTO garcons (nome, token, ativo) VALUES ($1, $2, TRUE) RETURNING id',
+      ['Apoio CI ' + process.pid, tokenB]
+    )).rows[0].id;
+    ids.mesa = (await pool.query(
+      "INSERT INTO mesas (numero, status) VALUES ($1, 'ocupada') RETURNING id",
+      [mesaNumero]
+    )).rows[0].id;
+    ids.sessao = (await pool.query(
+      "INSERT INTO mesa_sessoes (mesa_id, status, cliente_nome, valor_total) VALUES ($1, 'aberta', 'Teste cruzado', 0) RETURNING id",
+      [ids.mesa]
+    )).rows[0].id;
+    ids.pedidoPai = (await pool.query(
+      "INSERT INTO pedidos (sessao_id, status, cliente_nome, observacao_geral, origem_pedido) VALUES ($1, 'recebido', 'Teste cruzado', 'Pedido QR inicial', 'cliente') RETURNING id",
+      [ids.sessao]
+    )).rows[0].id;
+
+    await assumirMesa(tokenA, mesaNumero, { clienteNome: 'Teste cruzado' }, 'req-assume-additional-ci');
+    const editadoPai = await editarPedidoGarcom(tokenA, ids.pedidoPai, {
+      clienteNome: 'Teste cruzado',
+      note: 'Auditoria de edição',
+      items: [{ productId: ids.produto, qty: 1 }],
+    }, 'req-edit-ci');
+    assert.equal(editadoPai.editado, true);
+    const auditEdit = await pool.query(
+      'SELECT ator_tipo,ator_id,acao,alvo_id,request_id,contexto FROM auditoria_eventos WHERE request_id=$1',
+      ['req-edit-ci']
+    );
+    assert.equal(auditEdit.rows[0].ator_tipo, 'garcom');
+    assert.equal(Number(auditEdit.rows[0].ator_id), Number(ids.garcomA));
+    assert.equal(auditEdit.rows[0].acao, 'pedido_editado');
+    assert.equal(String(auditEdit.rows[0].alvo_id), String(ids.pedidoPai));
+    assert.equal(Number(auditEdit.rows[0].contexto.totalNovo), 8.5);
+    const ativos = await listarPedidosAtivosMesa(tokenB, mesaNumero);
+    assert.ok(ativos.some((p) => Number(p.id) === Number(ids.pedidoPai)),
+      'qualquer garçom ativo pode selecionar um pedido da mesa para acrescentar itens');
+    const pedidoNovo = await criarPedidoGarcom(tokenB, mesaNumero, {
+      idempotencyKey: '00000000-0000-4000-8000-000000000213',
+      pedidoPaiId: ids.pedidoPai,
+      clienteNome: 'Teste cruzado',
+      items: [{ productId: ids.produto, qty: 1 }],
+    });
+    const pedidoRelacionado = await pool.query(
+      'SELECT pedido_pai_id, garcom_id FROM pedidos WHERE id=$1',
+      [pedidoNovo.id]
+    );
+    assert.equal(Number(pedidoRelacionado.rows[0].pedido_pai_id), Number(ids.pedidoPai));
+    assert.equal(Number(pedidoRelacionado.rows[0].garcom_id), Number(ids.garcomB));
+
+    await assert.rejects(
+      () => criarPedidoGarcom(tokenB, mesaNumero, {
+        idempotencyKey: '00000000-0000-4000-8000-000000000214',
+        pedidoPaiId: 99999999,
+        clienteNome: 'Teste cruzado',
+        items: [{ productId: ids.produto, qty: 1 }],
+      }),
+      (error) => error.status === 404
+    );
+    await pool.query("UPDATE pedidos SET status='entregue' WHERE id=$1", [ids.pedidoPai]);
+    const replayRelacionado = await criarPedidoGarcom(tokenB, mesaNumero, {
+      idempotencyKey: '00000000-0000-4000-8000-000000000213',
+      pedidoPaiId: ids.pedidoPai,
+      clienteNome: 'Teste cruzado',
+      items: [{ productId: ids.produto, qty: 1 }],
+    });
+    assert.equal(replayRelacionado.idempotentReplay, true,
+      'retry da mesma operação deve prevalecer sobre o estado posterior do pedido pai');
+    assert.equal(Number(replayRelacionado.id), Number(pedidoNovo.id));
+    await assert.rejects(
+      () => criarPedidoGarcom(tokenB, mesaNumero, {
+        idempotencyKey: '00000000-0000-4000-8000-000000000215',
+        pedidoPaiId: ids.pedidoPai,
+        clienteNome: 'Teste cruzado',
+        items: [{ productId: ids.produto, qty: 1 }],
+      }),
+      (error) => error.status === 409
+    );
+
+    const sessaoAtual = await pool.query(
+      'SELECT garcom_responsavel_id FROM mesa_sessoes WHERE id=$1',
+      [ids.sessao]
+    );
+    assert.equal(Number(sessaoAtual.rows[0].garcom_responsavel_id), Number(ids.garcomA),
+      'acrescentar pedido não pode transferir a responsabilidade');
+    const pedidosResponsavel = await listarAtendimentosGarcom(tokenA);
+    const pedidosOutroGarcom = await listarAtendimentosGarcom(tokenB);
+    assert.ok(pedidosResponsavel.some((p) => Number(p.id) === Number(pedidoNovo.id)),
+      'o pedido adicional deve permanecer no atendimento do responsável atual');
+    assert.equal(Number(pedidosResponsavel.find((p) => Number(p.id) === Number(pedidoNovo.id)).pedidoPaiId), Number(ids.pedidoPai));
+    assert.equal(pedidosOutroGarcom.some((p) => Number(p.id) === Number(pedidoNovo.id)), false,
+      'o pedido adicional não deve mover a mesa para quem o lançou');
+  } finally {
+    if (ids.sessao) {
+      await pool.query(
+        'DELETE FROM itens_pedido_adicionais WHERE item_pedido_id IN (SELECT id FROM itens_pedido WHERE pedido_id IN (SELECT id FROM pedidos WHERE sessao_id=$1))',
+        [ids.sessao]
+      ).catch(() => {});
+      await pool.query(
+        'DELETE FROM itens_pedido_remocoes WHERE item_pedido_id IN (SELECT id FROM itens_pedido WHERE pedido_id IN (SELECT id FROM pedidos WHERE sessao_id=$1))',
+        [ids.sessao]
+      ).catch(() => {});
+      await pool.query(
+        'DELETE FROM itens_pedido WHERE pedido_id IN (SELECT id FROM pedidos WHERE sessao_id=$1)',
+        [ids.sessao]
+      ).catch(() => {});
+      await pool.query('DELETE FROM pedidos WHERE sessao_id=$1', [ids.sessao]).catch(() => {});
+      await pool.query('DELETE FROM mesa_atendimento_historico WHERE sessao_id=$1', [ids.sessao]).catch(() => {});
+      await pool.query('DELETE FROM mesa_sessoes WHERE id=$1', [ids.sessao]).catch(() => {});
+    }
+    if (ids.mesa) await pool.query('DELETE FROM mesas WHERE id=$1', [ids.mesa]).catch(() => {});
+    if (ids.garcomA) await pool.query('DELETE FROM garcons WHERE id=$1', [ids.garcomA]).catch(() => {});
+    if (ids.garcomB) await pool.query('DELETE FROM garcons WHERE id=$1', [ids.garcomB]).catch(() => {});
+    if (ids.produto) await pool.query('DELETE FROM produtos WHERE id=$1', [ids.produto]).catch(() => {});
+    if (ids.categoria) await pool.query('DELETE FROM categorias WHERE id=$1', [ids.categoria]).catch(() => {});
   }
 });
 

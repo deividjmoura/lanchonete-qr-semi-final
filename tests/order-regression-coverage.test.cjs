@@ -218,8 +218,12 @@ function clientePedidoFake({ estoqueDisponivel = true, falharNoInsertAdicional =
       if (sql.includes('SELECT produto_id, ingrediente FROM produtos_ingredientes_removiveis')) {
         return { rows: [{ produto_id: 8, ingrediente: 'cebola' }] };
       }
-      if (sql.includes('INSERT INTO pedidos (sessao_id, observacao_geral, cliente_nome)')) {
-        return { rows: [{ id: 90, status: 'recebido', criado_em: '2026-01-01T12:00:00Z', cliente_nome: params[2], editado_em: null }] };
+      if (sql.includes('INSERT INTO pedidos (sessao_id, observacao_geral, cliente_nome')) {
+        return { rows: [{
+          id: 90, status: 'recebido', criado_em: '2026-01-01T12:00:00Z',
+          cliente_nome: params[2], editado_em: null,
+          pedido_pai_id: params[params.length - 1] || null,
+        }] };
       }
       if (sql.includes('UPDATE mesa_sessoes SET cliente_nome = COALESCE(cliente_nome, $2)')) return { rows: [], rowCount: 1 };
       if (sql.includes('UPDATE mesa_sessoes SET pix_informado_em = NULL')) return { rows: [], rowCount: 1 };

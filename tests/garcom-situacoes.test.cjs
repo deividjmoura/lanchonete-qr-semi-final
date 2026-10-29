@@ -1,9 +1,26 @@
 const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const cp=require('node:child_process');
 const root=path.join(__dirname,'..');const read=p=>fs.readFileSync(path.join(root,p),'utf8');
-test('Criar pedido exige o responsável atual da sessão e não oferece bypass de transferência',()=>{
+test('Pedido adicional exige responsável atribuído e não transfere a mesa para quem o lança',()=>{
  const api=read('db/atendimento.js'),ped=read('db/pedidos.js');
- assert.match(api,/s\.garcom_responsavel_id=\$2/);
- assert.match(api,/Assuma a mesa antes de enviar o pedido/);
+ assert.match(api,/s\.garcom_responsavel_id IS NOT NULL/);
+ assert.match(api,/token: Number\(r\.garcom_responsavel_id\) === Number\(garcom\.id\) \? r\.token : null/);
+ assert.match(api,/async function listarPedidosAtivosMesa/);
+ assert.match(api,/pedidoPaiId: body && body\.pedidoPaiId/);
+ assert.match(api,/acao: 'mesa_assumida'/);
+ assert.match(api,/acao: 'mesa_transferida'/);
+ assert.match(api,/acao: 'mesa_liberada'/);
+ assert.match(read('db/pedidos.js'),/acao: 'pedido_editado'/);
+ assert.match(read('server.js'),/editarPedidoGarcom\(m\[1\],m\[2\],await body\(req\),reqId\)/);
+ assert.match(read('db/garcons.js'),/acao: 'itens_entregues'/);
+ assert.match(read('server.js'),/entregarComoGarcom\(Number\(m\[2\]\), m\[1\], itemIds \|\| null, reqId\)/);
+ assert.match(read('server.js'),/transferirMesa\(m\[1\], m\[2\], payload\.garcomDestinoId, reqId\)/);
+ assert.match(read('server.js'),/deixarMesa\(m\[1\],m\[2\],reqId\)/);
+ assert.match(read('server.js'),/assumirMesa\(m\[1\], m\[2\], await body\(req\), reqId\)/);
+ assert.match(read('server.js'),/pedidos-ativos/);
+ assert.match(read('db/migrations/0026_pedido_pai_id.sql'),/ADD COLUMN IF NOT EXISTS pedido_pai_id/);
+ assert.match(api,/A mesa precisa ter um atendimento aberto com garçom responsável/);
+ assert.match(ped,/if \(!atribuidos\[0\]\?\.garcom_responsavel_id\)/);
+ assert.doesNotMatch(ped,/garcom_responsavel_id !== atendimento\.garcomId/);
  assert.doesNotMatch(api,/permitirResponsavelDiferente:true/);
  assert.match(ped,/garcomId/);
 });

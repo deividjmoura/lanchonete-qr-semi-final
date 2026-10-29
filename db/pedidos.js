@@ -287,6 +287,9 @@ async function criarPedido(token, body, atendimento = null) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new ErroPedido(400, 'Dados do pedido inválidos');
   }
+  if (!atendimento && body.pedidoPaiId !== undefined && body.pedidoPaiId !== null) {
+    throw new ErroPedido(400, 'Pedido relacionado só pode ser informado pelo atendimento do garçom');
+  }
   const chaveIdempotencia = idempotencyKeyDoCorpo(body);
   if (chaveIdempotencia === false) throw new ErroPedido(400, 'Chave de idempotência inválida');
   const itensInput = Array.isArray(body.items) ? body.items : [];
@@ -320,8 +323,12 @@ async function criarPedido(token, body, atendimento = null) {
         'SELECT garcom_responsavel_id FROM mesa_sessoes WHERE id = $1 FOR UPDATE',
         [sessaoId]
       );
-      if (atribuidos[0]?.garcom_responsavel_id !== atendimento.garcomId) {
-        throw new ErroPedido(409, 'Assuma a mesa antes de enviar o pedido');
+      // Um garçom pode lançar um pedido adicional para a mesa de outro
+      // responsável, mas nunca pode assumir a mesa implicitamente. Exigimos
+      // que exista um responsável no instante da transação; se a mesa foi
+      // liberada/fechada em paralelo, o pedido não cria sessão órfã.
+      if (!atribuidos[0]?.garcom_responsavel_id) {
+        throw new ErroPedido(409, 'A mesa precisa ter um atendimento aberto com garçom responsável');
       }
     }
 
@@ -343,6 +350,26 @@ async function criarPedido(token, body, atendimento = null) {
       }
     }
 
+    let pedidoPaiId = null;
+    if (atendimento && atendimento.pedidoPaiId !== undefined && atendimento.pedidoPaiId !== null) {
+      const paiId = Number(atendimento.pedidoPaiId);
+      if (!Number.isSafeInteger(paiId) || paiId < 1) {
+        throw new ErroPedido(400, 'Pedido de referência inválido');
+      }
+      const { rows: pais } = await client.query(
+        'SELECT id, sessao_id, status FROM pedidos WHERE id = $1',
+        [paiId]
+      );
+      const pai = pais[0];
+      if (!pai || Number(pai.sessao_id) !== Number(sessaoId)) {
+        throw new ErroPedido(404, 'Pedido selecionado não pertence à comanda desta mesa');
+      }
+      if (pai.status === 'entregue') {
+        throw new ErroPedido(409, 'O pedido selecionado já foi entregue; atualize a mesa e escolha um pedido ativo');
+      }
+      pedidoPaiId = Number(pai.id);
+    }
+
     const clienteNome = String(body.clienteNome || body.cliente_nome || '')
       .trim()
       .slice(0, 80) || null;
@@ -356,14 +383,14 @@ async function criarPedido(token, body, atendimento = null) {
     const observacaoGeral = String(body.note || '').trim().slice(0, 500) || null;
     const { rows: pedidoRows } = usarChave
       ? await client.query(
-          `INSERT INTO pedidos (sessao_id, observacao_geral, cliente_nome, idempotency_key)
-           VALUES ($1, $2, $3, $4) RETURNING id, status, criado_em, cliente_nome, editado_em`,
-          [sessaoId, observacaoGeral, clienteNome, chaveIdempotencia]
+          `INSERT INTO pedidos (sessao_id, observacao_geral, cliente_nome, idempotency_key, pedido_pai_id)
+           VALUES ($1, $2, $3, $4, $5) RETURNING id, status, criado_em, cliente_nome, editado_em, pedido_pai_id`,
+          [sessaoId, observacaoGeral, clienteNome, chaveIdempotencia, pedidoPaiId]
         )
       : await client.query(
-          `INSERT INTO pedidos (sessao_id, observacao_geral, cliente_nome)
-           VALUES ($1, $2, $3) RETURNING id, status, criado_em, cliente_nome, editado_em`,
-          [sessaoId, observacaoGeral, clienteNome]
+          `INSERT INTO pedidos (sessao_id, observacao_geral, cliente_nome, pedido_pai_id)
+           VALUES ($1, $2, $3, $4) RETURNING id, status, criado_em, cliente_nome, editado_em, pedido_pai_id`,
+          [sessaoId, observacaoGeral, clienteNome, pedidoPaiId]
         );
     const pedido = pedidoRows[0];
     if (atendimento) {
@@ -396,6 +423,7 @@ async function criarPedido(token, body, atendimento = null) {
     return {
       id: pedido.id,
       sessaoId,
+      pedidoPaiId,
       mesa: mesa.numero,
       status: pedido.status,
       criadoEm: pedido.criado_em,
@@ -451,18 +479,45 @@ async function cancelarPedidoCliente(token, pedidoId, garcomResponsavelId = null
       );
     }
 
+    const { rows: totalAnteriorRows } = await client.query(
+      `SELECT COALESCE(SUM(
+         ip.quantidade * (ip.preco_unitario + COALESCE(ad.total_adicionais, 0))
+       ), 0)::numeric(12,2) AS total,
+       COUNT(ip.id)::int AS quantidade
+       FROM itens_pedido ip
+       LEFT JOIN (
+         SELECT item_pedido_id, SUM(preco_unitario) AS total_adicionais
+         FROM itens_pedido_adicionais GROUP BY item_pedido_id
+       ) ad ON ad.item_pedido_id = ip.id
+       WHERE ip.pedido_id = $1`,
+      [pedido.id]
+    );
+    const totalAnterior = Number(totalAnteriorRows[0]?.total) || 0;
+    const quantidadeAnterior = Number(totalAnteriorRows[0]?.quantidade) || 0;
     const restaurou = await restaurarEstoqueDoPedido(client, pedido.id);
 
     // Evidência persistente do cancelamento (#48): gravada antes da exclusão
     // e na mesma transação — se o DELETE falhar, o evento também desfaz.
+    let atorTipoCancelamento = 'cliente_mesa';
+    let atorIdCancelamento = Number(mesa.id);
+    let atorNomeCancelamento = null;
+    if (garcomResponsavelId) {
+      const { rows: atores } = await client.query('SELECT id, nome FROM garcons WHERE id=$1', [garcomResponsavelId]);
+      atorTipoCancelamento = 'garcom';
+      atorIdCancelamento = Number(garcomResponsavelId);
+      atorNomeCancelamento = atores[0]?.nome || null;
+    }
     await registrarEvento(client, {
-      atorTipo: 'cliente_mesa',
-      atorId: mesa.id,
+      atorTipo: atorTipoCancelamento,
+      atorId: atorIdCancelamento,
+      atorNome: atorNomeCancelamento,
       acao: 'pedido_cancelado',
       alvoTipo: 'pedido',
       alvoId: String(pedido.id),
       contexto: {
         mesaNumero: mesa.numero,
+        totalAnterior,
+        quantidadeItens: quantidadeAnterior,
         motivo: opcoes && opcoes.motivo ? String(opcoes.motivo) : null,
       },
       requestId: opcoes && opcoes.requestId ? String(opcoes.requestId) : null,
@@ -495,7 +550,7 @@ async function cancelarPedidoCliente(token, pedidoId, garcomResponsavelId = null
 }
 
 /** Cliente edita itens do pedido só enquanto status = recebido. Marca editado_em. */
-async function editarPedidoCliente(token, pedidoId, body, garcomResponsavelId = null) {
+async function editarPedidoCliente(token, pedidoId, body, garcomResponsavelId = null, requestId = null) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new ErroPedido(400, 'Dados do pedido inválidos');
   }
@@ -529,6 +584,21 @@ async function editarPedidoCliente(token, pedidoId, body, garcomResponsavelId = 
       );
     }
 
+    const { rows: totalAnteriorRows } = await client.query(
+      `SELECT COALESCE(SUM(
+         ip.quantidade * (ip.preco_unitario + COALESCE(ad.total_adicionais, 0))
+       ), 0)::numeric(12,2) AS total,
+       COUNT(ip.id)::int AS quantidade
+       FROM itens_pedido ip
+       LEFT JOIN (
+         SELECT item_pedido_id, SUM(preco_unitario) AS total_adicionais
+         FROM itens_pedido_adicionais GROUP BY item_pedido_id
+       ) ad ON ad.item_pedido_id = ip.id
+       WHERE ip.pedido_id = $1`,
+      [pedido.id]
+    );
+    const totalAnterior = Number(totalAnteriorRows[0]?.total) || 0;
+    const quantidadeAnterior = Number(totalAnteriorRows[0]?.quantidade) || 0;
     const restaurou = await restaurarEstoqueDoPedido(client, pedido.id);
 
     await client.query(
@@ -561,6 +631,28 @@ async function editarPedidoCliente(token, pedidoId, body, garcomResponsavelId = 
       [pedido.id, observacaoGeral]
     );
 
+    if (garcomResponsavelId) {
+      const { rows: atores } = await client.query('SELECT id, nome FROM garcons WHERE id=$1', [garcomResponsavelId]);
+      await registrarEvento(client, {
+        atorTipo: 'garcom',
+        atorId: Number(garcomResponsavelId),
+        atorNome: atores[0]?.nome || null,
+        acao: 'pedido_editado',
+        alvoTipo: 'pedido',
+        alvoId: pedido.id,
+        resultado: 'sucesso',
+        requestId,
+        contexto: {
+          sessaoId: Number(pedido.sessao_id),
+          mesa: mesa.numero,
+          totalAnterior,
+          totalNovo: total,
+          itensAnteriores: quantidadeAnterior,
+          itensNovos: itensGravados.length,
+          observacaoAlterada: body.note !== undefined,
+        },
+      });
+    }
     await client.query('COMMIT');
     if (mudouDisponibilidade || restaurou.mudouDisponibilidade) invalidarCardapio();
 
