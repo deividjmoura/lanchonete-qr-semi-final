@@ -1,4 +1,4 @@
-# Auditoria de prontidão para produção — QRAdmin / Lanchonete QR
+# Auditoria de prontidão para produção — QR Admin / Lanchonete QR
 
 - **Base auditada:** `main`, commit `e0f2571bc8c6e19b67c137d93c1653e8d50f9ba6` (2026-10-19).
 - **Branch:** `audit/production-readiness`.
@@ -408,7 +408,7 @@ Cada tarefa deve ter branch própria e PR para `main`; revisar checks e diff e n
 - Nenhum teste mutável foi apontado para produção; nenhum banco ou variável de produção foi acessado.
 - PRs #35, #36 e #37 não foram alterados.
 
-**Conclusão:** a revisão estática encontrou lacunas reais de escopo de autorização no fluxo de garçom, além de riscos já descritos no relatório. A auditoria não demonstra que o deployment atual esteja explorável nem comprova a configuração real de produção. Não declarar o QRAdmin pronto para produção até concluir os testes de autorização, integração com PostgreSQL isolado, recuperação da PWA e verificação de migrations/readiness.
+**Conclusão:** a revisão estática encontrou lacunas reais de escopo de autorização no fluxo de garçom, além de riscos já descritos no relatório. A auditoria não demonstra que o deployment atual esteja explorável nem comprova a configuração real de produção. Não declarar o QR Admin pronto para produção até concluir os testes de autorização, integração com PostgreSQL isolado, recuperação da PWA e verificação de migrations/readiness.
 
 ---
 
