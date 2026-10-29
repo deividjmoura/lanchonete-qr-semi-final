@@ -8,11 +8,16 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const js = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
 
-test('sincronização do PWA não reassume mesa que já tem responsável', () => {
-  assert.ok(js.includes("let mesaAtual=mesas.find(m=>Number(m.numero)===Number(order.table));"));
-  assert.match(js, /if\(!mesaAtual\?\.sessaoId\|\|!mesaAtual\?\.garcomResponsavelId\)\s*\{\s*const assign=await fetch\(root\+'\/assumir'/);
+test('sincronização do PWA inicia sessão sem tomar mesa de outro responsável', () => {
+  const start=js.indexOf('async function syncOne(');
+  const end=js.indexOf('async function syncPending',start);
+  const sync=js.slice(start,end);
+  assert.ok(sync.includes("let mesaAtual=mesas.find(m=>Number(m.numero)===Number(order.table));"));
+  assert.match(sync,/if\(!mesaAtual\.sessaoId\|\|!mesaAtual\.garcomResponsavelId\)/);
+  assert.match(sync,/getJson\(root\+'\/iniciar'/);
+  assert.doesNotMatch(sync,/\/assumir/);
+  assert.match(sync,/idempotencyKey:order\.idempotencyKey/);
 });
-
 
 test('consentimento inicial é contextual e persistido por token de garçom', () => {
   assert.ok(js.includes("const CONSENT_SEEN='garcom-notification-intro-v1-'+waiterToken"));
