@@ -1,6 +1,6 @@
 # Fluxo de desenvolvimento e integração
 
-Este documento define o fluxo padrão para pessoas e agentes que trabalham no QRAdmin. O objetivo é manter qualidade, rastreabilidade e continuidade sem colocar a operação em risco.
+Este documento define o fluxo padrão para pessoas e agentes que trabalham no QR Admin. O objetivo é manter qualidade, rastreabilidade e continuidade sem colocar a operação em risco.
 
 ## 1. Fonte de verdade
 
