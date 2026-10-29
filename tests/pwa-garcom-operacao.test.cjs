@@ -66,7 +66,7 @@ test('pedidos diretos prontos ficam visíveis para todos e são assumidos uma ú
  assert.match(pedidos,/p\.origem_pedido = 'cliente' AND \(p\.garcom_id IS NULL OR p\.garcom_id = \$1\)/);
  assert.match(garcons,/async function assumirEntregaComoGarcom/);
  assert.match(garcons,/Outro garçom já assumiu esta entrega/);
- assert.match(server,/pedidos\\\/\(\\d\+\\)\\\/assumir-entrega/);
+ assert.ok(server.includes('pedidos\\\\/(\\\\d+)\\\\/assumir-entrega'));
  assert.match(app,/Assumir entrega/);
  assert.match(app,/Confirmar entrega/);
 });
