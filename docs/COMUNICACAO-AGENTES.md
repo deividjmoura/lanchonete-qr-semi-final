@@ -4,7 +4,7 @@
 
 - **Branch:** `fix/auditoria-integral-pwa-garcom-20261029`
 - **Base:** `main` no commit `d886b7b8e75865083bfcd9ee5328de6afbce8be4`
-- **Status:** PR #136 aberta; CI em execução; ainda sem merge/deploy. Head atual registrado pelo GitHub: `79ad86c9b76426f31f856a6ca9fb606a1b682729`.
+- **Status:** PR #136 aberta; CI e integração PostgreSQL verdes no head `45e79ab51ab76fbb8b6baf55ac421f18fc84d5df`; ainda sem merge/deploy.
 - **Escopo:** `public/garcom-pwa/app.js`, `public/garcom-pwa/sw.js`, `db/atendimento.js`, `server.js`, testes e documentação.
 
 ### Achado principal
@@ -30,9 +30,9 @@ A UI permitia iniciar novo pedido em mesa sem sessão, mas o PWA tentava `POST .
 
 ### Testes adicionados
 
-- Testes de unidade com pool mockado para criação de sessão vazia, atribuição/histórico/auditoria e recusa de sessão atribuída a outro garçom.
+- Testes de unidade com pool mockado para criação de sessão vazia, atribuição/histórico/auditoria e recusa de sessão atribuída a outro garçom.\n- Teste PostgreSQL real cobre mesa vazia → atribuição → pedido de origem garçom → fila da cozinha e fila do bar → replay idempotente.
 - Testes estáticos para rota nova, fallback da lista auxiliar, sincronização e versão do Service Worker.
-- A suíte CI ainda deve ser executada; teste estático não substitui integração PostgreSQL nem E2E.
+- - CI #40972381543: typecheck, build, dist integrity, regressions e syntax todos SUCCESS.\n- PostgreSQL integration #40972381550: SUCCESS, incluindo o novo fluxo real de mesa vazia/cozinha/bar.\n- E2E em navegador/dispositivo real ainda pendente; teste PostgreSQL não substitui validação visual.
 
 ### Pendências para agentes
 
