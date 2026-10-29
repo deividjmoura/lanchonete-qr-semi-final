@@ -1,8 +1,3 @@
-test('sincronização do PWA não reassume mesa que já tem responsável', () => {
-  assert.ok(js.includes("const mesaAtual=mesas.find(m=>Number(m.numero)===Number(order.table));"));
-  assert.match(js, /if\(!mesaAtual\?\.sessaoId\|\|!mesaAtual\?\.garcomResponsavelId\)\s*\{\s*const assign=await fetch\(root\+'\/assumir'/);
-});
-
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -12,6 +7,12 @@ const root = path.join(__dirname, '..', 'public', 'garcom-pwa');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const js = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+
+test('sincronização do PWA não reassume mesa que já tem responsável', () => {
+  assert.ok(js.includes("const mesaAtual=mesas.find(m=>Number(m.numero)===Number(order.table));"));
+  assert.match(js, /if\(!mesaAtual\?\.sessaoId\|\|!mesaAtual\?\.garcomResponsavelId\)\s*\{\s*const assign=await fetch\(root\+'\/assumir'/);
+});
+
 
 test('consentimento inicial é contextual e persistido por token de garçom', () => {
   assert.ok(js.includes("const CONSENT_SEEN='garcom-notification-intro-v1-'+waiterToken"));
