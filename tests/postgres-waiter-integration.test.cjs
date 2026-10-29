@@ -215,6 +215,15 @@ test('PostgreSQL real: outro garçom pode acrescentar pedido sem tomar a respons
       (error) => error.status === 404
     );
     await pool.query("UPDATE pedidos SET status='entregue' WHERE id=$1", [ids.pedidoPai]);
+    const replayRelacionado = await criarPedidoGarcom(tokenB, mesaNumero, {
+      idempotencyKey: '00000000-0000-4000-8000-000000000213',
+      pedidoPaiId: ids.pedidoPai,
+      clienteNome: 'Teste cruzado',
+      items: [{ productId: ids.produto, qty: 1 }],
+    });
+    assert.equal(replayRelacionado.idempotentReplay, true,
+      'retry da mesma operação deve prevalecer sobre o estado posterior do pedido pai');
+    assert.equal(Number(replayRelacionado.id), Number(pedidoNovo.id));
     await assert.rejects(
       () => criarPedidoGarcom(tokenB, mesaNumero, {
         idempotencyKey: '00000000-0000-4000-8000-000000000215',
