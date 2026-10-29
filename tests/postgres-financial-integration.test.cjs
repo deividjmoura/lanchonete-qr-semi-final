@@ -52,7 +52,7 @@ test('PostgreSQL real: pagamento parcial é idempotente e quitação registra o 
       valor: 10,
       formaPagamento: 'dinheiro',
       idempotencyKey: chaveParcial,
-    }, 'QA PostgreSQL');
+    }, 'QA PostgreSQL', null, { atorTipo: 'staff', atorId: 777, requestId: 'ci-payment-request-1' });
 
     assert.equal(parcial.valorTotal, 20);
     assert.equal(parcial.valorPago, 10);
@@ -64,9 +64,22 @@ test('PostgreSQL real: pagamento parcial é idempotente e quitação registra o 
       valor: 10,
       formaPagamento: 'dinheiro',
       idempotencyKey: chaveParcial,
-    }, 'QA PostgreSQL');
+    }, 'QA PostgreSQL', null, { atorTipo: 'staff', atorId: 777, requestId: 'ci-payment-request-1' });
     assert.equal(replay.idempotentReplay, true);
     assert.equal(replay.pagamento.id, parcial.pagamento.id);
+
+    const eventosPagamento = await pool.query(
+      `SELECT ator_tipo, ator_id, ator_nome, acao, alvo_id, request_id, contexto
+       FROM auditoria_eventos WHERE acao = 'pagamento_parcial' AND alvo_id = $1 ORDER BY id`,
+      [String(ids.sessao)]
+    );
+    assert.equal(eventosPagamento.rowCount, 1, 'retry idempotente não pode duplicar evento financeiro');
+    assert.equal(eventosPagamento.rows[0].ator_tipo, 'staff');
+    assert.equal(Number(eventosPagamento.rows[0].ator_id), 777);
+    assert.equal(eventosPagamento.rows[0].ator_nome, 'QA PostgreSQL');
+    assert.equal(eventosPagamento.rows[0].request_id, 'ci-payment-request-1');
+    assert.equal(Number(eventosPagamento.rows[0].contexto.pagamentoId), Number(parcial.pagamento.id));
+    assert.equal(Number(eventosPagamento.rows[0].contexto.valor), 10);
 
     await assert.rejects(
       () => registrarPagamento(ids.sessao, {
@@ -89,6 +102,15 @@ test('PostgreSQL real: pagamento parcial é idempotente e quitação registra o 
     assert.equal(fechado.valorCobrado, 20);
     assert.equal(fechado.valorPago, 20);
     assert.equal(fechado.idempotentReplay, false);
+
+    const eventoFechamento = await pool.query(
+      `SELECT ator_tipo, ator_id, request_id FROM auditoria_eventos
+       WHERE acao = 'sessao_fechada' AND alvo_id = $1 ORDER BY id`,
+      [String(ids.sessao)]
+    );
+    assert.equal(eventoFechamento.rowCount, 1);
+    assert.equal(eventoFechamento.rows[0].ator_tipo, 'staff');
+    assert.equal(eventoFechamento.rows[0].ator_id, null);
 
     const fechamentoReplay = await fecharSessao(ids.sessao, fechamentoBody, 'QA PostgreSQL');
     assert.equal(fechamentoReplay.status, 'fechada');
