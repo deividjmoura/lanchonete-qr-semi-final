@@ -115,7 +115,8 @@ test('cancelamento, PIX e fechamento estão ligados à trilha no código de prod
   assert.match(caixa, /acao: 'pagamento_parcial'/);
   assert.match(caixa, /acao: 'pix_confirmado'/);
   assert.match(caixa, /acao: 'sessao_fechada'/);
-  assert.match(caixa, /atorTipo: operadorNome \? 'staff' : 'sistema'/);
+  assert.match(caixa, /atorTipo: opcoes\.atorTipo \|\|/);
+  assert.match(caixa, /requestId: opcoes\.requestId \|\| null/);
 
   // rotas passam a identidade do staff e o request id
   assert.match(server, /confirmarPixAviso\(\s*Number\(m\[1\]\), Number\(m\[2\]\), operador\?\.nome \|\| null, \{[\s\S]*?requestId: reqId/);
