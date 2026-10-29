@@ -17,11 +17,15 @@ const { sincronizarValorTotalSessao, idempotencyKeyDoCorpo } = require('../db/co
 function setupMockPool(handler) {
   const origQuery = pool.query;
   const origConnect = pool.connect;
+  const mockQuery = async (sql, params) => {
+    if (/INSERT INTO auditoria_eventos/i.test(sql)) return { rows: [{ id: 1 }] };
+    return handler(sql, params);
+  };
   const mockClient = {
-    query: async (sql, params) => handler(sql, params),
+    query: mockQuery,
     release: () => {},
   };
-  pool.query = async (sql, params) => handler(sql, params);
+  pool.query = mockQuery;
   pool.connect = async () => mockClient;
   return () => {
     pool.query = origQuery;
