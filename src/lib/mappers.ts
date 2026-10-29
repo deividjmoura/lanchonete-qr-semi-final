@@ -19,6 +19,44 @@ export function fotoSrc(raw: string | null | undefined): string {
   return s;
 }
 
+/** Foto local por nome/categoria para substituir URLs externas quebradas ou itens sem foto. */
+export function fotoDemo(nome: string, categoria = ""): string {
+  const norm = (v: string) => String(v || "").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "");
+  const n = norm(nome), c = norm(categoria);
+  if (/\\bcombo\\b/.test(n) || /combo/.test(c)) return "/assets/demo/combo.webp";
+  if (/dog/.test(n) || /hot\\s*dogs?/.test(c)) {
+    if (/bacon/.test(n)) return "/assets/demo/dog-bacon.webp";
+    if (/especial/.test(n)) return "/assets/demo/dog-especial.webp";
+    if (/vegetariano|vegano/.test(n)) return "/assets/demo/dog-veg.webp";
+    if (/duplo/.test(n)) return "/assets/demo/dog-duplo.webp";
+    return "/assets/demo/dog-classic.webp";
+  }
+  if (/bacon/.test(n) && /x-?/.test(n)) return "/assets/demo/xbacon.webp";
+  if (/salada/.test(n)) return "/assets/demo/salad.webp";
+  if (/frango|chicken|passarinho/.test(n)) return "/assets/demo/chicken.webp";
+  if (/misto/.test(n)) return "/assets/demo/misto.webp";
+  if (/natural/.test(n)) return "/assets/demo/natural.webp";
+  if (/sandu|x-|burger|hamb/.test(n) || /sandu/.test(c)) return "/assets/demo/burger.webp";
+  if (/onion|anel/.test(n)) return "/assets/demo/onion.webp";
+  if (/batata|porc/.test(n) || /porc/.test(c)) return "/assets/demo/fries.webp";
+  if (/polenta/.test(n)) return "/assets/demo/polenta.webp";
+  if (/mandioca|aipim/.test(n)) return "/assets/demo/mandioca.webp";
+  if (/suco|juice/.test(n)) return "/assets/demo/juice.webp";
+  if (/milk\\s*shake|milkshake|shake/.test(n)) return "/assets/demo/milkshake.webp";
+  if (/agua|coco/.test(n)) return "/assets/demo/water.webp";
+  if (/refrigerante|refri|coca|cola/.test(n)) return "/assets/demo/soda-cola.webp";
+  if (/caipi/.test(n)) return "/assets/demo/caipi.webp";
+  if (/red\\s*bull|monster|energ/.test(n)) return "/assets/demo/energy.webp";
+  if (/cerveja|chopp|pilsen|malte|\\bipa\\b|balde/.test(n) || /cerveja|chopp|bar/.test(c)) return "/assets/demo/beer.webp";
+  if (/gin|moscow|mule|vodka|drink/.test(n) || /drink/.test(c)) return "/assets/demo/cocktail.webp";
+  if (/churros/.test(n)) return "/assets/demo/churros.webp";
+  if (/brownie/.test(n)) return "/assets/demo/brownie.webp";
+  if (/petit|gateau/.test(n)) return "/assets/demo/petit.webp";
+  if (/sobremesa|sorvete|doce/.test(n) || /sobremesa/.test(c)) return "/assets/demo/dessert.webp";
+  if (/bebida/.test(c)) return "/assets/demo/drink.webp";
+  return "/assets/demo/burger.webp";
+}
+
 export const FOTO_PLACEHOLDER =
   "data:image/svg+xml," +
   encodeURIComponent(
@@ -115,7 +153,7 @@ export function mapCardapio(apiCats: any[]): { categorias: Categoria[]; produtos
         categoria: String(c.nome),
         categoriaOrdem: c.ordem != null ? Number(c.ordem) : 0,
         ordem: p.ordem != null ? Number(p.ordem) : 0,
-        foto: fotoSrc(p.fotoUrl || p.foto_url || "") || FOTO_PLACEHOLDER,
+        foto: fotoSrc(p.fotoUrl || p.foto_url || "") || fotoDemo(String(p.nome || ""), String(c.nome || "")),
         setor: p.setor === "bar" ? "bar" : "cozinha",
         tipo,
         adicionais,
