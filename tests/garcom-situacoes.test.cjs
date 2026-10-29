@@ -3,6 +3,7 @@ const root=path.join(__dirname,'..');const read=p=>fs.readFileSync(path.join(roo
 test('Pedido adicional exige responsável atribuído e não transfere a mesa para quem o lança',()=>{
  const api=read('db/atendimento.js'),ped=read('db/pedidos.js');
  assert.match(api,/s\.garcom_responsavel_id IS NOT NULL/);
+ assert.match(api,/token: Number\(r\.garcom_responsavel_id\) === Number\(garcom\.id\) \? r\.token : null/);
  assert.match(api,/A mesa precisa ter um atendimento aberto com garçom responsável/);
  assert.match(ped,/if \(!atribuidos\[0\]\?\.garcom_responsavel_id\)/);
  assert.doesNotMatch(ped,/garcom_responsavel_id !== atendimento\.garcomId/);
