@@ -1,4 +1,4 @@
-const $=s=>document.querySelector(s);const money=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n);const DB='garcom-pwa-v1',STORE='orders';let db;let products=[];let cart=new Map();let mock=false;let waiterToken=new URLSearchParams(location.search).get('token')||localStorage.getItem('waiter-token')||'';if(waiterToken)localStorage.setItem('waiter-token',waiterToken);let mesas=[];const tables=[];const sample=[{id:'lanche-01',name:'X-Burger',description:'Hambúrguer, queijo e salada',price:22,additions:['Bacon','Ovo','Queijo extra'],removals:['Sem cebola','Sem tomate']},{id:'lanche-02',name:'X-Salada',description:'Hambúrguer, queijo, alface e tomate',price:25,additions:['Bacon','Ovo','Queijo extra'],removals:['Sem cebola','Sem tomate']},{id:'porcao-01',name:'Batata frita',description:'Porção crocante',price:18,additions:['Cheddar','Bacon'],removals:[]},{id:'bebida-01',name:'Refrigerante lata',description:'350 ml',price:6,additions:['Sem gelo'],removals:[]},{id:'bebida-02',name:'Suco natural',description:'Consulte os sabores disponíveis',price:9,additions:['Laranja','Limão'],removals:[]}];function openDb(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB,1);req.onupgradeneeded=()=>{const d=req.result;if(!d.objectStoreNames.contains(STORE))d.createObjectStore(STORE,{keyPath:'localId'})};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}function allOrders(){return new Promise((resolve,reject)=>{const r=db.transaction(STORE).objectStore(STORE).getAll();r.onsuccess=()=>resolve(r.result.filter(o=>o.ownerToken===waiterToken).sort((a,b)=>b.createdAt-a.createdAt));r.onerror=()=>reject(r.error)})}function putOrder(o){return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(o);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}function uid(){return crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)}function statusText(s){return ({offline:'Salvo offline',sync:'Sincronizando',confirmed:'Confirmado',conflict:'Conflito'})[s]||s}function populateTables(){for(const sel of [$('#tableSelect'),$('#qrTable'),$('#modalTable')]){const old=sel.value;sel.replaceChildren();tables.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent='Mesa '+n;sel.append(o)});if(tables.includes(Number(old)))sel.value=old;}}async function getJson(url,opts={}){const res=await fetch(url,{cache:'no-store',...opts});const data=await res.json().catch(()=>({}));if(!res.ok){const err=new Error(data.error||'HTTP '+res.status);err.status=res.status;throw err;}return data;}
+const $=s=>document.querySelector(s);const money=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n);const DB='garcom-pwa-v1',STORE='orders';let db;let products=[];let cart=new Map();let mock=false;let waiterToken=new URLSearchParams(location.search).get('token')||localStorage.getItem('waiter-token')||'';let waiterAuthInvalid=false;if(waiterToken)localStorage.setItem('waiter-token',waiterToken);let mesas=[];const tables=[];const sample=[{id:'lanche-01',name:'X-Burger',description:'Hambúrguer, queijo e salada',price:22,additions:['Bacon','Ovo','Queijo extra'],removals:['Sem cebola','Sem tomate']},{id:'lanche-02',name:'X-Salada',description:'Hambúrguer, queijo, alface e tomate',price:25,additions:['Bacon','Ovo','Queijo extra'],removals:['Sem cebola','Sem tomate']},{id:'porcao-01',name:'Batata frita',description:'Porção crocante',price:18,additions:['Cheddar','Bacon'],removals:[]},{id:'bebida-01',name:'Refrigerante lata',description:'350 ml',price:6,additions:['Sem gelo'],removals:[]},{id:'bebida-02',name:'Suco natural',description:'Consulte os sabores disponíveis',price:9,additions:['Laranja','Limão'],removals:[]}];function openDb(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB,1);req.onupgradeneeded=()=>{const d=req.result;if(!d.objectStoreNames.contains(STORE))d.createObjectStore(STORE,{keyPath:'localId'})};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}function allOrders(){return new Promise((resolve,reject)=>{const r=db.transaction(STORE).objectStore(STORE).getAll();r.onsuccess=()=>resolve(r.result.filter(o=>o.ownerToken===waiterToken).sort((a,b)=>b.createdAt-a.createdAt));r.onerror=()=>reject(r.error)})}function putOrder(o){return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(o);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}function uid(){return crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)}function statusText(s){return ({offline:'Salvo offline',sync:'Sincronizando',confirmed:'Confirmado',conflict:'Conflito'})[s]||s}function populateTables(){for(const sel of [$('#tableSelect'),$('#qrTable'),$('#modalTable')]){const old=sel.value;sel.replaceChildren();tables.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent='Mesa '+n;sel.append(o)});if(tables.includes(Number(old)))sel.value=old;}}async function getJson(url,opts={}){const res=await fetch(url,{cache:'no-store',...opts});const data=await res.json().catch(()=>({}));if(!res.ok){const err=new Error(data.error||'HTTP '+res.status);err.status=res.status;if(res.status===401&&url.includes('/api/garcom/')){waiterAuthInvalid=true;setConnection();}throw err;}return data;}
 async function loadActiveWaiters(){
  const data=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/garcons-ativos');
  activeWaiters=Array.isArray(data.garcons)?data.garcons:[];
@@ -6,11 +6,14 @@ async function loadActiveWaiters(){
 async function loadMesas(){
  if(!waiterToken)throw Error('Abra o link individual do garçom fornecido pelo administrador');
  const data=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/mesas');
- mesas=data.mesas||[];
+ mesas=Array.isArray(data.mesas)?data.mesas:[];
  localStorage.setItem('waiter-mesas-cache-'+waiterToken,JSON.stringify(mesas));
  tables.splice(0,tables.length,...mesas.map(x=>Number(x.numero)));
  currentWaiterId=Number(data.garcom.id);
- await loadActiveWaiters();
+ // A lista de garçons é auxiliar (transferência). Sua falha não pode impedir
+ // que o garçom veja as mesas nem que registre pedidos.
+ try{await loadActiveWaiters();}
+ catch(e){activeWaiters=[];$('#tableMessage').textContent='Mesas carregadas. A lista de garçons está temporariamente indisponível para transferências.';}
  populateTables();updateQr();renderTableGrid();
  $('#identity').textContent='Garçom: '+data.garcom.nome;
  renderMyTables();
@@ -80,22 +83,69 @@ const addInput=row.querySelector('[data-field="additions"]');
 const addWrap=document.createElement('div');addWrap.className='addon-options';
 if(opts.length){const caption=document.createElement('span');caption.textContent='Adicionais (opcionais)';addWrap.append(caption);for(const a of opts){const label=document.createElement('label');label.className='addon-choice';const cb=document.createElement('input');cb.type='checkbox';cb.checked=(item.additions||[]).some(x=>Number(x.id||x)===Number(a.id));cb.onchange=()=>{const selected=new Set((item.additions||[]).map(x=>Number(x.id||x)));if(cb.checked)selected.add(Number(a.id));else selected.delete(Number(a.id));item.additions=[...selected].map(id=>({id}));renderCart();};const title=document.createElement('span');title.textContent=a.nome+' · '+money(Number(a.preco||0));label.append(cb,title);addWrap.append(label);}}else addWrap.textContent='Sem adicionais disponíveis';
 addInput.closest('label').replaceWith(addWrap);
-for(const f of ['removals','note']){const input=row.querySelector('[data-field="'+f+'"]');input.value=Array.isArray(item[f])?item[f].join(', '):item[f];input.onchange=()=>{item[f]=f==='note'?input.value:input.value.split(',').map(x=>x.trim()).filter(Boolean)}}root.append(row)}$('#total').textContent=money(total)}async function renderOrders(){const orders=await allOrders();$('#queueCount').textContent=orders.filter(o=>o.status!=='confirmed').length+' pendentes';const root=$('#orders');root.replaceChildren();if(!orders.length){root.innerHTML='<p class="muted">Nenhum pedido salvo neste aparelho.</p>';return}for(const o of orders){const card=document.createElement('article');card.className='order';const head=document.createElement('div');head.className='order-head';const title=document.createElement('strong');title.textContent='Mesa '+o.table+' · '+o.customerName;const badge=document.createElement('span');badge.className='status '+o.status;badge.textContent=statusText(o.status);head.append(title,badge);const details=document.createElement('p');details.className='muted';details.textContent=o.items.map(i=>i.qty+'× '+i.name).join(', ')+' · '+money(o.total);card.append(head,details);if(o.status==='offline'||o.status==='conflict'){const retry=document.createElement('button');retry.className='secondary';retry.textContent=o.status==='conflict'?'Revisar conflito':'Tentar sincronizar';retry.onclick=()=>o.status==='conflict'?alert('O servidor informou conflito. Compare o pedido local com o retorno do backend antes de reenviar.'):syncOne(o.localId);card.append(retry)}if(o.status==='offline'){const edit=document.createElement('button');edit.className='secondary';edit.textContent='Editar rascunho';edit.onclick=()=>openEditDraft(o);card.append(edit)}root.append(card)}}async function saveOrder(){if(editingDraftId){await updateDraft();return}if(!waiterToken){alert('Abra o link individual do garçom antes de registrar pedidos.');return}if(!cart.size){alert('Adicione pelo menos um produto.');return}const customerName=$('#modalCustomer').value.trim();if(!customerName){$('#modalCustomer').focus();alert('Informe o nome do cliente.');return}const items=[...cart.values()].map(i=>({productId:Number(i.product.id),name:i.product.name||i.product.nome,qty:i.qty,unitPrice:Number(i.product.price??i.product.preco??0),additions:(i.additions||[]).map(x=>({id:Number(x.id||x)})).filter(x=>Number.isSafeInteger(x.id)),removals:i.removals||[],note:i.note}));if(editingServerId){if(!navigator.onLine){alert('Edição de pedido já enviado exige conexão.');return}try{await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/pedidos/'+editingServerId,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({items,note:$('#orderNote').value.trim()})});editingServerId=null;cart.clear();renderCart();$('#orderModal').close();switchTab('orders');await loadOrderStatuses();}catch(e){alert(e.message||'Não foi possível editar o pedido.');}return}
-const order={ownerToken:waiterToken,localId:uid(),idempotencyKey:uid(),table:Number($('#modalTable').value),parentOrderId:pendingParentOrderId,customerName,items,note:$('#orderNote').value.trim(),total:[...cart.values()].reduce((sum,it)=>sum+it.qty*(Number((it.product.preco??it.product.price??0))+(it.additions||[]).reduce((v,x)=>v+Number((it.product.adicionais||[]).find(a=>Number(a.id)===Number(x.id||x))?.preco||0),0)),0),status:'offline',createdAt:Date.now(),attempts:0};await putOrder(order);cart.clear();$('#orderNote').value='';renderCart();await renderOrders();$('#orderModal').close();switchTab('orders');if(navigator.onLine)syncOne(order.localId)}async function syncOne(localId){const order=(await allOrders()).find(o=>o.localId===localId);if(!order||order.status==='confirmed'||order.status==='sync'||order.status==='conflict')return;if(!navigator.onLine)return;order.status='sync';order.attempts++;await putOrder(order);await renderOrders();try{
-const root='/api/garcom/'+encodeURIComponent(waiterToken)+'/mesas/'+order.table;
-const mesaAtual=mesas.find(m=>Number(m.numero)===Number(order.table));
-// Só assumir quando ainda não há responsável. Nunca tentar reassumir uma
-// mesa já atribuída: qualquer garçom pode acrescentar itens sem transferi-la.
-if(!mesaAtual?.sessaoId||!mesaAtual?.garcomResponsavelId){
-const assign=await fetch(root+'/assumir',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({clienteNome:order.customerName})});
-const assigned=await assign.json().catch(()=>({}));if(!assign.ok){const e=new Error(assigned.error||'Falha ao assumir mesa');e.status=assign.status;throw e;}
+for(const f of ['removals','note']){const input=row.querySelector('[data-field="'+f+'"]');input.value=Array.isArray(item[f])?item[f].join(', '):item[f];input.onchange=()=>{item[f]=f==='note'?input.value:input.value.split(',').map(x=>x.trim()).filter(Boolean)}}root.append(row)}$('#total').textContent=money(total)}async function renderOrders(){const orders=await allOrders();$('#queueCount').textContent=orders.filter(o=>o.status!=='confirmed').length+' pendentes';const root=$('#orders');root.replaceChildren();if(!orders.length){root.innerHTML='<p class="muted">Nenhum pedido salvo neste aparelho.</p>';return}for(const o of orders){const card=document.createElement('article');card.className='order';const head=document.createElement('div');head.className='order-head';const title=document.createElement('strong');title.textContent='Mesa '+o.table+' · '+o.customerName;const badge=document.createElement('span');badge.className='status '+o.status;badge.textContent=statusText(o.status);head.append(title,badge);const details=document.createElement('p');details.className='muted';details.textContent=o.items.map(i=>i.qty+'× '+i.name).join(', ')+' · '+money(o.total);card.append(head,details);if(o.lastError){const error=document.createElement('p');error.className='muted';error.textContent='Não enviado: '+o.lastError;card.append(error);}if(o.status==='offline'||o.status==='conflict'){const retry=document.createElement('button');retry.className='secondary';retry.textContent=o.status==='conflict'?'Revisar conflito':'Tentar sincronizar';retry.onclick=()=>o.status==='conflict'?alert('O servidor informou conflito. Compare o pedido local com o retorno do backend antes de reenviar.'):syncOne(o.localId);card.append(retry)}if(o.status==='offline'){const edit=document.createElement('button');edit.className='secondary';edit.textContent='Editar rascunho';edit.onclick=()=>openEditDraft(o);card.append(edit)}root.append(card)}}let savingOrder=false;
+async function saveOrder(){
+ if(savingOrder)return;
+ savingOrder=true;
+ const saveButton=$('#saveOrder');
+ saveButton.disabled=true;
+ try{
+  if(editingDraftId){await updateDraft();return;}
+  if(!waiterToken){alert('Abra o link individual do garçom antes de registrar pedidos.');return;}
+  if(!db){alert('O armazenamento local ainda não está disponível. Aguarde a inicialização e tente novamente; o pedido não foi enviado.');return;}
+  if(!cart.size){alert('Adicione pelo menos um produto.');return;}
+  const customerName=$('#modalCustomer').value.trim();
+  if(!customerName){$('#modalCustomer').focus();alert('Informe o nome do cliente.');return;}
+  const items=[...cart.values()].map(i=>({productId:Number(i.product.id),name:i.product.name||i.product.nome,qty:i.qty,unitPrice:Number(i.product.price??i.product.preco??0),additions:(i.additions||[]).map(x=>({id:Number(x.id||x)})).filter(x=>Number.isSafeInteger(x.id)),removals:i.removals||[],note:i.note}));
+  if(editingServerId){
+   if(!navigator.onLine){alert('Edição de pedido já enviado exige conexão.');return;}
+   try{
+    await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/pedidos/'+editingServerId,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({items,note:$('#orderNote').value.trim()})});
+    editingServerId=null;cart.clear();renderCart();$('#orderModal').close();switchTab('orders');await loadOrderStatuses();
+   }catch(e){alert(e.message||'Não foi possível editar o pedido.');}
+   return;
+  }
+  const order={ownerToken:waiterToken,localId:uid(),idempotencyKey:uid(),table:Number($('#modalTable').value),parentOrderId:pendingParentOrderId,customerName,items,note:$('#orderNote').value.trim(),total:[...cart.values()].reduce((sum,it)=>sum+it.qty*(Number((it.product.preco??it.product.price??0))+(it.additions||[]).reduce((v,x)=>v+Number((it.product.adicionais||[]).find(a=>Number(a.id)===Number(x.id||x))?.preco||0),0)),0),status:'offline',createdAt:Date.now(),attempts:0};
+  await putOrder(order);
+  cart.clear();$('#orderNote').value='';renderCart();await renderOrders();$('#orderModal').close();switchTab('orders');
+  if(navigator.onLine)void syncOne(order.localId);
+ }catch(e){alert('Não foi possível salvar o pedido neste aparelho. O pedido não foi enviado: '+(e.message||'erro de armazenamento'));}
+ finally{savingOrder=false;saveButton.disabled=false;}
 }
-const body={clienteNome:order.customerName,items:order.items,note:order.note,idempotencyKey:order.idempotencyKey,pedidoPaiId:order.parentOrderId||undefined};
-const res=await fetch(root+'/pedidos',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-const data=await res.json().catch(()=>({}));if(!res.ok){const e=new Error(data.error||'Falha ao enviar pedido');e.status=res.status;throw e;}
-order.status='confirmed';order.serverOrderId=data.id;order.confirmedAt=Date.now();order.lastError=null;
-}catch(err){order.status=err.status&&err.status<500?'conflict':'offline';order.lastError=String(err.message||err);}await putOrder(order);await renderOrders();if(order.status==='confirmed')void loadOrderStatuses();}
-async function syncPending(){if(!navigator.onLine){setConnection();return}const pending=(await allOrders()).filter(o=>o.status==='offline');for(const o of pending)await syncOne(o.localId);setConnection()}function setConnection(){$('#connection').textContent=navigator.onLine?'Online · sincronização disponível':'Offline · pedidos ficam neste aparelho';$('#connection').style.color=navigator.onLine?'#166534':'#a16207'}function updateQr(){const n=Number($('#qrTable').value);const mesa=mesas.find(x=>Number(x.numero)===n);if(!mesa?.token){$('#qrImage').textContent='QR disponível apenas para o responsável atual da mesa.';return;}const url=new URL('../',location.href).href+'#/mesa/'+mesa.token;$('#qrUrl').value=url;try{const qr=window.qrcode(0,'M');qr.addData(url);qr.make();$('#qrImage').innerHTML=qr.createSvgTag({cellSize:4,margin:2,scalable:true,title:'QR Code da mesa '+n})}catch(e){$('#qrImage').textContent='Não foi possível gerar o QR desta mesa';console.error('Falha ao gerar QR local',e)}}$('#search').addEventListener('input',renderProducts);$('#saveOrder').addEventListener('click',saveOrder);$('#syncBtn').addEventListener('click',syncPending);$('#qrTable').addEventListener('change',updateQr);$('#copyQr').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('#qrUrl').value);$('#copyQr').textContent='Endereço copiado';setTimeout(()=>$('#copyQr').textContent='Copiar endereço',1500)}catch{ $('#qrUrl').select();document.execCommand('copy')}});window.addEventListener('online',syncPending);window.addEventListener('offline',setConnection);setConnection();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});void loadProducts();openDb().then(async d=>{db=d;await recoverInterruptedSync();try{await loadMesas();if(navigator.onLine){syncPending();loadDeliveries();loadOrderStatuses()}}catch(e){$('#identity').textContent=e.message;if(!navigator.onLine){try{mesas=JSON.parse(localStorage.getItem('waiter-mesas-cache-'+waiterToken)||'[]');tables.splice(0,tables.length,...mesas.map(x=>Number(x.numero)));populateTables();updateQr();renderTableGrid();}catch{}}}}).catch(e=>{console.error(e);alert('Não foi possível abrir o armazenamento offline neste navegador.')});
+async function syncOne(localId){
+ const order=(await allOrders()).find(o=>o.localId===localId);
+ if(!order||order.status==='confirmed'||order.status==='sync'||order.status==='conflict'||!navigator.onLine)return;
+ order.status='sync';order.attempts++;await putOrder(order);await renderOrders();
+ try{
+  const root='/api/garcom/'+encodeURIComponent(waiterToken)+'/mesas/'+order.table;
+  let mesaAtual=mesas.find(m=>Number(m.numero)===Number(order.table));
+  if(!mesaAtual){await loadMesas();mesaAtual=mesas.find(m=>Number(m.numero)===Number(order.table));}
+  if(!mesaAtual)throw new Error('Mesa não encontrada na lista de mesas habilitadas.');
+  // Mesa vazia precisa de uma sessão criada e atribuída ao garçom. Se outro
+  // garçom a assumir simultaneamente, atualizamos o estado e seguimos como
+  // colaborador: o backend permite pedido adicional sem transferir a mesa.
+  if(!mesaAtual.sessaoId||!mesaAtual.garcomResponsavelId){
+   try{
+    await getJson(root+'/iniciar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({clienteNome:order.customerName})});
+   }catch(err){
+    if(err.status!==409)throw err;
+    await loadMesas();
+    const atualizada=mesas.find(m=>Number(m.numero)===Number(order.table));
+    if(!atualizada?.sessaoId||!atualizada?.garcomResponsavelId)throw err;
+   }
+   await loadMesas();
+  }
+  const body={clienteNome:order.customerName,items:order.items,note:order.note,idempotencyKey:order.idempotencyKey,pedidoPaiId:order.parentOrderId||undefined};
+  const data=await getJson(root+'/pedidos',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  order.status='confirmed';order.serverOrderId=data.id;order.confirmedAt=Date.now();order.lastError=null;
+ }catch(err){
+  order.status=err.status&&err.status<500?'conflict':'offline';
+  order.lastError=String(err.message||err);
+ }
+ await putOrder(order);await renderOrders();
+ if(order.status==='confirmed'){void loadMesas();void loadOrderStatuses();}
+}
+async function syncPending(){if(!navigator.onLine||!db){setConnection();return}try{const pending=(await allOrders()).filter(o=>o.status==='offline');for(const o of pending)await syncOne(o.localId);}catch(e){console.error('[garcom-pwa] Falha ao consultar fila local:',e);$('#connection').textContent='Não foi possível acessar a fila local deste aparelho.';$('#connection').style.color='#b91c1c';return}setConnection()}function setConnection(){if(waiterAuthInvalid){$('#connection').textContent='Link do garçom inválido ou desativado. Solicite um novo link ao administrador.';$('#connection').style.color='#b91c1c';return}$('#connection').textContent=navigator.onLine?'Online · sincronização disponível':'Offline · pedidos ficam neste aparelho';$('#connection').style.color=navigator.onLine?'#166534':'#a16207'}function updateQr(){const n=Number($('#qrTable').value);const mesa=mesas.find(x=>Number(x.numero)===n);if(!mesa?.token){$('#qrImage').textContent='QR disponível apenas para o responsável atual da mesa.';return;}const url=new URL('../',location.href).href+'#/mesa/'+mesa.token;$('#qrUrl').value=url;try{const qr=window.qrcode(0,'M');qr.addData(url);qr.make();$('#qrImage').innerHTML=qr.createSvgTag({cellSize:4,margin:2,scalable:true,title:'QR Code da mesa '+n})}catch(e){$('#qrImage').textContent='Não foi possível gerar o QR desta mesa';console.error('Falha ao gerar QR local',e)}}$('#search').addEventListener('input',renderProducts);$('#saveOrder').addEventListener('click',saveOrder);$('#syncBtn').addEventListener('click',syncPending);$('#qrTable').addEventListener('change',updateQr);$('#copyQr').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('#qrUrl').value);$('#copyQr').textContent='Endereço copiado';setTimeout(()=>$('#copyQr').textContent='Copiar endereço',1500)}catch{ $('#qrUrl').select();document.execCommand('copy')}});window.addEventListener('online',syncPending);window.addEventListener('offline',setConnection);setConnection();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});void loadProducts();void loadMesas().then(()=>{if(navigator.onLine){void loadDeliveries();void loadOrderStatuses();}}).catch(e=>{console.error('[garcom-pwa] Falha ao carregar mesas:',e);$('#identity').textContent=e.message;if(!navigator.onLine){try{mesas=JSON.parse(localStorage.getItem('waiter-mesas-cache-'+waiterToken)||'[]');tables.splice(0,tables.length,...mesas.map(x=>Number(x.numero)));populateTables();updateQr();renderTableGrid();}catch{}}});openDb().then(async d=>{db=d;try{await recoverInterruptedSync();}catch(e){console.error('[garcom-pwa] Falha ao recuperar fila local:',e);$('#connection').textContent='Não foi possível recuperar a fila offline. As mesas continuam disponíveis.';$('#connection').style.color='#b91c1c';}if(navigator.onLine)void syncPending();}).catch(e=>{console.error(e);$('#connection').textContent='Armazenamento offline indisponível neste navegador. Pedidos não podem ser salvos localmente.';$('#connection').style.color='#b91c1c';});
 let deferredInstall=null;
 const installBtn=$('#installAppBtn');
 const isStandalone=()=>window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
@@ -165,7 +215,9 @@ async function iniciarAtendimento(n,customer){
  const table=Number(n);
  if(!table||!tables.includes(table))throw Error('Selecione uma mesa válida');
  const base='/api/garcom/'+encodeURIComponent(waiterToken)+'/mesas/'+table;
- return getJson(base+'/assumir',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({clienteNome:customer||undefined})}).then(async result=>{await loadMesas();return result;});
+ const result=await getJson(base+'/iniciar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({clienteNome:customer||undefined})});
+ await loadMesas();
+ return result;
 }
 async function clickStartAttendance(){
  const n=Number($('#tableSelect').value);
@@ -218,15 +270,14 @@ function openTableDetails(tableNumber){
        appendSelect.disabled=!rows.length;appendButton.disabled=true;
      }).catch(()=>{appendSelect.replaceChildren();const error=document.createElement('option');error.value='';error.textContent='Não foi possível carregar pedidos ativos';appendSelect.append(error);});
    }else{
-     appendSelect.replaceChildren();const unavailable=document.createElement('option');unavailable.value='';unavailable.textContent=navigator.onLine?'Assuma a mesa e atualize antes de acrescentar itens':'Conecte-se para selecionar um pedido ativo';appendSelect.append(unavailable);
+     appendSelect.replaceChildren();const unavailable=document.createElement('option');unavailable.value='';unavailable.textContent=navigator.onLine?'Inicie o atendimento antes de acrescentar itens':'Conecte-se para selecionar um pedido ativo';appendSelect.append(unavailable);
    }
    appendSelect.addEventListener('change',()=>{appendButton.disabled=!appendSelect.value;});
  }
- if(!m.garcomResponsavelId&&m.pedidoClienteQr){
-   const nameLabel=document.createElement('label');nameLabel.className='field';nameLabel.textContent='Nome do cliente (opcional)';
-   const name=document.createElement('input');name.maxLength=100;name.autocomplete='off';name.placeholder=m.clienteNome||'Nome do cliente';name.value=m.clienteNome||'';nameLabel.append(name);root.append(nameLabel);
-   const assume=document.createElement('button');assume.type='button';assume.className='primary';assume.textContent='Assumir mesa';
-   assume.onclick=async()=>{assume.disabled=true;try{await iniciarAtendimento(m.numero,name.value.trim());$('#tableDetailsStatus').textContent='Mesa assumida. Você é o responsável pelo atendimento.';await loadMesas();$('#tableDetailsModal').close();}catch(e){alert(e.message||'Não foi possível assumir a mesa.');assume.disabled=false;}};root.append(assume);
+ if(!m.garcomResponsavelId){
+   const start=document.createElement('button');start.type='button';start.className='primary';start.textContent=m.pedidoClienteQr?'Assumir mesa':'Iniciar atendimento';
+   start.onclick=async()=>{start.disabled=true;try{await iniciarAtendimento(m.numero,m.clienteNome||'');await loadMesas();$('#tableDetailsModal').close();}catch(e){alert(e.message||'Não foi possível iniciar o atendimento.');start.disabled=false;}};
+   root.append(start);
  }else if(Number(m.garcomResponsavelId)===Number(currentWaiterId)&&m.sessaoId){
    const label=document.createElement('label');label.className='field';label.textContent='Transferir para outro garçom';
    const select=document.createElement('select');select.setAttribute('aria-label','Garçom de destino da mesa '+m.numero);
@@ -237,40 +288,10 @@ function openTableDetails(tableNumber){
    const transfer=document.createElement('button');transfer.type='button';transfer.className='primary';transfer.textContent='Transferir mesa';transfer.disabled=!options.length;
    transfer.onclick=async()=>{const targetId=Number(select.value);const targetName=select.options[select.selectedIndex]?.textContent||'';transfer.disabled=true;try{await transferTable(m.numero,targetId,targetName);$('#tableDetailsModal').close();}finally{transfer.disabled=!options.length;}};root.append(transfer);
  }else if(m.garcomResponsavelId){
-   const note=document.createElement('p');note.className='muted';note.textContent='Somente o garçom responsável atual pode transferir esta mesa.';root.append(note);
- }else{
-   const note=document.createElement('p');note.className='muted';note.textContent='A opção de assumir só aparece quando existe um pedido iniciado pelo cliente via QR.';root.append(note);
+   const note=document.createElement('p');note.className='muted';note.textContent='Qualquer garçom ativo pode acrescentar itens; somente o responsável atual pode transferir esta mesa.';root.append(note);
  }
  $('#tableDetailsModal').showModal();
 }
-document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.dataset.tab)));
-for(const id of ['newOrderTables','newOrderOrders'])$('#'+id).addEventListener('click',()=>openOrder());
-$('#closeOrder').addEventListener('click',()=>$('#orderModal').close());
-$('#closeTableDetails').addEventListener('click',()=>$('#tableDetailsModal').close());
-$('#tableDetailsModal').addEventListener('click',e=>{if(e.target===$('#tableDetailsModal'))$('#tableDetailsModal').close()});
-$('#closeQr').addEventListener('click',()=>$('#qrModal').close());
-$('#showQr').addEventListener('click',()=>openQr($('#tableSelect').value));
-$('#modalQr').addEventListener('click',()=>openQr($('#modalTable').value));
-$('#startAttendance').addEventListener('click',clickStartAttendance);
-$('#refreshTables').addEventListener('click',()=>loadMesas().catch(e=>{$('#tableMessage').textContent=e.message}));
-$('#tableSelect').addEventListener('change',()=>{$('#modalTable').value=$('#tableSelect').value});
-$('#orderModal').addEventListener('click',e=>{if(e.target===$('#orderModal'))$('#orderModal').close()});
-$('#qrModal').addEventListener('click',e=>{if(e.target===$('#qrModal'))$('#qrModal').close()});
-
-/* Acompanhamento de todas as mesas sob responsabilidade deste garçom. */
-let currentWaiterId=null;
-let activeWaiters=[];
-const pendingPaymentStorageKey='garcom-pending-payment-'+waiterToken;
-let pendingWaiterPayment=null;
-try{pendingWaiterPayment=JSON.parse(localStorage.getItem(pendingPaymentStorageKey)||'null')}catch{}
-let liveOrders=[];
-let editingServerId=null;
-let pendingParentOrderId=null;
-let firstLiveLoad=true;
-const announcedReady=new Set();
-const READY_STORAGE='garcom-ready-notified-'+waiterToken;
-try{for(const id of JSON.parse(localStorage.getItem(READY_STORAGE)||'[]'))announcedReady.add(Number(id))}catch{}
-let readyAlertsEnabled=localStorage.getItem('garcom-ready-alerts-'+waiterToken)==='1';
 function renderMyTables(){
  const root=$('#myTables');if(!root)return;root.replaceChildren();
  const mine=mesas.filter(m=>Number(m.garcomResponsavelId)===currentWaiterId&&m.sessaoId);
