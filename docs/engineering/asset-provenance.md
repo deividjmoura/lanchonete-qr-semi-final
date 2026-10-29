@@ -1,9 +1,10 @@
 # Proveniência de ativos, licença e repositório canônico
 
 **Issue relacionada:** [#45](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/45).
-**Escopo:** inventário e recomendação para decisão do proprietário. Nenhuma
-visibilidade, histórico, marca ou arquivo foi alterado; nenhuma licença foi
-adicionada sem confirmação de titularidade.
+**Escopo:** inventário e recomendação para decisão do proprietário. Nesta branch,
+as páginas operacionais foram normalizadas para QR Admin e os ativos de marca
+do cliente anterior foram removidos de `public/` e `dist/`. Nenhuma visibilidade,
+histórico ou licença foi alterada sem confirmação de titularidade.
 
 ## 1. Repositórios
 
@@ -53,9 +54,9 @@ impede publicação no registro npm; não muda a visibilidade pública do GitHub
    comprovação, não usar essas imagens em material comercial do
    estabelecimento real; substituí-las por fotos autorizadas no cardápio de
    produção é o caminho mais seguro.
-5. **Marca do estabelecimento:** a marca "Delicia's" e qualquer logo de
-   cliente precisam de autorização escrita de uso; não remover nem publicar
-   materiais sem esse consentimento.
+5. **Marca do estabelecimento:** os ativos de marca do cliente anterior foram
+   removidos das páginas e da distribuição pública nesta branch. Não os
+   reintroduzir nem publicar materiais de cliente sem autorização escrita.
 6. **Metadados do GitHub:** descrição, topics e badge de versão só devem ser
    alinhados depois das decisões acima.
 
