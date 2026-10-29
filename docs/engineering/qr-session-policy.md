@@ -44,9 +44,19 @@ Se a operação relatar pedidos remotos indevidos, a próxima etapa natural é a
 opção 2 (sessão autorizada), reaproveitando o fluxo de assunção já existente
 no atendimento.
 
-## O que precisa de decisão explícita
+## Decisão adotada para o lançamento
 
-- Confirmar formalmente a opção 1 como política do produto ou escolher outra.
-- Se escolher rotação (3) ou PIN (4), abrir issue própria com o desenho de
-  UX e a migration correspondente; este documento não implementa nenhuma
-  mudança de comportamento do QR.
+Por delegação do responsável pelo projeto em 2026-10-29, fica adotada a
+**opção 1 — QR fixo sempre ativo**, mantendo o comportamento já implementado.
+A decisão privilegia o autoatendimento e evita exigir abertura manual de cada
+mesa. O risco de cópia/fotografia do QR é mitigado por token opaco UUID,
+limitação de tentativas e auditoria dos cancelamentos.
+
+Esta decisão não significa que o QR prove presença física. Se forem observados
+pedidos remotos indevidos, abrir uma mudança separada para avaliar a opção 2
+(sessão autorizada pelo funcionário) ou a opção 4 (PIN de presença), com
+critérios de UX e segurança antes de alterar o fluxo.
+
+A evidência automatizada continua sendo `tests/postgres-qr-session.test.cjs`,
+executada em PostgreSQL descartável no CI. Nenhuma alteração de token, migration
+ou dado de produção é necessária para esta decisão documental.
