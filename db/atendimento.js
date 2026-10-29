@@ -1,6 +1,7 @@
 const pool = require('./pool');
 const { getGarcomPorToken } = require('./garcons');
 const { totalEntregueDaSessao, totalPagoDaSessao } = require('./conta');
+const { registrarEvento } = require('./auditoria');
 
 class ErroAtendimento extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -35,7 +36,7 @@ async function listarMesasGarcom(token) {
     pedidoClienteQr: r.pedido_cliente_qr === true,
   })) };
 }
-async function assumirMesa(token, numeroBruto, body = {}) {
+async function assumirMesa(token, numeroBruto, body = {}, requestId = null) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw new ErroAtendimento(400, 'Corpo de início de atendimento inválido');
   const garcom = await validarGarcom(token);
   const numero = Number(numeroBruto);
@@ -100,6 +101,12 @@ async function assumirMesa(token, numeroBruto, body = {}) {
         INSERT INTO mesa_atendimento_historico
           (sessao_id,garcom_anterior_id,garcom_novo_id,alterado_por_id)
         VALUES ($1,$2,$3,$4)`, [sessaoId, anterior, garcom.id, garcom.id]);
+      await registrarEvento(client, {
+        atorTipo: 'garcom', atorId: Number(garcom.id), atorNome: garcom.nome,
+        acao: 'mesa_assumida', alvoTipo: 'mesa_sessao', alvoId: sessaoId,
+        resultado: 'sucesso', requestId,
+        contexto: { mesa: numero, sessaoId, pedidoClienteId: Number(pedidosCliente[0].id) },
+      });
     }
     await client.query('COMMIT');
     return { mesa: numero, mesaToken: mesa.token, sessaoId,
@@ -117,7 +124,7 @@ async function listarGarconsAtivos(token) {
   return rows;
 }
 
-async function transferirMesa(token, numeroBruto, garcomDestinoBruto) {
+async function transferirMesa(token, numeroBruto, garcomDestinoBruto, requestId = null) {
   const origem = await validarGarcom(token);
   const numero = Number(numeroBruto);
   const destinoId = Number(garcomDestinoBruto);
@@ -165,6 +172,16 @@ async function transferirMesa(token, numeroBruto, garcomDestinoBruto) {
         (sessao_id,garcom_anterior_id,garcom_novo_id,alterado_por_id)
       VALUES ($1,$2,$3,$4)`,
       [sessao.id, origem.id, destino.id, origem.id]);
+    await registrarEvento(client, {
+      atorTipo: 'garcom', atorId: Number(origem.id), atorNome: origem.nome,
+      acao: 'mesa_transferida', alvoTipo: 'mesa_sessao', alvoId: sessao.id,
+      resultado: 'sucesso', requestId,
+      contexto: {
+        mesa: numero, sessaoId: sessao.id,
+        garcomAnteriorId: Number(origem.id), garcomAnteriorNome: origem.nome,
+        garcomNovoId: Number(destino.id), garcomNovoNome: destino.nome,
+      },
+    });
 
     await client.query('COMMIT');
     return {
@@ -228,7 +245,7 @@ async function resumoPagamentoSessao(token, sessaoIdBruto) {
     client.release();
   }
 }
-async function deixarMesa(token, numeroBruto) {
+async function deixarMesa(token, numeroBruto, requestId = null) {
   const garcom = await validarGarcom(token);
   const numero = Number(numeroBruto);
   if (!Number.isSafeInteger(numero) || numero < 1 || numero > 70) throw new ErroAtendimento(400,'Mesa inválida');
@@ -246,6 +263,12 @@ async function deixarMesa(token, numeroBruto) {
       WHERE p.sessao_id=$1 AND COALESCE(ip.status,'recebido') <> 'entregue'`,[sessoes[0].id]);
     if(pendentes[0].total>0)throw new ErroAtendimento(409,'Existem itens ainda não entregues. Entregue-os ou transfira a mesa para outro garçom antes de deixá-la.');
     await client.query('UPDATE mesa_sessoes SET garcom_responsavel_id=NULL WHERE id=$1',[sessoes[0].id]);
+    await registrarEvento(client, {
+      atorTipo: 'garcom', atorId: Number(garcom.id), atorNome: garcom.nome,
+      acao: 'mesa_liberada', alvoTipo: 'mesa_sessao', alvoId: sessoes[0].id,
+      resultado: 'sucesso', requestId,
+      contexto: { mesa: numero, sessaoId: sessoes[0].id },
+    });
     await client.query('COMMIT');
     return {mesa:numero,liberada:true,sessaoId:sessoes[0].id};
   }catch(e){await client.query('ROLLBACK').catch(()=>{});throw e}finally{client.release()}
