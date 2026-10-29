@@ -10,13 +10,14 @@ const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 
 test('legacy pages and generated distribution use QR Admin branding', () => {
   const files = [
-    'public/index.html', 'public/mesa.html', 'public/pedido.html',
+    'index.html', 'public/index.html', 'public/mesa.html', 'public/pedido.html',
     'public/admin.html', 'public/caixa.html', 'public/garcom.html',
     'public/cozinha.html', 'public/bar.html', 'public/login.html',
     'dist/index.html', 'dist/mesa.html', 'dist/pedido.html',
     'dist/admin.html', 'dist/caixa.html', 'dist/garcom.html',
     'dist/cozinha.html', 'dist/bar.html', 'dist/login.html',
     'public/js/admin-relatorio.js', 'dist/js/admin-relatorio.js', 'db/seed.js',
+    'src/lib/print.ts', 'package.json',
   ];
   for (const file of files) {
     const content = read(file);
