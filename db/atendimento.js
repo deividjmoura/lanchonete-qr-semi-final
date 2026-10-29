@@ -281,7 +281,7 @@ async function listarPedidosAtivosMesa(token, numeroBruto) {
     throw new ErroAtendimento(400, 'Número de mesa inválido');
   }
   const { rows } = await pool.query(`
-    SELECT p.id, p.status, p.criado_em, p.cliente_nome,
+    SELECT p.id, p.status, p.criado_em,
            COALESCE(json_agg(json_build_object(
              'nome', pr.nome,
              'quantidade', ip.quantidade,
@@ -302,7 +302,6 @@ async function listarPedidosAtivosMesa(token, numeroBruto) {
     id: p.id,
     status: p.status,
     criadoEm: p.criado_em,
-    clienteNome: p.cliente_nome || null,
     itens: p.itens || [],
     label: (p.itens || []).slice(0, 3).map(i => (i.quantidade || 1) + '× ' + i.nome).join(', '),
   }));
