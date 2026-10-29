@@ -61,7 +61,7 @@ async function gerarRelatorioPdf() {
       '<h2>Top produtos</h2><table><thead><tr><th>Produto</th><th style="text-align:right">Qtd</th><th style="text-align:right">Receita</th></tr></thead><tbody>' + top + '</tbody></table>' +
       '<h2>Por dia</h2><table><thead><tr><th>Dia</th><th style="text-align:right">Contas</th><th style="text-align:right">Faturamento</th></tr></thead><tbody>' + dias + '</tbody></table>' +
       '<h2>Contas fechadas (até 200)</h2><table><thead><tr><th>Mesa</th><th>Cliente</th><th>Pagamento</th><th style="text-align:right">Valor</th></tr></thead><tbody>' + contas + '</tbody></table>' +
-      '<p class="muted" style="margin-top:32px">Major Pub</p></body></html>');
+      '<p class="muted" style="margin-top:32px">QR Admin</p></body></html>');
     w.document.close();
   } catch (e) {
     toast('Erro ao gerar relatório');
