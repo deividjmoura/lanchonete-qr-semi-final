@@ -311,7 +311,7 @@ async function listarPedidosAtivosMesa(token, numeroBruto) {
 async function listarAtendimentosGarcom(token) {
   const garcom=await validarGarcom(token);
   const {rows}=await pool.query(`
-    SELECT p.id,p.status,p.criado_em,p.editado_em,p.cliente_nome,p.observacao_geral,
+    SELECT p.id,p.status,p.criado_em,p.editado_em,p.cliente_nome,p.observacao_geral,p.pedido_pai_id,
            m.numero AS mesa,s.id AS sessao_id,
            COALESCE(json_agg(json_build_object(
              'id',ip.id,'productId',ip.produto_id,'nome',pr.nome,
@@ -330,7 +330,7 @@ async function listarAtendimentosGarcom(token) {
     GROUP BY p.id,m.numero,s.id
     ORDER BY p.criado_em DESC LIMIT 250`,[garcom.id]);
   return rows.map(x=>({id:x.id,mesa:x.mesa,sessaoId:x.sessao_id,status:x.status,
-    criadoEm:x.criado_em,editadoEm:x.editado_em,clienteNome:x.cliente_nome,
+    pedidoPaiId:x.pedido_pai_id||null,criadoEm:x.criado_em,editadoEm:x.editado_em,clienteNome:x.cliente_nome,
     note:x.observacao_geral,itens:x.itens,
     podeEditar:x.status==='recebido'&&x.itens.every(i=>i.status==='recebido')}));
 }
