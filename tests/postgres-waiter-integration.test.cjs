@@ -125,9 +125,18 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
       (error) => error.status === 403
     );
 
-    await entregarComoGarcom(ids.pedido, tokenB, [ids.item]);
+    await entregarComoGarcom(ids.pedido, tokenB, [ids.item], 'req-delivery-ci');
     const finalItem = await pool.query('SELECT status FROM itens_pedido WHERE id = $1', [ids.item]);
     assert.equal(finalItem.rows[0].status, 'entregue');
+    const auditDelivery = await pool.query(
+      'SELECT ator_tipo,ator_id,acao,alvo_id,request_id,contexto FROM auditoria_eventos WHERE request_id=$1',
+      ['req-delivery-ci']
+    );
+    assert.equal(auditDelivery.rows[0].ator_tipo, 'garcom');
+    assert.equal(Number(auditDelivery.rows[0].ator_id), Number(ids.garcomB));
+    assert.equal(auditDelivery.rows[0].acao, 'itens_entregues');
+    assert.equal(String(auditDelivery.rows[0].alvo_id), String(ids.pedido));
+    assert.deepEqual(auditDelivery.rows[0].contexto.itensEntregues.map(Number), [Number(ids.item)]);
 
     const paymentBody = {
       valor: 1,
