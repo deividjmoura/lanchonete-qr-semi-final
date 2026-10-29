@@ -24,13 +24,13 @@ test('Pedido adicional exige responsável atribuído e não transfere a mesa par
  assert.doesNotMatch(api,/permitirResponsavelDiferente:true/);
  assert.match(ped,/garcomId/);
 });
-test('Toque na mesa abre detalhes; assumir exige pedido QR e transferir exige responsável atual',()=>{
+test('Toque na mesa abre detalhes; iniciar atende mesa vazia ou QR e transferir exige responsável atual',()=>{
  const pwa=read('public/garcom-pwa/app.js'),html=read('public/garcom-pwa/index.html'),api=read('db/atendimento.js');
  assert.match(pwa,/openTableDetails\(m\.numero\)/);
  assert.match(html,/id="tableDetailsModal"/);
- assert.match(pwa,/if\(!m\.garcomResponsavelId&&m\.pedidoClienteQr\)/);
+ assert.match(pwa,/if\(!m\.garcomResponsavelId\)/);\n assert.match(pwa,/start\.textContent=m\.pedidoClienteQr\?'Assumir mesa':'Iniciar atendimento'/);\n assert.match(pwa,/iniciarAtendimento\(m\.numero,m\.clienteNome/);
  assert.match(pwa,/Number\(m\.garcomResponsavelId\)===Number\(currentWaiterId\)/);
- assert.match(api,/async function assumirMesa/);
+ assert.match(api,/async function iniciarAtendimentoGarcom/);\n assert.match(api,/async function assumirMesa/);
  assert.match(api,/origem_pedido='cliente'/);
  assert.match(api,/async function transferirMesa/);
 });
