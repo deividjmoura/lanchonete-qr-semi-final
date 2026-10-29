@@ -1,9 +1,11 @@
 const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const cp=require('node:child_process');
 const root=path.join(__dirname,'..');const read=p=>fs.readFileSync(path.join(root,p),'utf8');
-test('Criar pedido exige o responsável atual da sessão e não oferece bypass de transferência',()=>{
+test('Pedido adicional exige responsável atribuído e não transfere a mesa para quem o lança',()=>{
  const api=read('db/atendimento.js'),ped=read('db/pedidos.js');
- assert.match(api,/s\.garcom_responsavel_id=\$2/);
- assert.match(api,/Assuma a mesa antes de enviar o pedido/);
+ assert.match(api,/s\.garcom_responsavel_id IS NOT NULL/);
+ assert.match(api,/A mesa precisa ter um atendimento aberto com garçom responsável/);
+ assert.match(ped,/if \(!atribuidos\[0\]\?\.garcom_responsavel_id\)/);
+ assert.doesNotMatch(ped,/garcom_responsavel_id !== atendimento\.garcomId/);
  assert.doesNotMatch(api,/permitirResponsavelDiferente:true/);
  assert.match(ped,/garcomId/);
 });
