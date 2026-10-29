@@ -8,7 +8,10 @@
 
 const pool = require('./pool');
 
-const DATA_URL_RE = /^data:([a-z0-9.+-]+\/[a-z0-9.+-]+)?(;base64)?,/i;
+// Nunca servir SVG/HTML/JavaScript pelo mesmo origin. O upload normaliza em
+// WebP, mas fotos legadas podem ser PNG/JPEG/GIF; só aceitamos formatos raster.
+const DATA_URL_RE = /^data:(image\/(?:jpeg|png|webp|gif));base64,/i;
+const MAX_DATA_URL_BYTES = Number(process.env.FOTO_MAX_SERVE_BYTES || 6 * 1024 * 1024);
 
 function resolverFotoUrl(fotoUrl, produtoId) {
   if (fotoUrl === null || fotoUrl === undefined) return null;
