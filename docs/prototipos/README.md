@@ -1,4 +1,4 @@
-# Protótipo visual do garçom — QRAdmin
+# Protótipo visual do garçom — QR Admin
 
 Esta pasta preserva o trabalho de **prévia visual de 20/10/2026** em uma branch/PR separada, para análise antes de qualquer decisão de incorporar mudanças.
 
