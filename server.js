@@ -79,6 +79,7 @@ const {
   removerGarcom,
   getGarcomPorToken,
   entregarComoGarcom,
+  assumirEntregaComoGarcom,
   listPedidosRecentes,
 } = require('./db/garcons');
 const { resumoDia, topProdutosHoje } = require('./db/dashboard');
@@ -420,6 +421,18 @@ const server = http.createServer(async (req, res) => {
       const g = await getGarcomPorToken(m[1]);
       if (!g || !g.ativo) return json(res, 401, { error: 'Link inválido ou desativado' });
       return json(res, 200, await listarPedidosProntosGarcom(m[1]));
+    }
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/pedidos\/(\d+)\/assumir-entrega$/)) && req.method === 'POST') {
+      try {
+        await body(req);
+        const out = await assumirEntregaComoGarcom(Number(m[2]), m[1], reqId);
+        broadcast('update', { type: 'entrega_assumida', pedidoId: Number(m[2]), garcom: out.garcom?.nome });
+        return json(res, 200, out);
+      } catch (e) {
+        if (e instanceof ErroGarcom) return json(res, e.status, { error: e.message });
+        if (e && (e.status === 400 || e.status === 413)) return json(res, e.status, { error: e.message });
+        throw e;
+      }
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/pedidos\/(\d+)\/entregar$/)) && req.method === 'POST') {
       try {
