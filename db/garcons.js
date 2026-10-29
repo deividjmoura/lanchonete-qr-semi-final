@@ -173,7 +173,10 @@ async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null, request
     const pedidoDiretoDoCliente = pedido.origem_pedido === 'cliente';
     if (responsavelAtual !== Number(garcom.id) &&
         !(pedidoDiretoDoCliente && entregaAtribuidaAoGarcom)) {
-      throw new ErroGarcom(403, 'Este pedido não pertence a uma entrega sob sua responsabilidade');
+      if (pedidoDiretoDoCliente) {
+        throw new ErroGarcom(403, 'Este pedido não pertence a uma entrega sob sua responsabilidade');
+      }
+      throw new ErroGarcom(403, 'Este pedido não pertence a uma mesa sob sua responsabilidade atual');
     }
     if (pedidoDiretoDoCliente && pedido.garcom_id && !entregaAtribuidaAoGarcom) {
       throw new ErroGarcom(409, 'Outro garçom já assumiu esta entrega');
