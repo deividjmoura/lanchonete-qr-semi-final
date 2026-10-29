@@ -10,7 +10,7 @@ assert.strictEqual(
 );
 
 const pool = require('../db/pool');
-const { assumirMesa, transferirMesa, criarPedidoGarcom, listarAtendimentosGarcom, listarPedidosProntosGarcom, resumoPagamentoSessao } = require('../db/atendimento');
+const { assumirMesa, transferirMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, listarPedidosProntosGarcom, resumoPagamentoSessao } = require('../db/atendimento');
 const { registrarPagamento } = require('../db/caixa');
 const { entregarComoGarcom } = require('../db/garcons');
 
@@ -153,7 +153,7 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
 });
 
 test('PostgreSQL real: outro garçom pode acrescentar pedido sem tomar a responsabilidade da mesa', async () => {
-  const ids = { categoria: null, produto: null, garcomA: null, garcomB: null, mesa: null, sessao: null };
+  const ids = { categoria: null, produto: null, garcomA: null, garcomB: null, mesa: null, sessao: null, pedidoPai: null };
   const mesaNumero = 8;
   const tokenA = '00000000-0000-4000-8000-000000000211';
   const tokenB = '00000000-0000-4000-8000-000000000212';
@@ -183,17 +183,27 @@ test('PostgreSQL real: outro garçom pode acrescentar pedido sem tomar a respons
       "INSERT INTO mesa_sessoes (mesa_id, status, cliente_nome, valor_total) VALUES ($1, 'aberta', 'Teste cruzado', 0) RETURNING id",
       [ids.mesa]
     )).rows[0].id;
-    await pool.query(
-      "INSERT INTO pedidos (sessao_id, status, cliente_nome, observacao_geral, origem_pedido) VALUES ($1, 'recebido', 'Teste cruzado', 'Pedido QR inicial', 'cliente')",
+    ids.pedidoPai = (await pool.query(
+      "INSERT INTO pedidos (sessao_id, status, cliente_nome, observacao_geral, origem_pedido) VALUES ($1, 'recebido', 'Teste cruzado', 'Pedido QR inicial', 'cliente') RETURNING id",
       [ids.sessao]
-    );
+    )).rows[0].id;
 
     await assumirMesa(tokenA, mesaNumero, { clienteNome: 'Teste cruzado' });
+    const ativos = await listarPedidosAtivosMesa(tokenB, mesaNumero);
+    assert.ok(ativos.some((p) => Number(p.id) === Number(ids.pedidoPai)),
+      'qualquer garçom ativo pode selecionar um pedido da mesa para acrescentar itens');
     const pedidoNovo = await criarPedidoGarcom(tokenB, mesaNumero, {
       idempotencyKey: '00000000-0000-4000-8000-000000000213',
+      pedidoPaiId: ids.pedidoPai,
       clienteNome: 'Teste cruzado',
       items: [{ productId: ids.produto, qty: 1 }],
     });
+    const pedidoRelacionado = await pool.query(
+      'SELECT pedido_pai_id, garcom_id FROM pedidos WHERE id=$1',
+      [pedidoNovo.id]
+    );
+    assert.equal(Number(pedidoRelacionado.rows[0].pedido_pai_id), Number(ids.pedidoPai));
+    assert.equal(Number(pedidoRelacionado.rows[0].garcom_id), Number(ids.garcomB));
 
     const sessaoAtual = await pool.query(
       'SELECT garcom_responsavel_id FROM mesa_sessoes WHERE id=$1',
@@ -205,6 +215,7 @@ test('PostgreSQL real: outro garçom pode acrescentar pedido sem tomar a respons
     const pedidosOutroGarcom = await listarAtendimentosGarcom(tokenB);
     assert.ok(pedidosResponsavel.some((p) => Number(p.id) === Number(pedidoNovo.id)),
       'o pedido adicional deve permanecer no atendimento do responsável atual');
+    assert.equal(Number(pedidosResponsavel.find((p) => Number(p.id) === Number(pedidoNovo.id)).pedidoPaiId), Number(ids.pedidoPai));
     assert.equal(pedidosOutroGarcom.some((p) => Number(p.id) === Number(pedidoNovo.id)), false,
       'o pedido adicional não deve mover a mesa para quem o lançou');
   } finally {
