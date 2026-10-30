@@ -5,7 +5,7 @@ e [#6](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/6).
 
 ## Fluxo de release verificado
 
-Evidência registrada em 2026-10-26 (`docs/COMUNICACAO-AGENTES.md`), lida
+Evidência registrada em 2026-10-26, lida
 diretamente da configuração do Railway no projeto `exquisite-nurturing`:
 
 1. **Pre-deploy:** `npm run db:migrate && npm run db:seed` — aplica as

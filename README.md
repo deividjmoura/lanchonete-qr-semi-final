@@ -219,15 +219,18 @@ ambiente de operação.**
 
 ### Documentação técnica
 
-- [`docs/CORRECAO-ENTREGA-PROGRESSIVA.md`](docs/CORRECAO-ENTREGA-PROGRESSIVA.md) —
-  diagnóstico, causas-raiz, correções, evidência de teste e limites da validação.
-- [`docs/CORRECAO-PWA-LOTE-COBRANCA.md`](docs/CORRECAO-PWA-LOTE-COBRANCA.md) —
-  rodada seguinte: lote de aceite/retirada/entrega, diálogo de notificações e o
-  `ReferenceError` que matava o botão de confirmar pagamento.
 - [`docs/CONTRATO-ATENDIMENTO-GARCOM.md`](docs/CONTRATO-ATENDIMENTO-GARCOM.md) —
   contrato de API, estados por item, idempotência e erros.
 - [`docs/PWA-ATENDIMENTO-GARCOM.md`](docs/PWA-ATENDIMENTO-GARCOM.md) —
   arquitetura do PWA, garantias e limites da fila offline.
+- [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md) — sistema visual vigente.
+- [`docs/REDEFINICAO-SENHA-ADMIN.md`](docs/REDEFINICAO-SENHA-ADMIN.md) —
+  redefinição de senha de staff pelo Admin.
+- [`docs/engineering/PRODUCTION_OPERATIONS_RUNBOOK.md`](docs/engineering/PRODUCTION_OPERATIONS_RUNBOOK.md) —
+  operação, incidentes, deploy e rollback.
+
+Documentos históricos de correções e auditorias datadas foram removidos na
+faxina de 2026-10-30; o histórico permanece no Git e nas PRs mergeadas.
 
 ## Banco e deploy
 

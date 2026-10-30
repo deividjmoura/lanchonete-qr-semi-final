@@ -40,7 +40,7 @@ test('sem APP_TIMEZONE os módulos de relatório convergem no default America/Sa
 
 test('a regra de meia-noite civil está documentada junto da decisão pendente de virada às 05:00', () => {
   const plano = fs.readFileSync(
-    path.join(__dirname, '..', 'docs', 'engineering', 'production-readiness-plan.md'),
+    path.join(__dirname, '..', 'docs', 'engineering', 'PRODUCTION_OPERATIONS_RUNBOOK.md'),
     'utf8'
   );
   assert.match(plano, /05:00/);

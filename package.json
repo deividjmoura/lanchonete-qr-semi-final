@@ -18,6 +18,7 @@
     "test:dia": "node scripts/dia-inteiro.js",
     "test:carga": "node scripts/teste-carga.js",
     "test:carga70": "node scripts/carga-70-mesas.js",
+    "test:carga60": "node scripts/carga-60-mesas-10-garcons.js",
     "test:seguranca": "node scripts/teste-seguranca.js",
     "fotos:fix": "node scripts/fix-fotos-cardapio.js",
     "fotos:sync": "node scripts/sync-fotos-seed.js",

@@ -157,6 +157,14 @@ Riscos residuais:
 Acompanhamento necessário:
 ```
 
+## 7.1 Dia operacional e fuso horário
+
+Hoje os relatórios usam a meia-noite civil no fuso `APP_TIMEZONE`
+(default `America/Sao_Paulo`). Uma virada configurável (ex.: 05:00) continua
+sendo decisão de negócio pendente; enquanto não for aprovada, não altere a
+regra nos módulos de relatório (`db/dashboard.js`, `db/atendimento.js`,
+`db/relatorio.js`).
+
 ## 8. Lacunas operacionais a confirmar
 
 - [ ] Health check e alertas efetivamente configurados no Railway.

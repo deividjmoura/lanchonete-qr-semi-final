@@ -42,7 +42,7 @@ tratamento e os direitos dos titulares antes de qualquer automação.
   exige papel `admin`; sem `confirm:true` apenas conta o que seria removido).
 - Toda exclusão definitiva deve: ter backup restaurável, sair de dry-run
   revisado por um segundo par de olhos, rodar em transação e registrar
-  data de corte, contagens e aprovador em `docs/COMUNICACAO-AGENTES.md`.
+  data de corte, contagens e aprovador em registro interno aprovado.
 - Sessões abertas nunca são elegíveis (o `WHERE status='fechada'` é fixo).
 - A nova trilha `auditoria_eventos` (issue #48) não grava senha, hash, token,
   chave PIX nem conteúdo livre do cliente; o purge da trilha tem prazo próprio.
