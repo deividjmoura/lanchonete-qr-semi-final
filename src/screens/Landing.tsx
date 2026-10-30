@@ -1,40 +1,50 @@
 import { useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
-  ArrowRight, ChefHat, ConciergeBell, QrCode, Smartphone,
-  Split, Wallet, Boxes, ChartNoAxesColumn, UtensilsCrossed, Zap, Beer,
-} from "lucide-react";
-import { Badge, LivePill, Logo, Secao, ThemeToggle } from "../components/ui";
+  ArrowRight,
+  CallBell,
+  CashRegister,
+  CookingPot,
+  QrCode,
+  SignIn,
+} from "@phosphor-icons/react";
+import { Badge, Btn, Logo, Secao, ThemeToggle } from "../components/ui";
 import { ir } from "../router";
-import { usePub, totalSessao } from "../store/usePub";
+import { totalSessao, usePub } from "../store/usePub";
 import { BRL } from "../lib/utils";
 
-const fadeUp = {
-  initial: { opacity: 0, y: 28 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, margin: "-80px" },
-  transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] as const },
-};
-
-const FLUXO = [
-  { icon: Smartphone, passo: "01", titulo: "Cliente", texto: "Escaneia o QR da mesa, monta o pedido no celular e personaliza tudo — sem app, sem fila.", tom: "text-sky-700" },
-  { icon: ChefHat, passo: "02", titulo: "Cozinha", texto: "Recebe na hora com alerta de voz: mesa + cliente. Aceita, produz e marca como pronto.", tom: "text-brand-600" },
-  { icon: ConciergeBell, passo: "03", titulo: "Garçom", texto: "Voz leve anunciando o nº da mesa. Entrega e confirma com um toque.", tom: "text-violet-700" },
-  { icon: Wallet, passo: "04", titulo: "Caixa", texto: "Fecha a sessão acumulativa, divide a conta, aplica desconto e confirma o PIX.", tom: "text-teal-600" },
-];
-
-const RECURSOS = [
-  { icon: QrCode, titulo: "Conta acumulativa", texto: "Uma comanda por visita: a mesa pode pedir várias vezes, o caixa fecha a sessão." },
-  { icon: Split, titulo: "Divisão de conta", texto: "N pessoas, valor por pessoa, pagamentos parciais com badge pago/restante." },
-  { icon: Zap, titulo: "PIX instantâneo", texto: "QR dinâmico com valor, copia-e-cola e botão “Já paguei” que avisa o caixa." },
-  { icon: Boxes, titulo: "Estoque vivo", texto: "Baixa automática a cada pedido e alerta de item acabando." },
-  { icon: ChartNoAxesColumn, titulo: "Dashboard", texto: "Faturamento, ticket médio e os campeões de venda em tempo real." },
-  { icon: UtensilsCrossed, titulo: "Personalização", texto: "Adicionais, removíveis e itens de escolha única (tamanho/sabor)." },
-];
+const POSTOS = [
+  {
+    passo: "01",
+    titulo: "Mesa",
+    Icon: QrCode,
+    texto: "O cliente lê o QR fixo da mesa, escolhe o ponto, personaliza itens e acompanha a conta aberta sem instalar aplicativo.",
+  },
+  {
+    passo: "02",
+    titulo: "Cozinha & Bar",
+    Icon: CookingPot,
+    texto: "Cada setor recebe apenas seus itens em tempo real com anúncio por voz, controle por item e impressão térmica de comanda.",
+  },
+  {
+    passo: "03",
+    titulo: "Garçom",
+    Icon: CallBell,
+    texto: "Recebe aviso de prato ou bebida pronta, aceita, retira no balcão, entrega na mesa e lança pedidos mesmo sem sinal.",
+  },
+  {
+    passo: "04",
+    titulo: "Caixa",
+    Icon: CashRegister,
+    texto: "Consolida toda a sessão acumulativa, divide por pessoa, gera QR PIX com valor exato e registra pagamentos parciais.",
+  },
+] as const;
 
 export default function Landing() {
   const hydrateCardapio = usePub((s) => s.hydrateCardapio);
   const hydrateMe = usePub((s) => s.hydrateMe);
+  const reduceMotion = useReducedMotion();
+
   useEffect(() => {
     void hydrateCardapio();
     void hydrateMe();
@@ -50,163 +60,140 @@ export default function Landing() {
     .reduce((a, s) => a + totalSessao(pedidos, s.id) - s.desconto + s.taxa, 0);
 
   return (
-    <div className="relative min-h-dvh overflow-x-clip w-full max-w-[100vw]">
-      {/* fundo */}
-      <div className="fixed inset-0 -z-10">
-        <div className="glow-orb absolute -top-32 left-[8%] size-[30rem] bg-brand-500/6" />
-        <div className="glow-orb absolute bottom-0 right-[-6rem] size-[26rem] bg-brand-500/6" />
-        <div className="noise absolute inset-0" />
-      </div>
-
-      {/* nav */}
-      <header className="relative z-10 mx-auto max-w-7xl px-5 sm:px-8 pt-6 flex items-center justify-between">
-        <Logo />
-        <div className="flex items-center gap-2.5">
-          <Badge tone="lime" pulse>salão aberto</Badge>
-          <ThemeToggle />
+    <div data-regime="expressive" className="min-h-dvh flex flex-col bg-surface text-text">
+      <header className="border-b border-line bg-surface">
+        <div className="mx-auto max-w-6xl px-4 sm:px-8 py-4 flex items-center justify-between gap-3">
+          <Logo size="md" />
+          <div className="flex items-center gap-2">
+            <Btn variant="secondary" size="sm" onClick={() => ir("/login")}>
+              <SignIn size={15} weight="bold" /> Equipe
+            </Btn>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
-      {/* HERO */}
-      <section className="relative mx-auto max-w-7xl px-5 sm:px-8 pt-8 sm:pt-12">
-        <div className="relative overflow-hidden rounded-[2rem] sm:rounded-[3rem] border border-slate-200">
-          <div className="absolute inset-0 bg-gradient-to-br from-white via-slate-50 to-brand-50" />
-          <div className="glow-orb absolute -top-24 right-[10%] size-[22rem] bg-brand-500/6" />
-          <div className="glow-orb absolute -bottom-32 left-[5%] size-[20rem] bg-navy-500/6" />
+      <main className="flex-1">
+        {/* Comanda principal / Cartaz de recepção */}
+        <section className="mx-auto max-w-6xl px-4 sm:px-8 pt-8 sm:pt-12 pb-10">
+          <motion.div
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.16, ease: [0.22, 1.18, 0.36, 1] }}
+            className="rounded-md border border-line-strong bg-surface-raised overflow-hidden"
+          >
+            <div className="grid lg:grid-cols-[1.35fr_0.85fr]">
+              <div className="p-6 sm:p-10 lg:p-12 border-b lg:border-b-0 lg:border-r border-dashed border-line-strong">
+                <div className="flex flex-wrap items-center gap-2 mb-5">
+                  <Badge tone="ember">Comanda por QR Code</Badge>
+                  <Badge tone="sage" dot>Salão em operação</Badge>
+                </div>
 
-          <div className="relative px-6 sm:px-12 pt-14 sm:pt-20 pb-10">
-            <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}>
-              <div className="flex flex-wrap items-center gap-2 mb-6">
-                <Badge tone="amber">pedidos por QR code</Badge>
-                <Badge tone="zinc">nesse dispositivo · sem app</Badge>
-              </div>
-              <h1 className="font-display leading-[1.02] text-[clamp(2.25rem,7.4vw,6rem)]">
-                <span className="block text-navy-900">SENTOU.</span>
-                <span className="block stroke-text">ESCANEOU.</span>
-                <span className="block shine">PEDIU.</span>
-              </h1>
-              <p className="mt-6 max-w-xl text-slate-600 text-base sm:text-lg leading-relaxed">
-                Do celular do cliente até a <b className="text-navy-900">cozinha</b>, o <b className="text-navy-900">garçom</b> e o{" "}
-                <b className="text-navy-900">caixa</b> — tudo conectado em tempo real. Uma comanda por visita, vários pedidos,
-                PIX na mesa e divisão de conta sem dor de cabeça.
-              </p>
+                <h1 className="font-display font-black uppercase tracking-tight leading-[0.94] text-[clamp(2.6rem,6.6vw,5.25rem)] text-text">
+                  <span className="block">Sentou.</span>
+                  <span className="block text-brand-ink">Escaneou.</span>
+                  <span className="block">Pediu.</span>
+                </h1>
 
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <div className="inline-flex items-center gap-3 rounded-2xl border border-brand-500/30 bg-brand-500/10 px-4 py-3">
-                  <QrCode className="size-6 text-brand-600 shrink-0" />
-                  <p className="text-sm text-slate-700 leading-snug max-w-xs">
-                    <b className="text-navy-900">Cliente:</b> escaneie o QR Code fixo da sua mesa — o cardápio e os pedidos iniciam direto por ele.
+                <p className="mt-5 max-w-xl text-text-muted text-base sm:text-lg leading-relaxed">
+                  Uma comanda aberta por mesa, conectando cliente, cozinha, bar, garçom e caixa em tempo real — com conta acumulativa, divisão simples e PIX direto na mesa.
+                </p>
+
+                <div className="mt-7 flex items-start gap-3 rounded-sm border border-line-strong bg-surface-sunken px-4 py-3.5 max-w-md">
+                  <QrCode size={24} weight="regular" className="text-brand-ink shrink-0 mt-0.5" />
+                  <p className="text-sm text-text leading-snug">
+                    <strong>Está na casa?</strong> Escaneie o QR Code fixo da sua mesa para abrir o cardápio e enviar pedidos direto para o preparo.
                   </p>
                 </div>
               </div>
 
-            </motion.div>
-
-            {/* placar ao vivo */}
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25, duration: 0.8 }}
-              className="mt-10 grid grid-cols-3 gap-1.5 sm:gap-4 max-w-lg w-full"
-            >
-              {[
-                { v: String(comandas), l: "comandas abertas" },
-                { v: String(naFila), l: "pedidos na chapa" },
-                { v: BRL(consumoAberto), l: "consumo no salão" },
-              ].map((m) => (
-                <div key={m.l} className="glass rounded-2xl px-4 py-3.5">
-                  <p className="font-display text-3xl sm:text-4xl text-gradient leading-none">{m.v}</p>
-                  <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-slate-500 font-semibold">{m.l}</p>
+              {/* Resumo contábil do salão em estilo talão */}
+              <div className="p-6 sm:p-10 bg-surface-sunken flex flex-col justify-between">
+                <div>
+                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted">
+                    Resumo de balcão
+                  </p>
+                  <dl className="mt-4 divide-y divide-dashed divide-line-strong border-y border-dashed border-line-strong">
+                    <div className="py-4 flex items-baseline justify-between gap-4">
+                      <dt className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+                        Comandas abertas
+                      </dt>
+                      <dd className="font-mono text-2xl sm:text-3xl font-bold text-text">
+                        {String(comandas).padStart(2, "0")}
+                      </dd>
+                    </div>
+                    <div className="py-4 flex items-baseline justify-between gap-4">
+                      <dt className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+                        Pedidos em preparo
+                      </dt>
+                      <dd className="font-mono text-2xl sm:text-3xl font-bold text-brand-ink">
+                        {String(naFila).padStart(2, "0")}
+                      </dd>
+                    </div>
+                    <div className="py-4 flex items-baseline justify-between gap-4">
+                      <dt className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+                        Consumo em aberto
+                      </dt>
+                      <dd className="font-mono text-xl sm:text-2xl font-bold text-text">
+                        {BRL(consumoAberto)}
+                      </dd>
+                    </div>
+                  </dl>
                 </div>
-              ))}
-            </motion.div>
-          </div>
-        </div>
-      </section>
 
-      {/* marquee */}
-      <div className="relative mt-10 border-y border-slate-200 bg-slate-100/40 py-3 overflow-hidden">
-        <div className="flex w-max animate-marquee gap-10 whitespace-nowrap">
-          {Array.from({ length: 2 }).map((_, r) => (
-            <div key={r} className="flex items-center gap-10 text-[13px] font-semibold uppercase tracking-[0.3em] text-slate-500">
-              {["cardápio digital", "alerta de voz", "pix na mesa", "divisão de conta", "estoque vivo", "dashboard em tempo real", "comanda acumulativa"].map((t) => (
-                <span key={t} className="flex items-center gap-10">
-                  {t} <Beer className="size-4 text-brand-500" />
-                </span>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* FLUXO */}
-      <section className="mx-auto max-w-7xl px-5 sm:px-8 py-16 sm:py-24">
-        <motion.div {...fadeUp}>
-          <Secao kicker="o fluxo" titulo={<>Quatro telas, <span className="text-gradient">zero atrito</span></>} right={<LivePill />} />
-        </motion.div>
-        <div className="mt-10 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {FLUXO.map((f, i) => (
-            <motion.div
-              key={f.passo}
-              {...fadeUp}
-              transition={{ ...fadeUp.transition, delay: i * 0.08 }}
-              className="group relative glass rounded-3xl p-6 overflow-hidden hover:border-brand-500/40 transition-colors"
-            >
-              <span className="font-display text-7xl leading-none text-navy-900/[0.07] absolute -top-2 right-3 group-hover:text-brand-500/10 transition-colors">
-                {f.passo}
-              </span>
-              <f.icon className={`size-7 ${f.tom}`} />
-              <h3 className="font-display text-3xl mt-4 text-navy-900">{f.titulo}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-500">{f.texto}</p>
-              {i < 3 && <ArrowRight className="absolute bottom-6 right-6 size-4 text-slate-400 group-hover:text-brand-500 group-hover:translate-x-1 transition-all" />}
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* RECURSOS */}
-      <section className="mx-auto max-w-7xl px-5 sm:px-8 pb-16 sm:pb-24">
-        <motion.div {...fadeUp}>
-          <Secao kicker="tudo incluso" titulo={<>O sistema inteiro, <span className="text-gradient">num bolso só</span></>} />
-        </motion.div>
-        <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {RECURSOS.map((r, i) => (
-            <motion.div
-              key={r.titulo}
-              {...fadeUp}
-              transition={{ ...fadeUp.transition, delay: i * 0.06 }}
-              className="glass rounded-3xl p-6 hover:bg-slate-100 transition-colors"
-            >
-              <div className="grid place-items-center size-11 rounded-2xl bg-gradient-to-br from-brand-500/15 to-teal-600/10 border border-brand-500/25">
-                <r.icon className="size-5 text-brand-600" />
+                <div className="mt-6 pt-4 flex items-center justify-between gap-3">
+                  <span className="font-mono text-[11px] text-text-muted">Operadores do turno</span>
+                  <button
+                    type="button"
+                    onClick={() => ir("/login")}
+                    className="inline-flex items-center gap-1.5 font-mono text-xs font-bold uppercase tracking-wider text-brand-ink hover:underline"
+                  >
+                    Abrir posto <ArrowRight size={14} weight="bold" />
+                  </button>
+                </div>
               </div>
-              <h3 className="mt-4 font-semibold text-navy-900">{r.titulo}</h3>
-              <p className="mt-1.5 text-sm text-slate-500 leading-relaxed">{r.texto}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
+            </div>
+          </motion.div>
+        </section>
 
+        {/* Fluxo em faixa única de talão (sem caixas repetitivas soltas) */}
+        <section className="mx-auto max-w-6xl px-4 sm:px-8 pb-14">
+          <Secao kicker=" Percurso do pedido" titulo="Da mesa ao fechamento" />
+          <div className="mt-5 rounded-md border border-line-strong bg-surface-raised divide-y sm:divide-y-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:divide-x divide-line">
+            {POSTOS.map((f) => {
+              const Icon = f.Icon;
+              return (
+                <div key={f.passo} className="p-5 sm:p-6 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between text-text-muted">
+                      <span className="font-mono text-xs font-bold text-brand-ink">#{f.passo}</span>
+                      <Icon size={20} weight="regular" />
+                    </div>
+                    <h3 className="font-display text-2xl font-extrabold uppercase tracking-tight text-text mt-3">
+                      {f.titulo}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-text-muted">{f.texto}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </main>
 
-      {/* footer */}
-      <footer className="border-t border-slate-200">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8 py-10 flex flex-col sm:flex-row items-center justify-between gap-5">
-          <div>
+      <footer className="border-t border-line bg-surface-raised">
+        <div className="mx-auto max-w-6xl px-4 sm:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
             <Logo size="sm" />
-            <p className="mt-2 text-xs text-slate-500 max-w-sm">
-              Pedidos por QR Code — do celular do cliente até a cozinha, o garçom e o caixa. Redesign completo do repositório
-              <span className="font-mono text-slate-500"> lanchonete-qr</span>.
-            </p>
+            <p className="text-xs text-text-muted">QR Admin — Comanda digital por QR Code.</p>
           </div>
-          <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => ir("/login")}
-              className="text-[11px] text-slate-400 hover:text-slate-500 transition-colors cursor-pointer"
-            >
-              equipe
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => ir("/login")}
+            className="font-mono text-xs uppercase tracking-wider text-text-muted hover:text-text transition-colors"
+          >
+            equipe
+          </button>
         </div>
       </footer>
     </div>

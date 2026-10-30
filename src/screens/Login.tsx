@@ -1,5 +1,14 @@
-import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, ChefHat, KeyRound, LayoutGrid, LogIn, ShieldAlert, Wallet, Wine } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import {
+  ArrowLeft,
+  BeerStein,
+  CashRegister,
+  CookingPot,
+  Key,
+  SignIn,
+  SquaresFour,
+  WarningCircle,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 import { Logo, ThemeToggle } from "../components/ui";
 import { ir } from "../router";
@@ -7,11 +16,11 @@ import { usePub } from "../store/usePub";
 import { cn } from "../utils/cn";
 
 const PAPEIS = [
-  { id: "cozinha", nome: "Cozinha", desc: "Fila de preparo + voz", icon: ChefHat, tom: "from-brand-500/20 to-teal-600/10 text-brand-600 border-brand-500/30" },
-  { id: "bar", nome: "Bar", desc: "Bebidas e drinks", icon: Wine, tom: "from-violet-500/15 to-fuchsia-600/10 text-violet-700 border-violet-500/30" },
-  { id: "caixa", nome: "Caixa", desc: "Contas, divisão e PIX", icon: Wallet, tom: "from-teal-500/15 to-teal-600/10 text-teal-600 border-teal-500/30" },
-  { id: "admin", nome: "Admin", desc: "Cardápio, mesas e painel", icon: LayoutGrid, tom: "from-sky-500/15 to-sky-600/10 text-sky-700 border-sky-500/30" },
-];
+  { id: "cozinha", nome: "Cozinha", desc: "Fila da chapa", Icon: CookingPot },
+  { id: "bar", nome: "Bar", desc: "Chopes e bebidas", Icon: BeerStein },
+  { id: "caixa", nome: "Caixa", desc: "Contas e PIX", Icon: CashRegister },
+  { id: "admin", nome: "Admin", desc: "Gestão e salão", Icon: SquaresFour },
+] as const;
 
 export default function Login() {
   const loginApi = usePub((s) => s.loginApi);
@@ -19,6 +28,7 @@ export default function Login() {
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState(false);
   const [busy, setBusy] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   const entrar = async () => {
     if (!papel || busy) return;
@@ -37,87 +47,101 @@ export default function Login() {
           ? "/cozinha"
           : role === "bar"
             ? "/bar"
-            : "/caixa"
+            : "/caixa",
     );
   };
 
   const ativo = PAPEIS.find((p) => p.id === papel);
 
   return (
-    <div className="relative min-h-dvh flex items-center justify-center p-5 overflow-hidden bg-brand-shell">
-      <div className="fixed inset-0 -z-10">
-        <div className="glow-orb absolute -top-40 left-[15%] size-[30rem] bg-brand-500/6" />
-        <div className="glow-orb absolute bottom-[-10rem] right-[5%] size-[28rem] bg-brand-500/6" />
-        <div className="noise absolute inset-0" />
-      </div>
-
-      <button
-        onClick={() => ir("/")}
-        className="btn-press absolute top-6 left-5 sm:left-8 inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-navy-800 cursor-pointer"
-      >
-        <ArrowLeft className="size-4" /> voltar ao pub
-      </button>
-
-      <div className="absolute top-5 right-5 sm:right-8">
+    <div
+      data-regime="expressive"
+      className="min-h-dvh flex flex-col justify-between p-4 sm:p-6 bg-surface text-text"
+    >
+      <header className="mx-auto w-full max-w-5xl flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => ir("/")}
+          className="inline-flex min-h-10 items-center gap-2 rounded-sm border border-line bg-surface-raised px-3 text-xs font-semibold text-text-muted hover:text-text hover:border-line-strong transition-colors"
+        >
+          <ArrowLeft size={15} weight="bold" /> Voltar
+        </button>
         <ThemeToggle />
-      </div>
+      </header>
 
-      <motion.div
-        initial={{ opacity: 0, y: 30, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-md relative"
-      >
-        <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-14 w-32 h-60 sm:w-44 opacity-[.09]" style={{background:"url('/logo/qradmin-mark.png') center / contain no-repeat"}} />
-        <div className="text-center mb-8">
-          <div className="flex justify-center">
-            <Logo size="lg" />
-          </div>
-          <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.32em] text-slate-500">
-            gestão · QR Admin
-          </p>
-        </div>
-
-        <div className="glass-deep noise rounded-4xl p-6 sm:p-8 border border-brand-500/15 shadow-xl shadow-brand-500/5">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            {PAPEIS.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => {
-                  setPapel(p.id);
-                  setErro(false);
-                }}
-                className={cn(
-                  "btn-press relative rounded-2xl border p-3.5 text-center cursor-pointer transition-all",
-                  papel === p.id
-                    ? `bg-gradient-to-br ${p.tom} ring-brand`
-                    : "bg-slate-100/60 border-slate-200 text-slate-500 hover:text-navy-800 hover:bg-slate-100"
-                )}
+      <main className="my-auto py-8 flex items-center justify-center">
+        <motion.section
+          initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.16, ease: [0.22, 1.18, 0.36, 1] }}
+          aria-labelledby="login-titulo"
+          className="w-full max-w-md rounded-md border border-line-strong bg-surface-raised overflow-hidden"
+        >
+          {/* Cabeçalho da comanda de acesso */}
+          <div className="px-6 pt-6 pb-5 flex items-center justify-between gap-4 border-b border-dashed border-line-strong">
+            <Logo size="md" />
+            <div className="text-right">
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-ink block">
+                Posto
+              </span>
+              <h1
+                id="login-titulo"
+                className="font-display text-xl font-extrabold uppercase tracking-tight text-text leading-none mt-1"
               >
-                <p.icon className="size-6 mx-auto" />
-                <p className="mt-2 text-[11px] font-bold uppercase tracking-wider">{p.nome}</p>
-              </button>
-            ))}
+                Acesso Equipe
+              </h1>
+            </div>
           </div>
 
-          <AnimatePresence mode="wait">
-            {papel && ativo && (
-              <motion.div
-                key={papel}
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                className="overflow-hidden"
-              >
+          <div className="p-6">
+            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted mb-3">
+              Selecione o setor
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {PAPEIS.map((p) => {
+                const selecionado = papel === p.id;
+                const Icon = p.Icon;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    aria-pressed={selecionado}
+                    onClick={() => {
+                      setPapel(p.id);
+                      setErro(false);
+                    }}
+                    className={cn(
+                      "min-h-20 rounded-sm border px-2.5 py-3 flex flex-col items-center justify-center gap-1.5 text-center transition-colors duration-150",
+                      selecionado
+                        ? "bg-brand text-brand-contrast border-brand"
+                        : "bg-surface-sunken border-line text-text-muted hover:text-text hover:border-line-strong hover:bg-surface-hover",
+                    )}
+                  >
+                    <Icon size={22} weight={selecionado ? "fill" : "regular"} />
+                    <span className="font-display text-sm font-extrabold uppercase tracking-wide leading-none mt-0.5">
+                      {p.nome}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <AnimatePresence mode="wait">
+              {papel && ativo && (
+                <motion.div
+                  key={papel}
+                  initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.22, 1, 0.36, 1] }}
+                >
                 <form
-                  className="pt-6 space-y-3"
+                  className="mt-5 pt-5 border-t border-dashed border-line-strong space-y-3"
                   onSubmit={(e) => {
                     e.preventDefault();
                     void entrar();
                   }}
                 >
-                  {/* Usuário = perfil escolhido (admin, cozinha, bar, caixa); permite ao navegador salvar a senha com o usuário certo. */}
                   <input
                     type="text"
                     name="username"
@@ -129,49 +153,71 @@ export default function Login() {
                     aria-hidden="true"
                     className="sr-only"
                   />
-                  <div className={cn("flex items-center gap-3 rounded-2xl border bg-slate-100 px-4 h-13 transition-colors", erro ? "border-rose-500/60" : "border-slate-200 focus-within:border-brand-500/60")}>
-                    <KeyRound className={cn("size-4.5", erro ? "text-rose-600" : "text-slate-500")} />
-                    <input
-                      type="password"
-                      name="password"
-                      id="login-senha"
-                      autoComplete="current-password"
-                      autoFocus
-                      value={senha}
-                      onChange={(e) => {
-                        setSenha(e.target.value);
-                        setErro(false);
-                      }}
-                      placeholder={`Senha da ${ativo.nome.toLowerCase()}`}
-                      className="flex-1 bg-transparent text-sm text-navy-900 placeholder:text-slate-400 focus:outline-none h-full"
-                    />
-                  </div>
-                  <AnimatePresence>
-                    {erro && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        className="flex items-center justify-center gap-1.5 text-xs font-semibold text-rose-600"
-                      >
-                        <ShieldAlert className="size-3.5" /> Senha incorreta — tente de novo
-                      </motion.p>
-                    )}
-                  </AnimatePresence>
-                  <motion.button
-                    type="submit"
-                    whileTap={{ scale: 0.97 }}
-                    className="btn-press w-full h-13 rounded-2xl fill-brand text-white font-bold text-sm inline-flex items-center justify-center gap-2 shadow-[0_14px_38px_-8px_rgba(0,196,180,0.55)] cursor-pointer"
-                  >
-                    <LogIn className="size-4.5" /> Entrar como {ativo.nome}
-                  </motion.button>
-                </form>
-              </motion.div>
-            )}
-          </AnimatePresence>
 
-        </div>
-      </motion.div>
+                  <label htmlFor="login-senha" className="block">
+                    <span className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted mb-1.5">
+                      <span>Credencial · {ativo.nome}</span>
+                      <span>{ativo.desc}</span>
+                    </span>
+                    <span
+                      className={cn(
+                        "flex items-center gap-2.5 rounded-sm border bg-surface-sunken px-3.5 h-12 transition-colors",
+                        erro
+                          ? "border-status-danger-border"
+                          : "border-line-strong focus-within:border-brand",
+                      )}
+                    >
+                      <Key
+                        size={18}
+                        weight="regular"
+                        className={erro ? "text-status-danger-ink shrink-0" : "text-text-muted shrink-0"}
+                      />
+                      <input
+                        type="password"
+                        name="password"
+                        id="login-senha"
+                        autoComplete="current-password"
+                        autoFocus
+                        value={senha}
+                        onChange={(e) => {
+                          setSenha(e.target.value);
+                          setErro(false);
+                        }}
+                        placeholder={`Senha de ${ativo.nome.toLowerCase()}`}
+                        className="flex-1 bg-transparent text-sm text-text placeholder:text-text-subtle focus:outline-none h-full"
+                      />
+                    </span>
+                  </label>
+
+                  {erro && (
+                    <p
+                      role="alert"
+                      className="flex items-center gap-2 rounded-sm border border-status-danger-border bg-status-danger-surface px-3 py-2 text-xs font-semibold text-status-danger-ink"
+                    >
+                      <WarningCircle size={16} weight="fill" className="shrink-0" />
+                      Senha incorreta — confira e tente novamente.
+                    </p>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={busy}
+                    className="w-full min-h-12 rounded-sm bg-brand border border-brand text-brand-contrast font-bold text-sm inline-flex items-center justify-center gap-2 hover:bg-brand-hover active:translate-y-px disabled:opacity-45 transition-colors duration-150"
+                  >
+                    <SignIn size={18} weight="bold" />
+                    {busy ? "Autenticando…" : `Entrar em ${ativo.nome}`}
+                  </button>
+                </form>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.section>
+      </main>
+
+      <footer className="mx-auto w-full max-w-5xl text-center">
+        <p className="font-mono text-[11px] text-text-muted">QR Admin · Operação de salão</p>
+      </footer>
     </div>
   );
 }
