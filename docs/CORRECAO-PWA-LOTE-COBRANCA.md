@@ -105,6 +105,8 @@ própria (`#billingBlocked`, `role="status"`) e texto específico por causa.
 | `npm run test:e2e` | **2/2 cenários, 22 verificações** |
 | `npm run typecheck` | limpo |
 | `npm run build` | ok, `dist/` em sincronia, shell v19 |
+| CI `PostgreSQL integration` | **success**, drill de backup e E2E novos incluídos |
+| CI `CI` | **success** (migrations, typecheck, build, dist, regressão) |
 
 O E2E novo prova, em Chromium real contra servidor Node e PostgreSQL:
 
@@ -131,6 +133,25 @@ parse real do navegador.
 310 testes de regressão porque nenhum deles executava `submitWaiterPayment`.
 Por isso o harness novo recorta e **executa** as funções reais, e o E2E cobre o
 clique de ponta a ponta.
+
+### 4.1 Defeito de CI encontrado e corrigido no caminho
+
+O drill de backup/restore passou a falhar sem relação com esta rodada. A
+annotation revelou a causa:
+
+```
+pg_restore: ERROR: unrecognized configuration parameter "transaction_timeout"
+Command was: SET transaction_timeout = 0;
+```
+
+O `pg_dump` da imagem do runner é 17+ e grava esse `SET` no cabeçalho do dump.
+O PostgreSQL 16 não conhece o parâmetro (introduzido no 17) e aborta o restore.
+Não era defeito do backup: era descasamento de versão cliente/servidor, exposto
+pela troca de imagem do `ubuntu-latest`.
+
+O workflow agora instala `postgresql-client-16` quando o major não é 16 e
+verifica a versão antes do drill. **Implicação operacional: o backup de
+produção deve ser feito com `pg_dump` da mesma versão maior do servidor.**
 
 ## 5. Limites
 
