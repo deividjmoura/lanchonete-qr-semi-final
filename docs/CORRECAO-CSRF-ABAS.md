@@ -95,11 +95,13 @@ por aba ou token em `sessionStorage`) e fica fora desta correção.
 
 | Verificação | Resultado |
 | --- | --- |
-| `npm test` | **325/325** (antes: 314; +11 testes de CSRF) |
+| `npm test` | **326/326** (antes: 314; +12 testes) |
 | `npm run typecheck` | limpo |
 | `npm run build` | ok |
 | `npm run test:pg -- --sem-backup` | **7/7 suítes** |
 | `npm run test:e2e` | **4/4 cenários** (offline, lote/cobrança, CSRF entre abas, visual) |
+| CI `PostgreSQL integration` | **success** (run 41068010558) |
+| CI `CI` | **success** (run 41068010544) |
 
 ### Prova de que os testes pegam o defeito
 
