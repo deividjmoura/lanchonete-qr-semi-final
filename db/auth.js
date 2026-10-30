@@ -219,10 +219,10 @@ async function autenticar(login, senha) {
   return staffPublico(row);
 }
 
-async function criarSessao(staffId) {
+async function criarSessao(staffId, db = pool) {
   const token = crypto.randomBytes(32).toString('hex');
   const expira = new Date(Date.now() + SESSION_TTL_MS);
-  await pool.query(
+  await db.query(
     `INSERT INTO staff_sessoes (token, staff_id, expira_em)
      VALUES ($1, $2, $3)`,
     [token, staffId, expira]
@@ -368,12 +368,182 @@ async function exigirSessao(req) {
   return staff;
 }
 
-async function registrarEventoCredencial(db, { staffId, login, evento, sessoesRevogadas = 0 }) {
+async function registrarEventoCredencial(db, { staffId, login, evento, sessoesRevogadas = 0, atorStaffId = null, atorLogin = null }) {
   await db.query(
-    `INSERT INTO staff_credencial_eventos (staff_id, login, evento, sessoes_revogadas)
-     VALUES ($1, $2, $3, $4)`,
-    [staffId, login, evento, sessoesRevogadas]
+    `INSERT INTO staff_credencial_eventos (staff_id, login, evento, sessoes_revogadas, ator_staff_id, ator_login)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [staffId, login, evento, sessoesRevogadas, atorStaffId, atorLogin]
   );
+}
+
+/**
+ * Redefinição de senha por um administrador — cobre o caso "esqueci a senha".
+ *
+ * Diferente de trocarSenha(), NÃO exige a senha antiga: quem autoriza é o papel
+ * admin da sessão, validado na rota pelo gate de recuperação (exigirSessao +
+ * papel admin). Serve para qualquer setor (admin, cozinha, bar, caixa),
+ * inclusive a própria conta do admin.
+ *
+ * O que continua obrigatório, para a facilidade não virar buraco:
+ *  - a política de senha (tamanho, variedade, não conter o login, não ser comum);
+ *  - senha exclusiva: não pode ser igual à de outra conta ativa;
+ *  - revogação de TODAS as sessões da conta afetada;
+ *  - auditoria com o ator (quem redefiniu) e o alvo, sem nunca gravar segredo.
+ *
+ * Tudo em uma transação, com o mesmo lock que serializa as trocas.
+ */
+async function redefinirSenhaStaff(atorStaffId, loginAlvo, senhaNova, tokenSessao = null) {
+  if (typeof senhaNova !== 'string' || !senhaNova) throw new ErroAuth(400, 'Informe a nova senha.');
+  if (typeof loginAlvo !== 'string' || !loginAlvo.trim() || loginAlvo.trim().length > 64) {
+    throw new ErroAuth(400, 'Informe de qual setor a senha será redefinida.');
+  }
+  const alvo = loginAlvo.trim().toLowerCase();
+
+  const client = await pool.connect();
+  let rejeicao = null;
+  try {
+    await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(741928350112)');
+
+    // O ator precisa ser admin ATIVO no instante da transação: o papel não pode
+    // ter sido rebaixado entre a checagem da rota e esta escrita.
+    const { rows: atores } = await client.query(
+      'SELECT id, login, papel, ativo FROM staff WHERE id = $1 FOR SHARE',
+      [atorStaffId]
+    );
+    const ator = atores[0];
+    if (!ator || !ator.ativo) {
+      await client.query('ROLLBACK');
+      throw new ErroAuth(401, 'Não autenticado');
+    }
+    if (ator.papel !== 'admin') {
+      await client.query('ROLLBACK');
+      throw new ErroAuth(403, 'Apenas o administrador pode redefinir senhas de outros setores.');
+    }
+    // A rota já validou a sessão, mas outra redefinição concorrente pode tê-la
+    // revogado enquanto esperávamos o lock. Revalidamos o cookie dentro da
+    // transação para não autorizar escrita com sessão morta.
+    if (tokenSessao) {
+      const { rows: sessoes } = await client.query(
+        'SELECT 1 FROM staff_sessoes WHERE token = $1 AND staff_id = $2 AND expira_em > now()',
+        [tokenSessao, ator.id]
+      );
+      if (!sessoes.length) {
+        await client.query('ROLLBACK');
+        throw new ErroAuth(401, 'Não autenticado');
+      }
+    }
+
+    const { rows } = await client.query(
+      'SELECT id, nome, login, papel, ativo, senha_hash FROM staff WHERE lower(login) = $1 FOR UPDATE',
+      [alvo]
+    );
+    const row = rows[0];
+    if (!row || !row.ativo) {
+      await client.query('ROLLBACK');
+      throw new ErroAuth(404, 'Conta não encontrada ou desativada.');
+    }
+
+    const politica = validarPoliticaSenha(senhaNova, { login: row.login });
+    if (politica) {
+      rejeicao = { evento: 'senha_redefinicao_rejeitada', erro: new ErroAuth(400, politica), alvo: row };
+    } else if (await verificarSenha(senhaNova, row.senha_hash)) {
+      rejeicao = {
+        evento: 'senha_redefinicao_rejeitada',
+        erro: new ErroAuth(400, 'A nova senha deve ser diferente da senha atual dessa conta.'),
+        alvo: row,
+      };
+    } else {
+      const { rows: outros } = await client.query(
+        'SELECT senha_hash FROM staff WHERE ativo AND id <> $1',
+        [row.id]
+      );
+      for (const o of outros) {
+        if (await verificarSenha(senhaNova, o.senha_hash)) {
+          rejeicao = {
+            evento: 'senha_redefinicao_rejeitada',
+            erro: new ErroAuth(400, 'Essa senha já é usada por outra conta. Escolha uma senha exclusiva.'),
+            alvo: row,
+          };
+          break;
+        }
+      }
+    }
+
+    if (rejeicao) {
+      await registrarEventoCredencial(client, {
+        staffId: rejeicao.alvo.id,
+        login: rejeicao.alvo.login,
+        evento: rejeicao.evento,
+        atorStaffId: ator.id,
+        atorLogin: ator.login,
+      });
+      await client.query('COMMIT'); // preserva a trilha da tentativa recusada
+      throw rejeicao.erro;
+    }
+
+    // Mesma regra da troca própria: se a credencial era compartilhada, as outras
+    // contas continuam obrigadas a trocar antes de o hash antigo deixar de existir.
+    await client.query(
+      'UPDATE staff SET deve_trocar_senha = TRUE WHERE ativo AND id <> $1 AND senha_hash = $2',
+      [row.id, row.senha_hash]
+    );
+
+    const novoHash = await hashSenha(senhaNova);
+    await client.query(
+      `UPDATE staff
+          SET senha_hash = $2, senha_alterada_em = now(), deve_trocar_senha = FALSE
+        WHERE id = $1`,
+      [row.id, novoHash]
+    );
+    const revogadas = await client.query('DELETE FROM staff_sessoes WHERE staff_id = $1', [row.id]);
+
+    // Se o admin redefiniu a própria senha, a sessão dele também foi revogada.
+    // A sessão de substituição nasce DENTRO da transação: ou a troca inteira
+    // (hash + revogação + sessão nova + auditoria) confirma, ou nada muda.
+    const propriaConta = Number(row.id) === Number(ator.id);
+    const token = propriaConta ? await criarSessao(row.id, client) : null;
+
+    await registrarEventoCredencial(client, {
+      staffId: row.id,
+      login: row.login,
+      evento: 'senha_redefinida',
+      sessoesRevogadas: revogadas.rowCount,
+      atorStaffId: ator.id,
+      atorLogin: ator.login,
+    });
+    await client.query('COMMIT');
+
+    return {
+      login: row.login,
+      papel: row.papel,
+      nome: row.nome,
+      sessoesRevogadas: revogadas.rowCount,
+      propriaConta,
+      token,
+      csrfToken: token ? csrfTokenParaSessao(token) : null,
+    };
+  } catch (e) {
+    if (!rejeicao) await client.query('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+/** Contas que o admin pode ter como alvo da redefinição (sem expor hash). */
+async function listarContasStaff() {
+  const { rows } = await pool.query(
+    `SELECT s.id, s.nome, s.login, s.papel, s.ativo, ${SQL_FLAGS_SENHA}
+       FROM staff s WHERE s.ativo ORDER BY s.papel, s.login`
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    nome: r.nome,
+    login: r.login,
+    papel: r.papel,
+    deveTrocarSenha: exigeTrocaDeSenha(r),
+  }));
 }
 
 /**
@@ -501,6 +671,8 @@ module.exports = {
   exigirAcesso,
   exigirSessao,
   trocarSenha,
+  redefinirSenhaStaff,
+  listarContasStaff,
   validarPoliticaSenha,
   trocaObrigatoriaAtiva,
   exigeTrocaDeSenha,
