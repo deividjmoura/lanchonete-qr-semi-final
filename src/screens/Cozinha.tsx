@@ -106,9 +106,18 @@ export default function Cozinha() {
 
 function CardPedido({ pedido, borda, setor }: { pedido: Pedido; borda: string; setor: "cozinha" | "bar" }) {
   const hydrate = usePub((s) => s.hydrateCozinha);
+  const reportarErro = usePub((s) => s.reportarErro);
   const avancarItem = async (itemId: number, status: string) => {
-    try { await api.statusItem(setor, itemId, status); await hydrate(); }
-    catch (e) { alert(e instanceof Error ? e.message : "Falha ao atualizar item"); }
+    try {
+      await api.statusItem(setor, itemId, status);
+      reportarErro(null);
+      await hydrate();
+    } catch (e) {
+      // Faixa de erro da tela: o alert nativo bloqueia a cozinha inteira e
+      // desaparece sem registro. O item volta ao estado real via hydrate.
+      reportarErro(e instanceof Error ? e.message : "Falha ao atualizar item");
+      await hydrate();
+    }
   };
   const aceitar = usePub((s) => s.aceitarPedido);
   const concluir = usePub((s) => s.concluirPedido);

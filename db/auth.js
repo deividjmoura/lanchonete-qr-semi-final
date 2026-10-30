@@ -37,6 +37,21 @@ class ErroAuth extends Error {
 const CODIGO_TROCA_OBRIGATORIA = 'SENHA_TROCA_OBRIGATORIA';
 
 /**
+ * Token CSRF que não corresponde ao cookie de sessão atual.
+ *
+ * Acontece legitimamente quando outra aba fez login: `criarSessao()` emite um
+ * cookie novo com `Path=/`, então o cookie passa a valer para todas as abas, mas
+ * a aba antiga continua com o token derivado da sessão anterior em memória.
+ * O cliente usa este código para buscar o token atual e repetir a chamada uma
+ * única vez — a checagem de CSRF roda ANTES de qualquer escrita, portanto a
+ * requisição recusada não alterou nada e repeti-la não duplica efeito.
+ *
+ * É distinto de 401 (sessão inexistente) e de 403 sem código (sem permissão):
+ * nesses casos repetir não resolveria.
+ */
+const CODIGO_CSRF_INVALIDO = 'CSRF_INVALIDO';
+
+/**
  * Troca obrigatória ativa por padrão em produção. `STAFF_FORCE_PASSWORD_CHANGE=true|false`
  * força o comportamento em qualquer ambiente (útil para testar/ desligar conscientemente).
  */
@@ -313,7 +328,7 @@ function verificarProtecaoCSRF(req) {
       try { refererOrigin = new URL(req.headers.referer).origin; } catch {}
     }
     if (!origin && !refererOrigin) {
-      throw new ErroAuth(403, 'Token CSRF ausente ou inválido');
+      throw new ErroAuth(403, 'Token CSRF ausente ou inválido', CODIGO_CSRF_INVALIDO);
     }
     verificarOrigemRequisicao(req);
     return;
@@ -322,7 +337,7 @@ function verificarProtecaoCSRF(req) {
   const a = Buffer.from(esperado, 'utf8');
   const b = Buffer.from(recebido, 'utf8');
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
-    throw new ErroAuth(403, 'Token CSRF ausente ou inválido');
+    throw new ErroAuth(403, 'Token CSRF ausente ou inválido', CODIGO_CSRF_INVALIDO);
   }
 }
 
@@ -490,6 +505,7 @@ module.exports = {
   trocaObrigatoriaAtiva,
   exigeTrocaDeSenha,
   CODIGO_TROCA_OBRIGATORIA,
+  CODIGO_CSRF_INVALIDO,
   papelPodeAcessar,
   homeDoPapel,
   garantirStaffSeed,

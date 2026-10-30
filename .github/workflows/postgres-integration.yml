@@ -109,7 +109,7 @@ jobs:
       # roda os três E2E: offline, lote/cobrança e sistema visual. O runner sobe e
       # encerra o `vite preview` necessário ao teste visual, que usa API simulada
       # e não toca no banco. Os demais sobem o próprio server.js no banco do job.
-      - name: E2E in real Chromium (offline, batch delivery/billing, visual system)
+      - name: E2E in real Chromium (offline, batch/billing, CSRF tabs, visual system)
         env:
           LD_LIBRARY_PATH: /tmp/al2023/lib:/tmp/al2023/usr/lib
         run: npm run test:e2e

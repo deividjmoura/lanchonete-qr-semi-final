@@ -1,5 +1,12 @@
-@import "tailwindcss";
+/* Fontes explícitas: por padrão o Tailwind varre o projeto inteiro, incluindo
+   docs/ e tests/. Um relatório que cite uma classe como exemplo passava a gerar
+   essa classe no CSS de produção, mudando o hash do bundle sem nenhuma mudança
+   de tela. Aqui só o código de aplicação é fonte de classes. */
+@import "tailwindcss" source(none);
 @import "../public/garcom-pwa/design-tokens.css";
+
+@source "../index.html";
+@source "./**/*.{ts,tsx}";
 
 @theme {
   --font-display: "Manrope", "Segoe UI", system-ui, sans-serif;

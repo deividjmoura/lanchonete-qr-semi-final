@@ -2,6 +2,50 @@
 
 let csrfToken: string | null = null;
 
+/**
+ * Sincronismo do token CSRF entre abas.
+ *
+ * `criarSessao()` sempre emite um cookie novo com `Path=/`. Como o cookie vale
+ * para o domínio inteiro, um login em outra aba troca a sessão desta aba também,
+ * mas o token em memória continua derivado da sessão antiga — daí o
+ * "Token CSRF ausente ou inválido" em Cozinha/Bar. Avisar as outras abas evita o
+ * erro na maioria dos casos; o retry abaixo cobre a corrida em que o aviso
+ * ainda não chegou.
+ */
+const CSRF_CHANNEL = "qradmin-sessao";
+type AvisoSessao = { tipo: "csrf-invalidado" };
+let canalSessao: BroadcastChannel | null = null;
+const ouvintesSessao = new Set<() => void>();
+
+function canalDaSessao(): BroadcastChannel | null {
+  if (typeof BroadcastChannel === "undefined") return null;
+  if (!canalSessao) {
+    canalSessao = new BroadcastChannel(CSRF_CHANNEL);
+    canalSessao.onmessage = (ev: MessageEvent<AvisoSessao>) => {
+      if (ev?.data?.tipo !== "csrf-invalidado") return;
+      // Não buscamos o token aqui: cada aba resolve no próximo envio, evitando
+      // uma rajada de /api/me em todas as abas abertas.
+      csrfToken = null;
+      ouvintesSessao.forEach((fn) => { try { fn(); } catch { /* UI não pode quebrar o cliente HTTP */ } });
+    };
+  }
+  return canalSessao;
+}
+
+/** Registra callback chamado quando outra aba troca a sessão. Retorna o cancelamento. */
+export function aoTrocarSessao(fn: () => void): () => void {
+  canalDaSessao();
+  ouvintesSessao.add(fn);
+  return () => { ouvintesSessao.delete(fn); };
+}
+
+function avisarTrocaDeSessao() {
+  try { canalDaSessao()?.postMessage({ tipo: "csrf-invalidado" } satisfies AvisoSessao); } catch { /* aba anônima/sem suporte */ }
+}
+
+// Escuta desde o carregamento, para a aba antiga reagir mesmo sem enviar nada.
+canalDaSessao();
+
 function requiresStaffCsrf(path: string, method: string) {
   if (["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase())) return false;
   return path === "/api/logout" ||
@@ -49,19 +93,49 @@ export async function apiSend<T = unknown>(
     await apiGet("/api/me");
   }
 
-  const headers: Record<string, string> = {};
-  if (body !== undefined) headers["Content-Type"] = "application/json";
-  if (needsCsrf && csrfToken) headers["X-CSRF-Token"] = csrfToken;
+  const enviar = () => {
+    const headers: Record<string, string> = {};
+    if (body !== undefined) headers["Content-Type"] = "application/json";
+    if (needsCsrf && csrfToken) headers["X-CSRF-Token"] = csrfToken;
+    return fetch(path, {
+      method,
+      credentials: "include",
+      headers: Object.keys(headers).length ? headers : undefined,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  };
 
-  const res = await fetch(path, {
-    method,
-    credentials: "include",
-    headers: Object.keys(headers).length ? headers : undefined,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let res = await enviar();
+
+  /* Token velho: outra aba entrou e o cookie de sessão mudou. O servidor
+     valida o CSRF ANTES de qualquer escrita, então a chamada recusada não
+     alterou nada e é seguro repeti-la uma única vez com o token atual.
+     Um único retry evita laço quando o problema é outro (permissão, sessão
+     revogada), e não se aplica a login/logout, que não usam o token antigo. */
+  if (needsCsrf && res.status === 403 && path !== "/api/login" && path !== "/api/logout") {
+    const corpo: any = await res.clone().json().catch(() => ({}));
+    if (corpo?.code === "CSRF_INVALIDO") {
+      const anterior = csrfToken;
+      csrfToken = null;
+      try {
+        await apiGet("/api/me");
+      } catch {
+        /* sessão realmente encerrada: mantém o erro original para a tela */
+      }
+      if (csrfToken && csrfToken !== anterior) res = await enviar();
+    }
+  }
+
   const data: any = await parse(res);
-  if ((path === "/api/login" || path === "/api/me/senha") && typeof data?.csrfToken === "string") csrfToken = data.csrfToken;
-  if (path === "/api/logout") csrfToken = null;
+  if ((path === "/api/login" || path === "/api/me/senha") && typeof data?.csrfToken === "string") {
+    csrfToken = data.csrfToken;
+    // A sessão mudou para todas as abas deste navegador.
+    avisarTrocaDeSessao();
+  }
+  if (path === "/api/logout") {
+    csrfToken = null;
+    avisarTrocaDeSessao();
+  }
   return data as T;
 }
 
