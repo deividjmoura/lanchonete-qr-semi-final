@@ -39,78 +39,44 @@
 
   function connect(onUpdate, opts) {
     opts = opts || {};
-    const fallbackMs = opts.fallbackMs != null ? opts.fallbackMs : 20000;
-    const debounceMs = opts.debounceMs != null ? opts.debounceMs : 150;
-    let es = null;
-    let timer = null;
-    let closed = false;
-
+    var fallbackMs = opts.fallbackMs != null ? opts.fallbackMs : 20000;
+    var debounceMs = opts.debounceMs != null ? opts.debounceMs : 150;
+    var es = null, debounce = null, reconnect = null, fallback = null, closed = false, failures = 0;
     function schedule() {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(function () {
-        timer = null;
-        try {
-          onUpdate();
-        } catch (e) {
-          console.error(e);
-        }
-      }, debounceMs);
+      if (closed) return;
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(function () { debounce = null; Promise.resolve().then(onUpdate).catch(function (e) { console.error(e); }); }, debounceMs);
     }
-
     function start() {
       if (closed) return;
-      if (typeof EventSource === 'undefined') {
-        setInterval(function () {
-          try {
-            onUpdate();
-          } catch (e) {}
-        }, fallbackMs);
-        try {
-          onUpdate();
-        } catch (e) {}
-        return;
-      }
+      if (typeof EventSource === 'undefined') { schedule(); return; }
       try {
-        if (es) {
-          try {
-            es.close();
-          } catch (_) {}
-        }
-        es = new EventSource('/api/events');
+        if (es) es.close();
+        var query = new URLSearchParams();
+        if (opts.mesa) query.set('mesa', opts.mesa);
+        if (opts.garcom) query.set('garcom', opts.garcom);
+        es = new EventSource('/api/events' + (query.toString() ? '?' + query.toString() : ''));
+        es.addEventListener('hello', function () { failures = 0; schedule(); });
         es.addEventListener('update', schedule);
-        es.addEventListener('hello', schedule);
         es.onerror = function () {
-          try {
-            es.close();
-          } catch (_) {}
-          es = null;
-          setTimeout(start, 2000);
+          if (closed) return;
+          if (es) es.close(); es = null;
+          failures++;
+          if (reconnect) clearTimeout(reconnect);
+          reconnect = setTimeout(start, Math.min(30000, 1000 * Math.pow(2, Math.min(failures, 5))));
+          schedule();
         };
-      } catch (e) {
-        setTimeout(start, 3000);
-      }
+      } catch (_) { schedule(); }
     }
-
     start();
-    if (fallbackMs > 0) {
-      setInterval(function () {
-        try {
-          onUpdate();
-        } catch (e) {}
-      }, fallbackMs);
-    }
-
-    return {
-      close: function () {
-        closed = true;
-        if (timer) clearTimeout(timer);
-        if (es) {
-          try {
-            es.close();
-          } catch (_) {}
-        }
-      },
-    };
+    if (fallbackMs > 0) fallback = setInterval(schedule, fallbackMs);
+    return { close: function () {
+      closed = true;
+      if (debounce) clearTimeout(debounce);
+      if (reconnect) clearTimeout(reconnect);
+      if (fallback) clearInterval(fallback);
+      if (es) es.close();
+    } };
   }
 
   global.LQRRealtime = { createLoader: createLoader, connect: connect };

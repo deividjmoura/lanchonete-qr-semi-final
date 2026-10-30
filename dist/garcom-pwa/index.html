@@ -85,8 +85,8 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
 
   <section class="page" id="page-orders" data-page="orders" aria-label="Meus pedidos">
     <div class="section-heading"><div><span class="section-eyebrow">HISTÓRICO LOCAL</span><h3>Meus pedidos</h3></div><button class="primary small" id="newOrderOrders" type="button">＋ Novo pedido</button></div>
-    <div class="notice"><span>↻</span><p>Pedidos <strong>salvos offline</strong> permanecem aqui até serem confirmados pelo servidor. Não são considerados enviados antes disso.</p></div>
-    <div id="orders" class="orders-list"></div><div class="section-heading" style="margin-top:22px"><h4>Pedidos nas minhas mesas</h4><button class="secondary small" type="button" id="refreshOrderStatus">Atualizar ↻</button></div><button type="button" id="showActiveOrders" class="primary">Abrir pedidos das mesas</button><div id="activeOrderStatuses" class="orders-list" hidden></div>
+    <div class="notice"><span>↻</span><p>Pedidos <strong>salvos offline</strong> permanecem aqui até confirmação do servidor. O cliente pelo QR precisa de conexão; este modo offline é para o garçom. Limpar dados do site ou remover o aplicativo pode apagar pendências locais.</p></div>
+    <div class="action-row"><button id="exportPending" class="secondary small" type="button">Exportar pendências</button><span id="queueCount" class="muted small-copy">0 pendentes</span></div><div id="orders" class="orders-list"></div><div class="section-heading" style="margin-top:22px"><h4>Pedidos nas minhas mesas</h4><button class="secondary small" type="button" id="refreshOrderStatus">Atualizar ↻</button></div><button type="button" id="showActiveOrders" class="primary">Abrir pedidos das mesas</button><div id="activeOrderStatuses" class="orders-list" hidden></div>
   </section>
 
   <section class="page" id="page-deliveries" data-page="deliveries" aria-label="Entregas">
@@ -103,7 +103,15 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
       <div class="action-row"><button id="refreshBilling" class="secondary small" type="button">Atualizar saldo ↻</button></div>
       <label class="field">Valor recebido (R$)<input id="billingAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0,00" autocomplete="off"></label>
       <label class="field">Forma de pagamento<select id="billingMethod"><option value="dinheiro">Dinheiro</option><option value="pix">PIX</option><option value="cartao_debito">Cartão de débito</option><option value="cartao_credito">Cartão de crédito</option></select></label>
-      <p id="pixPaymentNote" class="muted small-copy" hidden>PIX: confira o crédito no aplicativo bancário antes de registrar. Esta tela não gera QR nem confirma transferência automaticamente.</p>
+      <p id="pixPaymentNote" class="muted small-copy" hidden>Mostre o QR Code PIX ao cliente. Depois, confira o crédito no aplicativo bancário e só então confirme o recebimento abaixo.</p>
+      <div id="pixQrPanel" class="panel compact" hidden aria-live="polite">
+        <h4>PIX · pagar esta conta</h4>
+        <p id="pixQrMessage" class="muted small-copy">Informe o valor para gerar o QR Code.</p>
+        <div class="qr-row"><img id="pixQrImage" alt="QR Code PIX para pagamento" style="display:block;width:min(100%,280px);height:auto;margin:0 auto;background:#fff;padding:10px;border-radius:12px"></div>
+        <label class="field">PIX copia e cola<textarea id="pixCopyPaste" rows="3" readonly aria-label="Código PIX copia e cola"></textarea></label>
+        <button id="copyPixPayload" class="secondary full" type="button">Copiar PIX copia e cola</button>
+        <p class="hint">O QR apenas inicia o pagamento. Ele não confirma a transferência nem registra recebimento.</p>
+      </div>
       <label class="check-field"><input id="billingReceivedConfirm" type="checkbox"><span id="billingConfirmLabel">Confirmo que recebi o valor informado.</span></label>
       <button id="registerPayment" class="primary full" type="button">Registrar recebimento</button>
       <p id="billingMessage" class="muted small-copy" aria-live="polite"></p>
@@ -151,5 +159,8 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
  <div class="sheet-body center-content"><p class="muted">Mostre este QR para o cliente pedir pelo celular.</p><label class="field">Mesa<select id="qrTable"></select></label><div class="qr-row"><div id="qrImage" role="img" aria-label="Código QR do cliente"></div></div><label class="field">Link da mesa<input id="qrUrl" readonly></label><button class="primary full" id="copyQr" type="button">Copiar link</button><p class="hint">O endereço e o QR são gerados neste aparelho, inclusive sem conexão.</p></div>
 </dialog>
 <script src="./qrcode-generator.js" defer></script>
+<script src="../js/pix.js" defer></script>
+<script src="../js/realtime.js" defer></script>
+<dialog id="historyModal" class="sheet" aria-labelledby="historyTitle"><div class="sheet-top"><h2 id="historyTitle">Histórico do pedido</h2><button type="button" id="closeHistory" class="close-button" aria-label="Fechar">×</button></div><div class="sheet-body" id="historyContent"></div></dialog>
 <script type="module" src="./app.js"></script>
 </body></html>
