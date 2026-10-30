@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* docs/ contém o manual do design system (HTML autônomo) — não deve entrar no CSS do app */
+@source not "../docs";
+
 /* =============================================================================
    QR ADMIN — DESIGN SYSTEM v2  ·  "Mesa & Brasa"
    -----------------------------------------------------------------------------
