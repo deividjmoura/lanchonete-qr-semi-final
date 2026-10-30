@@ -30,7 +30,7 @@ function montarConsent(permissao, confirmRecusa = true) {
   const ids = {
     notificationConsent: Object.assign(new Elemento('dialog'), { open: true }),
     consentStatus: new Elemento('p'),
-    alertMessage: new Elemento('p'),
+    notificationFeedback: new Elemento('div'),
     requestNotificationPermission: new Elemento('button'),
   };
   ids.notificationConsent.close = function () { this.open = false; };
@@ -48,6 +48,7 @@ function montarConsent(permissao, confirmRecusa = true) {
       // o handler testa `'Notification' in window` antes de pedir permissão
       window: { confirm: () => confirmRecusa, Notification: { requestPermission: async () => permissao } },
       updateNotificationStatus: () => {},
+      showNotificationFeedback: (message) => { ids.notificationFeedback.textContent = message; },
       CONSENT_SEEN: 'consent-v1-tok-teste',
     },
   });
@@ -62,14 +63,14 @@ function montarConsent(permissao, confirmRecusa = true) {
   return { ctx, ids, armazenamento };
 }
 
-test('conceder notificações fecha o diálogo e confirma no painel', async () => {
+test('conceder notificações fecha o diálogo e confirma sem ocupar a fila', async () => {
   const { ctx, ids, armazenamento } = montarConsent('granted');
   await ctx.pedirPermissao();
   assert.equal(ids.notificationConsent.open, false, 'o diálogo deveria fechar após o aceite');
   assert.equal(ctx.readyAlertsEnabled, true);
   assert.equal(armazenamento.get('garcom-ready-alerts-tok-teste'), '1');
   assert.equal(armazenamento.get('consent-v1-tok-teste'), '1');
-  assert.match(ids.alertMessage.textContent, /Avisos de item pronto ativados/);
+  assert.match(ids.notificationFeedback.textContent, /Avisos de item pronto ativados/);
 });
 
 test('recusa confirmada também fecha o diálogo e persiste a escolha', async () => {

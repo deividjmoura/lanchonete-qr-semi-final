@@ -204,6 +204,23 @@
   padding: 10px;
 }
 
+/* Valores da semana permanecem legíveis até nas barras estreitas do celular.
+   A etiqueta tem superfície própria, inclusive quando a barra tem valor zero. */
+.week-bar-value {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+  padding: 4px 3px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  color: var(--text);
+  font: 700 12px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ==========================================================================
    SHELL OPERACIONAL & SIDEBAR COLAPSADA (72px -> 248px OVERLAY SEM REFLOW)
    ========================================================================== */

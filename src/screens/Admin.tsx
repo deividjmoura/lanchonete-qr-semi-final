@@ -44,7 +44,7 @@ import {
 import { QR_SVG_COLORS } from "../lib/tema";
 import type { ItemPedido, Pedido, Produto, TipoProduto } from "../lib/types";
 import { CATEGORIAS } from "../lib/data";
-import { faturamentoSemana, totalSessao, usePub } from "../store/usePub";
+import { totalSessao, usePub } from "../store/usePub";
 import { BRL } from "../lib/utils";
 import { cn } from "../utils/cn";
 
@@ -234,15 +234,12 @@ function Painel() {
 
   const semanaApi: { dia: string; label: string; faturamento: number; contas: number }[] =
     Array.isArray(dash?.porDia) ? dash.porDia : [];
-  const semana =
-    semanaApi.length > 0
-      ? semanaApi.map((d) => ({
-          dia: d.label || d.dia,
-          valor: Number(d.faturamento || 0),
-        }))
-      : faturamentoSemana(sessoes).map((d) =>
-          d.dia === "Hoje" ? { ...d, valor: fatHoje + emAberto } : d,
-        );
+  // Os valores do gráfico são de contas fechadas. Não misturar consumo em
+  // aberto nem inventar zeros para dias sem dados quando a API não responde.
+  const semana = semanaApi.map((d) => ({
+    dia: d.label || d.dia,
+    valor: Number(d.faturamento || 0),
+  }));
   const maxSemana = Math.max(1, ...semana.map((d) => d.valor));
 
   const cards = [
@@ -323,32 +320,45 @@ function Painel() {
             </h2>
             <Badge tone="neutral">Faturamento / dia</Badge>
           </div>
-          <div className="flex items-end gap-2.5 sm:gap-3.5 h-44">
-            {semana.map((d) => {
-              const hoje = d.dia === "Hoje";
-              return (
-                <div key={d.dia} className="flex-1 h-full min-w-0 flex flex-col items-center gap-2">
-                  <div className="relative flex-1 w-full rounded-xs bg-surface-sunken border border-line overflow-hidden">
+          {semana.length ? (
+            <div className="flex items-end gap-2.5 sm:gap-3.5 h-44">
+              {semana.map((d) => {
+                const hoje = d.dia === "Hoje";
+                const valor = BRL(d.valor);
+                return (
+                  <div key={d.dia} className="flex-1 h-full min-w-0 flex flex-col items-center gap-2">
                     <div
+                      className="relative flex-1 w-full rounded-xs bg-surface-sunken border border-line overflow-hidden"
+                      role="img"
+                      aria-label={`${d.dia}: ${valor}`}
+                      title={`${d.dia}: ${valor}`}
+                    >
+                      <div
+                        className={cn(
+                          "absolute inset-0 origin-bottom transition-transform duration-150",
+                          hoje ? "bg-brand" : "bg-status-success",
+                        )}
+                        style={{ transform: `scaleY(${Math.max(0.04, d.valor / maxSemana)})` }}
+                      />
+                      <span className="week-bar-value" aria-hidden="true">{valor}</span>
+                    </div>
+                    <span
                       className={cn(
-                        "absolute inset-0 origin-bottom transition-transform duration-150",
-                        hoje ? "bg-brand" : "bg-status-success",
+                        "font-mono text-[10px] font-semibold uppercase tracking-wider",
+                        hoje ? "text-brand-ink" : "text-text-muted",
                       )}
-                      style={{ transform: `scaleY(${Math.max(0.04, d.valor / maxSemana)})` }}
-                    />
+                    >
+                      {d.dia}
+                    </span>
                   </div>
-                  <span
-                    className={cn(
-                      "font-mono text-[10px] font-semibold uppercase tracking-wider",
-                      hoje ? "text-brand-ink" : "text-text-muted",
-                    )}
-                  >
-                    {d.dia}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="h-44 flex items-center justify-center text-sm text-text-muted text-center" role="status">
+              {loadingDash ? "Carregando vendas da semana…" : "Dados de vendas da semana indisponíveis."}
+            </p>
+          )}
         </section>
 
         {/* Mais pedidos */}
@@ -1646,13 +1656,6 @@ function Estoque() {
     return ordered;
   }, [produtos, ordemCat]);
 
-  useEffect(() => {
-    if (abertas.size === 0 && grupos.length) {
-      setAbertas(new Set(grupos.slice(0, 3).map((g) => g.id)));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [grupos]);
-
   const toggle = (id: number | string) => {
     setAbertas((prev) => {
       const n = new Set(prev);
@@ -1689,6 +1692,7 @@ function Estoque() {
           >
             <button
               type="button"
+              aria-expanded={open}
               onClick={() => toggle(g.id)}
               className="w-full flex items-center gap-2.5 px-4 py-3 text-left hover:bg-surface-hover"
             >

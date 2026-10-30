@@ -20,9 +20,12 @@ test('sincronização do PWA inicia sessão sem tomar mesa de outro responsável
   assert.match(sync,/collaborationApproved/);
 });
 
-test('consentimento inicial é contextual e persistido por token de garçom', () => {
+test('lembrete de consentimento é discreto, acessível sob demanda e persistido por token', () => {
   assert.ok(js.includes("const CONSENT_SEEN='garcom-notification-intro-v1-'+waiterToken"));
-  assert.match(js, /if\(!localStorage\.getItem\(CONSENT_SEEN\)\)\s*\{[\s\S]*?consentDialog\.showModal\(\)/);
+  assert.match(html, /id="openNotificationSettings"[^>]*aria-haspopup="dialog"/);
+  assert.match(js, /\$\('#openNotificationSettings'\)\.addEventListener\('click',openNotificationSetup\)/);
+  assert.match(js, /function openNotificationSetup\(\)[\s\S]*?consentDialog\.showModal\(\)/);
+  assert.doesNotMatch(js, /if\(!localStorage\.getItem\(CONSENT_SEEN\)\)\s*\{[\s\S]*?consentDialog\.showModal\(\)/);
   assert.match(js, /consentDialog\.addEventListener\('close',[^;]*localStorage\.setItem\(CONSENT_SEEN,'1'\)/);
   assert.match(js, /\$\('#dismissNotificationConsent'\)\.addEventListener\('click',[^;]*localStorage\.setItem\(CONSENT_SEEN,'1'\)/);
 });
@@ -42,7 +45,7 @@ test('recusa informa consequência, pede confirmação e não tenta reabrir perm
   assert.match(js, /window\.confirm\('Você recusou as notificações e não receberá avisos por este navegador/);
   assert.ok(js.includes("garcom-notifications-declined-'+waiterToken"));
   assert.match(js, /Permissão negada nas configurações do navegador/);
-  assert.match(js, /requestNotificationPermission'\)\.disabled=permission==='unavailable'\|\|permission==='denied'/);
+  assert.match(js, /button\.disabled=permission==='unavailable'\|\|permission==='denied'/);
   assert.match(js, /alterá-la nas configurações do site/);
 });
 

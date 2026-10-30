@@ -108,12 +108,10 @@ async function main() {
     await page.waitForFunction(() => document.querySelectorAll('#modalTable option').length > 0, null, { timeout: 20000 });
     ok('PWA carregou e listou mesas do garçom autenticado');
 
-    // Primeiro acesso mostra o consentimento de notificações (modal real).
-    // O garçom precisa decidir antes de usar o app; o teste faz o mesmo.
-    if (await page.locator('#notificationConsent[open]').count()) {
-      await page.click('#dismissNotificationConsent');
-      ok('consentimento de notificações é exigido no primeiro acesso e pode ser recusado');
-    }
+    // O primeiro acesso não bloqueia o atendimento; avisos são configurados
+    // voluntariamente pelo sino (cobertos em garcom-lote-cobranca.e2e.cjs).
+    assert.equal(await page.locator('#notificationConsent[open]').count(), 0);
+    ok('primeiro acesso não bloqueia o atendimento com um modal de avisos');
 
     // ---- 1) Pedido criado sem rede -------------------------------------
     await context.setOffline(true);

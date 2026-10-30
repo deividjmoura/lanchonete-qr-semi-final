@@ -141,14 +141,17 @@ async function main() {
     await page.goto(`${base}/garcom-pwa/?token=${token}`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => document.querySelectorAll('#modalTable option').length > 0, null, { timeout: 20000 });
 
-    /* ---- 1) consentimento fecha após conceder ------------------------- */
+    /* ---- 1) consentimento só abre sob demanda e fecha após conceder --- */
+    assert.equal(await page.locator('#notificationConsent[open]').count(), 0);
+    await page.click('#openNotificationSettings');
     await page.waitForSelector('#notificationConsent[open]', { timeout: 10000 });
     await page.click('#requestNotificationPermission');
     await page.waitForFunction(() => !document.querySelector('#notificationConsent')?.open, null, { timeout: 10000 });
     assert.equal(await page.locator('#notificationConsent[open]').count(), 0);
-    const avisoPainel = await page.textContent('#alertMessage');
-    assert.match(avisoPainel || '', /Avisos de item pronto ativados/i);
-    ok('diálogo de notificações fecha sozinho após conceder e confirma no painel');
+    const aviso = await page.textContent('#notificationFeedback');
+    assert.match(aviso || '', /Avisos de item pronto ativados/i);
+    assert.equal(await page.locator('#notificationFeedback').isVisible(), true);
+    ok('diálogo de notificações fecha após conceder e mostra confirmação temporária');
 
     /* ---- 2) lote nas três etapas -------------------------------------- */
     await page.click('[data-tab="deliveries"]');

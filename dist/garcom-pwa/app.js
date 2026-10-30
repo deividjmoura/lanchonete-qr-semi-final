@@ -987,6 +987,14 @@ function notifyReady(o,quantidade=1){
  if(window.speechSynthesis){try{speechSynthesis.cancel();const msg=new SpeechSynthesisUtterance('Pedido pronto na mesa '+o.mesa);msg.lang='pt-BR';speechSynthesis.speak(msg)}catch{}}
 }
 $('#refreshOrderStatus').addEventListener('click',loadOrderStatuses);
+let notificationFeedbackTimer=null;
+function showNotificationFeedback(message){
+ const feedback=$('#notificationFeedback');
+ feedback.hidden=false;
+ feedback.textContent=message;
+ clearTimeout(notificationFeedbackTimer);
+ notificationFeedbackTimer=setTimeout(()=>{feedback.hidden=true;feedback.textContent=''},6000);
+}
 const CONSENT_SEEN='garcom-notification-intro-v1-'+waiterToken;
 const consentDialog=$('#notificationConsent');
 function notificationPermission(){
@@ -1001,9 +1009,14 @@ function updateNotificationStatus(){
  else if(permission==='granted')state='Permissão concedida. Avisos locais dependem de o app estar executando; push em segundo plano não está configurado no servidor.';
  else state='Permissão ainda não solicitada.';
  $('#notificationStatus').textContent=(installed?'PWA instalado. ':'PWA não instalado. ')+state;
- $('#enableAlerts').textContent=permission==='granted'?'Status de avisos':'Configurar avisos';
- $('#requestNotificationPermission').disabled=permission==='unavailable'||permission==='denied';
+ const button=$('#requestNotificationPermission');
+ button.disabled=permission==='unavailable'||permission==='denied'||(permission==='granted'&&readyAlertsEnabled);
+ button.textContent=permission==='granted'?(readyAlertsEnabled?'Avisos ativados':'Ativar avisos'):'Permitir notificações';
  $('#consentPlatformNote').textContent=installed?'O PWA está instalado neste dispositivo.':'A instalação pode ser necessária para notificações em algumas plataformas.';
+ const pending=!localStorage.getItem(CONSENT_SEEN)&&(!installed||(permission!=='unavailable'&&!readyAlertsEnabled));
+ const settings=$('#openNotificationSettings');
+ settings.dataset.pending=pending?'true':'false';
+ settings.setAttribute('aria-label',pending?'Avisos e instalação, configuração pendente':'Avisos e instalação');
  refreshInstallState();
 }
 function openNotificationSetup(){
@@ -1015,9 +1028,12 @@ function openNotificationSetup(){
  else $('#consentStatus').textContent='';
  if(!consentDialog.open)consentDialog.showModal();
 }
-$('#enableAlerts').addEventListener('click',openNotificationSetup);
+$('#openNotificationSettings').addEventListener('click',openNotificationSetup);
 $('#closeNotificationConsent').addEventListener('click',()=>consentDialog.close());
-consentDialog.addEventListener('close',()=>localStorage.setItem(CONSENT_SEEN,'1'));
+consentDialog.addEventListener('close',()=>{
+ localStorage.setItem(CONSENT_SEEN,'1');
+ updateNotificationStatus();
+});
 $('#dismissNotificationConsent').addEventListener('click',()=>{localStorage.setItem(CONSENT_SEEN,'1');consentDialog.close()});
 $('#requestNotificationPermission').addEventListener('click',async()=>{
  if(!('Notification'in window)){updateNotificationStatus();return}
@@ -1037,16 +1053,14 @@ $('#requestNotificationPermission').addEventListener('click',async()=>{
  localStorage.setItem(CONSENT_SEEN,'1');updateNotificationStatus();
  if(decidiu){
    if(consentDialog.open)consentDialog.close();
-   $('#alertMessage').textContent=readyAlertsEnabled
+   showNotificationFeedback(readyAlertsEnabled
      ?'Avisos de item pronto ativados neste dispositivo. Com o app fechado não há envio em segundo plano.'
-     :'Preferência de notificações salva. Você pode alterá-la depois nas configurações do site.';
+     :'Preferência de notificações salva. Você pode alterá-la depois nas configurações do site.');
  }
 });
+// Na primeira visita, o ponto no sino substitui o popup automático. O diálogo
+// só abre por escolha do garçom, sem atrapalhar o atendimento.
 updateNotificationStatus();
-if(!localStorage.getItem(CONSENT_SEEN)){
- $('#consentStatus').textContent='Na primeira visita, explicamos os requisitos antes de solicitar permissão.';
- consentDialog.showModal();
-}
 window.addEventListener('pageshow',updateNotificationStatus);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateNotificationStatus()});
 

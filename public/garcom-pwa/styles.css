@@ -308,6 +308,65 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   font-weight: 600;
 }
 
+/* Acesso discreto e disponível em todas as abas, com alvo de toque ampliado. */
+.notification-settings-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.notification-settings-button:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.notification-settings-button::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+
+.notification-settings-button[data-pending="true"]::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 3px;
+  right: 3px;
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--surface-sunken);
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+/* Confirmação temporária, acessível em qualquer aba e sem ocupar a fila. */
+.notification-feedback {
+  position: fixed;
+  z-index: 30;
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  left: 50%;
+  width: min(calc(100% - 28px), 420px);
+  transform: translateX(-50%);
+  padding: 10px 14px;
+  border: 1px solid var(--status-info-border);
+  border-radius: var(--radius-sm);
+  background: var(--status-info-surface);
+  box-shadow: var(--shadow-card-hover);
+  color: var(--status-info-ink);
+  font-size: 0.8rem;
+  font-weight: 600;
+  pointer-events: none;
+}
+
 /* Ready Toast */
 .ready-toast {
   max-width: 1040px;
@@ -413,6 +472,10 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 
 .small-copy {
   font-size: 0.78rem;
+}
+
+.alert-inline:empty {
+  display: none;
 }
 
 .alert-inline:not(:empty) {
