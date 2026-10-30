@@ -264,7 +264,7 @@ function filtrarItens(
   }
   /* produção: não lista o que já foi entregue */
   if (setor === "cozinha" || setor === "bar") {
-    itens = itens.filter((i) => i.status !== "entregue");
+    itens = itens.filter((i) => i.status !== "entregue" && i.status !== "cancelado");
   }
   return itens;
 }

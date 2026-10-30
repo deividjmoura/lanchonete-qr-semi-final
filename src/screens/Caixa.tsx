@@ -205,6 +205,16 @@ export default function Caixa() {
 
 /* =================== detalhe da comanda =================== */
 function DetalheCaixa({ sessao }: { sessao: Sessao }) {
+  const auth = usePub((s) => s.auth);
+  const hydrateCaixa = usePub((s) => s.hydrateCaixa);
+  const cancelarItem = async (itemId: number) => {
+    const motivo = prompt("Motivo do cancelamento do item (mínimo 3 caracteres):");
+    if (motivo == null) return;
+    try {
+      await api.cancelarItem(itemId, motivo, auth?.role === "admin" ? "admin" : "caixa");
+      await hydrateCaixa();
+    } catch (e) { alert(e instanceof Error ? e.message : "Falha ao cancelar item"); }
+  };
   const pedidos = usePub((s) => s.pedidos).filter((p) => p.sessaoId === sessao.id);
   const registrar = usePub((s) => s.registrarPagamento);
   const setDesconto = usePub((s) => s.setDesconto);
@@ -216,6 +226,11 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
   const total = Math.max(0, consumo - sessao.desconto + sessao.taxa);
   const pago = sessao.valorPago != null ? Number(sessao.valorPago) : pagoSessao(sessao);
   const restante = Math.max(0, Math.round((total - pago) * 100) / 100);
+
+  // Comanda zerada (tudo cancelado) precisa poder ser encerrada para liberar a
+  // mesa; antes o botão exigia total > 0 e a mesa ficava ocupada para sempre.
+  const semPendencias = sessao.podeFechar !== false && !(sessao.pedidosPendentes != null && sessao.pedidosPendentes > 0);
+  const podeEncerrar = semPendencias && (total > 0 || (sessao.pedidosCancelados ?? 0) > 0);
 
   const [pessoas, setPessoas] = useState(2);
   const [valor, setValor] = useState("");
@@ -311,9 +326,13 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                 </p>
                 {p.itens.map((i) => (
                   <div key={i.id} className="flex justify-between gap-3 text-[13px] text-slate-600 py-0.5">
-                    <span className="leading-snug">
+                    <span className={"leading-snug " + (i.status === "cancelado" ? "line-through opacity-50" : "")}>
                       <b className="font-mono text-navy-900">{i.qtd}×</b> {i.nome}
                       {i.escolha && <span className="text-navy-700 text-[11px]"> · {i.escolha.nome}</span>}
+                      {i.status && <span className="ml-1.5 text-[9px] font-bold uppercase tracking-wider text-slate-500">{i.status === "concluido" ? "pronto" : i.status === "em_producao" ? "preparando" : i.status === "aceito" ? "aceito" : i.status === "retirado" ? "retirado" : i.status === "entregue" ? "entregue" : i.status === "cancelado" ? "cancelado" : "na fila"}</span>}
+                      {i.status && i.status !== "entregue" && i.status !== "cancelado" && (
+                        <button type="button" className="ml-2 text-[10px] font-bold text-rose-600 hover:underline cursor-pointer" onClick={() => cancelarItem(Number(i.id))}>Cancelar item</button>
+                      )}
                     </span>
                     <span className="font-mono text-slate-500">{BRL(i.totalUnit * i.qtd)}</span>
                   </div>
@@ -481,7 +500,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
           <div className="mt-4">
             {(sessao.pedidosPendentes != null && sessao.pedidosPendentes > 0) && (
             <p className="mb-2 text-center text-[11px] text-brand-600">
-              {sessao.pedidosPendentes} pedido(s) ainda na cozinha/garçom — só fecha quando tudo estiver entregue.
+              {sessao.pedidosPendentes} pedido(s) ainda na cozinha/garçom — só fecha quando tudo estiver entregue ou cancelado.
             </p>
           )}
           {!fechando ? (
@@ -490,9 +509,9 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                 size="lg"
                 variant="lime"
                 onClick={() => setFechando(true)}
-                disabled={total <= 0 || sessao.podeFechar === false || (sessao.pedidosPendentes != null && sessao.pedidosPendentes > 0)}
+                disabled={!podeEncerrar}
               >
-                Fechar conta {restante > 0.004 ? `· quita ${BRL(restante)}` : "· já quitada"}
+                {total <= 0 ? "Encerrar comanda sem consumo" : <>Fechar conta {restante > 0.004 ? `· quita ${BRL(restante)}` : "· já quitada"}</>}
               </Btn>
             ) : (
               <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-teal-500/40 bg-teal-500/10 p-4">

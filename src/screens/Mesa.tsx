@@ -335,7 +335,11 @@ export default function Mesa({ token }: { token: string }) {
       ) : (
         <div className="mt-4 flex-1 space-y-3 overflow-y-auto pr-1 no-scrollbar">
           {pedidosMesa.map((p) => {
-            const stepIdx = STATUS_ORDEM.findIndex((s) => s.id === p.status);
+            const cancelado = p.status === "cancelado";
+            const idx = STATUS_ORDEM.findIndex((s) => s.id === p.status);
+            // Pedido cancelado não existe na linha de progresso: sem este guard,
+            // STATUS_ORDEM[-1] derrubava a tela do cliente com TypeError.
+            const stepIdx = cancelado ? -1 : Math.max(0, idx);
             return (
               <div key={p.id} className="rounded-2xl bg-slate-100/60 border border-slate-200 p-3.5">
                 <div className="flex items-center justify-between">
@@ -350,8 +354,8 @@ export default function Mesa({ token }: { token: string }) {
                       </p>
                     )}
                   </div>
-                  <Badge tone={p.status === "entregue" ? "lime" : p.status === "pronto" ? "sky" : p.status === "em_producao" ? "amber" : "zinc"} pulse={p.status !== "entregue"}>
-                    {STATUS_ORDEM[stepIdx].label}
+                  <Badge tone={cancelado ? "rose" : p.status === "entregue" ? "lime" : p.status === "pronto" ? "sky" : p.status === "em_producao" ? "amber" : "zinc"} pulse={!cancelado && p.status !== "entregue"}>
+                    {cancelado ? "Cancelado" : STATUS_ORDEM[stepIdx].label}
                   </Badge>
                 </div>
 
@@ -359,7 +363,7 @@ export default function Mesa({ token }: { token: string }) {
                 <div className="mt-3 flex items-center gap-1">
                   {STATUS_ORDEM.map((s, i) => (
                     <div key={s.id} className="flex-1">
-                      <div className={cn("h-1.5 rounded-full transition-colors duration-500", i <= stepIdx ? "bg-gradient-to-r from-brand-500 to-teal-600" : "bg-slate-100")} />
+                      <div className={cn("h-1.5 rounded-full transition-colors duration-500", cancelado ? "bg-rose-100" : i <= stepIdx ? "bg-gradient-to-r from-brand-500 to-teal-600" : "bg-slate-100")} />
                     </div>
                   ))}
                 </div>

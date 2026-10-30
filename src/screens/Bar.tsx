@@ -5,7 +5,7 @@ import { OpsShell, useAnuncios } from "../components/OpsShell";
 import { Badge, Btn, LivePill } from "../components/ui";
 import type { Pedido } from "../lib/types";
 import { usePub } from "../store/usePub";
-import { connectEvents } from "../lib/api";
+import { api, connectEvents } from "../lib/api";
 import { elapsed } from "../lib/utils";
 import { imprimirComandaBar } from "../lib/print";
 import { cn } from "../utils/cn";
@@ -88,7 +88,7 @@ export default function Bar() {
                     </motion.div>
                   )}
                   {lista.map((p) => (
-                    <CardPedido key={p.id} pedido={p} borda={col.borda} />
+                    <CardPedido key={p.id} pedido={p} borda={col.borda} setor="bar" />
                   ))}
                 </AnimatePresence>
               </div>
@@ -104,7 +104,12 @@ export default function Bar() {
   );
 }
 
-function CardPedido({ pedido, borda }: { pedido: Pedido; borda: string }) {
+function CardPedido({ pedido, borda, setor }: { pedido: Pedido; borda: string; setor: "cozinha" | "bar" }) {
+  const hydrate = usePub((s) => s.hydrateBar);
+  const avancarItem = async (itemId: number, status: string) => {
+    try { await api.statusItem(setor, itemId, status); await hydrate(); }
+    catch (e) { alert(e instanceof Error ? e.message : "Falha ao atualizar item"); }
+  };
   const aceitar = usePub((s) => s.aceitarPedido);
   const concluir = usePub((s) => s.concluirPedido);
   const atrasado = Date.now() - pedido.criadoEm > 1000 * 60 * 15 && pedido.status === "na_fila";
@@ -152,10 +157,18 @@ function CardPedido({ pedido, borda }: { pedido: Pedido; borda: string }) {
       <ul className="mt-3 space-y-2 border-t border-slate-200 pt-3">
         {pedido.itens.map((i) => (
           <li key={i.id} className="text-[13px] leading-snug">
-            <p className="text-slate-800 font-medium">
+            <p className={cn("text-slate-800 font-medium", i.status === "cancelado" && "line-through opacity-50")}>
               <b className="font-mono text-brand-600">{i.qtd}×</b> {i.nome}
               {i.escolha && <span className="ml-1.5 rounded-md bg-navy-700/10 border border-navy-700/25 px-1.5 py-0.5 text-[10px] font-bold text-navy-700">{i.escolha.nome}</span>}
             </p>
+            {(i.status === "recebido" || i.status === "em_producao") ? (
+              <button type="button" className="mt-1 text-[10px] font-bold uppercase tracking-wide text-brand-600 hover:underline cursor-pointer"
+                onClick={() => avancarItem(Number(i.id), i.status === "recebido" ? "em_producao" : "concluido")}>
+                {i.status === "recebido" ? "Iniciar este item" : "Liberar este item"}
+              </button>
+            ) : (
+              <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">{{concluido:"Pronto · aguardando retirada",aceito:"Garçom aceitou",retirado:"Retirado · em entrega",entregue:"Entregue",cancelado:"Cancelado"}[i.status as string] || i.status}</span>
+            )}
             {(i.adicionais.length > 0 || i.removidos.length > 0 || i.obs) && (
               <p className="mt-0.5 text-[11px] text-slate-500">
                 {i.adicionais.length > 0 && <span className="text-teal-600">+ {i.adicionais.map((a) => a.nome).join(", ")} </span>}

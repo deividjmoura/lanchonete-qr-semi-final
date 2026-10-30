@@ -1118,10 +1118,13 @@ function Mesas() {
   const [adicionando, setAdicionando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [qrPendente, setQrPendente] = useState<{ token: string; numero: number } | null>(null);
+  const [garcons, setGarcons] = useState<Array<{ id: number; nome: string; ativo: boolean }>>([]);
+  const [transferindo, setTransferindo] = useState<number | null>(null);
   const qrRef = useRef<SVGSVGElement | null>(null);
 
   useEffect(() => {
     let montado = true;
+    api.listGarcons().then((rows) => { if (montado) setGarcons(rows.filter((g) => g.ativo)); }).catch(() => {});
     api.adminMesasConfig()
       .then((config) => {
         if (!montado) return;
@@ -1212,10 +1215,41 @@ function Mesas() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-navy-900 text-sm">Mesa {String(m.numero).padStart(2, "0")}</p>
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <Badge tone={sessao ? "amber" : "zinc"}>{sessao ? "Ocupada" : "Livre"}</Badge>
                   {sessao && <span className="text-xs text-slate-500">{BRL(consumo)}</span>}
+                  {sessao && <span className="text-xs text-violet-700 font-semibold">Garçom: {m.garcomResponsavelNome || "a definir"}</span>}
                 </div>
+                {sessao && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <select
+                      aria-label={`Transferir mesa ${m.numero} para garçom`}
+                      className="h-9 rounded-xl border border-slate-300 bg-white px-2 text-xs text-navy-900"
+                      value={transferindo === m.numero ? undefined : ""}
+                      defaultValue=""
+                      onChange={async (e) => {
+                        const destino = Number(e.target.value);
+                        if (!destino) return;
+                        const nome = garcons.find((g) => g.id === destino)?.nome || "garçom";
+                        if (!confirm(`Transferir a responsabilidade da mesa ${m.numero} para ${nome}? Retiradas já assumidas continuam com seus garçons.`)) { e.target.value = ""; return; }
+                        setTransferindo(m.numero);
+                        try {
+                          await api.transferirMesaAdmin(m.numero, destino);
+                          await hydrateMesas();
+                        } catch (err) {
+                          alert(err instanceof Error ? err.message : "Falha ao transferir mesa");
+                        } finally {
+                          setTransferindo(null);
+                          e.target.value = "";
+                        }
+                      }}
+                    >
+                      <option value="">Transferir responsabilidade…</option>
+                      {garcons.filter((g) => g.id !== m.garcomResponsavelId).map((g) => <option key={g.id} value={g.id}>{g.nome}</option>)}
+                    </select>
+                    {transferindo === m.numero && <span className="text-[11px] text-slate-500">Transferindo…</span>}
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <button type="button" title={copiado === m.id ? "Link copiado" : "Copiar link da mesa"} aria-label={`Copiar link da mesa ${m.numero}`} onClick={() => void copiarLink(m.token, m.id)}
