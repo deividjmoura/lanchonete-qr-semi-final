@@ -479,8 +479,8 @@ export default function Mesa({ token }: { token: string }) {
     <div className="relative min-h-dvh pb-[calc(8rem+env(safe-area-inset-bottom,0px))] lg:pb-12 overflow-x-clip">
       {/* fundo */}
       <div className="fixed inset-0 -z-10">
-        <div className="glow-orb absolute -top-40 right-[10%] size-[28rem] bg-brand-500/10" />
-        <div className="glow-orb absolute bottom-[-8rem] left-[-6rem] size-[26rem] bg-brand-500/10" />
+        <div className="glow-orb absolute -top-40 right-[10%] size-[28rem] bg-brand-500/6" />
+        <div className="glow-orb absolute bottom-[-8rem] left-[-6rem] size-[26rem] bg-brand-500/6" />
         <div className="noise absolute inset-0" />
       </div>
 
@@ -506,7 +506,7 @@ export default function Mesa({ token }: { token: string }) {
           </button>
           <button
             onClick={() => setSheet("cart")}
-            className="btn-press relative grid place-items-center size-10 rounded-full bg-gradient-to-br from-brand-500 to-teal-600 text-white cursor-pointer"
+            className="btn-press relative grid place-items-center size-10 rounded-full fill-brand text-white cursor-pointer"
           >
             <ShoppingBag className="size-4.5" />
             <AnimatePresence>
@@ -530,11 +530,11 @@ export default function Mesa({ token }: { token: string }) {
           {/* -------- coluna cardápio -------- */}
           <section className="lg:col-span-8 xl:col-span-8">
             {/* hero da mesa */}
-            <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }} className="pt-8 sm:pt-10 pb-6">
+            <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }} className="mesa-hero pt-8 sm:pt-10 pb-6">
               <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.3em] text-brand-600">
                 <HandPlatter className="size-4" /> bem-vindo(a) à {mesa.nome}
               </p>
-              <h1 className="font-display text-[clamp(2.5rem,11vw,5.5rem)] sm:text-7xl lg:text-8xl leading-[0.9] text-navy-900 mt-2">
+              <h1 className="font-display text-[clamp(2rem,7vw,3.5rem)] leading-[1.12] text-navy-900 mt-2">
                 Bateu a fome?<br /><span className="text-gradient">Pede sem esperar.</span>
               </h1>
               <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -576,7 +576,7 @@ export default function Mesa({ token }: { token: string }) {
                     {categoria === c && !busca && (
                       <motion.span
                         layoutId="cat-pill"
-                        className="absolute inset-0 rounded-full bg-gradient-to-br from-brand-500 to-teal-600"
+                        className="absolute inset-0 rounded-full fill-brand"
                         transition={{ type: "spring", stiffness: 420, damping: 32 }}
                       />
                     )}
@@ -703,7 +703,7 @@ export default function Mesa({ token }: { token: string }) {
               </button>
               <button
                 onClick={() => setSheet("cart")}
-                className="btn-press flex-[1.3] h-13 rounded-2xl bg-gradient-to-br from-brand-500 to-teal-600 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-[0_14px_38px_-8px_rgba(0,196,180,0.55)] cursor-pointer"
+                className="btn-press flex-[1.3] h-13 rounded-2xl fill-brand text-white font-bold text-sm flex items-center justify-center gap-2 shadow-[0_14px_38px_-8px_rgba(0,196,180,0.55)] cursor-pointer"
               >
                 <ShoppingBag className="size-4.5" />
                 {qtdCart === 0 ? "Pedir" : `Pedir · ${BRL(totalCart)}`}
@@ -748,7 +748,7 @@ export default function Mesa({ token }: { token: string }) {
               <motion.div
                 animate={{ rotate: [0, -8, 8, 0] }}
                 transition={{ repeat: Infinity, duration: 1.4 }}
-                className="mx-auto grid place-items-center size-24 rounded-3xl bg-gradient-to-br from-teal-400 to-teal-600 text-white shadow-[0_20px_60px_-10px_rgba(20,184,166,0.5)]"
+                className="mx-auto grid place-items-center size-24 rounded-3xl fill-success text-white shadow-[0_20px_60px_-10px_rgba(20,184,166,0.5)]"
               >
                 <PartyPopper className="size-11" />
               </motion.div>
@@ -818,7 +818,7 @@ function ItemCard({
             fallbackFoto(e, p.nome, p.categoria);
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-50/95 via-slate-50/20 to-transparent pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-slate-50/60 to-transparent pointer-events-none" />
         <div className="absolute top-2 left-2 right-2 flex flex-wrap gap-1 pointer-events-none z-[1]">
           {p.estoque !== null && p.estoque > 0 && p.estoque <= 8 && (
             <Badge tone="rose" pulse>
@@ -904,14 +904,14 @@ function PainelComAbas({
             key={t.id}
             onClick={() => setAba(t.id)}
             className={cn(
-              "relative h-10 rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors",
+              "relative min-w-0 h-10 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer transition-colors",
               aba === t.id ? "text-white" : "text-slate-500 hover:text-navy-800"
             )}
           >
             {aba === t.id && (
-              <motion.span layoutId="painel-aba" className="absolute inset-0 rounded-xl bg-gradient-to-br from-brand-500 to-teal-600" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
+              <motion.span layoutId="painel-aba" className="absolute inset-0 rounded-xl fill-brand" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
             )}
-            <span className="relative z-10 inline-flex items-center gap-1.5">
+            <span className="relative z-10 inline-flex items-center justify-center gap-1.5 whitespace-nowrap">
               <t.icon className="size-3.5" /> {t.label}
               {t.id === "cart" && cart.length > 0 && <span className="grid place-items-center min-w-4.5 h-4.5 px-1 rounded-full bg-slate-200/60 text-[10px] font-bold">{cart.length}</span>}
             </span>

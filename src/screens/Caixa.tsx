@@ -418,7 +418,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                   className={cn(
                     "btn-press h-10 rounded-xl text-[10px] font-bold uppercase tracking-wide cursor-pointer border transition-all inline-flex items-center justify-center gap-1",
                     forma === f.id
-                      ? "bg-gradient-to-br from-brand-500 to-teal-600 text-white border-transparent"
+                      ? "fill-brand text-white border-transparent"
                       : "bg-slate-100/60 border-slate-200 text-slate-500 hover:text-navy-800"
                   )}
                 >

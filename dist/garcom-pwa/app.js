@@ -188,7 +188,7 @@ function setConnection(state){
  const effective=waiterAuthInvalid?'auth':state||syncEngine?.connection||'checking';
  const labels={online:'ONLINE · servidor acessível',offline:'OFFLINE · pedidos ficam neste aparelho',checking:'VERIFICANDO CONEXÃO…',auth:'LINK INVÁLIDO OU DESATIVADO',storage:'ERRO NO ARMAZENAMENTO LOCAL'};
  el.textContent=labels[effective]||labels.checking;
- el.style.color=effective==='online'?'#166534':effective==='offline'||effective==='checking'?'#a16207':'#b91c1c';
+ el.style.color=effective==='online'?'var(--qr-teal-700)':effective==='offline'||effective==='checking'?'var(--qr-amber-700)':'var(--qr-rose-700)';
 }
 async function reviewConflict(localId){
  const order=await offlineStore.get(localId);if(!order)return;
