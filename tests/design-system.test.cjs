@@ -185,14 +185,15 @@ test("PWA renderiza múltiplos pedidos recolhidos por padrão com expansão inli
 });
 
 
-test("fontes Archivo + Martian Mono (~150 KB máx) e sprite de ícones Phosphor fazem parte do shell offline", () => {
+test("fontes Fraunces + Plus Jakarta Sans + JetBrains Mono (~150 KB máx), cantos suaves e sprite Phosphor fazem parte do shell offline", () => {
   const sw = read("public/garcom-pwa/sw.js");
   for (const asset of [
     "design-tokens.css",
     "theme-init.js",
     "icons.svg",
-    "fonts/archivo-latin-wdth-normal.woff2",
-    "fonts/martian-mono-latin-wght-normal.woff2",
+    "fonts/fraunces-latin-soft-normal.woff2",
+    "fonts/plus-jakarta-sans-latin-wght-normal.woff2",
+    "fonts/jetbrains-mono-latin-wght-normal.woff2",
     "brand-mark.webp",
     "brand-wordmark.webp",
   ]) {
@@ -200,10 +201,13 @@ test("fontes Archivo + Martian Mono (~150 KB máx) e sprite de ícones Phosphor 
     assert.ok(fs.existsSync("public/garcom-pwa/" + asset), asset + " existe");
   }
   const fontBytes =
-    fs.statSync("public/garcom-pwa/fonts/archivo-latin-wdth-normal.woff2").size +
-    fs.statSync("public/garcom-pwa/fonts/martian-mono-latin-wght-normal.woff2").size;
+    fs.statSync("public/garcom-pwa/fonts/fraunces-latin-soft-normal.woff2").size +
+    fs.statSync("public/garcom-pwa/fonts/plus-jakarta-sans-latin-wght-normal.woff2").size +
+    fs.statSync("public/garcom-pwa/fonts/jetbrains-mono-latin-wght-normal.woff2").size;
   assert.ok(fontBytes <= 155 * 1024, `orçamento de fontes respeitado (${fontBytes} bytes)`);
   assert.match(tokens, /font-display:\s*swap/);
+  assert.match(tokens, /--radius-md:\s*20px/);
+  assert.match(tokens, /--radius-lg:\s*24px/);
   assert.doesNotMatch(read("index.html"), /fonts\.googleapis\.com/);
   assert.ok(fs.existsSync("docs/DESIGN_SYSTEM.md"), "docs/DESIGN_SYSTEM.md existe");
 });

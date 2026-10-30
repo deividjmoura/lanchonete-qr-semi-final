@@ -39,7 +39,7 @@ export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   return (
     <span
       className={cn(
-        "brand-logo inline-flex items-center gap-3 select-none rounded-sm border border-line-strong bg-surface-raised px-3.5 py-2.5",
+        "brand-logo inline-flex items-center gap-3 select-none rounded-md border border-line bg-surface-raised shadow-card px-3.5 py-2.5",
         size === "lg" && "px-4 py-3",
       )}
     >
@@ -54,13 +54,13 @@ export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
       <span className="flex flex-col text-left leading-none">
         <span
           className={cn(
-            "font-display font-extrabold uppercase tracking-tight text-text",
+            "font-display font-bold tracking-tight text-text",
             size === "lg" ? "text-2xl sm:text-3xl" : "text-xl",
           )}
         >
           QR Admin
         </span>
-        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted mt-1">
+        <span className="text-[11px] font-medium tracking-wide text-text-muted mt-1">
           Comanda &amp; Balcão
         </span>
       </span>
@@ -82,7 +82,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       title={tema === "claro" ? "Ativar tema escuro" : "Ativar tema claro"}
       aria-label={tema === "claro" ? "Ativar tema escuro" : "Ativar tema claro"}
       className={cn(
-        "inline-flex h-10 w-10 items-center justify-center rounded-sm border border-line bg-surface-raised text-text-muted hover:text-text hover:border-line-strong hover:bg-surface-hover transition-colors duration-150",
+        "inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface-raised text-text-muted hover:text-text hover:border-line-strong hover:bg-surface-hover transition-colors duration-150",
         className,
       )}
     >
@@ -104,7 +104,7 @@ export function IconBtn({
       aria-label={label}
       title={label}
       className={cn(
-        "inline-flex h-10 w-10 items-center justify-center rounded-sm border transition-colors duration-150",
+        "inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors duration-150",
         active
           ? "bg-brand-surface text-brand-ink border-brand-border"
           : "bg-surface-raised text-text-muted border-line hover:text-text hover:border-line-strong hover:bg-surface-hover",
@@ -143,7 +143,7 @@ export function Btn({
       onClick={onClick}
       className={cn(
         "qr-button inline-flex items-center justify-center gap-2 font-semibold select-none transition-[background-color,color,border-color,transform,opacity] duration-150 active:translate-y-px disabled:bg-surface-sunken disabled:text-text-muted disabled:border-line disabled:pointer-events-none",
-        size === "sm" && "min-h-10 px-3 text-xs rounded-sm",
+        size === "sm" && "min-h-10 px-3.5 text-xs rounded-sm",
         size === "md" && "min-h-12 px-4 text-sm rounded-sm",
         size === "lg" && "min-h-12 px-6 text-base rounded-md",
         full && "w-full",
@@ -152,7 +152,7 @@ export function Btn({
         variant === "sage" &&
           "bg-status-success text-status-success-contrast border border-status-success hover:opacity-95",
         (variant === "ghost" || variant === "secondary") &&
-          "bg-surface-raised text-text border border-line-strong hover:bg-surface-hover",
+          "bg-surface-raised text-text border border-line hover:border-line-strong hover:bg-surface-hover",
         variant === "outline" &&
           "bg-transparent border border-brand-border text-brand-ink hover:bg-brand-surface",
         variant === "danger" &&
@@ -190,7 +190,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-xs border px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-[0.06em]",
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-wide",
         BADGE_CLASSES[tone],
         className,
       )}
@@ -249,7 +249,7 @@ export function Modal({
             onClick={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
             className={cn(
-              "relative rounded-t-md sm:rounded-md border border-line-strong bg-surface-raised w-full max-h-[92dvh] overflow-y-auto no-scrollbar",
+              "relative rounded-t-xl sm:rounded-xl border border-line bg-surface-raised shadow-modal w-full max-h-[92dvh] overflow-y-auto no-scrollbar",
               wide ? "sm:max-w-2xl" : "sm:max-w-md",
             )}
           >
@@ -257,7 +257,7 @@ export function Modal({
               type="button"
               onClick={onClose}
               aria-label="Fechar"
-              className="absolute top-3.5 right-3.5 z-10 inline-flex h-10 w-10 items-center justify-center rounded-sm border border-line bg-surface-sunken text-text-muted hover:text-text hover:border-line-strong"
+              className="absolute top-3.5 right-3.5 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface-sunken text-text-muted hover:text-text hover:border-line-strong"
             >
               <X size={18} weight="bold" />
             </button>
@@ -281,7 +281,7 @@ export function Qtd({
   return (
     <div
       className={cn(
-        "inline-flex items-center rounded-sm bg-surface-sunken border border-line-strong",
+        "inline-flex items-center rounded-full overflow-hidden bg-surface-sunken border border-line",
         size === "sm" ? "h-9" : "h-11",
       )}
     >
@@ -326,11 +326,11 @@ export function Secao({
     <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-3">
       <div>
         {kicker && (
-          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-ink">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-ink">
             {kicker}
           </p>
         )}
-        <h2 className="font-display text-2xl sm:text-3xl font-extrabold uppercase tracking-tight leading-none text-text mt-0.5">
+        <h2 className="font-display text-2xl sm:text-3xl font-bold tracking-tight leading-tight text-text mt-0.5">
           {titulo}
         </h2>
       </div>
@@ -367,7 +367,7 @@ export function Input({
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         className={cn(
-          "w-full h-12 rounded-sm bg-surface-sunken border border-line-strong text-sm text-text placeholder:text-text-subtle",
+          "w-full h-12 rounded-sm bg-surface-sunken border border-line text-sm text-text placeholder:text-text-subtle",
           "focus:outline-none focus:border-brand transition-colors",
           prefix ? "pl-11 pr-3.5" : "px-3.5",
         )}

@@ -99,7 +99,7 @@ export default function Admin() {
   const extras = (
     <nav
       aria-label="Seções administrativas"
-      className="flex flex-wrap items-center gap-1 rounded-sm bg-surface-sunken border border-line-strong p-1"
+      className="flex flex-wrap items-center gap-1 rounded-full bg-surface-sunken border border-line p-1"
     >
       {ABAS.map((a) => {
         const ativa = aba === a.id;
@@ -112,14 +112,14 @@ export default function Admin() {
             aria-pressed={ativa}
             onClick={() => setAba(a.id)}
             className={cn(
-              "relative flex items-center gap-1.5 rounded-xs px-3 min-h-9 text-xs font-bold transition-colors",
+              "relative flex items-center gap-1.5 rounded-full px-3.5 min-h-9 text-xs font-semibold transition-colors",
               ativa ? "text-brand-contrast" : "text-text-muted hover:text-text",
             )}
           >
             {ativa && (
               <motion.span
                 layoutId="adm-aba"
-                className="absolute inset-0 rounded-xs bg-brand"
+                className="absolute inset-0 rounded-full bg-brand"
                 transition={
                   reduceMotion
                     ? { duration: 0 }
@@ -278,17 +278,20 @@ function Painel() {
 
   return (
     <div className="space-y-5">
-      {/* Talão de indicadores sem cartões aninhados */}
+      {/* Cartões individuais arredondados de indicadores */}
       <section
         aria-label="Indicadores do dia"
-        className="rounded-md border border-line-strong bg-surface-raised grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-dashed divide-line-strong"
+        className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"
       >
         {cards.map((c) => {
           const Icon = c.Icon;
           return (
-            <div key={c.label} className="metric-card p-5 flex flex-col justify-between">
+            <div
+              key={c.label}
+              className="metric-card rounded-lg border border-line bg-surface-raised shadow-card p-5 flex flex-col justify-between"
+            >
               <div className="flex items-center justify-between gap-2">
-                <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted">
                   {c.label}
                 </span>
                 <Icon
@@ -299,7 +302,7 @@ function Painel() {
               </div>
               <p
                 className={cn(
-                  "metric-value mt-3 font-mono text-2xl sm:text-3xl font-bold leading-none",
+                  "metric-value mt-3 font-display text-2xl sm:text-[1.7rem] font-bold tnum leading-tight truncate",
                   c.destaque ? "text-brand-ink" : "text-text",
                 )}
               >
@@ -313,9 +316,9 @@ function Painel() {
 
       <div className="grid lg:grid-cols-2 gap-5">
         {/* Gráfico de faturamento semanal */}
-        <section className="rounded-md border border-line-strong bg-surface-raised p-5 sm:p-6">
-          <div className="flex items-center justify-between gap-2 pb-4 border-b border-dashed border-line-strong mb-5">
-            <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight text-text">
+        <section className="rounded-lg border border-line bg-surface-raised shadow-card p-5 sm:p-6">
+          <div className="flex items-center justify-between gap-2 pb-4 border-b border-line mb-5">
+            <h2 className="font-display text-2xl font-bold tracking-tight text-text">
               Semana da casa
             </h2>
             <Badge tone="neutral">Faturamento / dia</Badge>
@@ -349,9 +352,9 @@ function Painel() {
         </section>
 
         {/* Mais pedidos */}
-        <section className="rounded-md border border-line-strong bg-surface-raised p-5 sm:p-6">
+        <section className="rounded-md border border-line bg-surface-raised p-5 sm:p-6">
           <div className="flex items-center justify-between gap-2 pb-4 border-b border-dashed border-line-strong mb-4">
-            <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight text-text flex items-center gap-2">
+            <h2 className="font-display text-2xl font-bold tracking-tight text-text flex items-center gap-2">
               <Trophy size={20} weight="regular" className="text-accent-ink" /> Mais pedidos
             </h2>
             <Badge tone="brass">Top 5</Badge>
@@ -547,7 +550,7 @@ function Cardapio() {
           return (
             <li
               key={c.id}
-              className="rounded-md border border-line-strong bg-surface-raised overflow-hidden"
+              className="rounded-md border border-line bg-surface-raised overflow-hidden"
             >
               <div className="flex flex-wrap items-center gap-1.5 px-3 py-2.5">
                 <button
@@ -564,7 +567,7 @@ function Cardapio() {
                   <span className="font-mono text-xs text-text-muted w-5 shrink-0">
                     {String(i + 1).padStart(2, "0")}
                   </span>
-                  <span className="font-display text-lg font-extrabold uppercase tracking-tight text-text truncate">
+                  <span className="font-display text-lg font-bold tracking-tight text-text truncate">
                     {c.nome}
                   </span>
                   <Badge tone="neutral">{lista.length}</Badge>
@@ -649,7 +652,7 @@ function Cardapio() {
               ) : (
                 <CaretRight size={16} weight="bold" className="text-status-danger-ink" />
               )}
-              <span className="font-display text-lg font-extrabold uppercase tracking-tight text-status-danger-ink">
+              <span className="font-display text-lg font-bold tracking-tight text-status-danger-ink">
                 Sem categoria
               </span>
               <Badge tone="rose">{orfaos.length}</Badge>
@@ -822,7 +825,7 @@ function ProdutoForm({
   return (
     <Modal open={open} onClose={onClose} wide closeOnBackdrop={false}>
       <div className="p-5 sm:p-6">
-        <h3 className="font-display text-3xl font-extrabold uppercase tracking-tight text-text pb-3 border-b border-dashed border-line-strong mb-5">
+        <h3 className="font-display text-3xl font-bold tracking-tight text-text pb-3 border-b border-dashed border-line-strong mb-5">
           {editando ? "Editar produto" : "Novo produto"}
         </h3>
 
@@ -1135,12 +1138,12 @@ function Garcons() {
   return (
     <div className="space-y-5">
       <section
-        className="rounded-md border border-line-strong bg-surface-raised p-5"
+        className="rounded-md border border-line bg-surface-raised p-5"
         aria-label="Desempenho diário de garçons"
       >
         <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-dashed border-line-strong mb-4">
           <div>
-            <h3 className="font-display text-2xl font-extrabold uppercase tracking-tight text-text">
+            <h3 className="font-display text-2xl font-bold tracking-tight text-text">
               Desempenho da equipe
             </h3>
             <p className="text-xs text-text-muted mt-0.5">
@@ -1193,10 +1196,10 @@ function Garcons() {
         </div>
       </section>
 
-      <section className="rounded-md border border-line-strong bg-surface-raised overflow-hidden">
+      <section className="rounded-md border border-line bg-surface-raised overflow-hidden">
         <div className="p-5 flex flex-wrap items-end justify-between gap-3 border-b border-dashed border-line-strong">
           <div>
-            <h3 className="font-display text-2xl font-extrabold uppercase tracking-tight text-text leading-none">
+            <h3 className="font-display text-2xl font-bold tracking-tight text-text leading-tight">
               Credenciais de garçom
             </h3>
             <p className="mt-1 text-xs text-text-muted">
@@ -1423,9 +1426,9 @@ function Mesas() {
 
   return (
     <section className="space-y-4">
-      <div className="rounded-md border border-line-strong bg-surface-raised p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+      <div className="rounded-md border border-line bg-surface-raised p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h3 className="font-display text-xl font-extrabold uppercase tracking-tight text-text">
+          <h3 className="font-display text-xl font-bold tracking-tight text-text">
             Mapa de mesas e QR Codes
           </h3>
           <p className="text-xs text-text-muted mt-0.5 font-mono">
@@ -1448,7 +1451,7 @@ function Mesas() {
         </p>
       )}
 
-      <div className="rounded-md border border-line-strong bg-surface-raised overflow-hidden divide-y divide-line">
+      <div className="rounded-md border border-line bg-surface-raised overflow-hidden divide-y divide-line">
         {visiveis.map((m) => {
           const sessao = sessoes.find((x) => x.mesaId === m.id && x.status === "aberta");
           const consumo = sessao ? totalSessao(pedidos, sessao.id) : 0;
@@ -1682,7 +1685,7 @@ function Estoque() {
         return (
           <section
             key={String(g.id)}
-            className="rounded-md border border-line-strong bg-surface-raised overflow-hidden"
+            className="rounded-md border border-line bg-surface-raised overflow-hidden"
           >
             <button
               type="button"
@@ -1694,7 +1697,7 @@ function Estoque() {
               ) : (
                 <CaretRight size={16} weight="bold" className="text-text-muted" />
               )}
-              <span className="font-display text-xl font-extrabold uppercase tracking-tight text-text flex-1">
+              <span className="font-display text-xl font-bold tracking-tight text-text flex-1">
                 {g.nome}
               </span>
               <Badge tone="neutral">
@@ -1857,7 +1860,7 @@ function Relatorio() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-md border border-line-strong bg-surface-raised p-4 flex flex-wrap items-end gap-3">
+      <div className="rounded-md border border-line bg-surface-raised p-4 flex flex-wrap items-end gap-3">
         <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
           De
           <input
@@ -1907,36 +1910,36 @@ function Relatorio() {
         </p>
       )}
 
-      <div className="rounded-md border border-line-strong bg-surface-raised grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-dashed divide-line-strong">
-        <div className="p-4">
-          <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        <div className="rounded-md border border-line bg-surface-raised shadow-card p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
             Faturamento
           </p>
-          <p className="font-mono text-xl text-status-success-ink font-bold mt-1">
+          <p className="font-display text-xl text-status-success-ink font-bold tnum mt-1">
             {BRL(faturamento)}
           </p>
         </div>
-        <div className="p-4">
-          <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">Contas</p>
-          <p className="font-mono text-xl text-text font-bold mt-1">{qtdContas}</p>
+        <div className="rounded-md border border-line bg-surface-raised shadow-card p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">Contas</p>
+          <p className="font-display text-xl text-text font-bold tnum mt-1">{qtdContas}</p>
         </div>
-        <div className="p-4">
-          <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+        <div className="rounded-md border border-line bg-surface-raised shadow-card p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
             Ticket médio
           </p>
-          <p className="font-mono text-xl text-brand-ink font-bold mt-1">{BRL(ticket)}</p>
+          <p className="font-display text-xl text-brand-ink font-bold tnum mt-1">{BRL(ticket)}</p>
         </div>
-        <div className="p-4">
-          <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">Pedidos</p>
-          <p className="font-mono text-xl text-text font-bold mt-1">
+        <div className="rounded-md border border-line bg-surface-raised shadow-card p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">Pedidos</p>
+          <p className="font-display text-xl text-text font-bold tnum mt-1">
             {Number(resumo.pedidosTotal ?? 0)}
           </p>
         </div>
       </div>
 
       {Object.keys(porForma).length > 0 && (
-        <section className="rounded-md border border-line-strong bg-surface-raised p-5">
-          <h3 className="font-display text-xl font-extrabold uppercase tracking-tight text-text mb-3">
+        <section className="rounded-md border border-line bg-surface-raised p-5">
+          <h3 className="font-display text-xl font-bold tracking-tight text-text mb-3">
             Por forma de pagamento
           </h3>
           <div className="grid sm:grid-cols-2 gap-x-6 divide-y sm:divide-y-0 divide-line">
@@ -1951,8 +1954,8 @@ function Relatorio() {
       )}
 
       {porDia.length > 0 && (
-        <section className="rounded-md border border-line-strong bg-surface-raised p-5 overflow-x-auto">
-          <h3 className="font-display text-xl font-extrabold uppercase tracking-tight text-text mb-3">
+        <section className="rounded-md border border-line bg-surface-raised p-5 overflow-x-auto">
+          <h3 className="font-display text-xl font-bold tracking-tight text-text mb-3">
             Por dia
           </h3>
           <table className="w-full text-left text-sm">
@@ -1979,8 +1982,8 @@ function Relatorio() {
       )}
 
       {top.length > 0 && (
-        <section className="rounded-md border border-line-strong bg-surface-raised p-5">
-          <h3 className="font-display text-xl font-extrabold uppercase tracking-tight text-text mb-3">
+        <section className="rounded-md border border-line bg-surface-raised p-5">
+          <h3 className="font-display text-xl font-bold tracking-tight text-text mb-3">
             Top produtos
           </h3>
           <ul className="divide-y divide-line">
@@ -1999,8 +2002,8 @@ function Relatorio() {
         </section>
       )}
 
-      <section className="rounded-md border border-line-strong bg-surface-raised p-5 overflow-x-auto">
-        <h3 className="font-display text-xl font-extrabold uppercase tracking-tight text-text mb-3">
+      <section className="rounded-md border border-line bg-surface-raised p-5 overflow-x-auto">
+        <h3 className="font-display text-xl font-bold tracking-tight text-text mb-3">
           Contas fechadas
         </h3>
         {!contas.length ? (
@@ -2157,10 +2160,10 @@ function HistoricoPedidos({
   const toggle = (id: number) => setAberto((cur) => (cur === id ? null : id));
 
   return (
-    <section className="rounded-md border border-line-strong bg-surface-raised p-5">
+    <section className="rounded-md border border-line bg-surface-raised p-5">
       <div className="flex flex-wrap items-end justify-between gap-3 pb-4 border-b border-dashed border-line-strong">
         <div>
-          <h3 className="font-display text-2xl font-extrabold uppercase tracking-tight text-text">
+          <h3 className="font-display text-2xl font-bold tracking-tight text-text">
             Histórico de pedidos
           </h3>
           <p className="text-xs text-text-muted mt-0.5">
@@ -2468,7 +2471,7 @@ function Funcoes() {
       )}
       {sub === "purge" && (
         <section className="rounded-md border border-status-danger-border bg-surface-raised p-5">
-          <h3 className="font-display text-2xl font-extrabold uppercase tracking-tight text-text mb-1">
+          <h3 className="font-display text-2xl font-bold tracking-tight text-text mb-1">
             Limpar histórico antigo
           </h3>
           <p className="text-xs text-text-muted mb-4">

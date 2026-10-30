@@ -68,14 +68,18 @@
 
   --radius-*: initial;
   --radius-none: 0px;
-  --radius-xs: 2px;
-  --radius-sm: 2px;
-  --radius-md: 4px;
-  --radius-lg: 4px;
-  --radius-full: 999px;
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-full: var(--radius-pill);
 
   --shadow-*: initial;
   --shadow-none: none;
+  --shadow-card: var(--shadow-card);
+  --shadow-float: var(--shadow-card-hover);
+  --shadow-modal: var(--shadow-modal);
 
   --font-*: initial;
   --font-sans: var(--font-sans);
@@ -92,7 +96,6 @@
     background-color: var(--surface);
     color: var(--text);
     font-family: var(--font-sans);
-    font-feature-settings: "cv02", "cv03", "cv04";
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     min-height: 100dvh;
@@ -116,20 +119,33 @@
 }
 
 /* ==========================================================================
-   TIPOGRAFIA CONDENSADA E TABULAR ("A COMANDA")
+   TIPOGRAFIA EDITORIAL SUAVE (Fraunces Soft + Plus Jakarta Sans + JetBrains Mono)
    ========================================================================== */
 .font-display,
 .display-condensed {
   font-family: var(--font-display);
-  font-stretch: 82%;
-  font-variation-settings: "wdth" 82;
+  font-variation-settings: "SOFT" 80;
   letter-spacing: -0.02em;
 }
 
-.tnum,
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
 .font-mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+}
+
+/* Elevação suave automática para cartões elevados */
+.bg-surface-raised.rounded-md,
+.bg-surface-raised.rounded-lg,
+.bg-surface-raised.rounded-xl {
+  box-shadow: var(--shadow-card);
+}
+
+[role="dialog"].bg-surface-raised {
+  box-shadow: var(--shadow-modal);
 }
 
 /* ==========================================================================

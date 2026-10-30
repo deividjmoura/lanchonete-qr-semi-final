@@ -127,7 +127,7 @@ export function OpsShell({
               className="ops-brand flex items-center gap-3 text-left min-w-0 focus:outline-none"
             >
               <Logo size="sm" />
-              <span className="ops-sidebar-label font-display text-lg font-extrabold uppercase tracking-tight text-sidebar-text">
+              <span className="ops-sidebar-label font-display text-lg font-bold tracking-tight text-sidebar-text">
                 QR Admin
               </span>
             </button>
@@ -182,11 +182,11 @@ export function OpsShell({
               </button>
               <div className="min-w-0">
                 {kicker && (
-                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-ink">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-ink">
                     {kicker}
                   </p>
                 )}
-                <h1 className="font-display text-2xl sm:text-3xl font-extrabold uppercase tracking-tight text-text leading-none mt-0.5 break-words">
+                <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-text leading-tight mt-0.5 break-words">
                   {titulo}
                 </h1>
               </div>

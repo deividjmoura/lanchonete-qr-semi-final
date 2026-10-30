@@ -1,20 +1,27 @@
 @import "./design-tokens.css";
 
 @font-face {
-  font-family: "Archivo";
+  font-family: "Fraunces";
   font-style: normal;
   font-weight: 100 900;
-  font-stretch: 62% 125%;
   font-display: swap;
-  src: url("./fonts/archivo-latin-wdth-normal.woff2") format("woff2");
+  src: url("./fonts/fraunces-latin-soft-normal.woff2") format("woff2");
 }
 
 @font-face {
-  font-family: "Martian Mono";
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("./fonts/plus-jakarta-sans-latin-wght-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
   font-style: normal;
   font-weight: 100 800;
   font-display: swap;
-  src: url("./fonts/martian-mono-latin-wght-normal.woff2") format("woff2");
+  src: url("./fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
 }
 
 *,
@@ -157,18 +164,20 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 .brand h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-variation-settings: "wdth" 82;
-  font-size: 1rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: -0.01em;
-  line-height: 1;
+  font-variation-settings: "SOFT" 80;
+  font-size: clamp(0.92rem, 3.4vw, 1.12rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
@@ -176,16 +185,14 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   display: inline-flex;
   align-items: center;
   min-height: 30px;
-  padding: 4px 7px;
-  border-radius: var(--radius-xs);
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--status-success-border);
   background: var(--status-success-surface);
   color: var(--status-success-ink);
-  font-family: var(--font-mono);
-  font-size: 0.64rem;
+  font-size: 0.65rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   white-space: nowrap;
 }
 
@@ -210,8 +217,8 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   width: 40px;
   height: 40px;
   padding: 0;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
   background: var(--surface);
   color: var(--text);
   transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
@@ -379,19 +386,17 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 .section-heading h2 {
   margin: 0;
   font-family: var(--font-display);
-  font-variation-settings: "wdth" 82;
-  font-size: clamp(1.35rem, 4vw, 1.75rem);
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: -0.015em;
-  line-height: 1.05;
+  font-variation-settings: "SOFT" 80;
+  font-size: clamp(1.45rem, 4.2vw, 1.85rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 
 .eyebrow,
 .section-eyebrow {
   display: block;
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
+  font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -412,20 +417,21 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 
 .alert-inline:not(:empty) {
   margin-top: 8px;
-  padding: 8px 10px;
-  border-radius: var(--radius-xs);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--status-info-border);
   background: var(--status-info-surface);
   color: var(--status-info-ink);
   font-weight: 600;
 }
 
-/* Ledger Blocks (replaces nested panels) */
+/* Ledger Blocks (soft rounded cards) */
 .ledger-block {
   background: var(--surface-raised);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-md);
-  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 16px;
   overflow: hidden;
 }
 
@@ -434,9 +440,9 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 }
 
 .ledger-head {
-  padding: 10px 14px;
+  padding: 12px 16px;
   background: var(--surface-sunken);
-  border-bottom: 1px dashed var(--line-strong);
+  border-bottom: 1px solid var(--line);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -447,11 +453,10 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 .ledger-head h3 {
   margin: 0;
   font-family: var(--font-display);
-  font-variation-settings: "wdth" 84;
-  font-size: 1rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.01em;
+  font-variation-settings: "SOFT" 80;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -559,14 +564,12 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 .status {
   display: inline-flex;
   align-items: center;
-  padding: 2px 7px;
-  border-radius: var(--radius-xs);
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  font-size: 0.68rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border: 1px solid var(--line-strong);
+  letter-spacing: 0.03em;
+  border: 1px solid var(--line);
   background: var(--surface-sunken);
   color: var(--text-muted);
 }
@@ -629,8 +632,10 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 }
 
 .table-tile strong {
-  font-family: var(--font-mono);
-  font-size: 0.95rem;
+  font-family: var(--font-display);
+  font-variation-settings: "SOFT" 80;
+  font-variant-numeric: tabular-nums;
+  font-size: 1rem;
   font-weight: 700;
 }
 
@@ -692,8 +697,9 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 
 .order {
   background: var(--surface-raised);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
   overflow: hidden;
 }
 
@@ -1176,7 +1182,8 @@ dialog.sheet[open] {
   max-width: 520px;
   height: fit-content;
   max-height: min(82dvh, 690px);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1192,7 +1199,7 @@ dialog.sheet[open] {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px 16px;
+  padding: 14px 18px;
   background: var(--surface-raised);
   border-bottom: 1px solid var(--line);
 }
@@ -1205,10 +1212,10 @@ dialog.sheet[open] {
 .sheet-top h2 {
   margin: 2px 0 0;
   font-family: var(--font-display);
-  font-variation-settings: "wdth" 82;
-  font-size: 1.2rem;
-  font-weight: 800;
-  text-transform: uppercase;
+  font-variation-settings: "SOFT" 80;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .sheet-body {
@@ -1223,8 +1230,8 @@ dialog.sheet[open] {
 .close-button {
   width: 40px;
   height: 40px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
   background: var(--surface);
   font-size: 1.2rem;
   line-height: 1;

@@ -66,13 +66,14 @@ Componentes **nunca** consomem `--prim-*` diretamente. Nenhum token usa `#FFFFFF
 
 ## 3. Tipografia Self-Hosted (`<= 150 KB`)
 
-Servida localmente em `public/garcom-pwa/fonts/` sob CSP `'self'`, totalizando **112 KB** (`88 KB + 24 KB`):
+Servida localmente em `public/garcom-pwa/fonts/` sob CSP `'self'`, totalizando **128 KB** (`61 KB + 27 KB + 40 KB`):
 
-1. **Archivo Variable (`archivo-latin-wdth-normal.woff2`, 88 KB)** — pesos `100–900` e eixo `wdth` (`62%–125%`):
-   - Corpo e controles: largura normal (`100%`), pesos `500–700`.
-   - Títulos e cabeçalhos (`.font-display` / `.display-condensed`): `font-stretch: 82%` (`"wdth" 82`), `letter-spacing: -0.02em`, remetendo a letreiros condensados de pub e cabeçalhos de comanda.
-2. **Martian Mono Variable (`martian-mono-latin-wght-normal.woff2`, 24 KB)** — pesos `100–800`:
-   - Uso obrigatório em preços (`R$ 34,90`), identificadores de pedido (`#101`), números de mesa (`01`), relógios/tempos (`4min`, `14:32`), contadores e códigos PIX (`tabular-nums`).
+1. **Fraunces Soft Variable (`fraunces-latin-soft-normal.woff2`, 61 KB)** — pesos `100–900` e eixo `SOFT` (`0–100`):
+   - Títulos e cabeçalhos (`.font-display`): `font-variation-settings: "SOFT" 80`, `letter-spacing: -0.02em`, caixa mista natural e curvas acolhedoras com personalidade gastronômica editorial.
+2. **Plus Jakarta Sans Variable (`plus-jakarta-sans-latin-wght-normal.woff2`, 27 KB)** — pesos `200–800`:
+   - Corpo, navegação, botões, filtros e controles operacionais com terminações suaves e alta legibilidade.
+3. **JetBrains Mono Variable (`jetbrains-mono-latin-wght-normal.woff2`, 40 KB)** — pesos `100–800`:
+   - Identificadores de pedido (`#101`), relógios/tempos (`4min`, `14:32`), contadores e códigos PIX (`tabular-nums`).
 
 ---
 
@@ -85,12 +86,10 @@ Servida localmente em `public/garcom-pwa/fonts/` sob CSP `'self'`, totalizando *
 
 ---
 
-## 5. Geometria, Bordas, Espaçamento e Proibições
+## 5. Geometria Suave, Bordas e Elevação
 
-- **Raios secos (0 a 4 px):** `--radius-none: 0px`, `--radius-xs: 2px`, `--radius-sm: 2px`, `--radius-md: 4px`, `--radius-lg: 4px`. Pílulas redondas (`999px`) restritas a pontos mínimos de status.
-- **Bordas de `1px`:** estrutura definida por contraste entre superfícies (`--surface` vs `--surface-raised` vs `--surface-sunken`), bordas contínuas de `1px solid var(--line)` e divisórias de picote `1px dashed var(--line-strong)`.
-- **Sem aninhamento de cartões:** dentro de uma comanda ou painel, subdivisões usam linhas divisórias (`1px solid` ou `1px dashed`) em vez de caixas com borda dentro de caixas com borda.
-- **Proibições estritas:** zero `shadow-lg/xl/2xl`, zero `backdrop-blur`/glassmorphism, zero glow/orbes decorativos, zero gradiente em texto, zero `border-l-4` como muleta padrão, zero `animate-pulse` decorativo em indicadores "Ao vivo".
+- **Cantos orgânicos arredondados:** `--radius-none: 0px`, `--radius-xs: 10px`, `--radius-sm: 14px`, `--radius-md: 20px` (cartões padrão), `--radius-lg: 24px` (painéis de destaque e diálogos), `--radius-xl: 28px` (modais e hero) e `--radius-pill: 9999px` (filtros, badges e botões circulares).
+- **Bordas suaves e elevação quente:** cartões elevados (`--surface-raised`) combinam borda sutil de `1px solid var(--line)` com sombra ambiente quente (`--shadow-card` / `--shadow-modal`), sem glassmorphism pesado, sem glow neon e sem aninhamento excessivo.
 
 ---
 

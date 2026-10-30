@@ -62,7 +62,7 @@ export function Toasts() {
               animate={{ y: 0, opacity: 1 }}
               exit={reduceMotion ? { opacity: 0 } : { y: -8, opacity: 0 }}
               transition={{ duration: reduceMotion ? 0 : 0.16, ease: [0.22, 1, 0.36, 1] }}
-              className="pointer-events-auto flex items-center gap-3 rounded-sm border border-line-strong bg-surface-raised px-3.5 py-2.5 max-w-sm w-full"
+              className="pointer-events-auto flex items-center gap-3 rounded-md border border-line bg-surface-raised shadow-float px-4 py-3 max-w-sm w-full"
             >
               <Icon size={18} weight="fill" className="text-brand-ink shrink-0" />
               <p className="flex-1 text-xs font-semibold text-text leading-snug">{t.texto}</p>

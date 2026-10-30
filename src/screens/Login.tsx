@@ -62,7 +62,7 @@ export default function Login() {
         <button
           type="button"
           onClick={() => ir("/")}
-          className="inline-flex min-h-10 items-center gap-2 rounded-sm border border-line bg-surface-raised px-3 text-xs font-semibold text-text-muted hover:text-text hover:border-line-strong transition-colors"
+          className="inline-flex min-h-10 items-center gap-2 rounded-full border border-line bg-surface-raised px-4 text-xs font-semibold text-text-muted hover:text-text hover:border-line-strong transition-colors"
         >
           <ArrowLeft size={15} weight="bold" /> Voltar
         </button>
@@ -75,18 +75,18 @@ export default function Login() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: reduceMotion ? 0 : 0.16, ease: [0.22, 1.18, 0.36, 1] }}
           aria-labelledby="login-titulo"
-          className="w-full max-w-md rounded-md border border-line-strong bg-surface-raised overflow-hidden"
+          className="w-full max-w-md rounded-xl border border-line bg-surface-raised shadow-card overflow-hidden"
         >
           {/* Cabeçalho da comanda de acesso */}
-          <div className="px-6 pt-6 pb-5 flex items-center justify-between gap-4 border-b border-dashed border-line-strong">
+          <div className="px-6 pt-6 pb-5 flex items-center justify-between gap-4 border-b border-line">
             <Logo size="md" />
             <div className="text-right">
-              <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-ink block">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-ink block">
                 Posto
               </span>
               <h1
                 id="login-titulo"
-                className="font-display text-xl font-extrabold uppercase tracking-tight text-text leading-none mt-1"
+                className="font-display text-xl font-bold tracking-tight text-text leading-tight mt-0.5"
               >
                 Acesso Equipe
               </h1>
@@ -94,10 +94,10 @@ export default function Login() {
           </div>
 
           <div className="p-6">
-            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted mb-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-text-muted mb-3">
               Selecione o setor
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               {PAPEIS.map((p) => {
                 const selecionado = papel === p.id;
                 const Icon = p.Icon;
@@ -111,14 +111,14 @@ export default function Login() {
                       setErro(false);
                     }}
                     className={cn(
-                      "min-h-20 rounded-sm border px-2.5 py-3 flex flex-col items-center justify-center gap-1.5 text-center transition-colors duration-150",
+                      "min-h-20 rounded-md border px-2.5 py-3 flex flex-col items-center justify-center gap-1.5 text-center transition-colors duration-150",
                       selecionado
                         ? "bg-brand text-brand-contrast border-brand"
                         : "bg-surface-sunken border-line text-text-muted hover:text-text hover:border-line-strong hover:bg-surface-hover",
                     )}
                   >
                     <Icon size={22} weight={selecionado ? "fill" : "regular"} />
-                    <span className="font-display text-sm font-extrabold uppercase tracking-wide leading-none mt-0.5">
+                    <span className="font-display text-sm font-bold tracking-tight leading-none mt-0.5">
                       {p.nome}
                     </span>
                   </button>
@@ -136,7 +136,7 @@ export default function Login() {
                   transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.22, 1, 0.36, 1] }}
                 >
                 <form
-                  className="mt-5 pt-5 border-t border-dashed border-line-strong space-y-3"
+                  className="mt-5 pt-5 border-t border-line space-y-3"
                   onSubmit={(e) => {
                     e.preventDefault();
                     void entrar();
@@ -155,7 +155,7 @@ export default function Login() {
                   />
 
                   <label htmlFor="login-senha" className="block">
-                    <span className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted mb-1.5">
+                    <span className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted mb-1.5">
                       <span>Credencial · {ativo.nome}</span>
                       <span>{ativo.desc}</span>
                     </span>
@@ -164,7 +164,7 @@ export default function Login() {
                         "flex items-center gap-2.5 rounded-sm border bg-surface-sunken px-3.5 h-12 transition-colors",
                         erro
                           ? "border-status-danger-border"
-                          : "border-line-strong focus-within:border-brand",
+                          : "border-line focus-within:border-brand",
                       )}
                     >
                       <Key

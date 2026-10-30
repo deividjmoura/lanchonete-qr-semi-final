@@ -112,7 +112,7 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
   };
 
   const campo =
-    "mt-1 w-full rounded-sm border border-line-strong bg-surface-sunken px-3.5 h-12 text-sm text-text outline-none focus:border-brand";
+    "mt-1 w-full rounded-sm border border-line bg-surface-sunken px-3.5 h-12 text-sm text-text outline-none focus:border-brand transition-colors";
   const contaSelecionada = contas.find((c) => c.login === alvo) || null;
   const rotuloAlvo = contaSelecionada
     ? `${NOME_PAPEL[contaSelecionada.papel] || contaSelecionada.nome}${contaSelecionada.login === loginSessao ? " (minha conta)" : ""}`
@@ -125,8 +125,8 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
       aria-labelledby="trocar-senha-titulo"
       className="fixed inset-0 z-50 grid place-items-center bg-surface-overlay p-4"
     >
-      <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-md border border-line-strong bg-surface-raised p-6">
-        <div className="flex items-start justify-between gap-3 pb-3 border-b border-line">
+      <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-xl border border-line bg-surface-raised shadow-modal p-6">
+        <div className="flex items-start justify-between gap-3 pb-3.5 border-b border-line">
           <div className="flex items-center gap-2.5">
             {obrigatorio ? (
               <ShieldWarning size={22} weight="fill" className="text-status-warning-ink shrink-0" />
@@ -135,7 +135,7 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
             )}
             <h2
               id="trocar-senha-titulo"
-              className="font-display text-2xl font-extrabold uppercase tracking-tight text-text"
+              className="font-display text-2xl font-bold tracking-tight text-text"
             >
               {obrigatorio ? "Defina uma nova senha" : admin ? "Redefinir senha" : "Alterar senha"}
             </h2>
@@ -145,7 +145,7 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
               type="button"
               onClick={onClose}
               aria-label="Fechar"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-line text-text-muted hover:text-text hover:bg-surface-hover"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line text-text-muted hover:text-text hover:bg-surface-hover"
             >
               <X size={18} weight="bold" />
             </button>

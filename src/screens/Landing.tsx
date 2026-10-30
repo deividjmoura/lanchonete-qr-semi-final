@@ -74,22 +74,22 @@ export default function Landing() {
       </header>
 
       <main className="flex-1">
-        {/* Comanda principal / Cartaz de recepção */}
+        {/* Cartaz de recepção acolhedor */}
         <section className="mx-auto max-w-6xl px-4 sm:px-8 pt-8 sm:pt-12 pb-10">
           <motion.div
             initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: reduceMotion ? 0 : 0.16, ease: [0.22, 1.18, 0.36, 1] }}
-            className="rounded-md border border-line-strong bg-surface-raised overflow-hidden"
+            className="rounded-xl border border-line bg-surface-raised shadow-card overflow-hidden"
           >
             <div className="grid lg:grid-cols-[1.35fr_0.85fr]">
-              <div className="p-6 sm:p-10 lg:p-12 border-b lg:border-b-0 lg:border-r border-dashed border-line-strong">
+              <div className="p-6 sm:p-10 lg:p-12 border-b lg:border-b-0 lg:border-r border-line">
                 <div className="flex flex-wrap items-center gap-2 mb-5">
                   <Badge tone="ember">Comanda por QR Code</Badge>
                   <Badge tone="sage" dot>Salão em operação</Badge>
                 </div>
 
-                <h1 className="font-display font-black uppercase tracking-tight leading-[0.94] text-[clamp(2.6rem,6.6vw,5.25rem)] text-text">
+                <h1 className="font-display font-bold tracking-tight leading-[0.98] text-[clamp(2.5rem,6vw,4.85rem)] text-text">
                   <span className="block">Sentou.</span>
                   <span className="block text-brand-ink">Escaneou.</span>
                   <span className="block">Pediu.</span>
@@ -99,7 +99,7 @@ export default function Landing() {
                   Uma comanda aberta por mesa, conectando cliente, cozinha, bar, garçom e caixa em tempo real — com conta acumulativa, divisão simples e PIX direto na mesa.
                 </p>
 
-                <div className="mt-7 flex items-start gap-3 rounded-sm border border-line-strong bg-surface-sunken px-4 py-3.5 max-w-md">
+                <div className="mt-7 flex items-start gap-3 rounded-md border border-line bg-surface-sunken px-4 py-3.5 max-w-md">
                   <QrCode size={24} weight="regular" className="text-brand-ink shrink-0 mt-0.5" />
                   <p className="text-sm text-text leading-snug">
                     <strong>Está na casa?</strong> Escaneie o QR Code fixo da sua mesa para abrir o cardápio e enviar pedidos direto para o preparo.
@@ -107,34 +107,34 @@ export default function Landing() {
                 </div>
               </div>
 
-              {/* Resumo contábil do salão em estilo talão */}
-              <div className="p-6 sm:p-10 bg-surface-sunken flex flex-col justify-between">
+              {/* Resumo do salão */}
+              <div className="p-6 sm:p-10 bg-surface-sunken/70 flex flex-col justify-between">
                 <div>
-                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-muted">
                     Resumo de balcão
                   </p>
-                  <dl className="mt-4 divide-y divide-dashed divide-line-strong border-y border-dashed border-line-strong">
+                  <dl className="mt-4 divide-y divide-line border-y border-line">
                     <div className="py-4 flex items-baseline justify-between gap-4">
-                      <dt className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      <dt className="text-xs font-semibold text-text-muted">
                         Comandas abertas
                       </dt>
-                      <dd className="font-mono text-2xl sm:text-3xl font-bold text-text">
+                      <dd className="font-display text-2xl sm:text-3xl font-bold tnum text-text">
                         {String(comandas).padStart(2, "0")}
                       </dd>
                     </div>
                     <div className="py-4 flex items-baseline justify-between gap-4">
-                      <dt className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      <dt className="text-xs font-semibold text-text-muted">
                         Pedidos em preparo
                       </dt>
-                      <dd className="font-mono text-2xl sm:text-3xl font-bold text-brand-ink">
+                      <dd className="font-display text-2xl sm:text-3xl font-bold tnum text-brand-ink">
                         {String(naFila).padStart(2, "0")}
                       </dd>
                     </div>
                     <div className="py-4 flex items-baseline justify-between gap-4">
-                      <dt className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      <dt className="text-xs font-semibold text-text-muted">
                         Consumo em aberto
                       </dt>
-                      <dd className="font-mono text-xl sm:text-2xl font-bold text-text">
+                      <dd className="font-display text-xl sm:text-2xl font-bold tnum text-text">
                         {BRL(consumoAberto)}
                       </dd>
                     </div>
@@ -142,11 +142,11 @@ export default function Landing() {
                 </div>
 
                 <div className="mt-6 pt-4 flex items-center justify-between gap-3">
-                  <span className="font-mono text-[11px] text-text-muted">Operadores do turno</span>
+                  <span className="text-xs font-medium text-text-muted">Operadores do turno</span>
                   <button
                     type="button"
                     onClick={() => ir("/login")}
-                    className="inline-flex items-center gap-1.5 font-mono text-xs font-bold uppercase tracking-wider text-brand-ink hover:underline"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-ink hover:underline"
                   >
                     Abrir posto <ArrowRight size={14} weight="bold" />
                   </button>
@@ -156,20 +156,25 @@ export default function Landing() {
           </motion.div>
         </section>
 
-        {/* Fluxo em faixa única de talão (sem caixas repetitivas soltas) */}
+        {/* Cartões individuais arredondados para cada posto */}
         <section className="mx-auto max-w-6xl px-4 sm:px-8 pb-14">
-          <Secao kicker=" Percurso do pedido" titulo="Da mesa ao fechamento" />
-          <div className="mt-5 rounded-md border border-line-strong bg-surface-raised divide-y sm:divide-y-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:divide-x divide-line">
+          <Secao kicker="Percurso do pedido" titulo="Da mesa ao fechamento" />
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {POSTOS.map((f) => {
               const Icon = f.Icon;
               return (
-                <div key={f.passo} className="p-5 sm:p-6 flex flex-col justify-between">
+                <div
+                  key={f.passo}
+                  className="rounded-lg border border-line bg-surface-raised shadow-card p-6 flex flex-col justify-between"
+                >
                   <div>
                     <div className="flex items-center justify-between text-text-muted">
-                      <span className="font-mono text-xs font-bold text-brand-ink">#{f.passo}</span>
-                      <Icon size={20} weight="regular" />
+                      <span className="inline-flex items-center justify-center rounded-full bg-brand-surface border border-brand-border px-2.5 py-0.5 font-mono text-xs font-bold text-brand-ink">
+                        #{f.passo}
+                      </span>
+                      <Icon size={22} weight="regular" />
                     </div>
-                    <h3 className="font-display text-2xl font-extrabold uppercase tracking-tight text-text mt-3">
+                    <h3 className="font-display text-2xl font-bold tracking-tight text-text mt-3.5">
                       {f.titulo}
                     </h3>
                     <p className="mt-2 text-sm leading-relaxed text-text-muted">{f.texto}</p>

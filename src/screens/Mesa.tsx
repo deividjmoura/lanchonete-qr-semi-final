@@ -188,11 +188,11 @@ export default function Mesa({ token }: { token: string }) {
         data-regime="expressive"
         className="paper-grain min-h-dvh bg-surface text-text grid place-items-center p-6 text-center"
       >
-        <div className="rounded-md border border-line-strong bg-surface-raised px-8 py-10 max-w-sm w-full">
+        <div className="rounded-md border border-line bg-surface-raised px-8 py-10 max-w-sm w-full">
           <div className="mx-auto size-12 rounded-sm border border-line-strong bg-surface-sunken grid place-items-center text-brand-ink">
             <BeerStein size={24} weight="duotone" />
           </div>
-          <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight text-text mt-4">
+          <h1 className="font-display text-3xl font-bold tracking-tight text-text mt-4">
             Abrindo comanda…
           </h1>
           <p className="text-text-muted mt-1.5 text-xs">Validando o QR Code desta mesa.</p>
@@ -207,11 +207,11 @@ export default function Mesa({ token }: { token: string }) {
         data-regime="expressive"
         className="paper-grain min-h-dvh bg-surface text-text grid place-items-center p-6 text-center"
       >
-        <div className="rounded-md border border-line-strong bg-surface-raised px-6 py-8 max-w-sm w-full">
+        <div className="rounded-md border border-line bg-surface-raised px-6 py-8 max-w-sm w-full">
           <div className="mx-auto size-12 rounded-sm border border-status-danger-border bg-status-danger-surface grid place-items-center text-status-danger-ink">
             <BeerStein size={24} />
           </div>
-          <h1 className="font-display text-4xl font-extrabold uppercase tracking-tight text-text mt-4">
+          <h1 className="font-display text-4xl font-bold tracking-tight text-text mt-4">
             QR inválido
           </h1>
           <p className="text-text-muted mt-2 text-xs leading-relaxed">
@@ -261,7 +261,7 @@ export default function Mesa({ token }: { token: string }) {
   const painelCarrinho = (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between pb-3 border-b border-dashed border-line-strong">
-        <h3 className="font-display text-2xl font-extrabold uppercase tracking-tight text-text flex items-center gap-2">
+        <h3 className="font-display text-2xl font-bold tracking-tight text-text flex items-center gap-2">
           <ShoppingBag size={20} className="text-brand-ink" /> Comanda atual
         </h3>
         {qtdCart > 0 && <Badge tone="brand">{qtdCart} it.</Badge>}
@@ -356,7 +356,7 @@ export default function Mesa({ token }: { token: string }) {
   const painelConta = (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between pb-3 border-b border-dashed border-line-strong">
-        <h3 className="font-display text-2xl font-extrabold uppercase tracking-tight text-text flex items-center gap-2">
+        <h3 className="font-display text-2xl font-bold tracking-tight text-text flex items-center gap-2">
           <Receipt size={20} className="text-brand-ink" /> Consumo da mesa
         </h3>
         <Badge tone="neutral">{pedidosMesa.length} ped.</Badge>
@@ -604,7 +604,7 @@ export default function Mesa({ token }: { token: string }) {
                   <p className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-brand-ink">
                     Comanda digital · {mesa.nome}
                   </p>
-                  <h1 className="font-display text-[clamp(1.85rem,6vw,2.75rem)] font-extrabold uppercase tracking-tight leading-none text-text mt-1">
+                  <h1 className="font-display text-[clamp(1.85rem,6vw,2.75rem)] font-bold tracking-tight leading-tight text-text mt-1">
                     Cardápio da casa
                   </h1>
                 </div>
@@ -624,7 +624,7 @@ export default function Mesa({ token }: { token: string }) {
                 catsHidden ? "hidden opacity-0 pointer-events-none" : "block opacity-100 mb-2",
               )}
             >
-              <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1">
+              <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
                 {categorias.map((c) => {
                   const ativa = categoria === c && !busca;
                   return (
@@ -637,10 +637,10 @@ export default function Mesa({ token }: { token: string }) {
                         irParaLista();
                       }}
                       className={cn(
-                        "relative shrink-0 h-10 px-3.5 rounded-sm font-mono text-[11px] font-bold uppercase tracking-wider transition-colors border",
+                        "relative shrink-0 h-10 px-4 rounded-full text-xs font-semibold tracking-wide transition-colors border",
                         ativa
                           ? "bg-brand text-brand-contrast border-brand"
-                          : "bg-surface-raised text-text-muted border-line-strong hover:text-text",
+                          : "bg-surface-raised text-text-muted border-line hover:border-line-strong hover:text-text",
                       )}
                     >
                       {c}
@@ -655,20 +655,20 @@ export default function Mesa({ token }: { token: string }) {
               <div className="relative">
                 <MagnifyingGlass
                   size={16}
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
                 />
                 <input
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder="Buscar no cardápio…"
-                  className="w-full h-11 rounded-sm bg-surface-raised border border-line-strong pl-10 pr-10 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:border-brand transition-colors"
+                  className="w-full h-11 rounded-full bg-surface-raised border border-line pl-10 pr-10 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:border-brand transition-colors"
                 />
                 {busca && (
                   <button
                     type="button"
                     onClick={() => setBusca("")}
                     aria-label="Limpar busca"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text"
                   >
                     <X size={16} />
                   </button>
@@ -680,7 +680,7 @@ export default function Mesa({ token }: { token: string }) {
 
             {(busca || categoria !== "Tudo") && (
               <div className="mt-2 mb-3 flex items-baseline justify-between gap-2">
-                <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight text-text truncate">
+                <h2 className="font-display text-2xl font-bold tracking-tight text-text truncate">
                   {busca ? `Busca: “${busca}”` : categoria}
                 </h2>
                 <span className="font-mono text-xs text-text-muted shrink-0">{lista.length} itens</span>
@@ -688,16 +688,16 @@ export default function Mesa({ token }: { token: string }) {
             )}
 
             {gruposCardapio ? (
-              <div className="space-y-7 pt-2 pb-24 lg:pb-10 w-full min-w-0">
+              <div className="space-y-8 pt-2 pb-24 lg:pb-10 w-full min-w-0">
                 {gruposCardapio.map((g) => (
                   <section key={g.nome}>
-                    <div className="mb-3 pb-1.5 border-b border-line-strong flex items-baseline justify-between">
-                      <h3 className="font-display text-xl sm:text-2xl font-extrabold uppercase tracking-tight text-text">
+                    <div className="mb-3.5 pb-2 border-b border-line flex items-baseline justify-between">
+                      <h3 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-text">
                         {g.nome}
                       </h3>
                       <span className="font-mono text-[11px] text-text-muted">{g.itens.length}</span>
                     </div>
-                    <div className="grid-cardapio grid grid-cols-2 sm:grid-cols-3 gap-3 w-full min-w-0">
+                    <div className="grid-cardapio grid grid-cols-2 sm:grid-cols-3 gap-3.5 w-full min-w-0">
                       {g.itens.map((p) => (
                         <ItemCard
                           key={p.id}
@@ -746,7 +746,7 @@ export default function Mesa({ token }: { token: string }) {
 
           {/* Coluna Comanda Lateral (Desktop) */}
           <aside className="hidden lg:block lg:col-span-4 pt-6">
-            <div className="sticky top-20 rounded-md border border-line-strong bg-surface-raised p-4 max-h-[calc(100dvh-6.5rem)] flex flex-col overflow-hidden">
+            <div className="sticky top-20 rounded-md border border-line bg-surface-raised p-4 max-h-[calc(100dvh-6.5rem)] flex flex-col overflow-hidden">
               <PainelComAbas
                 cart={cart}
                 totalConta={totalConta}
@@ -827,7 +827,7 @@ export default function Mesa({ token }: { token: string }) {
               <div className="mx-auto grid place-items-center size-14 rounded-sm bg-status-success-surface border border-status-success-border text-status-success-ink">
                 <Check size={28} weight="bold" />
               </div>
-              <h2 className="font-display text-4xl font-extrabold uppercase tracking-tight text-text mt-4">
+              <h2 className="font-display text-4xl font-bold tracking-tight text-text mt-4">
                 Comanda enviada
               </h2>
               <p className="mt-2 text-text-muted text-xs">
@@ -857,7 +857,7 @@ function ItemCard({
   return (
     <article
       className={cn(
-        "card-produto group flex h-full min-h-0 flex-col rounded-md border border-line-strong bg-surface-raised overflow-hidden",
+        "card-produto group flex h-full min-h-0 flex-col rounded-md border border-line bg-surface-raised shadow-card hover:border-brand-border transition-[border-color,box-shadow] duration-150 overflow-hidden",
         esgotado && "opacity-55 grayscale-[0.55]",
       )}
     >
@@ -872,26 +872,26 @@ function ItemCard({
           alt=""
           loading="lazy"
           decoding="async"
-          className="card-produto-foto transition-transform duration-150 group-hover:scale-[1.03]"
+          className="card-produto-foto transition-transform duration-200 group-hover:scale-[1.03]"
           onError={(e) => fallbackFoto(e, p.nome, p.categoria)}
         />
-        <div className="absolute top-2 left-2 right-2 flex flex-wrap gap-1 pointer-events-none">
+        <div className="absolute top-2.5 left-2.5 right-2.5 flex flex-wrap gap-1 pointer-events-none">
           {p.estoque !== null && p.estoque > 0 && p.estoque <= 8 && (
             <Badge tone="rose">{p.estoque} un</Badge>
           )}
           {esgotado && <Badge tone="neutral">Esgotado</Badge>}
         </div>
-        <span className="absolute bottom-2 left-2 rounded-xs bg-surface-raised border border-line-strong px-2 py-0.5 font-mono text-xs font-bold text-text pointer-events-none">
+        <span className="absolute bottom-2.5 left-2.5 rounded-full bg-surface-raised/95 border border-line px-2.5 py-0.5 font-display text-xs font-bold tnum text-text pointer-events-none">
           {BRL(p.preco)}
         </span>
       </button>
 
-      <div className="flex flex-1 flex-col min-h-0 p-2.5 sm:p-3 gap-2">
+      <div className="flex flex-1 flex-col min-h-0 p-3 sm:p-3.5 gap-2">
         <button type="button" onClick={() => onOpen(p)} className="text-left min-w-0">
-          <h3 className="font-semibold text-text leading-snug text-xs sm:text-sm line-clamp-2 min-h-[2.4em] break-words">
+          <h3 className="font-display font-bold text-text leading-snug text-sm sm:text-base line-clamp-2 min-h-[2.4em] break-words">
             {p.nome}
           </h3>
-          <p className="mt-0.5 text-[11px] text-text-muted leading-snug line-clamp-2 min-h-[2.4em] break-words">
+          <p className="mt-1 text-xs text-text-muted leading-snug line-clamp-2 min-h-[2.4em] break-words">
             {descricaoExibida(p.descricao, p.nome, p.categoria) || "\u00a0"}
           </p>
         </button>
@@ -941,7 +941,7 @@ function PainelComAbas({
   const [aba, setAba] = useState<"cart" | "conta">("cart");
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="grid grid-cols-2 gap-1 rounded-sm bg-surface-sunken border border-line p-1 mb-4">
+      <div className="grid grid-cols-2 gap-1 rounded-full bg-surface-sunken border border-line p-1 mb-4">
         {(
           [
             { id: "cart", label: "Comanda", icon: ShoppingBag },
@@ -955,16 +955,16 @@ function PainelComAbas({
               type="button"
               onClick={() => setAba(t.id)}
               className={cn(
-                "min-w-0 h-10 rounded-xs font-mono text-[11px] font-bold uppercase tracking-wider whitespace-nowrap transition-colors inline-flex items-center justify-center gap-1.5 px-2",
+                "min-w-0 h-10 rounded-full text-xs font-semibold whitespace-nowrap transition-colors inline-flex items-center justify-center gap-1.5 px-3",
                 ativa
-                  ? "bg-surface-raised text-text border border-line-strong"
+                  ? "bg-surface-raised text-text border border-line"
                   : "text-text-muted hover:text-text",
               )}
             >
               <t.icon size={14} />
               <span className="truncate">{t.label}</span>
               {t.id === "cart" && cart.length > 0 && (
-                <span className="px-1.5 py-0.5 rounded-xs bg-brand text-brand-contrast text-[10px]">
+                <span className="px-2 py-0.5 rounded-full bg-brand text-brand-contrast text-[10px] font-bold">
                   {cart.length}
                 </span>
               )}
@@ -1047,7 +1047,7 @@ function ProdutoModal({
 
         <div className="p-4 sm:p-5 space-y-4">
           <div className="flex items-baseline justify-between gap-3 border-b border-dashed border-line-strong pb-3">
-            <h3 className="font-display text-2xl sm:text-3xl font-extrabold uppercase tracking-tight text-text leading-tight">
+            <h3 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-text leading-tight">
               {produto.nome}
             </h3>
             <span className="font-mono text-lg font-extrabold text-brand-ink shrink-0">
