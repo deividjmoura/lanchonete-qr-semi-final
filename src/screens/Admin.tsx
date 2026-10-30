@@ -64,6 +64,7 @@ export default function Admin() {
       {ABAS.map((a) => (
         <button
           key={a.id}
+          aria-label={a.label}
           onClick={() => setAba(a.id)}
           className={cn(
             "btn-press relative flex items-center gap-1.5 rounded-xl px-3 h-9 text-xs font-bold cursor-pointer transition-colors",
@@ -71,7 +72,7 @@ export default function Admin() {
           )}
         >
           {aba === a.id && (
-            <motion.span layoutId="adm-aba" className="absolute inset-0 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600" transition={{ type: "spring", stiffness: 420, damping: 32 }} />
+            <motion.span layoutId="adm-aba" className="absolute inset-0 rounded-xl fill-brand" transition={{ type: "spring", stiffness: 420, damping: 32 }} />
           )}
           <a.icon className="relative z-10 size-3.5" />
           <span className="relative z-10 hidden sm:inline">{a.label}</span>
@@ -81,7 +82,7 @@ export default function Admin() {
   );
 
   return (
-    <OpsShell ativo="admin" kicker="gestão · QR Admin" titulo={<>QR <span className="text-gradient">Admin</span></>} extra={extras}>
+    <OpsShell ativo="admin" kicker="gestão · salão" titulo={<>QR <span className="text-gradient">Admin</span></>} extra={extras}>
       <AnimatePresence mode="wait">
         <motion.div
           key={aba}
@@ -221,11 +222,11 @@ function Painel() {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.06 }}
-            className="glass rounded-3xl p-5 relative overflow-hidden"
+            className="metric-card glass rounded-3xl p-4 sm:p-5 relative overflow-hidden"
           >
             <div className={cn("glow-orb absolute -top-10 -right-10 size-24 bg-gradient-to-br to-transparent opacity-30", c.tom.split(" ")[0])} />
             <c.icon className={cn("size-5", c.tom.split(" ")[1])} />
-            <p className="mt-3 font-display text-4xl sm:text-5xl text-navy-900 leading-none">{c.valor}</p>
+            <p className="metric-value mt-3 font-display text-navy-900 leading-tight">{c.valor}</p>
             <p className="mt-1.5 text-[10px] uppercase tracking-[0.22em] font-bold text-slate-500">{c.label}</p>
             <p className="text-[10px] text-slate-400">{c.sub}</p>
           </motion.div>
@@ -241,16 +242,18 @@ function Painel() {
           </div>
           <div className="flex items-end gap-2.5 sm:gap-4 h-44">
             {semana.map((d) => (
-              <div key={d.dia} className="flex-1 flex flex-col items-center gap-2">
+              <div key={d.dia} className="flex-1 h-full min-w-0 flex flex-col items-center gap-2">
+                <div className="relative flex-1 w-full rounded-lg bg-slate-100 overflow-hidden">
                 <div
                   className={cn(
-                    "w-full rounded-t-lg transition-all",
+                    "absolute bottom-0 w-full rounded-lg transition-all",
                     d.dia === "Hoje"
                       ? "bg-gradient-to-t from-brand-600 to-brand-400 shadow-[0_0_28px_-4px_rgba(0,196,180,0.45)]"
-                      : "bg-slate-100"
+                      : "bg-teal-500/60"
                   )}
                   style={{ height: `${Math.max(4, (d.valor / maxSemana) * 100)}%` }}
                 />
+                </div>
                 <span className={cn("text-[10px] font-bold uppercase tracking-wider", d.dia === "Hoje" ? "text-brand-600" : "text-slate-500")}>{d.dia}</span>
               </div>
             ))}
@@ -2024,7 +2027,7 @@ function Funcoes() {
             {sub === s.id && (
               <motion.span
                 layoutId="fn-sub"
-                className="absolute inset-0 rounded-xl bg-gradient-to-br from-brand-500 to-teal-600"
+                className="absolute inset-0 rounded-xl fill-brand"
                 transition={{ type: "spring", stiffness: 420, damping: 32 }}
               />
             )}

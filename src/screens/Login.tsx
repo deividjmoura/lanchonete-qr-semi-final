@@ -46,8 +46,8 @@ export default function Login() {
   return (
     <div className="relative min-h-dvh flex items-center justify-center p-5 overflow-hidden bg-brand-shell">
       <div className="fixed inset-0 -z-10">
-        <div className="glow-orb absolute -top-40 left-[15%] size-[30rem] bg-brand-500/12" />
-        <div className="glow-orb absolute bottom-[-10rem] right-[5%] size-[28rem] bg-brand-500/10" />
+        <div className="glow-orb absolute -top-40 left-[15%] size-[30rem] bg-brand-500/6" />
+        <div className="glow-orb absolute bottom-[-10rem] right-[5%] size-[28rem] bg-brand-500/6" />
         <div className="noise absolute inset-0" />
       </div>
 
@@ -161,7 +161,7 @@ export default function Login() {
                   <motion.button
                     type="submit"
                     whileTap={{ scale: 0.97 }}
-                    className="btn-press w-full h-13 rounded-2xl bg-gradient-to-br from-brand-500 to-teal-600 text-white font-bold text-sm inline-flex items-center justify-center gap-2 shadow-[0_14px_38px_-8px_rgba(0,196,180,0.55)] cursor-pointer"
+                    className="btn-press w-full h-13 rounded-2xl fill-brand text-white font-bold text-sm inline-flex items-center justify-center gap-2 shadow-[0_14px_38px_-8px_rgba(0,196,180,0.55)] cursor-pointer"
                   >
                     <LogIn className="size-4.5" /> Entrar como {ativo.nome}
                   </motion.button>

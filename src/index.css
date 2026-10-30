@@ -1,8 +1,9 @@
 @import "tailwindcss";
+@import "../public/garcom-pwa/design-tokens.css";
 
 @theme {
-  --font-display: Georgia, "Times New Roman", serif;
-  --font-sans: "Trebuchet MS", "Segoe UI", sans-serif;
+  --font-display: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --font-sans: "Manrope", "Segoe UI", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   --color-navy-950: #061a2e;
@@ -74,105 +75,6 @@
   --color-violet-700: var(--qr-violet-700);
   --color-sky-500: var(--qr-sky-500);
   --color-sky-700: var(--qr-sky-700);
-}
-
-/* ================= TEMA CLARO (padrão) =================
-   Mesma paleta do fallback inline em src/lib/tema.ts — superfície suave,
-   sem branco agressivo (ver commit "reduzir branco agressivo no tema claro"). */
-:root {
-  color-scheme: light;
-  --qr-white: #fff9f1;
-  --qr-slate-50: #f9efe2;
-  --qr-slate-100: #f5e6d5;
-  --qr-slate-200: #e9d6bf;
-  --qr-slate-300: #d0b69b;
-  --qr-slate-400: #8a796b;
-  --qr-slate-500: #756051;
-  --qr-slate-600: #604b42;
-  --qr-slate-700: #4b3a4a;
-  --qr-slate-800: #3f313e;
-  --qr-navy-500: #906747;
-  --qr-navy-700: #67443d;
-  --qr-navy-800: #553b44;
-  --qr-navy-900: #493641;
-  --qr-brand-50: #fff0e8;
-  --qr-brand-400: #fb9074;
-  --qr-brand-500: #f05e4a;
-  --qr-brand-600: #da5040;
-  --qr-brand-700: #a63e36;
-  --qr-teal-400: #fb9074;
-  --qr-teal-500: #70a58b;
-  --qr-teal-600: #4f8a6b;
-  --qr-teal-700: #367157;
-  --qr-amber-500: #f59e0b;
-  --qr-amber-700: #b45309;
-  --qr-rose-400: #fb7185;
-  --qr-rose-500: #f43f5e;
-  --qr-rose-600: #e11d48;
-  --qr-rose-700: #be123c;
-  --qr-violet-500: #8b5cf6;
-  --qr-violet-700: #6d28d9;
-  --qr-sky-500: #0ea5e9;
-  --qr-sky-700: #0369a1;
-
-  --qr-page: #f6eddf;
-  --qr-text: #493641;
-  --qr-grad-from: #493641;
-  --qr-stroke: rgba(10, 37, 64, 0.28);
-  --qr-card-shadow: 0 1px 2px rgba(10, 37, 64, 0.04), 0 10px 28px -18px rgba(10, 37, 64, 0.18);
-  --qr-card-shadow-deep: 0 2px 4px rgba(10, 37, 64, 0.05), 0 18px 44px -20px rgba(10, 37, 64, 0.22);
-  --qr-scrollbar: #d0b69b;
-}
-
-/* ================= TEMA ESCURO =================
-   Aceita data-theme="escuro" (canônico PT) E data-theme="dark" (legado Railway). */
-:root[data-theme="escuro"],
-:root[data-theme="dark"],
-html.dark,
-[data-theme="escuro"],
-[data-theme="dark"] {
-  color-scheme: dark;
-  --qr-white: #2d2628;
-  --qr-slate-50: #201b1c;
-  --qr-slate-100: #382b29;
-  --qr-slate-200: #4a3734;
-  --qr-slate-300: #614b43;
-  --qr-slate-400: #baa99b;
-  --qr-slate-500: #d4c2b2;
-  --qr-slate-600: #e4d3c0;
-  --qr-slate-700: #f2dfca;
-  --qr-slate-800: #f5e6d5;
-  --qr-navy-500: #bd967c;
-  --qr-navy-700: #f1d2b5;
-  --qr-navy-800: #f5ddc7;
-  --qr-navy-900: #fff1dc;
-  --qr-brand-50: #4a2929;
-  --qr-brand-400: #fa9680;
-  --qr-brand-500: #f47a65;
-  --qr-brand-600: #f69a82;
-  --qr-brand-700: #ffd0b6;
-  --qr-teal-400: #fa9680;
-  --qr-teal-500: #73ac94;
-  --qr-teal-600: #fa9680;
-  --qr-teal-700: #5eead4;
-  --qr-amber-500: #f59e0b;
-  --qr-amber-700: #fcd34d;
-  --qr-rose-400: #fb7185;
-  --qr-rose-500: #f43f5e;
-  --qr-rose-600: #fb7185;
-  --qr-rose-700: #fda4af;
-  --qr-violet-500: #8b5cf6;
-  --qr-violet-700: #c4b5fd;
-  --qr-sky-500: #0ea5e9;
-  --qr-sky-700: #7dd3fc;
-
-  --qr-page: #201b1c;
-  --qr-text: #fff1dc;
-  --qr-grad-from: #fff1dc;
-  --qr-stroke: rgba(234, 242, 251, 0.32);
-  --qr-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 30px -18px rgba(0, 0, 0, 0.6);
-  --qr-card-shadow-deep: 0 2px 4px rgba(0, 0, 0, 0.45), 0 20px 48px -20px rgba(0, 0, 0, 0.65);
-  --qr-scrollbar: #614b43;
 }
 
 html {
@@ -365,13 +267,96 @@ input, textarea, select, button {
 }
 
 
-:root { --qradmin-brand:#f05e4a; --qradmin-ink:#493641; --qradmin-surface:#f6eddf; --qradmin-muted:#8b5e3c; --qradmin-success:#4f8a6b; --qradmin-blue:#2d6f7a; }
-body { background-image: radial-gradient(circle at 10% 0%,rgba(240,94,74,.065),transparent 29%),radial-gradient(circle at 100% 75%,rgba(79,138,107,.06),transparent 36%); }
-.glass,.glass-deep { border-radius: 20px; }
-.brand-hero { position:relative; isolation:isolate; overflow:hidden; background:linear-gradient(112deg,rgba(240,94,74,.12),rgba(246,237,223,.8) 48%,rgba(79,138,107,.09)); border:1px solid rgba(139,94,60,.19); border-radius:24px; }
-.brand-hero::after { content:""; position:absolute; inset:0 0 0 auto; width:34%; pointer-events:none; opacity:.065; background-image:url('/logo/qradmin-mark.png'); background-position:right center; background-repeat:no-repeat; background-size:contain; z-index:-1; }
-.brand-kicker { color:var(--qradmin-muted); letter-spacing:.22em; text-transform:uppercase; font-size:.7rem; font-weight:800; }
-.brand-logo { filter:drop-shadow(0 4px 8px rgba(73,54,65,.12)); }
+/* Aliases da marca, para componentes existentes. */
+:root {
+  --qradmin-brand: var(--qr-brand-500);
+  --qradmin-ink: var(--qr-text);
+  --qradmin-surface: var(--qr-page);
+  --qradmin-muted: var(--qr-slate-500);
+  --qradmin-success: var(--qr-teal-600);
+  --qradmin-blue: var(--qr-sky-700);
+}
 
-.font-brand { font-family: Georgia, "Times New Roman", serif; }
-.bg-brand-shell { background:linear-gradient(130deg,var(--qr-page) 0%,var(--qr-white) 50%,var(--qr-brand-50) 100%); }
+/* ================= QR ADMIN · PRODUCT UI ================= */
+body { background-image: none; }
+.font-display, .font-brand { font-family: var(--qr-font); font-weight: 800; letter-spacing: -.045em; }
+.font-display { text-wrap: balance; }
+.text-gradient { background: none; color: var(--qr-brand-600); }
+.glass, .glass-deep { border-radius: var(--qr-radius); }
+.brand-logo { background: #fff; box-shadow: none; filter: none; border-radius: 10px; }
+.fill-brand { background: var(--qr-action); color: var(--qr-on-action); }
+.fill-success { background: var(--qr-success-action); color: var(--qr-on-action); }
+button.fill-brand:hover { background: var(--qr-action-hover); }
+.fill-brand, .fill-success { background-image: none; }
+:where(button, a, input, textarea, select):focus-visible {
+  outline: 2px solid var(--qr-focus);
+  outline-offset: 3px;
+}
+:where(button, input, select, textarea) { -webkit-tap-highlight-color: transparent; }
+button { touch-action: manipulation; }
+.ops-topbar > div > button { flex-shrink: 0; }
+::selection { background: var(--qr-action); color: #fff; }
+.brand-hero { position: relative; overflow: hidden; border: 1px solid var(--qr-slate-200); border-radius: 24px; background: var(--qr-brand-50); }
+.brand-kicker { color: var(--qr-brand-600); font-size: .7rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+.bg-brand-shell { background: var(--qr-page); }
+
+/* Mesmos controles existentes: apenas sua disposição muda. */
+.ops-sidebar { display: contents; }
+.ops-sidebar-label, .ops-sidebar-footer { display: none; }
+.ops-topbar { background: var(--qr-white); backdrop-filter: none; }
+.ops-topbar-kicker { letter-spacing: .05em; }
+.ops-page-heading { padding-bottom: 24px; border-bottom: 1px solid var(--qr-slate-200); }
+.ops-page-heading > div { min-width: 0; }
+.ops-page-heading > div > p { letter-spacing: .16em; font-size: 10px; margin-bottom: 8px; }
+.ops-nav-item { white-space: nowrap; }
+.ops-shell .glow-orb { opacity: .45; }
+.ops-main { min-width: 0; }
+@media (min-width: 1024px) {
+  .ops-shell { padding-left: 224px; }
+  .ops-sidebar {
+    position: fixed; inset: 0 auto 0 0; z-index: 60; width: 224px;
+    display: flex; flex-direction: column; align-items: stretch;
+    padding: 24px 16px; background: var(--qr-white); border-right: 1px solid var(--qr-slate-200);
+  }
+  .ops-brand { align-self: flex-start; margin: 0 12px 44px; }
+  .ops-brand .brand-logo { width: 150px; height: 52px; }
+  .ops-sidebar-label { display: block; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; color: var(--qr-slate-500); padding: 0 12px; margin-bottom: 14px; }
+  .ops-nav { flex-direction: column; align-items: stretch; gap: 8px; border: 0; padding: 0; background: none; max-width: none; overflow: visible; flex-shrink: 0; }
+  .ops-nav-item { height: 48px; border-radius: 12px; padding-inline: 16px; gap: 12px; font-size: 13px; }
+  .ops-nav-item > span:first-child:not(.ops-nav-label) { border-radius: 12px; }
+  .ops-nav-item svg { width: 19px; height: 19px; }
+  .ops-nav-label { display: inline; }
+  .ops-sidebar-footer { display: block; margin-top: auto; padding: 20px 12px 4px; border-top: 1px solid var(--qr-slate-200); }
+  .ops-sidebar-footer p { font-size: 11px; color: var(--qr-slate-500); line-height: 1.8; margin-top: 14px; }
+  .ops-main { padding-top: 32px; }
+  .ops-page-heading > div > h1 { margin-top: 0; }
+}
+@media (max-width: 639px) {
+  .ops-topbar > div { gap: 6px; }
+  .ops-nav { max-width: none; min-width: 0; flex-shrink: 1; }
+  .ops-nav-item { padding-inline: 10px; }
+  .ops-page-heading { gap: 16px; padding-bottom: 20px; }
+  .ops-main { padding-inline: 16px; }
+}
+@media (max-width: 359px) {
+  .ops-nav-item { padding-inline: 7px; }
+  .ops-topbar button.size-10 { width: 36px; height: 36px; }
+}
+
+/* Mesa: vitrine com as mesmas superfícies e controles da PWA. */
+.mesa-hero { margin-block: 24px 20px; padding: 24px; border-radius: 22px; border: 1px solid var(--qr-slate-200); background: var(--qr-white); }
+.mesa-hero > p { letter-spacing: .13em; font-size: 10px; }
+.mesa-hero h1 { margin-top: 14px; }
+.card-produto { border-radius: var(--qr-radius); box-shadow: var(--qr-card-shadow); border-color: var(--qr-slate-200); }
+.card-produto:hover { border-color: var(--qr-slate-300); }
+@media (max-width: 639px) {
+  .mesa-hero { padding: 22px 18px; margin-block: 18px 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+.qr-button { border-radius: var(--qr-radius-control); }
+.metric-card { container-type: inline-size; }
+.metric-value { font-size: clamp(1rem, 13.5cqi, 2.5rem); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }

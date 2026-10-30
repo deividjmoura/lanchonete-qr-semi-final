@@ -72,7 +72,7 @@ própria (`#billingBlocked`, `role="status"`) e texto específico por causa.
 | `public/garcom-pwa/app.js` | correção do `ReferenceError`; fechamento do diálogo; lote nas 3 etapas; bloqueio explicado; aviso de conta encerrada; coerção numérica de ids |
 | `public/garcom-pwa/index.html` | faixa `#billingBlocked` com `aria-live` |
 | `public/garcom-pwa/styles.css` | estilo `.billing-blocked`, legível em tela de celular |
-| `public/garcom-pwa/sw.js` | cache do shell **v18 → v19** |
+| `public/garcom-pwa/sw.js` | cache do shell **v18 → v20** (v19 já usado pelo PR #141) |
 | `tests/pwa-garcom-lote-cobranca.test.cjs` | 22 testes comportamentais |
 | `tests/helpers/pwa-harness.cjs` | harness que executa as funções reais do `app.js` |
 | `tests/e2e/garcom-lote-cobranca.e2e.cjs` | E2E em Chromium real, 11 verificações |
@@ -100,11 +100,11 @@ própria (`#billingBlocked`, `role="status"`) e texto específico por causa.
 
 | Verificação | Resultado |
 | --- | --- |
-| `npm test` | **310/310** (antes: 288) |
+| `npm test` | **314/314** (antes: 288; já com o PR #141 integrado) |
 | `npm run test:pg -- --sem-backup` | **7/7 suítes, 25 testes** |
-| `npm run test:e2e` | **2/2 cenários, 22 verificações** |
+| `npm run test:e2e` | **3/3 cenários, 22 verificações + 64 layouts visuais** |
 | `npm run typecheck` | limpo |
-| `npm run build` | ok, `dist/` em sincronia, shell v19 |
+| `npm run build` | ok, `dist/garcom-pwa/*` byte a byte igual ao `public/`, shell v20 |
 | CI `PostgreSQL integration` | **success**, drill de backup e E2E novos incluídos |
 | CI `CI` | **success** (migrations, typecheck, build, dist, regressão) |
 
@@ -130,7 +130,7 @@ quebrou o PWA inteiro no navegador com `SyntaxError`. A suíte agora copia
 parse real do navegador.
 
 **Teste de texto não pega `ReferenceError`.** O bug do `sessaoId` sobreviveu a
-310 testes de regressão porque nenhum deles executava `submitWaiterPayment`.
+314 testes de regressão porque nenhum deles executava `submitWaiterPayment`.
 Por isso o harness novo recorta e **executa** as funções reais, e o E2E cobre o
 clique de ponta a ponta.
 
@@ -153,6 +153,50 @@ O workflow agora instala `postgresql-client-16` quando o major não é 16 e
 verifica a versão antes do drill. **Implicação operacional: o backup de
 produção deve ser feito com `pg_dump` da mesma versão maior do servidor.**
 
+### 4.2 Compatibilidade com o PR #141 (identidade visual)
+
+O PR #141 foi mergeado em `main` enquanto esta correção estava pronta. Os dois
+mexem no PWA do garçom, então a integração foi conferida arquivo por arquivo
+antes de abrir o PR.
+
+| Arquivo | Situação | Resolução |
+| --- | --- | --- |
+| `app.js` | sem conflito textual | merge automático: o PR #141 só trocou cores do indicador de conexão por tokens; lote, notificações e cobrança preservados |
+| `index.html` | sem conflito textual | merge automático: marcação nova do #141 + `#billingBlocked` desta correção |
+| `styles.css` | **conflito** | mantido o CSS reescrito com design tokens; `.billing-blocked` reaplicado sobre ele |
+| `sw.js` | **conflito** | mantido o precache novo do #141 e versão subida para **v20** |
+
+Três pontos que merecem registro:
+
+1. **Colisão de versão de cache.** Os dois PRs chegaram a `garcom-pwa-shell-v19`
+   de forma independente. Manter v19 faria o aparelho que já instalou o shell do
+   #141 servir `app.js` antigo, com o botão de pagamento morto. O cache desta
+   entrega é **v20**, e o precache continua listando `design-tokens.css`,
+   `theme-init.js`, a fonte local e os dois WebP da marca.
+
+2. **Aviso de bloqueio agora usa tokens.** A primeira versão de `.billing-blocked`
+   tinha cores fixas (`#fff4e5` / `#7a4a10`), que ficariam ilegíveis no tema
+   escuro introduzido pelo #141. Passou a usar `--qr-amber-500` / `--qr-amber-700`
+   com `color-mix`, como os demais avisos. O teste foi atualizado para exigir o
+   token e proibir cor fixa.
+
+3. **`dist/` do #141 não fechava com o source dele.** Buildando `origin/main`
+   limpo obtêm-se `index-BTm3lOPy.js` e `index-DptcC2lZ.css`, e não os hashes
+   commitados no #141. O JS é byte a byte idêntico (só o nome do arquivo muda);
+   já o CSS commitado tinha ~236 bytes a mais, incluindo uma classe
+   `.to-brand-600` que não existe em nenhum source — resto de um build anterior.
+   O `dist/` desta branch foi regerado e conferido contra esse build limpo do
+   `main` (idênticos), removendo os assets órfãos. Não é regressão desta
+   correção, e o passo `dist/ integrity` do CI aceita hashes diferentes por
+   construção.
+
+O runner `scripts/run-e2e-tests.js` também precisou de ajuste: o E2E visual do
+#141 roda sobre `vite preview` com API simulada e não usa banco, enquanto os E2E
+do garçom sobem o próprio `server.js` contra PostgreSQL. O runner agora detecta
+a família pelo conteúdo do arquivo, exige `DATABASE_URL` apenas para quem usa
+banco, e sobe/encerra o `preview` sozinho. Os guards continuam valendo: sem
+`DATABASE_URL` ou com banco sem "test" no nome, os E2E de banco são recusados.
+
 ## 5. Limites
 
 - **Permissão de notificação simulada no E2E.** O Chromium empacotado
@@ -174,6 +218,6 @@ Nenhuma migration nova. É apenas shell do PWA:
 
 1. `npm run build`
 2. publicar
-3. reabrir o PWA nos aparelhos — o cache **v19** força a atualização do
+3. reabrir o PWA nos aparelhos — o cache **v20** força a atualização do
    `app.js`. Sem isso o aparelho pode continuar com o JS antigo e o botão de
    pagamento seguirá morto.

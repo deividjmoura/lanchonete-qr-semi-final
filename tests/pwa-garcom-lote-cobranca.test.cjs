@@ -351,8 +351,17 @@ test('tentativa pendente de outra mesa bloqueia explicando o que resolver', asyn
 
 test('aviso de bloqueio existe no HTML com live region e estilo próprio', () => {
   assert.match(HTML, /id="billingBlocked"[^>]*aria-live="polite"/);
-  const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'garcom-pwa', 'styles.css'), 'utf8');
-  assert.match(css, /\.billing-blocked\{/, 'o aviso precisa de destaque visual legível no celular');
+  // Normaliza só a formatação: o design system (PR #141) reescreveu o CSS com
+  // indentação, e a guarda precisa valer para os dois formatos.
+  const css = fs
+    .readFileSync(path.join(__dirname, '..', 'public', 'garcom-pwa', 'styles.css'), 'utf8')
+    .replace(/\s*([{}:;,])\s*/g, '$1');
+  const regra = css.match(/\.billing-blocked\{([^}]*)\}/);
+  assert.ok(regra, 'o aviso precisa de destaque visual legível no celular');
+  // Sem cores fixas: o motivo do bloqueio tem de continuar legível no tema escuro.
+  assert.match(regra[1], /var\(--qr-amber-700\)/, 'texto do aviso usa token de âmbar');
+  assert.match(regra[1], /var\(--qr-amber-500\)/, 'fundo/borda do aviso usam token de âmbar');
+  assert.doesNotMatch(regra[1], /#[0-9a-f]{3,6}/i, 'nada de cor fixa no aviso de bloqueio');
 });
 
 test('não sobrou comparação de id sem coerção numérica', () => {

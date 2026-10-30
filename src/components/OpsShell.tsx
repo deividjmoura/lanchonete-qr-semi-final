@@ -95,73 +95,107 @@ export function OpsShell({
   }, [somLigado]);
 
   return (
-    <div className="relative min-h-dvh">
+    <div className="ops-shell relative min-h-dvh">
       {/* ambientes */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
-        <div className="glow-orb absolute -top-40 left-1/4 size-[34rem] bg-brand-500/12" />
-        <div className="glow-orb absolute top-1/3 -right-40 size-[28rem] bg-amber-500/10" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(240,94,74,0.07),transparent_62%)]" />
+        <div className="glow-orb absolute -top-40 left-1/4 size-[34rem] bg-brand-500/6" />
+        <div className="glow-orb absolute top-1/3 -right-40 size-[28rem] bg-amber-500/6" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(240,94,74,0.04),transparent_62%)]" />
       </div>
 
       {/* Marca d'água discreta do QR Admin */}
-      <div aria-hidden="true" className="fixed -z-10 bottom-0 right-0 w-36 sm:w-52 h-80 opacity-[.045] pointer-events-none" style={{ background:"url('/logo/qradmin-mark.png') center bottom / contain no-repeat" }} />
+      <div
+        aria-hidden="true"
+        className="fixed -z-10 bottom-0 right-0 w-36 sm:w-52 h-80 opacity-[.045] pointer-events-none"
+        style={{
+          background:
+            "url('/logo/qradmin-mark.png') center bottom / contain no-repeat",
+        }}
+      />
       {/* header */}
-      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
+      <header className="ops-topbar sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-3 sm:px-6 h-14 sm:h-16 flex items-center gap-1.5 sm:gap-3 min-w-0">
-          <button
-            onClick={() => {
-              if (role === "admin") ir("/admin");
-              else if (role === "cozinha") ir("/cozinha");
-              else if (role === "bar") ir("/bar");
-              else if (role === "caixa") ir("/caixa");
-              else ir("/");
-            }}
-            className="cursor-pointer shrink-0"
-          >
-            <Logo size="sm" />
-          </button>
-          <span className="hidden md:block h-6 w-px bg-slate-200" />
-          <p className="hidden md:flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.3em] text-slate-500">
-            {kicker} <LivePill />
+          <aside className="ops-sidebar">
+            <button
+              onClick={() => {
+                if (role === "admin") ir("/admin");
+                else if (role === "cozinha") ir("/cozinha");
+                else if (role === "bar") ir("/bar");
+                else if (role === "caixa") ir("/caixa");
+                else ir("/");
+              }}
+              className="ops-brand cursor-pointer shrink-0"
+            >
+              <Logo size="sm" />
+            </button>
+            <p className="ops-sidebar-label">Seu espaço de operação</p>
+            <nav
+              aria-label="Postos de operação"
+              className="ops-nav flex items-center gap-0.5 sm:gap-1 rounded-full bg-slate-100/70 border border-slate-200 p-0.5 sm:p-1 overflow-x-auto no-scrollbar max-w-[55vw] sm:max-w-none shrink"
+            >
+              {nav.map((n) => (
+                <button
+                  key={n.id}
+                  aria-label={n.label}
+                  aria-current={ativo === n.id ? "page" : undefined}
+                  onClick={() => ir(n.to)}
+                  className={cn(
+                    "ops-nav-item btn-press relative flex items-center gap-1.5 rounded-full px-3 sm:px-3.5 h-9 text-xs font-semibold cursor-pointer transition-colors",
+                    ativo === n.id
+                      ? "text-white"
+                      : "text-slate-500 hover:text-navy-800",
+                  )}
+                >
+                  {ativo === n.id && (
+                    <motion.span
+                      layoutId="ops-nav"
+                      className="absolute inset-0 rounded-full fill-brand"
+                      transition={{
+                        type: "spring",
+                        stiffness: 420,
+                        damping: 32,
+                      }}
+                    />
+                  )}
+                  <n.icon className="relative z-10 size-4" />
+                  <span className="ops-nav-label relative z-10 hidden lg:inline">
+                    {n.label}
+                  </span>
+                </button>
+              ))}
+            </nav>
+
+            <div className="ops-sidebar-footer">
+              <LivePill />
+              <p>
+                Do pedido à mesa.
+                <br />
+                Tudo no mesmo lugar.
+              </p>
+            </div>
+          </aside>
+          <p className="ops-topbar-kicker hidden lg:block text-xs font-semibold text-slate-500">
+            {kicker}
           </p>
-
           <div className="flex-1 min-w-0" />
-
-          <nav className="flex items-center gap-0.5 sm:gap-1 rounded-full bg-slate-100/70 border border-slate-200 p-0.5 sm:p-1 overflow-x-auto no-scrollbar max-w-[55vw] sm:max-w-none shrink">
-            {nav.map((n) => (
-              <button
-                key={n.id}
-                onClick={() => ir(n.to)}
-                className={cn(
-                  "btn-press relative flex items-center gap-1.5 rounded-full px-3 sm:px-3.5 h-9 text-xs font-semibold cursor-pointer transition-colors",
-                  ativo === n.id ? "text-white" : "text-slate-500 hover:text-navy-800"
-                )}
-              >
-                {ativo === n.id && (
-                  <motion.span
-                    layoutId="ops-nav"
-                    className="absolute inset-0 rounded-full bg-gradient-to-br from-brand-500 to-brand-600"
-                    transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                  />
-                )}
-                <n.icon className="relative z-10 size-4" />
-                <span className="relative z-10 hidden md:inline">{n.label}</span>
-              </button>
-            ))}
-          </nav>
-
           <ThemeToggle />
           <button
             onClick={toggleSom}
-            title={somLigado ? "Silenciar alertas de voz" : "Ativar alertas de voz"}
+            title={
+              somLigado ? "Silenciar alertas de voz" : "Ativar alertas de voz"
+            }
             className={cn(
               "btn-press grid place-items-center size-10 rounded-full border cursor-pointer transition-colors",
               somLigado
                 ? "bg-brand-500/10 border-brand-500/40 text-brand-600"
-                : "bg-slate-100/70 border-slate-200 text-slate-500"
+                : "bg-slate-100/70 border-slate-200 text-slate-500",
             )}
           >
-            {somLigado ? <Volume2 className="size-4.5" /> : <VolumeX className="size-4.5" />}
+            {somLigado ? (
+              <Volume2 className="size-4.5" />
+            ) : (
+              <VolumeX className="size-4.5" />
+            )}
           </button>
           <button
             onClick={() => {
@@ -195,18 +229,25 @@ export function OpsShell({
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10 pb-24">
-        <div className="flex flex-wrap items-end justify-between gap-4 mb-6 sm:mb-8">
+      <main className="ops-main mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10 pb-24">
+        <div className="ops-page-heading flex flex-wrap items-end justify-between gap-4 mb-6 sm:mb-8">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-brand-600">{kicker}</p>
-            <h1 className="font-display text-4xl sm:text-6xl lg:text-7xl leading-[0.95] text-navy-900 mt-1 break-words">{titulo}</h1>
+            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-brand-600">
+              {kicker}
+            </p>
+            <h1 className="font-display text-3xl sm:text-4xl lg:text-[2.75rem] leading-[1.12] text-navy-900 mt-1 break-words">
+              {titulo}
+            </h1>
           </div>
           {extra}
         </div>
         {children}
       </main>
       {role && (trocaObrigatoria || trocando) && (
-        <TrocarSenha obrigatorio={trocaObrigatoria} onClose={() => setTrocando(false)} />
+        <TrocarSenha
+          obrigatorio={trocaObrigatoria}
+          onClose={() => setTrocando(false)}
+        />
       )}
     </div>
   );
