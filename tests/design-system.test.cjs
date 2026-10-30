@@ -118,6 +118,73 @@ test("tokens semânticos atendem contraste WCAG AA nos dois temas", () => {
   }
 });
 
+test("PWA implementa ação única de sincronização no cabeçalho, faixa compacta do garçom e sprite Phosphor", () => {
+  const pwaHtml = read("public/garcom-pwa/index.html");
+  const pwaCss = read("public/garcom-pwa/styles.css");
+  const syncMatches = pwaHtml.match(/id="syncBtn"/g) || [];
+  assert.equal(syncMatches.length, 1, "deve existir exatamente um botão de sincronização");
+  assert.match(
+    pwaHtml,
+    /id="connection"[\s\S]{0,160}id="syncBtn"[^>]*aria-label="[^"]+"[^>]*title="[^"]+"/,
+    "#syncBtn precisa ficar imediatamente à direita do indicador de conexão no cabeçalho global",
+  );
+  assert.doesNotMatch(
+    pwaHtml.slice(pwaHtml.indexOf('<main class="workspace">')),
+    /Sincronizar/i,
+    "nenhum botão visual Sincronizar repetido nas páginas individuais",
+  );
+  assert.match(pwaHtml, /class="waiter-strip"/, "identificação compacta do garçom");
+  assert.match(pwaCss, /\.waiter-strip-inner\s*\{[^}]*min-height:\s*28px/);
+  assert.match(pwaHtml, /icons\.svg#squares-four-regular/);
+  assert.match(pwaHtml, /icons\.svg#squares-four-fill/);
+});
+
+test("PWA renderiza múltiplos pedidos recolhidos por padrão com expansão inline em acordeão", async () => {
+  const { contexto, carregar, Elemento } = require("./helpers/pwa-harness.cjs");
+  const root = new Elemento("div");
+  const ctx = contexto({
+    ids: { readyOrders: root, alertMessage: new Elemento("p") },
+    globais: {
+      waiterToken: "tok",
+      currentWaiterId: 7,
+      getJson: async () => [
+        { id: 101, mesa: 4, responsavelMesaNome: "Deivid", criado_em: "2026-10-30T18:10:00Z", itens: [{ id: 1, status: "concluido", nome: "Chopp", quantidade: 2, setor: "bar" }] },
+        { id: 102, mesa: 9, responsavelMesaNome: "Ana", criado_em: "2026-10-30T18:15:00Z", itens: [{ id: 2, status: "concluido", nome: "Burger", quantidade: 1, setor: "cozinha" }] },
+      ],
+      refreshLiveData: async () => {},
+      itemStateText: (i) => i.status,
+      showOrderHistory: () => {},
+    },
+  });
+  carregar(ctx, ["avisarEntrega", "deliveryAction", "loadDeliveries"]);
+  await ctx.loadDeliveries();
+
+  assert.equal(root.children.length, 2, "dois cards na fila");
+  const [card1, card2] = root.children;
+  const [sum1, body1] = card1.children;
+  const [sum2, body2] = card2.children;
+  assert.equal(body1.hidden, true, "pedido 1 inicia recolhido quando há vários pedidos");
+  assert.equal(body2.hidden, true, "pedido 2 inicia recolhido quando há vários pedidos");
+  assert.equal(sum1.attributes["aria-expanded"], "false");
+
+  // Tocar no primeiro expande
+  sum1.onclick();
+  assert.equal(body1.hidden, false);
+  assert.equal(sum1.attributes["aria-expanded"], "true");
+
+  // Tocar no segundo expande o segundo e recolhe o primeiro
+  sum2.onclick();
+  assert.equal(body1.hidden, true, "evita múltiplos pedidos expandidos simultaneamente");
+  assert.equal(body2.hidden, false);
+  assert.equal(sum2.attributes["aria-expanded"], "true");
+
+  // Tocar novamente recolhe
+  sum2.onclick();
+  assert.equal(body2.hidden, true);
+  assert.equal(sum2.attributes["aria-expanded"], "false");
+});
+
+
 test("fontes Archivo + Martian Mono (~150 KB máx) e sprite de ícones Phosphor fazem parte do shell offline", () => {
   const sw = read("public/garcom-pwa/sw.js");
   for (const asset of [
