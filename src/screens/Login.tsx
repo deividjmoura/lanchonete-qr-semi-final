@@ -88,7 +88,7 @@ export default function Login() {
       </aside>
 
       {/* ---------- acesso ---------- */}
-      <main className="relative flex flex-col px-5 py-6 sm:px-8 sm:py-8 lg:border-l lg:border-slate-200 lg:bg-white/40">
+      <main className="relative flex flex-col px-5 py-6 sm:px-8 sm:py-8 lg:border-l lg:border-slate-200 lg:bg-white">
         <div className="flex items-center justify-between">
           <button
             onClick={() => ir("/")}
@@ -140,7 +140,7 @@ export default function Login() {
                       <span
                         className={cn(
                           "grid place-items-center size-9 rounded-xl border transition-colors",
-                          sel ? p.tom : "border-slate-200 bg-white " + p.tom.split(" ")[0]
+                          sel ? p.tom : "border-slate-200 bg-slate-50 " + p.tom.split(" ")[0]
                         )}
                       >
                         <p.icon className="size-4.5" />

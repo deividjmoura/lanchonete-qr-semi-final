@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QR Admin · Galeria do redesign (Mesa &amp; Brasa v2)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page:#faf6f0; --card:#fff; --ink:#241c16; --muted:#7c6b5c; --line:#e8dfd1;
+    --brand:#e85d2f; --brand-600:#d1481f; --brand-50:#fff4ed; --teal:#2c9b6d;
+    --shadow:0 1px 2px rgba(58,37,20,.05), 0 18px 40px -26px rgba(58,37,20,.35);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --page:#14100d; --card:#221c16; --ink:#f7eee3; --muted:#b6a28e; --line:#3a2f27; --brand:#ff7a45; --brand-600:#ff9364; --brand-50:#3a2117; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin:0; background:var(--page); color:var(--ink);
+    font-family:"Plus Jakarta Sans",ui-sans-serif,system-ui,sans-serif; letter-spacing:-.01em;
+    background-image: radial-gradient(60rem 30rem at 85% -10%, rgba(232,93,47,.10), transparent 70%),
+                      radial-gradient(46rem 26rem at 0% 2%, rgba(44,155,109,.07), transparent 70%);
+    background-attachment: fixed;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 28px 22px 90px; }
+  header.top { display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding-bottom:22px; border-bottom:1px solid var(--line); }
+  .mark { width:40px;height:40px;border-radius:13px;background:linear-gradient(160deg,#F0703F,#E85D2F 55%,#C4431C);display:grid;place-items:center;box-shadow:0 10px 24px -12px rgba(199,66,27,.7); }
+  .title small { display:block; font-size:9.5px; font-weight:800; letter-spacing:.24em; text-transform:uppercase; color:var(--muted); }
+  .title b { font-family:"Bricolage Grotesque",sans-serif; font-size:18px; letter-spacing:-.025em; }
+  .title b em { color:var(--brand-600); font-style:normal; }
+  .spacer { flex:1; }
+  .pill { display:inline-flex; gap:7px; align-items:center; border:1px solid var(--line); background:var(--card); border-radius:999px; padding:7px 13px; font-size:11.5px; font-weight:700; color:var(--muted); }
+  .dot { width:7px;height:7px;border-radius:999px;background:var(--teal); box-shadow:0 0 0 3px rgba(44,155,109,.18); }
+  h1 { font-family:"Bricolage Grotesque",sans-serif; font-size:clamp(2rem,5vw,3rem); line-height:.98; letter-spacing:-.035em; margin:30px 0 0; }
+  h1 em { color:var(--brand-600); font-style:normal; }
+  .lede { max-width:64ch; color:var(--muted); margin:12px 0 0; font-size:14.5px; }
+  h2 { font-family:"Bricolage Grotesque",sans-serif; font-size:clamp(1.3rem,3vw,1.75rem); letter-spacing:-.03em; margin:56px 0 4px; }
+  h2 span { color:var(--brand-600); }
+  .sect-note { color:var(--muted); font-size:13px; margin:0 0 18px; }
+  .grid { display:grid; gap:18px; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); }
+  .grid.mobile { grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); }
+  figure { margin:0; background:var(--card); border:1px solid var(--line); border-radius:22px; padding:12px; box-shadow:var(--shadow); }
+  figure img { width:100%; display:block; border-radius:14px; border:1px solid var(--line); background:#faf6f0; }
+  figcaption { display:flex; align-items:baseline; justify-content:space-between; gap:10px; padding:11px 4px 3px; }
+  figcaption b { font-size:13.5px; }
+  figcaption span { font-size:11px; color:var(--muted); font-family:"JetBrains Mono",monospace; }
+  .tag { font-size:9.5px; font-weight:800; letter-spacing:.18em; text-transform:uppercase; color:var(--brand-600); background:var(--brand-50); border:1px solid rgba(232,93,47,.22); border-radius:999px; padding:3px 8px; }
+  .links { display:flex; flex-wrap:wrap; gap:10px; margin-top:26px; }
+  a.btn { display:inline-flex; align-items:center; gap:8px; text-decoration:none; border-radius:14px; padding:12px 18px; font-size:13.5px; font-weight:700; border:1px solid var(--line); background:var(--card); color:var(--ink); box-shadow:var(--shadow); }
+  a.btn--primary { background:linear-gradient(168deg,#d94e22,#b03c17); color:#fff; border-color:transparent; }
+  footer { margin-top:60px; padding-top:18px; border-top:1px solid var(--line); color:var(--muted); font-size:12px; }
+  code { font-family:"JetBrains Mono",monospace; font-size:11.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <span class="mark" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="7" height="7" rx="2" fill="#fff"/><rect x="15" y="2" width="7" height="7" rx="2" fill="#fff"/><rect x="2" y="15" width="7" height="7" rx="2" fill="#fff"/><rect x="15" y="15" width="3" height="3" rx="1" fill="#fff"/><rect x="19" y="19" width="3" height="3" rx="1" fill="#fff"/></svg>
+    </span>
+    <span class="title"><small>galeria · antes do merge</small><b>QR Admin <em>Mesa &amp; Brasa</em></b></span>
+    <span class="spacer"></span>
+    <span class="pill"><i class="dot"></i> build atual · dados de exemplo</span>
+  </header>
+
+  <h1>O redesign, tela por tela.<br><em>Claro, escuro e mobile.</em></h1>
+  <p class="lede">Capturas do build deste pull request feitas em Chromium headless (desktop 1440×900, mobile 390×844), com dados de exemplo para Cozinha, Bar, Caixa, Admin e Mesa. Nenhuma tela foi montada à mão: é o app real rodando o build atual.</p>
+
+  <div class="links">
+    <a class="btn btn--primary" id="vitrineLink" href="http://localhost:4180/">Abrir a vitrine interativa (dados de exemplo) →</a>
+    <a class="btn" href="./index.html">Manual do Design System</a>
+  </div>
+
+  <h2>Tema <span>claro</span></h2>
+  <p class="sect-note">Landing, Login, Mesa do cliente, Cozinha, Caixa e Admin.</p>
+  <div class="grid">
+    <figure>
+      <img src="./prints/landing.jpg" alt="Landing do QR Admin em tema claro" loading="lazy">
+      <figcaption><b>Landing</b><span class="tag">claro</span></figcaption>
+    </figure>
+    <figure>
+      <img src="./prints/login.jpg" alt="Tela de login em tema claro" loading="lazy">
+      <figcaption><b>Login</b><span class="tag">claro</span></figcaption>
+    </figure>
+    <figure>
+      <img src="./prints/mesa.jpg" alt="Cardápio do cliente em tema claro" loading="lazy">
+      <figcaption><b>Mesa · cardápio</b><span class="tag">claro</span></figcaption>
+    </figure>
+    <figure>
+      <img src="./prints/cozinha.jpg" alt="Operação de cozinha em tema claro" loading="lazy">
+      <figcaption><b>Cozinha</b><span class="tag">claro</span></figcaption>
+    </figure>
+    <figure>
+      <img src="./prints/caixa.jpg" alt="Caixa com comandas em tema claro" loading="lazy">
+      <figcaption><b>Caixa</b><span class="tag">claro</span></figcaption>
+    </figure>
+    <figure>
+      <img src="./prints/admin.jpg" alt="Dashboard do admin em tema claro" loading="lazy">
+      <figcaption><b>Admin · dashboard</b><span class="tag">claro</span></figcaption>
+    </figure>
+  </div>
+
+  <h2>Tema <span>escuro</span></h2>
+  <p class="sect-note">Mesmos componentes, mesma hierarquia — só os tokens mudam.</p>
+  <div class="grid">
+    <figure>
+      <img src="./prints/login-escuro.jpg" alt="Login em tema escuro" loading="lazy">
+      <figcaption><b>Login</b><span class="tag">escuro</span></figcaption>
+    </figure>
+    <figure>
+      <img src="./prints/bar-escuro.jpg" alt="Operação do bar em tema escuro" loading="lazy">
+      <figcaption><b>Bar</b><span class="tag">escuro</span></figcaption>
+    </figure>
+    <figure>
+      <img src="./prints/caixa-escuro.jpg" alt="Caixa em tema escuro" loading="lazy">
+      <figcaption><b>Caixa</b><span class="tag">escuro</span></figcaption>
+    </figure>
+  </div>
+
+  <h2>Mobile e <span>PWA do garçom</span></h2>
+  <p class="sect-note">Barra inferior com safe-area, folha de pedido centralizada e cardápio com barra flutuante.</p>
+  <div class="grid mobile">
+    <figure>
+      <img src="./prints/garcom-pwa.jpg" alt="PWA do garçom em tema claro" loading="lazy">
+      <figcaption><b>PWA · Mesas</b><span class="tag">claro</span></figcaption>
+    </figure>
+    <figure>
+      <img src="./prints/garcom-pwa-folha.jpg" alt="Folha de montar pedido do PWA em tema escuro" loading="lazy">
+      <figcaption><b>PWA · folha de pedido</b><span class="tag">escuro</span></figcaption>
+    </figure>
+    <figure>
+      <img src="./prints/mesa-escuro-mobile.jpg" alt="Cardápio do cliente no celular, tema escuro" loading="lazy">
+      <figcaption><b>Mesa · celular</b><span class="tag">escuro</span></figcaption>
+    </figure>
+    <figure>
+      <img src="./prints/cozinha-mobile.jpg" alt="Cozinha no celular" loading="lazy">
+      <figcaption><b>Cozinha · celular</b><span class="tag">claro</span></figcaption>
+    </figure>
+    <figure>
+      <img src="./prints/admin-mobile.jpg" alt="Admin no celular" loading="lazy">
+      <figcaption><b>Admin · celular</b><span class="tag">claro</span></figcaption>
+    </figure>
+    <figure>
+      <img src="./prints/login-mobile.jpg" alt="Login no celular" loading="lazy">
+      <figcaption><b>Login · celular</b><span class="tag">claro</span></figcaption>
+    </figure>
+  </div>
+
+  <footer>
+    QR Admin · galeria do redesign “Mesa &amp; Brasa” v2 — capturas e vitrine geradas antes do merge.
+    Detalhes em <code>docs/design-system.md</code>.
+  </footer>
+</div>
+<script>
+  // a vitrine roda na porta 4180 — mesma origem, porta vizinha
+  (function () {
+    const link = document.getElementById('vitrineLink');
+    const h = location.hostname;
+    if (/^4181-/.test(h)) {
+      link.href = location.protocol + '//' + h.replace(/^4181-/, '4180-') + '/';
+    } else if (location.port === '4181') {
+      link.href = location.protocol + '//' + h + ':4180/';
+    }
+  })();
+</script>
+</body>
+</html>
