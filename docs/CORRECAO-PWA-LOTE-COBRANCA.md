@@ -183,12 +183,18 @@ Três pontos que merecem registro:
 3. **`dist/` do #141 não fechava com o source dele.** Buildando `origin/main`
    limpo obtêm-se `index-BTm3lOPy.js` e `index-DptcC2lZ.css`, e não os hashes
    commitados no #141. O JS é byte a byte idêntico (só o nome do arquivo muda);
-   já o CSS commitado tinha ~236 bytes a mais, incluindo uma classe
-   `.to-brand-600` que não existe em nenhum source — resto de um build anterior.
+   já o CSS commitado tinha ~236 bytes a mais, incluindo uma classe de
+   gradiente que não existe em nenhum source de tela.
    O `dist/` desta branch foi regerado e conferido contra esse build limpo do
    `main` (idênticos), removendo os assets órfãos. Não é regressão desta
    correção, e o passo `dist/ integrity` do CI aceita hashes diferentes por
    construção.
+
+   **Causa identificada depois (ver `CORRECAO-CSRF-ABAS.md` §6):** por padrão o
+   Tailwind varre o projeto inteiro, incluindo `docs/` e `tests/`. Este próprio
+   relatório citava a classe como exemplo, e o build passou a gerá-la no CSS de
+   produção. O `src/index.css` agora declara as fontes explicitamente
+   (`source(none)` + `@source`), então documentação não altera mais o bundle.
 
 O runner `scripts/run-e2e-tests.js` também precisou de ajuste: o E2E visual do
 #141 roda sobre `vite preview` com API simulada e não usa banco, enquanto os E2E
