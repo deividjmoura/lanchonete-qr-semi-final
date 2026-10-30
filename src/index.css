@@ -376,16 +376,6 @@
   animation: stamp-pop 150ms var(--ease-ticket);
 }
 
-@keyframes sync-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.sync-spinning {
-  animation: sync-spin 700ms linear infinite;
-}
-
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -416,7 +406,7 @@
   }
   #qradmin-print-frame {
     display: block !important;
-    background: #fdfbf7 !important;
-    color: #17120e !important;
+    background: var(--prim-papel-50) !important;
+    color: var(--prim-stout-900) !important;
   }
 }

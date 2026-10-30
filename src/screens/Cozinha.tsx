@@ -216,6 +216,8 @@ function CardPedido({ pedido, setor }: { pedido: Pedido; setor: "cozinha" | "bar
 
         <div className="text-right">
           <Badge
+            key={pedido.status}
+            className="anim-stamp"
             tone={
               pedido.status === "na_fila"
                 ? "brass"

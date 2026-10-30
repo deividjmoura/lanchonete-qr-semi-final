@@ -198,7 +198,7 @@ function CardPronto({
           </p>
         </div>
         <div className="text-right">
-          <Badge tone={esfriando ? "rose" : "brass"}>
+          <Badge key={pedido.status} className="anim-stamp" tone={esfriando ? "rose" : "brass"}>
             {esfriando ? "Esfriando" : prontos.length ? "Pronto" : "Em entrega"}
           </Badge>
           <p className="mt-1.5 flex items-center justify-end gap-1 font-mono text-xs text-text-muted">

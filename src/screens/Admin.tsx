@@ -326,10 +326,10 @@ function Painel() {
                   <div className="relative flex-1 w-full rounded-xs bg-surface-sunken border border-line overflow-hidden">
                     <div
                       className={cn(
-                        "absolute inset-x-0 bottom-0 transition-[height] duration-150",
+                        "absolute inset-0 origin-bottom transition-transform duration-150",
                         hoje ? "bg-brand" : "bg-status-success",
                       )}
-                      style={{ height: `${Math.max(4, (d.valor / maxSemana) * 100)}%` }}
+                      style={{ transform: `scaleY(${Math.max(0.04, d.valor / maxSemana)})` }}
                     />
                   </div>
                   <span

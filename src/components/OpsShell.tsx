@@ -230,7 +230,7 @@ export function OpsShell({
           )}
         </header>
 
-        <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
+        <main className="anim-ticket mx-auto w-full max-w-[1440px] flex-1 px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
           {children}
         </main>
       </div>

@@ -400,6 +400,8 @@ export default function Mesa({ token }: { token: string }) {
                     )}
                   </div>
                   <Badge
+                    key={p.status}
+                    className="anim-stamp"
                     tone={
                       cancelado
                         ? "rose"
@@ -618,8 +620,8 @@ export default function Mesa({ token }: { token: string }) {
             {/* Abas de categoria */}
             <div
               className={cn(
-                "overflow-hidden transition-all duration-150",
-                catsHidden ? "max-h-0 opacity-0 mb-0 pointer-events-none" : "max-h-20 opacity-100 mb-2",
+                "transition-opacity duration-150",
+                catsHidden ? "hidden opacity-0 pointer-events-none" : "block opacity-100 mb-2",
               )}
             >
               <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1">
@@ -870,7 +872,7 @@ function ItemCard({
           alt=""
           loading="lazy"
           decoding="async"
-          className="card-produto-foto transition-transform duration-200 group-hover:scale-[1.03]"
+          className="card-produto-foto transition-transform duration-150 group-hover:scale-[1.03]"
           onError={(e) => fallbackFoto(e, p.nome, p.categoria)}
         />
         <div className="absolute top-2 left-2 right-2 flex flex-wrap gap-1 pointer-events-none">

@@ -194,8 +194,8 @@ export default function Caixa() {
 
                     <div className="mt-2.5 h-1.5 rounded-xs bg-surface-sunken overflow-hidden">
                       <div
-                        className="h-full bg-status-success transition-[width] duration-150"
-                        style={{ width: `${pct}%` }}
+                        className="h-full w-full origin-left bg-status-success transition-transform duration-150"
+                        style={{ transform: `scaleX(${Math.max(0, Math.min(1, pct / 100))})` }}
                       />
                     </div>
                     <p className="mt-1.5 font-mono text-[10px] text-text-muted">
