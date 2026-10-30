@@ -57,10 +57,28 @@ jobs:
         run: node --test tests/postgres-financial-concurrency.test.cjs
       - name: Staff password change PostgreSQL integration tests
         run: node --test tests/postgres-password-change.test.cjs
+      # O runner ubuntu-latest migra de imagem (Ubuntu 26 a partir de 19/10/2026)
+      # e o cliente PostgreSQL pré-instalado pode mudar ou desaparecer. Fixar a
+      # versão do cliente evita que o drill quebre por motivo alheio ao código.
+      - name: Ensure PostgreSQL client 16
+        run: |
+          if ! command -v pg_dump >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends postgresql-client-16 \
+              || sudo apt-get install -y --no-install-recommends postgresql-client
+          fi
+          pg_dump --version
+          pg_restore --version
       - name: Backup/restore drill (pg_dump + pg_restore em banco isolado)
         run: |
-          pg_dump --version
-          node --test tests/postgres-backup-restore.test.cjs
+          set -o pipefail
+          # Publica a causa como annotation: o download de log bruto nem sempre
+          # é acessível, e sem isto a falha aparece só como "exit code 1".
+          if ! node --test tests/postgres-backup-restore.test.cjs 2>&1 | tee /tmp/drill.log; then
+            echo "::error title=Backup/restore drill falhou::$(tail -n 40 /tmp/drill.log | tr '\n' '|' | sed 's/%/%25/g')"
+            tail -n 60 /tmp/drill.log
+            exit 1
+          fi
       # O E2E do lote/cobrança pega ReferenceError em handler do PWA, que os
       # testes de texto e o `node --check` em .js não detectam.
       - name: Extract Chromium shared libraries
