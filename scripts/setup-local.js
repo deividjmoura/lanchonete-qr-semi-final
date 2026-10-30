@@ -36,4 +36,7 @@ for (const script of ['db/migrate.js', 'db/seed.js']) {
 
 console.log('');
 console.log('✅ Pronto! Agora rode: npm start  →  http://localhost:3000');
-console.log('   Login de teste: admin / admin123 (ou a senha definida em STAFF_SEED_PASSWORD).');
+console.log('   Login: admin — use a senha que você definiu em STAFF_SEED_PASSWORD no .env.');
+console.log('   Não existe senha padrão. Se ainda não definiu, gere uma com:');
+console.log("     node -e \"console.log(require('crypto').randomBytes(18).toString('base64url'))\"");
+console.log('   O primeiro login exige troca da senha de bootstrap.');
