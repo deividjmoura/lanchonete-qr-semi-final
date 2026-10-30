@@ -334,3 +334,115 @@ test('navigator.onLine=false não bloqueia o envio quando o backend responde de 
     else delete globalThis.navigator;
   }
 });
+
+/* ------------------------------------------------------------------ */
+/* Pedido preso em "SINCRONIZANDO" (envio interrompido)                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Regressão do relato "o PWA não está enviando o novo pedido ao sistema".
+ *
+ * O pedido era gravado como `sync` antes do POST. Se o app fosse fechado ou
+ * morto no meio do envio, ele ficava nesse estado para sempre:
+ *  - recoverInterrupted() desistia quando o lease ainda estava válido (45s),
+ *    e só rodava uma vez, na abertura;
+ *  - flush() nunca selecionava `sync` e ainda tinha um `continue` para ele;
+ *  - o cartão não mostrava botão de reenvio nesse estado.
+ * Agora a recuperação roda a cada flush, já com o lease na mão.
+ */
+
+test('envio interrompido é reenviado sozinho mesmo se o app reabriu dentro do lease', async () => {
+  const { openOfflineDb, OfflineStore, SyncEngine, LEASE_TTL_MS } = await carregar();
+  const db = await openOfflineDb(new IDBFactory());
+  const store = new OfflineStore(db, TOKEN_A);
+  const t = 1_000_000;
+  const original = pedido({ status: 'sync', attempts: 1, createdAt: t });
+  await store.put(original);
+  // A aba que morreu deixou o lease gravado e ainda válido.
+  await store.acquireLease('sync:' + TOKEN_A, 'aba-que-morreu', LEASE_TTL_MS, t);
+
+  const envios = [];
+  const abertura = new SyncEngine({
+    store, send: async (o) => { envios.push(o); return { id: 4242 }; },
+    probe: async () => true, now: () => t,
+  });
+  await abertura.recoverInterrupted();
+  assert.equal((await store.get(original.localId)).status, 'sync', 'com lease de outra aba ativo, não mexe');
+
+  // O lease expira e o timer roda: precisa destravar sem ação do garçom.
+  const depois = new SyncEngine({
+    store, send: async (o) => { envios.push(o); return { id: 4242 }; },
+    probe: async () => true, now: () => t + LEASE_TTL_MS + 1000,
+  });
+  await depois.flush();
+
+  const final = await store.get(original.localId);
+  assert.equal(final.status, 'confirmed', 'o pedido chegou ao servidor');
+  assert.equal(final.serverOrderId, 4242);
+  assert.equal(envios.length, 1, 'enviado exatamente uma vez');
+  assert.equal(envios[0].idempotencyKey, original.idempotencyKey, 'replay usa a MESMA chave, não duplica');
+  db.close();
+});
+
+test('sync órfão é recuperado mesmo sem conexão, para não ficar preso na tela', async () => {
+  const { openOfflineDb, OfflineStore, SyncEngine } = await carregar();
+  const db = await openOfflineDb(new IDBFactory());
+  const store = new OfflineStore(db, TOKEN_A);
+  const t = 2_000_000;
+  const original = pedido({ status: 'sync', attempts: 1, createdAt: t });
+  await store.put(original);
+
+  let envios = 0;
+  const eng = new SyncEngine({
+    store, send: async () => { envios++; return { id: 1 }; },
+    probe: async () => false, now: () => t,
+  });
+  await eng.flush();
+
+  const final = await store.get(original.localId);
+  assert.equal(envios, 0, 'offline não envia');
+  assert.equal(final.status, 'offline', 'volta para a fila em vez de ficar em sync');
+  assert.ok(final.lastError, 'o motivo fica visível no cartão');
+  db.close();
+});
+
+test('aba com lease válido não tem seu envio interrompido roubado por outra aba', async () => {
+  const { openOfflineDb, OfflineStore, SyncEngine, LEASE_TTL_MS } = await carregar();
+  const db = await openOfflineDb(new IDBFactory());
+  const store = new OfflineStore(db, TOKEN_A);
+  const t = 3_000_000;
+  const original = pedido({ status: 'sync', createdAt: t });
+  await store.put(original);
+  await store.acquireLease('sync:' + TOKEN_A, 'aba-dona-do-envio', LEASE_TTL_MS, t);
+
+  let envios = 0;
+  const intrusa = new SyncEngine({
+    store, send: async () => { envios++; return { id: 7 }; },
+    probe: async () => true, now: () => t + 1000, holder: 'aba-intrusa',
+  });
+  const rodou = await intrusa.flush();
+
+  assert.equal(rodou, false, 'sem o lease, a segunda aba não roda');
+  assert.equal(envios, 0, 'não envia em paralelo');
+  assert.equal((await store.get(original.localId)).status, 'sync', 'o envio da dona permanece intacto');
+  db.close();
+});
+
+test('botão de verificar envio aparece para pedido em sincronização', async () => {
+  const fs = require('node:fs');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'garcom-pwa', 'app.js'), 'utf8');
+  assert.match(src, /\['offline','conflict','error','sync'\]\.includes\(o\.status\)/,
+    'sync precisa de ação manual, senão o garçom fica sem saída');
+  assert.match(src, /Verificar envio agora/);
+});
+
+test('recuperação de sync roda dentro do flush, sob o lease, e não só na abertura', async () => {
+  const fs = require('node:fs');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'garcom-pwa', 'offline.js'), 'utf8');
+  const flush = src.slice(src.indexOf('async flush('), src.indexOf('start(intervalMs'));
+  assert.match(flush, /recoverOrphanedSync\(\)/, 'flush precisa recuperar o órfão a cada ciclo');
+  assert.doesNotMatch(flush, /order\.status === 'sync'\) continue/, 'sync não pode ser descartado da fila');
+  // a recuperação sem lease continua protegida, para uso na abertura
+  const recover = src.slice(src.indexOf('async recoverInterrupted('), src.indexOf('async flush('));
+  assert.match(recover, /leaseActive/, 'na abertura ainda respeita o lease de outra aba');
+});

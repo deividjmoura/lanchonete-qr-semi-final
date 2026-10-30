@@ -128,16 +128,36 @@ export class SyncEngine {
     this.connection = 'checking';
   }
   get leaseKey() { return 'sync:' + this.store.ownerToken; }
-  async recoverInterrupted() {
-    if (await this.store.leaseActive(this.leaseKey, this.now())) return;
+  /**
+   * Devolve à fila os pedidos cujo envio foi interrompido (`sync` órfão).
+   *
+   * Só pode ser chamado por quem DETÉM o lease: é o lease que garante que
+   * nenhuma outra aba está enviando aquele pedido neste instante. Sem essa
+   * posse, um `sync` pode ser um envio em andamento e não deve ser tocado.
+   *
+   * A mesma idempotencyKey é preservada, então o replay devolve o pedido
+   * original se o servidor já tiver gravado — não duplica.
+   */
+  async recoverOrphanedSync() {
+    let recovered = 0;
     for (const order of await this.store.all()) {
-      if (order.status === 'sync') {
-        order.status = 'offline';
-        order.nextAttemptAt = this.now();
-        order.lastError = 'Envio interrompido; a mesma chave será reenviada com segurança.';
-        await this.store.put(order);
-      }
+      if (order.status !== 'sync') continue;
+      order.status = 'offline';
+      order.nextAttemptAt = this.now();
+      order.lastError = 'Envio interrompido; a mesma chave será reenviada com segurança.';
+      await this.store.put(order);
+      recovered++;
     }
+    return recovered;
+  }
+  /**
+   * Recuperação na abertura do app. Aqui ainda não temos o lease, por isso
+   * só agimos quando ele está livre. A recuperação que destrava o pedido é a
+   * que roda dentro de flush(), a cada ciclo, já com o lease na mão.
+   */
+  async recoverInterrupted() {
+    if (await this.store.leaseActive(this.leaseKey, this.now())) return 0;
+    return this.recoverOrphanedSync();
   }
   async flush({ force = false, localId = null } = {}) {
     if (this.running || this.stopped) return false;
@@ -160,15 +180,23 @@ export class SyncEngine {
         }
       }
       this.onChange(this.connection);
+      // Com o lease na mão, nenhum outro worker está enviando: todo `sync`
+      // restante é envio interrompido (app fechado/morto no meio do POST).
+      // Recuperar AQUI, e não só na abertura, é o que destrava o pedido — na
+      // abertura o lease ainda podia estar válido e a recuperação desistia,
+      // deixando o cartão em "SINCRONIZANDO" para sempre.
+      if (await this.recoverOrphanedSync()) this.onChange(this.connection);
       if (!online) return false;
       const pending = (await this.store.all()).filter(o =>
         (!localId || o.localId === localId) &&
-        (force ? ['offline','error','conflict'].includes(o.status) : ['offline','error'].includes(o.status) && (!o.nextAttemptAt || o.nextAttemptAt <= this.now()))
+        (force ? ['offline','error','conflict','sync'].includes(o.status) : ['offline','error'].includes(o.status) && (!o.nextAttemptAt || o.nextAttemptAt <= this.now()))
       ).sort((a,b) => a.createdAt-b.createdAt);
       for (const current of pending) {
         if (this.stopped) break;
         const order = await this.store.get(current.localId);
-        if (!order || order.status === 'confirmed' || order.status === 'sync') continue;
+        // `sync` não é mais descartado: sob o lease ele só existe se órfão,
+        // e já foi devolvido para `offline` acima.
+        if (!order || order.status === 'confirmed') continue;
         order.status = 'sync';
         order.attempts = Number(order.attempts || 0) + 1;
         order.lastAttemptAt = this.now();

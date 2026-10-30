@@ -127,7 +127,7 @@ export async function apiSend<T = unknown>(
   }
 
   const data: any = await parse(res);
-  if ((path === "/api/login" || path === "/api/me/senha") && typeof data?.csrfToken === "string") {
+  if ((path === "/api/login" || path === "/api/me/senha" || path === "/api/admin/contas/senha") && typeof data?.csrfToken === "string") {
     csrfToken = data.csrfToken;
     // A sessão mudou para todas as abas deste navegador.
     avisarTrocaDeSessao();
@@ -156,6 +156,16 @@ export const api = {
     }>("/api/me"),
   trocarSenha: (senhaAtual: string, senhaNova: string) =>
     apiSend<{ ok: boolean; csrfToken?: string; sessoesRevogadas?: number }>("/api/me/senha", "POST", { senhaAtual, senhaNova }),
+  /** Contas que o admin pode redefinir (admin, cozinha, bar, caixa). */
+  contasStaff: () =>
+    apiGet<Array<{ id: number; nome: string; login: string; papel: string; deveTrocarSenha?: boolean }>>("/api/admin/contas"),
+  /** Redefinição pelo admin: não pede a senha antiga, porque ela foi esquecida. */
+  redefinirSenha: (login: string, senhaNova: string) =>
+    apiSend<{ ok: boolean; login: string; papel: string; propriaConta: boolean; sessoesRevogadas?: number; csrfToken?: string | null }>(
+      "/api/admin/contas/senha",
+      "POST",
+      { login, senhaNova }
+    ),
 
   mesaSessao: (token: string) => apiGet<any>(`/api/mesas/${token}/sessao`),
   checkin: (token: string, clienteNome: string) =>

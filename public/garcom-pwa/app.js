@@ -127,7 +127,10 @@ async function renderOrders(){
   const times=document.createElement('p');times.className='muted small-copy';times.textContent='Criado: '+new Date(o.createdAt).toLocaleString('pt-BR')+(o.confirmedAt?' · Confirmado: '+new Date(o.confirmedAt).toLocaleString('pt-BR'):' · Ainda não confirmado pelo servidor')+(o.serverOrderId?' · Pedido #'+o.serverOrderId:'');
   card.append(head,details,times);
   if(o.lastError){const error=document.createElement('p');error.className='sync-error';error.setAttribute('role','alert');error.textContent=o.lastError+(o.nextAttemptAt?' Nova tentativa automática após '+new Date(o.nextAttemptAt).toLocaleTimeString('pt-BR'):'');card.append(error);}
-  if(['offline','conflict','error'].includes(o.status)){const retry=document.createElement('button');retry.className='secondary';retry.textContent=o.status==='conflict'?'Revisar conflito':'Tentar sincronizar';retry.onclick=()=>o.status==='conflict'?reviewConflict(o.localId):syncOne(o.localId,true);card.append(retry);}
+  // `sync` também ganha botão: se o envio foi interrompido, o garçom precisa de
+  // uma saída manual em vez de olhar "SINCRONIZANDO" para sempre. O flush com
+  // force recupera o órfão sob o lease e reenvia com a mesma chave.
+  if(['offline','conflict','error','sync'].includes(o.status)){const retry=document.createElement('button');retry.className='secondary';retry.textContent=o.status==='conflict'?'Revisar conflito':o.status==='sync'?'Verificar envio agora':'Tentar sincronizar';retry.onclick=()=>o.status==='conflict'?reviewConflict(o.localId):syncOne(o.localId,true);card.append(retry);}
   if(o.status==='offline'&&!o.attempts){const edit=document.createElement('button');edit.className='secondary';edit.textContent='Editar rascunho';edit.onclick=()=>openEditDraft(o);card.append(edit);}
   root.append(card);
  }
