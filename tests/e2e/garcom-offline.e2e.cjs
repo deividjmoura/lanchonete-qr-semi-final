@@ -213,6 +213,71 @@ async function main() {
     assert.equal(Number(dono.rows[0].garcom_responsavel_id), Number(ids.garcom), 'primeiro aceite assume a mesa no servidor');
     ok('aceite pelo navegador grava ator real e assume a mesa no servidor');
 
+    /* ---- 5) Envio interrompido: pedido preso em "SINCRONIZANDO" ---------
+       Reproduz o app morto no meio do POST. O pedido fica em `sync` e o lease
+       da aba morta continua gravado. Antes da correção ele nunca mais saía
+       desse estado: o flush ignorava `sync` e a recuperação só rodava na
+       abertura, desistindo se o lease ainda estivesse válido. */
+    const interrompido = await page.evaluate(async () => {
+      const { openOfflineDb, OfflineStore } = await import('./offline.js');
+      const db = await openOfflineDb();
+      const token = new URLSearchParams(location.search).get('token');
+      const store = new OfflineStore(db, token);
+      const novo = {
+        ownerToken: token, localId: 'interrompido-' + Date.now(),
+        idempotencyKey: crypto.randomUUID(), table: Number(document.querySelector('#modalTable')?.value || 0),
+        customerName: 'Cliente interrompido', items: [], status: 'sync',
+        createdAt: Date.now(), clientCreatedAt: new Date().toISOString(), attempts: 1,
+      };
+      // itens reais do produto do fixture, para o servidor aceitar
+      const cardapio = await (await fetch('/api/cardapio')).json();
+      const produto = cardapio.flatMap((c) => c.produtos || [])[0];
+      novo.items = [{ productId: Number(produto.id), name: produto.nome, qty: 1, unitPrice: Number(produto.preco) }];
+      const mesas = await (await fetch('/api/garcom/' + token + '/mesas')).json();
+      novo.table = Number(mesas.mesas[0].numero);
+      await store.put(novo);
+      // lease de uma aba que morreu, ainda dentro da validade
+      await store.acquireLease('sync:' + token, 'aba-que-morreu', 45000, Date.now());
+      db.close();
+      return { localId: novo.localId, chave: novo.idempotencyKey };
+    });
+    ok('cenário de envio interrompido criado com lease de aba morta ainda válido');
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.click('[data-tab="orders"]');
+    await page.waitForSelector('#orders .order', { timeout: 20000 });
+    const temBotao = await page.locator('#orders button:has-text("Verificar envio agora")').count();
+    assert.ok(temBotao >= 1, 'pedido em sync precisa de ação manual na tela');
+    ok('cartão em sincronização oferece "Verificar envio agora"');
+
+    // Expira o lease e deixa o ciclo normal rodar: tem de destravar sozinho.
+    await page.evaluate(async () => {
+      const { openOfflineDb } = await import('./offline.js');
+      const db = await openOfflineDb();
+      const token = new URLSearchParams(location.search).get('token');
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction('leases', 'readwrite');
+        tx.objectStore('leases').put({ key: 'sync:' + token, holder: 'aba-que-morreu', expiresAt: Date.now() - 1 });
+        tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+      });
+      db.close();
+    });
+    await page.click('#syncBtn');
+    const confirmado = await esperarEstado(
+      (l) => l.some((o) => o.localId === interrompido.localId && o.status === 'confirmed'),
+      'pedido interrompido voltar a ser enviado', 60000
+    );
+    const linha = confirmado.find((o) => o.localId === interrompido.localId);
+    assert.equal(linha.idempotencyKey, interrompido.chave, 'reenvio usa a mesma chave');
+    assert.ok(linha.serverOrderId, 'servidor confirmou o pedido que estava preso');
+    ok('pedido que estava preso em sincronização foi enviado e confirmado');
+
+    const gravados = await pool.query(
+      'SELECT COUNT(*)::int AS n FROM pedidos WHERE idempotency_key=$1', [interrompido.chave]
+    );
+    assert.equal(gravados.rows[0].n, 1, 'o reenvio não duplicou o pedido');
+    ok('reenvio do pedido interrompido não duplicou no servidor');
+
     assert.deepEqual(errosPagina, [], 'nenhum erro de JavaScript durante o fluxo: ' + errosPagina.join(' | '));
     ok('nenhum erro de JavaScript na página');
 
