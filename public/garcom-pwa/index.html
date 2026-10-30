@@ -64,9 +64,14 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
       <span class="waiter-sep" aria-hidden="true">/</span>
       <span id="pageTitle" class="waiter-page-name">Mesas</span>
       <span id="pageSubtitle" class="sr-only"></span>
+      <button id="openNotificationSettings" class="notification-settings-button" type="button" aria-label="Avisos e instalação" aria-haspopup="dialog" aria-controls="notificationConsent" title="Avisos e instalação">
+        <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#bell-regular"></use></svg>
+      </button>
     </div>
   </div>
 </header>
+
+<div id="notificationFeedback" role="status" aria-live="polite" hidden class="notification-feedback"></div>
 
 <div id="readyToast" role="status" aria-live="polite" hidden class="ready-toast">
   <div class="ready-toast-copy">
@@ -161,23 +166,7 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
       <button id="refreshDeliveries" class="secondary small" type="button">Recarregar fila</button>
     </div>
 
-    <div class="ledger-block" aria-labelledby="notificationSettingsTitle">
-      <div class="ledger-head">
-        <div>
-          <h3 id="notificationSettingsTitle">Avisos e instalação</h3>
-          <p id="notificationStatus" class="muted small-copy" aria-live="polite">Verificando suporte do dispositivo…</p>
-        </div>
-        <div class="inline-controls">
-          <button id="enableAlerts" class="secondary small" type="button">Configurar avisos</button>
-          <button id="installAppBtn" class="secondary small" type="button" hidden>Instalar app</button>
-        </div>
-      </div>
-      <div class="ledger-body-pad">
-        <p id="notificationExplanation" class="muted small-copy">Ative alertas sonoros e notificações locais para saber quando um item sair da cozinha ou do bar.</p>
-        <p id="installHelp" class="muted small-copy" hidden></p>
-        <p id="alertMessage" class="alert-inline small-copy" aria-live="polite"></p>
-      </div>
-    </div>
+    <p id="alertMessage" class="alert-inline small-copy" aria-live="polite"></p>
 
     <div id="readyOrders" class="orders-list"><p class="muted">Conecte-se para consultar os pedidos prontos.</p></div>
   </section>
@@ -271,18 +260,22 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
   <div class="sheet-top">
     <div>
       <span class="section-eyebrow">AVISOS DE SALÃO</span>
-      <h2 id="notificationConsentTitle">Configurar avisos</h2>
+      <h2 id="notificationConsentTitle">Avisos e instalação</h2>
     </div>
     <button type="button" id="closeNotificationConsent" class="close-button" aria-label="Fechar">×</button>
   </div>
   <div class="sheet-body">
+    <p id="notificationStatus" class="small-copy" aria-live="polite">Verificando suporte do dispositivo…</p>
+    <p class="small-copy">Ative alertas sonoros e notificações locais para saber quando um item sair da cozinha ou do bar.</p>
     <p class="small-copy">Para receber notificações, o PWA deve estar instalado quando a plataforma exigir e você precisa permitir as notificações.</p>
     <p id="consentPlatformNote" class="muted small-copy"></p>
     <p class="muted small-copy">Importante: o servidor ainda não tem subscrição Web Push nem envio em segundo plano. Conceder permissão, por si só, não garante avisos quando o aplicativo estiver fechado.</p>
     <div class="action-row">
       <button id="requestNotificationPermission" class="primary" type="button">Permitir notificações</button>
+      <button id="installAppBtn" class="secondary" type="button" hidden>Instalar app</button>
       <button id="dismissNotificationConsent" class="secondary" type="button">Agora não</button>
     </div>
+    <p id="installHelp" class="muted small-copy" hidden></p>
     <p id="consentStatus" class="muted small-copy" aria-live="polite"></p>
   </div>
 </dialog>
