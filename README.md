@@ -230,7 +230,7 @@ ambiente de operação.**
 - As migrations ficam em `db/migrations/` e são aplicadas em ordem pelo runner `npm run db:migrate`.
 - O servidor tenta verificar/aplicar migrations ao iniciar, mas esse caminho é **best-effort**: pode iniciar mesmo se a migration falhar. Confira os logs do deploy e confirme que todas as migrations esperadas foram aplicadas antes de operar.
 - Não rode migrations, seed ou testes mutáveis sem confirmar qual banco está conectado.
-- Antes da primeira operação comercial, valide login/perfis, pedido até entrega, estoque, fechamento e pagamentos em banco isolado; teste também restauração de backup.
+- Antes da primeira operação comercial, valide login/perfis, pedido até entrega, estoque, fechamento e pagamentos em banco isolado; teste também a restauração do **backup real** (o drill automatizado já roda no CI, mas com dados sintéticos).
 - A PWA foi validada em Chromium real (offline, reinício, sincronização e aceite). Ainda deve ser validada em Android/iOS físicos, incluindo instalação, suspensão prolongada e atualização do Service Worker.
 - A migration `0027_entregas_progressivas_offline.sql` é aditiva. Faça backup antes de aplicá-la em produção e rode o drill de restore em banco isolado.
 
@@ -238,13 +238,13 @@ ambiente de operação.**
 
 | Área | Situação |
 |---|---|
-| Fluxo base de QR, comanda, cozinha/bar e caixa | Implementado e coberto por integração em PostgreSQL real; requer validação final no ambiente de operação |
+| Fluxo base de QR, comanda, cozinha/bar e caixa | Implementado e coberto por integração em PostgreSQL real (CI verde em postgres:16); requer validação final no ambiente de operação |
 | Entrega progressiva por item, autoria e responsabilidade | Implementado; validado em PostgreSQL real, incluindo corrida de aceite entre garçons |
 | Segurança e concorrência do backend | Preços, permissões e transições revalidados no servidor sob lock; regressões + integração comportamental em PostgreSQL |
 | Fila offline do garçom | Persistência, reinício, reenvio automático, idempotência e conflito validados em Chromium real; pendente aparelho físico |
 | PWA de atendimento do garçom | Fluxo completo validado em navegador real; pendente Android/iOS físicos |
 | Notificação com app fechado (Web Push) | **Não implementado** — sem VAPID, subscrição ou serviço de envio |
-| Backup/restore | Script e teste existem e rodam no CI; **não executado no ambiente local desta rodada** |
+| Backup/restore | Drill (`pg_dump` + `pg_restore` em banco isolado) **executado com sucesso no CI**; o restore do dump real de produção ainda deve ser testado antes do deploy |
 | Comprovante de consumo não fiscal | Implementado; não substitui documento fiscal |
 | PIX | QR/chave estática e lançamento manual; sem gateway ou confirmação bancária automática |
 | Multi-loja / multi-tenant | Fora do escopo atual |

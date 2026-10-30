@@ -4,7 +4,8 @@ Relatório técnico da auditoria e da correção. Branch
 `arena/4b1e5afc-lanchonete-qr-semi-final`, base `8714f07` de `main`.
 
 Data da validação local: 2026-10-29/30. Banco de teste: PostgreSQL **18.4**
-descartável (`qradmin_test`). CI configurado para `postgres:16`.
+descartável (`qradmin_test`). CI verde em `postgres:16`, incluindo o drill de
+backup/restore.
 
 ---
 
@@ -181,6 +182,8 @@ Tudo abaixo foi executado neste ambiente. Nenhum teste escreveu em produção.
 | E2E Chromium real | **11 verificações, todas passaram** |
 | `npm audit --omit=dev` | **0 vulnerabilidades** |
 | Migrations | **27/27** aplicadas em banco limpo |
+| CI `PostgreSQL integration` (postgres:16) | **success** — inclui o drill de backup/restore |
+| CI `CI` (postgres:16) | **success** — migrations, integração, typecheck, build, dist, regressão |
 
 Baseline antes das mudanças, para comparação: typecheck/build OK, 267 testes
 passando, 0 vulnerabilidades de produção. Os defeitos acima **não** eram
@@ -219,18 +222,34 @@ houve **um único** pedido no banco roteado ao setor correto e direto em
 produção, e por fim aceita o item pronto pela interface conferindo ator e
 responsável no banco — sem nenhum erro de JavaScript na página.
 
-### 3.3 Limitações da validação — ler antes de publicar
+### 3.3 Validação no CI (commit `a02d41f`)
+
+Os dois workflows rodaram verdes no commit enviado à branch:
+
+- [`PostgreSQL integration` — run 40991085539](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40991085539)
+- [`CI` — run 40991085485](https://github.com/deividjmoura/lanchonete-qr-semi-final/actions/runs/40991085485)
+
+Isso fecha duas lacunas que existiam na validação local:
+
+- **Drill de backup/restore executado com sucesso** em `postgres:16`
+  (`pg_dump` + `pg_restore` em banco isolado), no passo
+  "Backup/restore drill". Não rodou localmente porque o `embedded-postgres`
+  não distribui `pg_dump`/`psql`, mas rodou no CI.
+- **PostgreSQL 16 validado**, não apenas o 18.4 local. As suítes de integração,
+  inclusive a nova de entrega progressiva, passaram no major usado em produção
+  pela maioria dos provedores.
+- Cadeia completa de migrations aplicada em banco limpo e runner verificado
+  como idempotente.
+
+### 3.4 Limitações da validação — ler antes de publicar
 
 - **Não houve acesso a Railway nem a produção.** Nada foi publicado, migrado ou
   testado no ambiente real. A migration precisa ser aplicada lá com backup
   prévio.
-- **Backup/restore não foi executado localmente.** O pacote `embedded-postgres`
-  não inclui `pg_dump`/`psql`, então `scripts/backup-restore-drill.js` e
-  `tests/postgres-backup-restore.test.cjs` não rodaram aqui. Eles rodam no
-  workflow `postgres-integration`, que tem os binários. **Executar esse drill em
-  banco isolado antes do deploy.**
-- **PostgreSQL 18.4 local, 16 no CI.** Os testes exigem major ≥ 16. A validação
-  em 16 acontecerá no CI.
+- **O drill de backup validado é sintético, não é o backup de produção.** Ele
+  prova que o script e o restore funcionam num banco descartável. Antes do
+  deploy ainda é obrigatório gerar e testar o restore do dump **real** do
+  estabelecimento.
 - **Chromium headless, não aparelho físico.** Sem teste em Android/iOS real,
   Safari/iOS, rede móvel com perda de pacote, suspensão prolongada do sistema
   operacional ou instalação em iOS.
@@ -239,6 +258,20 @@ responsável no banco — sem nenhum erro de JavaScript na página.
 - Testes de carga com 70 mesas não foram reexecutados nesta rodada.
 
 ---
+
+## 3.5 Commits entregues
+
+Branch `arena/4b1e5afc-lanchonete-qr-semi-final`, sete commits temáticos:
+
+| Commit | Conteúdo |
+|---|---|
+| `5d7099e` | backend: migration 0027, ciclo de vida por item, entregas, cancelamento, idempotência |
+| `bc166d7` | PWA: motor offline persistente + correção dos controles de tela mortos |
+| `21f720b` | UI: painéis por item, entrega em 3 etapas, Mesa/Caixa/Admin |
+| `a73debd` | testes: PostgreSQL progressivo, offline comportamental, controles, E2E |
+| `1d21abb` | segurança: remoção da senha padrão versionada |
+| `b636fca` | documentação: contrato v2, relatório, README e CI |
+| `a02d41f` | build: `dist/` regenerado com o shell v18 |
 
 ## 4. Publicação
 
@@ -275,7 +308,8 @@ exige restaurar o backup, porque os novos estados de item já podem estar em uso
 
 ## 5. Pendências recomendadas
 
-1. Rodar o drill de backup/restore e o CI em `postgres:16`.
+1. Gerar o backup real de produção e testar o restore em banco isolado antes de
+   aplicar a migration 0027 (o drill do CI já valida o mecanismo, não os dados).
 2. Validar em aparelho Android e iOS reais, incluindo instalação e suspensão.
 3. Migrar o token de garçom da URL para sessão curta/cookie protegido.
 4. Implementar Web Push de verdade (VAPID + subscrições + envio) se o aviso com
