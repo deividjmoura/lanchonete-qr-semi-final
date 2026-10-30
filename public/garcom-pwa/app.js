@@ -219,10 +219,16 @@ async function renderOrders(){
    error.textContent=o.lastError+(o.nextAttemptAt?' Nova tentativa após '+new Date(o.nextAttemptAt).toLocaleTimeString('pt-BR'):'');
    body.append(error);
   }
-  const actions=document.createElement('div');actions.className='action-row';
-  if(['offline','conflict','error'].includes(o.status)){
+
+  attachAccordionToggle(root,card,summary,body);
+  card.append(summary);
+
+  // `sync` também ganha botão visível: se o envio foi interrompido, o garçom tem
+  // saída manual imediata sem precisar abrir detalhes; o flush com force recupera o órfão sob o lease.
+  const actions=document.createElement('div');actions.className='order-quick-actions action-row';
+  if(['offline','conflict','error','sync'].includes(o.status)){
    const retry=document.createElement('button');retry.type='button';retry.className='secondary small';
-   retry.textContent=o.status==='conflict'?'Revisar conflito':'Reenviar pedido';
+   retry.textContent=o.status==='conflict'?'Revisar conflito':o.status==='sync'?'Verificar envio agora':'Tentar sincronizar';
    retry.onclick=()=>o.status==='conflict'?reviewConflict(o.localId):syncOne(o.localId,true);
    actions.append(retry);
   }
@@ -230,10 +236,8 @@ async function renderOrders(){
    const edit=document.createElement('button');edit.type='button';edit.className='secondary small';
    edit.textContent='Editar rascunho';edit.onclick=()=>openEditDraft(o);actions.append(edit);
   }
-  if(actions.childElementCount)body.append(actions);
-
-  attachAccordionToggle(root,card,summary,body);
-  card.append(summary,body);
+  if(actions.childElementCount)card.append(actions);
+  card.append(body);
   root.append(card);
  }
 }

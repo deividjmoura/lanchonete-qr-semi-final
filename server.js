@@ -58,6 +58,8 @@ const {
   exigirAcesso,
   exigirSessao,
   trocarSenha,
+  redefinirSenhaStaff,
+  listarContasStaff,
   homeDoPapel,
   garantirStaffSeed,
   csrfTokenParaSessao,
@@ -667,7 +669,20 @@ const server = http.createServer(async (req, res) => {
     }
 
     try {
-      if (p.startsWith('/api/admin')) {
+      /* Recuperação de credencial pelo admin: sessão + origem + CSRF + papel
+         admin, mas sem o bloqueio operacional de troca obrigatória. É o mesmo
+         princípio de /api/me/senha: quem precisa trocar a senha não pode ficar
+         trancado do lado de fora da própria recuperação. O papel admin continua
+         obrigatório e é revalidado dentro da transação. */
+      const recuperacaoAdmin =
+        (p === '/api/admin/contas' && req.method === 'GET') ||
+        (p === '/api/admin/contas/senha' && req.method === 'POST');
+      if (recuperacaoAdmin) {
+        const staff = await exigirSessao(req);
+        if (staff.papel !== 'admin') {
+          throw new ErroAuth(403, 'Apenas o administrador pode redefinir senhas de outros setores.');
+        }
+      } else if (p.startsWith('/api/admin')) {
         await exigirAcesso(req, 'admin');
       } else if (p.startsWith('/api/caixa')) {
         await exigirAcesso(req, 'caixa');
@@ -861,6 +876,49 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/admin/garcons/metricas' && req.method === 'GET') {
       try { return json(res, 200, await metricasGarcons({ data: u.searchParams.get('data') })); }
       catch (e) { if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message }); throw e; }
+    }
+    /* Contas que o admin pode ter como alvo na redefinição de senha.
+       O gate de recuperação acima já exigiu sessão + origem + CSRF + papel
+       admin, sem bloquear a própria recuperação por troca obrigatória. */
+    if (p === '/api/admin/contas' && req.method === 'GET') {
+      return json(res, 200, await listarContasStaff());
+    }
+    /* Redefinição de senha de qualquer setor, sem exigir a senha antiga
+       (o caso de uso é justamente a senha esquecida). A autorização é o papel
+       admin, revalidado dentro da transação em redefinirSenhaStaff(). */
+    if (p === '/api/admin/contas/senha' && req.method === 'POST') {
+      const ator = await getStaffDaRequisicao(req);
+      if (!ator) return json(res, 401, { error: 'Não autenticado' });
+      const ip = clientIp(req);
+      if (
+        !golpePermitido(`reset-senha:${ator.id}`, { janelaMs: 15 * 60 * 1000, max: 10 }) ||
+        !golpePermitido(`reset-senha-ip:${ip}`, { janelaMs: 15 * 60 * 1000, max: 30 })
+      ) {
+        return json(res, 429, { error: 'Muitas redefinições de senha. Aguarde alguns minutos.' });
+      }
+      try {
+        const b = await body(req);
+        const r = await redefinirSenhaStaff(
+          ator.id,
+          b && b.login,
+          b && b.senhaNova,
+          parseCookies(req)[SESSION_COOKIE]
+        );
+        // A própria conta do admin teve as sessões revogadas: rotaciona o cookie
+        // para ele não perder o acesso logo após redefinir a própria senha.
+        if (r.propriaConta && r.token) res.setHeader('Set-Cookie', cookieDeSessao(r.token));
+        return json(res, 200, {
+          ok: true,
+          login: r.login,
+          papel: r.papel,
+          propriaConta: r.propriaConta,
+          sessoesRevogadas: r.sessoesRevogadas,
+          csrfToken: r.csrfToken,
+        });
+      } catch (e) {
+        if (e instanceof ErroAuth) return json(res, e.status, erroAuthJson(e));
+        throw e;
+      }
     }
     if (p === '/api/admin/mesas' && req.method === 'GET') {
       return json(res, 200, await listMesas());

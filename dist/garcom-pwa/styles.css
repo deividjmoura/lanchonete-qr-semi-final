@@ -777,6 +777,10 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   transform: rotate(180deg);
 }
 
+.order-quick-actions {
+  padding: 0 12px 10px;
+}
+
 .order-body {
   padding: 12px;
   display: grid;

@@ -208,7 +208,10 @@ export function OpsShell({
                 </IconBtn>
                 {role && (
                   <>
-                    <IconBtn label="Alterar senha" onClick={() => setTrocando(true)}>
+                    <IconBtn
+                      label={role === "admin" ? "Redefinir senha de um setor" : "Alterar senha"}
+                      onClick={() => setTrocando(true)}
+                    >
                       <Key size={18} />
                     </IconBtn>
                     <IconBtn
