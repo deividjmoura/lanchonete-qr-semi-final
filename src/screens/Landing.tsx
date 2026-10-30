@@ -53,8 +53,8 @@ export default function Landing() {
     <div className="relative min-h-dvh overflow-x-clip w-full max-w-[100vw]">
       {/* fundo */}
       <div className="fixed inset-0 -z-10">
-        <div className="glow-orb absolute -top-32 left-[8%] size-[30rem] bg-brand-500/15" />
-        <div className="glow-orb absolute bottom-0 right-[-6rem] size-[26rem] bg-brand-500/10" />
+        <div className="glow-orb absolute -top-32 left-[8%] size-[30rem] bg-brand-500/6" />
+        <div className="glow-orb absolute bottom-0 right-[-6rem] size-[26rem] bg-brand-500/6" />
         <div className="noise absolute inset-0" />
       </div>
 
@@ -71,8 +71,8 @@ export default function Landing() {
       <section className="relative mx-auto max-w-7xl px-5 sm:px-8 pt-8 sm:pt-12">
         <div className="relative overflow-hidden rounded-[2rem] sm:rounded-[3rem] border border-slate-200">
           <div className="absolute inset-0 bg-gradient-to-br from-white via-slate-50 to-brand-50" />
-          <div className="glow-orb absolute -top-24 right-[10%] size-[22rem] bg-brand-500/15" />
-          <div className="glow-orb absolute -bottom-32 left-[5%] size-[20rem] bg-navy-500/10" />
+          <div className="glow-orb absolute -top-24 right-[10%] size-[22rem] bg-brand-500/6" />
+          <div className="glow-orb absolute -bottom-32 left-[5%] size-[20rem] bg-navy-500/6" />
 
           <div className="relative px-6 sm:px-12 pt-14 sm:pt-20 pb-10">
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}>
@@ -80,7 +80,7 @@ export default function Landing() {
                 <Badge tone="amber">pedidos por QR code</Badge>
                 <Badge tone="zinc">nesse dispositivo · sem app</Badge>
               </div>
-              <h1 className="font-display leading-[0.85] text-[clamp(4.5rem,14vw,12rem)]">
+              <h1 className="font-display leading-[1.02] text-[clamp(2.25rem,7.4vw,6rem)]">
                 <span className="block text-navy-900">SENTOU.</span>
                 <span className="block stroke-text">ESCANEOU.</span>
                 <span className="block shine">PEDIU.</span>

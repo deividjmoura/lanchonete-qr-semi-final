@@ -5,7 +5,8 @@ const path = require('node:path');
 const cp = require('node:child_process');
 const root = path.join(__dirname, '..', 'public', 'garcom-pwa');
 const html = fs.readFileSync(path.join(root,'index.html'),'utf8');
-const css = fs.readFileSync(path.join(root,'styles.css'),'utf8');
+// Normaliza apenas a formatação, preservando as verificações de layout.
+const css = fs.readFileSync(path.join(root,'styles.css'),'utf8').replace(/\s*([{}:;,])\s*/g, '$1');
 const js = fs.readFileSync(path.join(root,'app.js'),'utf8');
 
 test('modais de pedido, acompanhamento e QR usam popup nativo',()=>{

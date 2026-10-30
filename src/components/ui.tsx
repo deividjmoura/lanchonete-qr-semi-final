@@ -7,8 +7,9 @@ import { alternarTema, temaAtual, EVENTO_TEMA, type Tema } from "../lib/tema";
 /* Marca provisória do produto: QR Admin. */
 export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   return (
-    <span className={cn("brand-logo inline-flex shrink-0 items-center overflow-hidden rounded-xl bg-white",size === "sm" ? "h-10 w-[90px] sm:w-[118px]" : size === "lg" ? "h-[118px] w-[270px] sm:h-[145px] sm:w-[330px]" : "h-16 w-[150px]")}>
-      <img src="/logo/qradmin-horizontal.png" alt="QR Admin" className="w-full h-full object-contain" draggable={false}/>
+    <span className={cn("brand-logo inline-flex shrink-0 items-center overflow-hidden rounded-xl bg-white",size === "sm" ? "brand-logo-compact h-10 w-10 sm:w-[118px]" : size === "lg" ? "h-[118px] w-[270px] sm:h-[145px] sm:w-[330px]" : "h-16 w-[150px]")}>
+      <img src="/logo/qradmin-mark.png" alt="QR Admin" className={cn("h-full w-full object-contain", size === "sm" ? "sm:hidden" : "hidden")} draggable={false}/>
+      <img src="/logo/qradmin-horizontal.png" alt="QR Admin" className={cn("h-full w-full object-contain", size === "sm" && "hidden sm:block")} draggable={false}/>
     </span>
   );
 }
@@ -61,16 +62,16 @@ export function Btn({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "btn-press inline-flex items-center justify-center gap-2 rounded-2xl font-semibold select-none cursor-pointer",
+        "qr-button btn-press inline-flex items-center justify-center gap-2 rounded-2xl font-semibold select-none cursor-pointer",
         "transition-colors disabled:opacity-35 disabled:pointer-events-none",
         size === "sm" && "h-9 px-3.5 text-xs",
         size === "md" && "h-11 px-5 text-sm",
         size === "lg" && "h-13 px-7 text-base",
         full && "w-full",
         variant === "brand" &&
-          "bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-[0_10px_30px_-8px_rgba(240,94,74,0.5)] hover:shadow-[0_14px_38px_-6px_rgba(240,94,74,0.65)]",
+          "fill-brand text-white shadow-sm",
         variant === "lime" &&
-          "bg-gradient-to-br from-teal-400 to-teal-600 text-white shadow-[0_10px_30px_-8px_rgba(20,184,166,0.45)]",
+          "fill-success text-white shadow-[0_10px_30px_-8px_rgba(20,184,166,0.45)]",
         variant === "ghost" && "bg-slate-100/70 text-slate-700 hover:bg-slate-100 border border-slate-200",
         variant === "glass" && "glass text-slate-800 hover:border-brand-500/50",
         variant === "outline" && "border border-brand-500/50 text-brand-600 hover:bg-brand-500/10",

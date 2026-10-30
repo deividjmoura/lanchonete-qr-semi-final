@@ -1,0 +1,151 @@
+/* QR Admin · fonte única de tokens para React e PWA. Sem dependências externas. */
+@font-face {
+  font-family: "Manrope";
+  src: url("./fonts/manrope-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+}
+:root {
+  --qr-font: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --qr-radius: 18px;
+  --qr-radius-control: 12px;
+  --qr-action: #bf402e;
+  --qr-action-hover: #a93424;
+  --qr-success-action: #26704f;
+  --qr-on-action: #ffffff;
+  --qr-focus: #c74732;
+  color-scheme: light;
+  --qr-white: #ffffff;
+  --qr-slate-50: #f7f8f7;
+  --qr-slate-100: #f0f2f0;
+  --qr-slate-200: #dfe5e1;
+  --qr-slate-300: #c3cfc8;
+  --qr-slate-400: #6f8078;
+  --qr-slate-500: #596b62;
+  --qr-slate-600: #43564b;
+  --qr-slate-700: #304439;
+  --qr-slate-800: #24392e;
+  --qr-navy-500: #587464;
+  --qr-navy-700: #344f3f;
+  --qr-navy-800: #293e32;
+  --qr-navy-900: #21382b;
+  --qr-brand-50: #fff0eb;
+  --qr-brand-400: #e77860;
+  --qr-brand-500: #c74732;
+  --qr-brand-600: #b83b29;
+  --qr-brand-700: #a43424;
+  --qr-teal-400: #4b9870;
+  --qr-teal-500: #32815a;
+  --qr-teal-600: #26704f;
+  --qr-teal-700: #205e42;
+  --qr-page: #f5f7f4;
+  --qr-text: #21382b;
+  --qr-grad-from: #21382b;
+  --qr-stroke: rgba(33, 56, 43, 0.24);
+  --qr-card-shadow:
+    0 2px 4px rgba(24, 46, 33, 0.025), 0 8px 24px -16px rgba(24, 46, 33, 0.12);
+  --qr-card-shadow-deep:
+    0 4px 6px rgba(24, 46, 33, 0.025), 0 16px 40px -24px rgba(24, 46, 33, 0.18);
+  --qr-scrollbar: #c3cfc8;
+  --qr-amber-500: #d99516;
+  --qr-amber-700: #8a580a;
+  --qr-rose-400: #fb7185;
+  --qr-rose-500: #e54562;
+  --qr-rose-600: #c72f4c;
+  --qr-rose-700: #a5203a;
+  --qr-violet-500: #8b5cf6;
+  --qr-violet-700: #7042af;
+  --qr-sky-500: #2185b0;
+  --qr-sky-700: #176282;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="claro"]):not([data-theme="light"]) {
+    color-scheme: dark;
+    --qr-white: #1c2623;
+    --qr-slate-50: #141d19;
+    --qr-slate-100: #26332c;
+    --qr-slate-200: #37483d;
+    --qr-slate-300: #506458;
+    --qr-slate-400: #a0b4a7;
+    --qr-slate-500: #b0c3b7;
+    --qr-slate-600: #c3d2c8;
+    --qr-slate-700: #d7e2da;
+    --qr-slate-800: #e5ede7;
+    --qr-navy-500: #99b5a3;
+    --qr-navy-700: #bed5c6;
+    --qr-navy-800: #d6e5da;
+    --qr-navy-900: #eef4ef;
+    --qr-brand-50: #3b2822;
+    --qr-brand-400: #f49a82;
+    --qr-brand-500: #f1846e;
+    --qr-brand-600: #f79a87;
+    --qr-brand-700: #ffb5a2;
+    --qr-teal-400: #88cba4;
+    --qr-teal-500: #72bc92;
+    --qr-teal-600: #88cba4;
+    --qr-teal-700: #a3dfbc;
+    --qr-page: #141d19;
+    --qr-text: #eef4ef;
+    --qr-grad-from: #eef4ef;
+    --qr-stroke: rgba(238, 244, 239, 0.28);
+    --qr-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --qr-card-shadow-deep: 0 8px 28px -16px rgba(0, 0, 0, 0.4);
+    --qr-scrollbar: #506458;
+    --qr-amber-500: #edb44f;
+    --qr-amber-700: #f4ce82;
+    --qr-rose-400: #fb7185;
+    --qr-rose-500: #f46780;
+    --qr-rose-600: #ff94a6;
+    --qr-rose-700: #ffafbd;
+    --qr-violet-500: #ae8af0;
+    --qr-violet-700: #d0b5f7;
+    --qr-sky-500: #6ebde1;
+    --qr-sky-700: #9ed8f1;
+  }
+}
+:root[data-theme="escuro"],
+:root[data-theme="dark"],
+html.dark {
+  color-scheme: dark;
+  --qr-white: #1c2623;
+  --qr-slate-50: #141d19;
+  --qr-slate-100: #26332c;
+  --qr-slate-200: #37483d;
+  --qr-slate-300: #506458;
+  --qr-slate-400: #a0b4a7;
+  --qr-slate-500: #b0c3b7;
+  --qr-slate-600: #c3d2c8;
+  --qr-slate-700: #d7e2da;
+  --qr-slate-800: #e5ede7;
+  --qr-navy-500: #99b5a3;
+  --qr-navy-700: #bed5c6;
+  --qr-navy-800: #d6e5da;
+  --qr-navy-900: #eef4ef;
+  --qr-brand-50: #3b2822;
+  --qr-brand-400: #f49a82;
+  --qr-brand-500: #f1846e;
+  --qr-brand-600: #f79a87;
+  --qr-brand-700: #ffb5a2;
+  --qr-teal-400: #88cba4;
+  --qr-teal-500: #72bc92;
+  --qr-teal-600: #88cba4;
+  --qr-teal-700: #a3dfbc;
+  --qr-page: #141d19;
+  --qr-text: #eef4ef;
+  --qr-grad-from: #eef4ef;
+  --qr-stroke: rgba(238, 244, 239, 0.28);
+  --qr-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --qr-card-shadow-deep: 0 8px 28px -16px rgba(0, 0, 0, 0.4);
+  --qr-scrollbar: #506458;
+  --qr-amber-500: #edb44f;
+  --qr-amber-700: #f4ce82;
+  --qr-rose-400: #fb7185;
+  --qr-rose-500: #f46780;
+  --qr-rose-600: #ff94a6;
+  --qr-rose-700: #ffafbd;
+  --qr-violet-500: #ae8af0;
+  --qr-violet-700: #d0b5f7;
+  --qr-sky-500: #6ebde1;
+  --qr-sky-700: #9ed8f1;
+}

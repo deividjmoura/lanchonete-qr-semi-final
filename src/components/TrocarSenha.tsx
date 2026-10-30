@@ -119,7 +119,7 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
             <button
               type="submit"
               disabled={!podeEnviar}
-              className="btn-press mt-2 h-12 w-full rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 text-sm font-bold text-white disabled:opacity-40 cursor-pointer"
+              className="btn-press mt-2 h-12 w-full rounded-2xl fill-brand text-sm font-bold text-white disabled:opacity-40 cursor-pointer"
             >
               {busy ? "Salvando…" : "Salvar nova senha"}
             </button>

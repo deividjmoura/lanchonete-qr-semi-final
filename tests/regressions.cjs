@@ -71,31 +71,31 @@ test('tema respeita sistema sem armazenamento e preferência salva', () => {
   const t = theme();
   t.aplicarTema('escuro');
   assert.equal(t.saved(), 'escuro');
-  assert.equal(t.meta.content, '#0b1524');
+  assert.equal(t.meta.content, '#141d19');
   assert.equal(theme({ saved: t.saved() }).temaAtual(), 'escuro');
 });
-test('tema claro usa superfície suave e não branco agressivo', () => {
+test('tema claro mantém o fundo suave separado da superfície dos cartões', () => {
   const t = theme();
   t.aplicarTema('claro');
-  assert.equal(t.root.style.values['--qr-page'], '#e9eef3');
-  assert.equal(t.root.style.values['--qr-white'], '#f7f9fb');
-  assert.equal(t.meta.content, '#e9eef3');
+  assert.equal(t.root.style.values['--qr-page'], '#f5f7f4');
+  assert.equal(t.root.style.values['--qr-white'], '#ffffff');
+  assert.equal(t.meta.content, '#f5f7f4');
 });
 test('inicialização antes do React respeita sistema com armazenamento bloqueado', () => {
-  const script = fs.readFileSync('index.html', 'utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
+  const script = fs.readFileSync('public/garcom-pwa/theme-init.js', 'utf8');
   const context = { document: { documentElement: criarRoot() }, localStorage: { getItem() { throw Error(); } }, window: { matchMedia: () => ({ matches: true }) } };
   vm.runInNewContext(script, context);
   assert.equal(context.document.documentElement.dataset.theme, 'escuro');
   assert.equal(context.document.documentElement.classList.contains('dark'), true);
-  assert.equal(context.document.documentElement.style.values['--qr-page'], '#0b1524');
+  assert.equal(context.document.documentElement.style.values['--qr-page'], '#141d19');
 });
-test('inicialização antes do React aplica o tema claro sem flash branco agressivo', () => {
-  const script = fs.readFileSync('index.html', 'utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
+test('bootstrap compartilhado aplica o tema claro antes do primeiro paint', () => {
+  const script = fs.readFileSync('public/garcom-pwa/theme-init.js', 'utf8');
   const context = { document: { documentElement: criarRoot() }, localStorage: { getItem() { return 'claro'; } }, window: { matchMedia: () => ({ matches: false }) } };
   vm.runInNewContext(script, context);
   assert.equal(context.document.documentElement.dataset.theme, 'claro');
-  assert.equal(context.document.documentElement.style.values['--qr-page'], '#e9eef3');
-  assert.equal(context.document.documentElement.style.values['--qr-white'], '#f7f9fb');
+  assert.equal(context.document.documentElement.style.values['--qr-page'], '#f5f7f4');
+  assert.equal(context.document.documentElement.style.values['--qr-white'], '#ffffff');
 });
 test('tema normaliza valores legados light/dark de builds anteriores', () => {
   assert.equal(theme({ saved: 'dark', dark: false }).temaAtual(), 'escuro');

@@ -3,46 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#e9eef3" />
+    <meta name="theme-color" content="#f5f7f4" />
     <meta name="description" content="QR Admin — Pedidos por QR Code: do celular do cliente até a cozinha, o garçom e o caixa." />
     <title>QR Admin · Pedidos por QR Code</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
     <link rel="icon" type="image/png" href="/logo/favicon.png" />
-    <script>
-      /* Tema antes do primeiro paint — sem flash em nenhum dos dois sentidos.
-         Valores canônicos: "claro" | "escuro" (aceita legados "light"/"dark").
-         Fallback inline cobre CSS antigo em cache; classes p/ CSS legado. */
-      (function () {
-        var t;
-        try { t = localStorage.getItem("qradmin-tema"); } catch (e) {}
-        if (t === "dark") t = "escuro";
-        if (t === "light") t = "claro";
-        if (t !== "claro" && t !== "escuro")
-          t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "escuro" : "claro";
-        var root = document.documentElement;
-        root.setAttribute("data-theme", t);
-        root.classList.toggle("dark", t === "escuro");
-        if (t === "escuro") {
-          root.style.setProperty("--qr-page", "#0b1524");
-          root.style.setProperty("--qr-text", "#eaf2fb");
-          root.style.setProperty("--qr-white", "#12233a");
-        } else {
-          root.style.setProperty("--qr-page", "#e9eef3");
-          root.style.setProperty("--qr-text", "#0a2540");
-          root.style.setProperty("--qr-white", "#f7f9fb");
-        }
-      })();
-    </script>
-    <script type="module" crossorigin src="/assets/index-CyA12Kl3.js"></script>
+    <script src="/garcom-pwa/theme-init.js"></script>
+    <script type="module" crossorigin src="/assets/index-CcLth2df.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/motion-BRLfRHib.js">
     <link rel="modulepreload" crossorigin href="/assets/react-D4Z2WOW3.js">
     <link rel="modulepreload" crossorigin href="/assets/icons-CyankJmU.js">
-    <link rel="stylesheet" crossorigin href="/assets/index-DaQlnfnQ.css">
+    <link rel="stylesheet" crossorigin href="/assets/index-BVMs8_6E.css">
   </head>
   <body>
     <div id="root"></div>
