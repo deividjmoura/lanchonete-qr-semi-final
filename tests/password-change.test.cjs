@@ -108,3 +108,90 @@ test('SSE não mantém acesso operacional de staff com troca obrigatória penden
   assert.match(bloco, /SENHA_TROCA_OBRIGATORIA/);
   assert.match(bloco, /json\(res, 403/);
 });
+
+// ── Redefinição pelo admin (senha esquecida) ─────────────────────────────────
+
+const migrationReset = fs.readFileSync(path.join(__dirname, '..', 'db', 'migrations', '0028_admin_redefine_senha.sql'), 'utf8');
+const store = fs.readFileSync(path.join(__dirname, '..', 'src', 'store', 'usePub.ts'), 'utf8');
+
+test('migration 0028 é aditiva: registra o ator, amplia o CHECK e não cria colunas de segredo/IP', () => {
+  assert.match(migrationReset, /ADD COLUMN IF NOT EXISTS ator_staff_id/);
+  assert.match(migrationReset, /ADD COLUMN IF NOT EXISTS ator_login/);
+  assert.match(migrationReset, /senha_redefinida/);
+  assert.match(migrationReset, /senha_redefinicao_rejeitada/);
+  // Preserva os eventos antigos da troca própria.
+  assert.match(migrationReset, /senha_alterada/);
+  assert.match(migrationReset, /senha_troca_falhou/);
+  assert.match(migrationReset, /senha_troca_rejeitada/);
+  assert.doesNotMatch(migrationReset, /\b(DROP\s+TABLE|TRUNCATE|DELETE\s+FROM)\b/i);
+  // Comentários podem citar "token"/"hash" para documentar a ausência; o que
+  // não pode existir é coluna/identificador SQL com esses nomes.
+  const sqlSemComentarios = migrationReset.replace(/--[^\n]*/g, '');
+  assert.doesNotMatch(sqlSemComentarios, /\b(senha_hash|token|ip_address|client_ip)\b/i);
+});
+
+test('rotas de recuperação do admin exigem sessão+CSRF+papel admin, mas não o bloqueio de troca obrigatória', () => {
+  const i = server.indexOf('const recuperacaoAdmin =');
+  assert.ok(i > 0, 'gate de recuperação ausente');
+  const inicioIf = server.indexOf('if (recuperacaoAdmin) {', i);
+  const fimIf = server.indexOf('} else if (p.startsWith', inicioIf);
+  assert.ok(inicioIf > i && fimIf > inicioIf);
+  const bloco = server.slice(i, fimIf);
+  assert.match(bloco, /p === '\/api\/admin\/contas'/);
+  assert.match(bloco, /p === '\/api\/admin\/contas\/senha'/);
+  assert.match(bloco, /exigirSessao\(req\)/);
+  assert.match(bloco, /staff\.papel !== 'admin'/);
+  assert.doesNotMatch(bloco, /exigirAcesso\(req,\s*'admin'\)/, 'recuperação não pode ficar trancada pela troca obrigatória');
+});
+
+test('POST /api/admin/contas/senha limita tentativas, não pede senha antiga e só rotaciona cookie na própria conta', () => {
+  const i = server.indexOf("p === '/api/admin/contas/senha'");
+  assert.ok(i > 0, 'rota ausente');
+  const fim = server.indexOf("if (p === '/api/admin/mesas'", i);
+  assert.ok(fim > i);
+  const bloco = server.slice(i, fim);
+  assert.match(bloco, /golpePermitido\(`reset-senha:\$\{ator\.id\}`/);
+  assert.match(bloco, /429/);
+  assert.match(bloco, /redefinirSenhaStaff\(/);
+  assert.match(bloco, /parseCookies\(req\)\[SESSION_COOKIE\]/);
+  assert.match(bloco, /r\.propriaConta && r\.token/);
+  assert.match(bloco, /cookieDeSessao\(r\.token\)/);
+  assert.doesNotMatch(bloco, /senhaAtual/);
+  assert.doesNotMatch(bloco, /console\.(log|warn|error)/);
+});
+
+test('GET /api/admin/contas usa listarContasStaff e não expõe hash', () => {
+  const i = server.indexOf("p === '/api/admin/contas'");
+  assert.ok(i > 0);
+  const bloco = server.slice(i, server.indexOf("if (p === '/api/admin/contas/senha'", i));
+  assert.match(bloco, /listarContasStaff\(\)/);
+  assert.doesNotMatch(bloco, /senha_hash/);
+});
+
+test('UI: admin escolhe o setor e não vê senha atual; não-admin mantém a troca própria com senha atual', () => {
+  assert.match(ui, /role === "admin"/);
+  assert.match(ui, /api\.contasStaff\(\)/);
+  assert.match(ui, /<select/);
+  assert.match(ui, /Setor/);
+  assert.match(ui, /redefinirSenhaApi\(alvo, nova\)/);
+  assert.match(ui, /trocarSenhaApi\(atual, nova\)/);
+  assert.match(ui, /autoComplete="current-password"/);
+  assert.match(ui, /Não é necessário informar a senha antiga/);
+  assert.doesNotMatch(ui, /localStorage|sessionStorage|console\./);
+});
+
+test('cliente HTTP adota o novo CSRF quando o admin redefine a própria senha', () => {
+  assert.match(apiClient, /path === "\/api\/admin\/contas\/senha"/);
+  assert.match(apiClient, /contasStaff:/);
+  assert.match(apiClient, /redefinirSenha:/);
+});
+
+test('store: redefinirSenhaApi reidrata a sessão e só limpa troca obrigatória na própria conta', () => {
+  const i = store.indexOf('redefinirSenhaApi: async');
+  assert.ok(i > 0);
+  const bloco = store.slice(i, store.indexOf('logout:', i));
+  assert.match(bloco, /api\.redefinirSenha\(login, senhaNova\)/);
+  assert.match(bloco, /hydrateMe\(\)/);
+  assert.match(bloco, /out\?\.propriaConta && atual/);
+  assert.match(bloco, /deveTrocar: false/);
+});

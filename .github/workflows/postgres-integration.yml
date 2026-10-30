@@ -106,10 +106,11 @@ jobs:
       # O E2E visual (PR #141) roda sobre o build de produção, não sobre o source.
       - name: Build for E2E
         run: npm run build
-      # roda os três E2E: offline, lote/cobrança e sistema visual. O runner sobe e
-      # encerra o `vite preview` necessário ao teste visual, que usa API simulada
-      # e não toca no banco. Os demais sobem o próprio server.js no banco do job.
-      - name: E2E in real Chromium (offline, batch/billing, CSRF tabs, visual system)
+      # Roda todos os E2E: offline, lote/cobrança, abas CSRF, redefinição de senha
+      # pelo admin e sistema visual. O runner sobe e encerra o `vite preview`
+      # necessário ao teste visual, que usa API simulada e não toca no banco.
+      # Os demais sobem o próprio server.js no banco do job.
+      - name: E2E in real Chromium (offline, batch/billing, CSRF tabs, admin password reset, visual system)
         env:
           LD_LIBRARY_PATH: /tmp/al2023/lib:/tmp/al2023/usr/lib
         run: npm run test:e2e
