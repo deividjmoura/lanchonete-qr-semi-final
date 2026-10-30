@@ -41,8 +41,8 @@ e responsável; o repositório não guarda credenciais de webhook. Recomendaçã
 
 Evidência de teste do alerta (fase de habilitação): disparar um evento
 sintético em ambiente de não produção, capturar a entrega no canal escolhido e
-registrar timestamp, responsável que recebeu e ação de reconhecimento em
-`docs/COMUNICACAO-AGENTES.md`. Sem essa evidência, o alerta não deve ser
+registrar timestamp, responsável que recebeu e ação de reconhecimento no
+registro de incidente (seção 7 do runbook de operações). Sem essa evidência, o alerta não deve ser
 declarado operante.
 
 ## 4. O que ainda depende do provedor

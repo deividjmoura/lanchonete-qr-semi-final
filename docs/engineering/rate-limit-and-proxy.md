@@ -56,8 +56,8 @@ contas distintas têm orçamentos próprios.
    cliente deve ser ignorado/sobrescrito.
 4. Validar login bem-sucedido e uma sequência de falhas para confirmar os
    limites por IP e por conta, sem executar testes destrutivos em produção.
-5. Registrar o resultado, a data e o responsável em
-   `docs/COMUNICACAO-AGENTES.md`.
+5. Registrar o resultado, a data e o responsável no
+   registro de incidente (seção 7 do runbook de operações).
 
 Nenhuma das variáveis deve ser ativada sem os passos 1–2. A aplicação nunca
 executa testes de rate limit contra produção; a validação funcional fica nos

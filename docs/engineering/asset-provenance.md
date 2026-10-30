@@ -15,7 +15,7 @@ histórico ou licença foi alterada sem confirmação de titularidade.
 
 Os arquivos de demonstração (sementes e imagens `public/assets/demo/*.webp`)
 têm os mesmos blobs do repositório original, conforme auditoria registrada em
-`docs/COMUNICACAO-AGENTES.md` (PR #108).
+o histórico do Git (PR #108).
 
 **Recomendação:** declarar `lanchonete-qr-semi-final` como repositório
 canônico e manter o outro como arquivado/depreciado com um README apontando

@@ -2,8 +2,7 @@
 
 > Esta versão substitui o contrato v1. A unidade de trabalho deixou de ser o
 > **pedido** e passou a ser o **item**. Leia junto com
-> [`PWA-ATENDIMENTO-GARCOM.md`](./PWA-ATENDIMENTO-GARCOM.md) e
-> [`CORRECAO-ENTREGA-PROGRESSIVA.md`](./CORRECAO-ENTREGA-PROGRESSIVA.md).
+> [`PWA-ATENDIMENTO-GARCOM.md`](./PWA-ATENDIMENTO-GARCOM.md).
 > Requer a migration `0027_entregas_progressivas_offline.sql`.
 
 ## Princípio do fluxo (sem aprovação)
