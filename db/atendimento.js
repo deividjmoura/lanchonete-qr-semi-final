@@ -2,6 +2,7 @@ const pool = require('./pool');
 const { getGarcomPorToken } = require('./garcons');
 const { totalEntregueDaSessao, totalPagoDaSessao } = require('./conta');
 const { registrarEvento } = require('./auditoria');
+const { comRetryConcorrencia } = require('./retry');
 
 class ErroAtendimento extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -222,8 +223,11 @@ async function transferirMesa(token, numeroBruto, garcomDestinoBruto, requestId 
       throw new ErroAtendimento(403, 'Somente o responsável atual pode transferir esta mesa');
     }
 
+    // FOR SHARE (como em transferirMesaAdmin): FOR UPDATE colidia com o
+    // FOR SHARE que a entrega do próprio destino mantém sobre a própria
+    // linha enquanto espera a sessão — deadlock 40P01 sob carga (#158).
     const { rows: destinos } = await client.query(
-      'SELECT id, nome, ativo FROM garcons WHERE id=$1 FOR UPDATE', [destinoId]);
+      'SELECT id, nome, ativo FROM garcons WHERE id=$1 FOR SHARE', [destinoId]);
     const destino = destinos[0];
     if (!destino) throw new ErroAtendimento(404, 'Garçom de destino não encontrado');
     if (!destino.ativo) throw new ErroAtendimento(409, 'O garçom de destino não está ativo');
@@ -495,4 +499,10 @@ async function transferirMesaAdmin(staff,numeroBruto,destinoBruto,requestId=null
   }catch(e){await client.query('ROLLBACK').catch(()=>{});throw e;}finally{client.release();}
 }
 
-module.exports={ ErroAtendimento, transferirMesaAdmin, listarMesasGarcom, iniciarAtendimentoGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons };
+// Transferências concorrem com entregas/fechamentos que travam mesa e
+// sessão; mesmo com a ordem de locks alinhada, um deadlock residual
+// (40P01) é transitório e seguro de repetir — a vítima abortou antes do
+// COMMIT. Sem o retry, ele vazava como HTTP 500 para o garçom.
+const comRetryTransferencia = (fn) => (...args) => comRetryConcorrencia(() => fn(...args), { rotulo: fn.name });
+
+module.exports={ ErroAtendimento, transferirMesaAdmin: comRetryTransferencia(transferirMesaAdmin), listarMesasGarcom, iniciarAtendimentoGarcom, assumirMesa, listarGarconsAtivos, transferirMesa: comRetryTransferencia(transferirMesa), listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons };

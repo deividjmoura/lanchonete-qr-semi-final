@@ -183,6 +183,35 @@ async function produzirPedido(pedidoId, produto, cookies) {
   return erros;
 }
 
+/* Igual a produzirPedido, mas mede a propagação SSE do jeito certo: o
+   relógio começa quando a escrita `concluido` TERMINA no cliente (o
+   broadcast sai do servidor antes da resposta HTTP, então o evento pode
+   chegar durante a própria requisição — nesse caso a propagação é ~0).
+   Medir a partir do início da produção, como nas primeiras rodadas,
+   embutia o tempo das duas escritas de status no número do SSE. */
+async function produzirPedidoMedindoSse(pedidoId, produto, cookies, contadorSse) {
+  const erros = [];
+  const ini = await req('producao_status', 'PATCH', `/api/pedidos/${pedidoId}/status`, {
+    cookie: cookies.admin,
+    body: { status: 'em_producao', setor: produto.setor || 'cozinha' },
+  });
+  if (ini.status !== 200) erros.push(`status→em_producao ${ini.status}`);
+  const eventoAnterior = contadorSse.ultimoEventoEm;
+  const fim = await req('producao_status', 'PATCH', `/api/pedidos/${pedidoId}/status`, {
+    cookie: cookies.admin,
+    body: { status: 'concluido', setor: produto.setor || 'cozinha' },
+  });
+  const escritaTerminouEm = Date.now();
+  if (fim.status !== 200) { erros.push(`status→concluido ${fim.status}`); return erros; }
+  if (contadorSse.ultimoEventoEm > eventoAnterior) {
+    registrarLatencia('sse_propagacao', Math.max(0, contadorSse.ultimoEventoEm - escritaTerminouEm));
+  } else {
+    const prop = await esperarEventoSse(contadorSse, escritaTerminouEm);
+    if (prop != null) registrarLatencia('sse_propagacao', prop);
+  }
+  return erros;
+}
+
 /* Fluxo por item do garçom: fila compartilhada → assumir → retirar → entregar. */
 async function entregarPedidoComoGarcom(garcom, pedidoId) {
   const erros = [];
@@ -319,11 +348,10 @@ async function main() {
       }
       // Propagação SSE: a conclusão do 1º pedido precisa avisar a mesa.
       for (let k = 0; k < ids.length; k++) {
-        const antes = Date.now();
-        erros.push(...await produzirPedido(ids[k].id, ids[k].prod, cookies));
         if (k === 0) {
-          const prop = await esperarEventoSse(sseMesas[i], antes);
-          if (prop != null) registrarLatencia('sse_propagacao', prop);
+          erros.push(...await produzirPedidoMedindoSse(ids[k].id, ids[k].prod, cookies, sseMesas[i]));
+        } else {
+          erros.push(...await produzirPedido(ids[k].id, ids[k].prod, cookies));
         }
       }
       return { mesa, erros, esperado: Number(esperado.toFixed(2)), ids: ids.map((x) => x.id), cobrado: 0, sessaoId: null };
