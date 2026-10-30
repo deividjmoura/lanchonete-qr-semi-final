@@ -57,18 +57,36 @@ jobs:
         run: node --test tests/postgres-financial-concurrency.test.cjs
       - name: Staff password change PostgreSQL integration tests
         run: node --test tests/postgres-password-change.test.cjs
-      # O runner ubuntu-latest migra de imagem (Ubuntu 26 a partir de 19/10/2026)
-      # e o cliente PostgreSQL pré-instalado pode mudar ou desaparecer. Fixar a
-      # versão do cliente evita que o drill quebre por motivo alheio ao código.
-      - name: Ensure PostgreSQL client 16
+      # O cliente pg_dump precisa ser da MESMA versão maior do servidor.
+      # A imagem do runner traz pg_dump 17+, que emite "SET transaction_timeout"
+      # no cabeçalho do dump — parâmetro que o PostgreSQL 16 não reconhece, e o
+      # restore morre com "unrecognized configuration parameter". Não é defeito
+      # do backup: é descasamento de versão cliente/servidor.
+      - name: Ensure PostgreSQL client matches server (16)
         run: |
-          if ! command -v pg_dump >/dev/null 2>&1; then
+          set -euo pipefail
+          atual="$(pg_dump --version 2>/dev/null | grep -oE '[0-9]+' | head -1 || echo 0)"
+          echo "pg_dump no PATH: major=${atual}"
+          if [ "$atual" != "16" ]; then
             sudo apt-get update -qq
-            sudo apt-get install -y --no-install-recommends postgresql-client-16 \
-              || sudo apt-get install -y --no-install-recommends postgresql-client
+            sudo apt-get install -y --no-install-recommends ca-certificates curl gnupg
+            # PGDG garante o cliente 16 mesmo quando a imagem base já mudou.
+            sudo install -d /usr/share/postgresql-common/pgdg
+            sudo curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+              -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+            . /etc/os-release
+            echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+              | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends postgresql-client-16
+            echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
           fi
+      - name: Verify client/server major versions
+        run: |
           pg_dump --version
           pg_restore --version
+          pg_dump --version | grep -qE '\b16\.' \
+            || { echo "::error::pg_dump deveria ser 16.x para casar com postgres:16"; exit 1; }
       - name: Backup/restore drill (pg_dump + pg_restore em banco isolado)
         run: |
           set -o pipefail
