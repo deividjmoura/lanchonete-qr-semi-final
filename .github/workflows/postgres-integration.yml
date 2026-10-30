@@ -61,3 +61,13 @@ jobs:
         run: |
           pg_dump --version
           node --test tests/postgres-backup-restore.test.cjs
+      # O E2E do lote/cobrança pega ReferenceError em handler do PWA, que os
+      # testes de texto e o `node --check` em .js não detectam.
+      - name: Extract Chromium shared libraries
+        run: |
+          node -e "const z=require('zlib'),f=require('fs');f.writeFileSync('/tmp/al2023.tar',z.brotliDecompressSync(f.readFileSync('node_modules/@sparticuz/chromium/bin/al2023.tar.br')))"
+          mkdir -p /tmp/al2023 && tar -xf /tmp/al2023.tar -C /tmp/al2023
+      - name: Waiter PWA batch delivery + billing E2E (real Chromium)
+        env:
+          LD_LIBRARY_PATH: /tmp/al2023/lib:/tmp/al2023/usr/lib
+        run: node tests/e2e/garcom-lote-cobranca.e2e.cjs
