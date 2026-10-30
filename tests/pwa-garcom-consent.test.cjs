@@ -9,14 +9,15 @@ const js = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
 
 test('sincronização do PWA inicia sessão sem tomar mesa de outro responsável', () => {
-  const start=js.indexOf('async function syncOne(');
-  const end=js.indexOf('async function syncPending',start);
+  const start=js.indexOf('async function sendOrderToServer(');
+  const end=js.indexOf('async function syncOne(',start);
   const sync=js.slice(start,end);
-  assert.ok(sync.includes("let mesaAtual=mesas.find(m=>Number(m.numero)===Number(order.table));"));
+  assert.ok(sync.includes("const mesaAtual=mesas.find(m=>Number(m.numero)===Number(order.table));"));
   assert.match(sync,/if\(!mesaAtual\.sessaoId\|\|!mesaAtual\.garcomResponsavelId\)/);
   assert.match(sync,/getJson\(root\+'\/iniciar'/);
   assert.doesNotMatch(sync,/\/assumir/);
   assert.match(sync,/idempotencyKey:order\.idempotencyKey/);
+  assert.match(sync,/collaborationApproved/);
 });
 
 test('consentimento inicial é contextual e persistido por token de garçom', () => {

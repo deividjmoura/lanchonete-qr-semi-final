@@ -1,7 +1,8 @@
 const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const cp=require('node:child_process');const root=path.join(__dirname,'..');const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 test('rotas de cozinha e bar consultam fila especifica por setor',()=>{
  const pedidos=read('db/pedidos.js');assert.match(pedidos,/getFilaCozinha\(\)/);assert.match(pedidos,/getFilaBar\(\)/);
- assert.match(pedidos,/COALESCE\(pr\.setor, 'cozinha'\) = \$2/);
+ assert.match(pedidos,/ip\.setor=\$2/);
+ assert.match(pedidos,/ip\.status IN \('recebido','em_producao'\)/);
 });
 test('migração corrige Heineken e categoria de bebidas sem tocar em porcoes',()=>{
  const sql=read('db/migrations/0021_corrigir_setores_bebidas_marcas.sql');

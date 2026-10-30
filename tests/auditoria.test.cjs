@@ -105,11 +105,15 @@ test('cancelamento, PIX e fechamento estão ligados à trilha no código de prod
   const caixa = fs.readFileSync(path.join(__dirname, '..', 'db', 'caixa.js'), 'utf8');
   const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
 
-  // cancelamento grava evento antes da exclusão e na mesma transação
-  const cancelIdx = pedidos.indexOf("acao: 'pedido_cancelado'");
+  // cancelamento preserva o pedido e grava histórico/auditoria na mesma transação
+  const cancelIdx = pedidos.indexOf("acao:'pedido_cancelado'");
   assert.ok(cancelIdx > 0);
-  assert.ok(pedidos.slice(cancelIdx - 500, cancelIdx).includes('registrarEvento'));
-  assert.ok(pedidos.indexOf('DELETE FROM pedidos', cancelIdx) > cancelIdx);
+  assert.ok(pedidos.slice(cancelIdx - 700, cancelIdx).includes('registrarEvento'));
+  assert.ok(pedidos.slice(cancelIdx - 700, cancelIdx).includes("gravarStatusItem(client,item,'cancelado'"));
+  assert.doesNotMatch(pedidos.slice(cancelIdx - 700, cancelIdx + 300), /DELETE FROM pedidos/);
+  const itens = fs.readFileSync(path.join(__dirname, '..', 'db', 'itens-operacoes.js'), 'utf8');
+  assert.match(itens, /acao:'item_cancelado'/);
+  assert.match(itens, /restaurarEstoqueDoPedido\(client,item\.pedido_id,\[id\]\)/);
 
   // caixa audita confirmação de PIX e fechamento com o operador
   assert.match(caixa, /acao: 'pagamento_parcial'/);

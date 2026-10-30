@@ -185,7 +185,7 @@ test('PostgreSQL real: pagamento integral audita pagamento e fechamento automát
 
     const eventos = await pool.query(
       `SELECT acao, ator_tipo, ator_id, request_id, contexto
-       FROM auditoria_eventos WHERE alvo_id = $1 ORDER BY id`,
+       FROM auditoria_eventos WHERE alvo_id = $1 AND alvo_tipo='sessao' ORDER BY id`,
       [String(ids.sessao)]
     );
     assert.deepEqual(eventos.rows.map((e) => e.acao), ['pagamento_parcial', 'sessao_fechada']);

@@ -334,7 +334,7 @@ test('admin de garçom rejeita IDs não inteiros antes do banco', async () => {
   await assert.rejects(() => setGarcomAtivo(NaN, true), (e) => e instanceof ErroValidacao && e.status === 400);
   await assert.rejects(
     () => entregarComoGarcom(-1, '00000000-0000-4000-8000-000000000000'),
-    (e) => e instanceof ErroValidacao && e.status === 400
+    (e) => e instanceof ErroGarcom && e.status === 400
   );
   assert.equal(ErroGarcom.prototype instanceof Error, true);
 });

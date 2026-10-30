@@ -232,59 +232,26 @@ describe('3. Ciclo de Vida — Mesa aberta pelo cliente e assumida pelo garçom'
   });
 
   test('Garçom assume e entrega pedido da mesa aberta pelo cliente', async () => {
-    let pedidoAtualizado = null;
-
-    const restore = setupMockPool(async (sql, params) => {
-      if (/BEGIN|COMMIT|ROLLBACK/.test(sql)) {
-        return { rows: [] };
-      }
-      if (/FROM garcons WHERE token =/.test(sql)) {
-        return { rows: [{ id: 5, nome: 'Roberto Garçom', token: params[0], ativo: true }] };
-      }
-      if (/SELECT sessao_id FROM pedidos WHERE id =/.test(sql)) {
-        return { rows: [{ sessao_id: 1 }] };
-      }
-      if (/SELECT id, status, garcom_responsavel_id/.test(sql)) {
-        return { rows: [{ id: 1, status: 'aberta', garcom_responsavel_id: 5 }] };
-      }
-      if (/SELECT id, status, sessao_id, garcom_id FROM pedidos WHERE id =/.test(sql)) {
-        return { rows: [{ id: 10, status: 'concluido', sessao_id: 1, garcom_id: null }] };
-      }
-      if (/UPDATE itens_pedido SET status = 'entregue'/.test(sql)) {
-        return { rowCount: 1 };
-      }
-      if (/UPDATE pedidos\s+SET garcom_id/.test(sql)) {
-        pedidoAtualizado = { garcom_id: params[1], garcom_nome: params[2] };
-        return { rowCount: 1 };
-      }
-      if (/UPDATE mesa_sessoes SET valor_total/.test(sql)) {
-        return { rowCount: 1 };
-      }
-      if (/UPDATE pedidos SET status = \$2/.test(sql)) {
-        return { rows: [{ id: 10, status: 'entregue' }] };
-      }
-      if (/SELECT COALESCE\(SUM/i.test(sql)) {
-        return { rows: [{ total: '32.00', pago: '32.00' }] };
-      }
-      if (/FROM itens_pedido/i.test(sql)) {
-        return {
-          rows: [
-            { id: 101, quantidade: 1, preco_unitario: '32.00', status: 'concluido' },
-          ],
-        };
-      }
-      return { rows: [] };
+    const { criarEstado, install } = require('./helpers/fake-pool-itens.cjs');
+    const estado = criarEstado({
+      garcons: [{ id: 5, nome: 'Roberto Garçom', token: '33333333-3333-4000-8000-333333333333', ativo: true }],
+      sessao: { id: 1, garcom_responsavel_id: 5 },
+      pedido: { id: 10, sessao_id: 1, status: 'concluido' },
+      itens: [{ id: 101, pedido_id: 10, status: 'concluido', preco_unitario: 32, quantidade: 1 }],
     });
-
+    const restore = install(pool, estado);
     try {
       const res = await entregarComoGarcom(10, '33333333-3333-4000-8000-333333333333');
       assert.equal(res.status, 'entregue');
       assert.equal(res.garcom.nome, 'Roberto Garçom');
-      assert.equal(pedidoAtualizado.garcom_nome, 'Roberto Garçom');
-      assert.equal(pedidoAtualizado.garcom_id, 5);
-    } finally {
-      restore();
-    }
+      assert.equal(estado.pedido.garcom_nome, 'Roberto Garçom');
+      assert.equal(Number(estado.pedido.garcom_id), 5);
+      assert.equal(estado.itens[0].status, 'entregue');
+      assert.equal(Number(estado.itens[0].entregue_por_id), 5, 'ator real da entrega fica no item');
+      assert.equal(estado.sessao.valor_total, 32, 'espelho financeiro recomputado dos itens entregues');
+      assert.equal(estado.commits, 1);
+      assert.ok(estado.historico.some(h => h.tipo === 'item' && h.para === 'entregue'));
+    } finally { restore(); }
   });
 });
 
@@ -293,28 +260,43 @@ describe('3. Ciclo de Vida — Mesa aberta pelo cliente e assumida pelo garçom'
    ========================================================================= */
 describe('4. Status, Entrega Parcial e Fechamento', () => {
   test('Cozinha/bar recebem 403 se o pedido não possui itens do próprio setor', async () => {
-    const updates = [];
-    const restore = setupMockPool(async (sql) => {
-      if (/^(BEGIN|COMMIT|ROLLBACK)$/.test(sql.trim())) return { rows: [] };
-      if (/FROM pedidos WHERE id = \$1 FOR UPDATE/.test(sql)) {
-        return { rows: [{ id: 7, status: 'em_producao', sessao_id: 2 }] };
-      }
-      if (/SELECT ip\.id/.test(sql)) {
-        return { rows: [{ id: 70, status: 'recebido', setor: 'bar' }] };
-      }
-      if (/^UPDATE /.test(sql.trim())) updates.push(sql);
-      return { rows: [], rowCount: 0 };
+    const { criarEstado, install } = require('./helpers/fake-pool-itens.cjs');
+    const estado = criarEstado({
+      sessao: { id: 2 },
+      pedido: { id: 7, sessao_id: 2, status: 'recebido' },
+      itens: [{ id: 70, pedido_id: 7, status: 'recebido', setor: 'bar' }],
     });
-
+    const restore = install(pool, estado);
     try {
       await assert.rejects(
         () => setStatusPedido(7, 'em_producao', 'cozinha'),
         (error) => error instanceof ErroPedido && error.status === 403
       );
-      assert.deepEqual(updates, [], 'nenhum item/pedido deve ser atualizado fora do setor autorizado');
-    } finally {
-      restore();
-    }
+      assert.equal(estado.itens[0].status, 'recebido', 'nenhum item de outro setor foi alterado');
+      assert.equal(estado.pedido.status, 'recebido');
+      assert.equal(estado.commits, 0);
+      assert.equal(estado.rollbacks, 1);
+    } finally { restore(); }
+  });
+
+  test('bar conclui apenas os próprios itens e o pedido não vira entregue antes da hora', async () => {
+    const { criarEstado, install } = require('./helpers/fake-pool-itens.cjs');
+    const estado = criarEstado({
+      sessao: { id: 2 },
+      pedido: { id: 7, sessao_id: 2, status: 'recebido' },
+      itens: [
+        { id: 70, pedido_id: 7, status: 'recebido', setor: 'bar' },
+        { id: 71, pedido_id: 7, status: 'recebido', setor: 'cozinha' },
+      ],
+    });
+    const restore = install(pool, estado);
+    try {
+      const out = await setStatusPedido(7, 'concluido', 'bar');
+      assert.equal(estado.itens.find(i => i.id === 70).status, 'concluido');
+      assert.equal(estado.itens.find(i => i.id === 71).status, 'recebido', 'cozinha não foi afetada');
+      assert.equal(out.status, 'em_producao', 'pai derivado: ainda há produção pendente');
+      assert.notEqual(out.status, 'entregue');
+    } finally { restore(); }
   });
 
   test('Sincronização de status do pedido respeita regra de itens agregados', async () => {
@@ -323,7 +305,7 @@ describe('4. Status, Entrega Parcial e Fechamento', () => {
         if (/FROM itens_pedido/.test(sql)) {
           return { rows: [{ status: 'entregue' }, { status: 'concluido' }] };
         }
-        if (/UPDATE pedidos SET status = \$2/.test(sql)) {
+        if (/UPDATE pedidos SET status=\$2/.test(sql)) {
           return { rows: [{ id: 1, status: params[1] }] };
         }
         return { rows: [] };
@@ -334,49 +316,72 @@ describe('4. Status, Entrega Parcial e Fechamento', () => {
   });
 
   test('Entrega parcial entrega apenas os itemIds solicitados e mantém pedido aberto', async () => {
-    let itensEntreguesIds = [];
-    const restore = setupMockPool(async (sql, params) => {
-      if (/BEGIN|COMMIT|ROLLBACK/.test(sql)) return { rows: [] };
-      if (/FROM garcons WHERE token =/.test(sql)) {
-        return { rows: [{ id: 2, nome: 'Ana Garçonete', token: params[0], ativo: true }] };
-      }
-      if (/SELECT sessao_id FROM pedidos WHERE id =/.test(sql)) {
-        return { rows: [{ sessao_id: 100 }] };
-      }
-      if (/SELECT id, status, garcom_responsavel_id/.test(sql)) {
-        return { rows: [{ id: 100, status: 'aberta', garcom_responsavel_id: 2 }] };
-      }
-      if (/SELECT id, status, sessao_id, garcom_id FROM pedidos WHERE id =/.test(sql)) {
-        return { rows: [{ id: 20, status: 'pronto', sessao_id: 100, garcom_id: null }] };
-      }
-      if (/UPDATE itens_pedido SET status = 'entregue'/.test(sql)) {
-        itensEntreguesIds = params[0];
-        return { rowCount: 1 };
-      }
-      if (/UPDATE pedidos\s+SET garcom_id/.test(sql)) {
-        return { rowCount: 1 };
-      }
-      if (/UPDATE mesa_sessoes/.test(sql)) return { rowCount: 1 };
-      if (/UPDATE pedidos SET status = \$2/.test(sql)) {
-        return { rows: [{ id: 20, status: params[1] }] };
-      }
-      if (/SELECT p\.sessao_id.*COALESCE\(SUM/s.test(sql) || /SELECT COALESCE\(SUM/i.test(sql)) {
-        return { rows: [{ sessao_id: 100, total: 15.0 }] };
-      }
-      if (/FROM itens_pedido/i.test(sql)) {
-        return { rows: [{ id: 201, quantidade: 1, preco_unitario: 15, status: 'concluido' }, { id: 202, quantidade: 1, preco_unitario: 20, status: 'em_producao' }] };
-      }
-      return { rows: [] };
+    const { criarEstado, install } = require('./helpers/fake-pool-itens.cjs');
+    const estado = criarEstado({
+      garcons: [{ id: 2, nome: 'Ana Garçonete', token: '44444444-4444-4000-8000-444444444444', ativo: true }],
+      sessao: { id: 100, garcom_responsavel_id: 2 },
+      pedido: { id: 20, sessao_id: 100, status: 'concluido' },
+      itens: [
+        { id: 201, pedido_id: 20, status: 'concluido', preco_unitario: 15, quantidade: 1 },
+        { id: 202, pedido_id: 20, status: 'concluido', preco_unitario: 20, quantidade: 1 },
+      ],
     });
-
+    const restore = install(pool, estado);
     try {
       const res = await entregarComoGarcom(20, '44444444-4444-4000-8000-444444444444', [201]);
       assert.deepEqual(res.itensEntregues, [201]);
       assert.equal(res.parcial, true, 'Indica entrega parcial');
       assert.equal(res.garcom.nome, 'Ana Garçonete');
-    } finally {
-      restore();
-    }
+      assert.equal(estado.itens.find(i => i.id === 201).status, 'entregue');
+      assert.equal(estado.itens.find(i => i.id === 202).status, 'concluido', 'item não selecionado permanece pronto');
+      assert.equal(estado.sessao.valor_total, 15, 'só o item entregue é cobrável');
+      assert.equal(estado.pedido.status, 'concluido');
+    } finally { restore(); }
+  });
+
+  test('itemIds de outro pedido são rejeitados sem entregar nada', async () => {
+    const { criarEstado, install } = require('./helpers/fake-pool-itens.cjs');
+    const estado = criarEstado({
+      garcons: [{ id: 2, nome: 'Ana Garçonete', token: '44444444-4444-4000-8000-444444444444', ativo: true }],
+      sessao: { id: 100, garcom_responsavel_id: 2 },
+      pedido: { id: 20, sessao_id: 100, status: 'concluido' },
+      itens: [{ id: 201, pedido_id: 20, status: 'concluido' }],
+    });
+    const restore = install(pool, estado);
+    try {
+      await assert.rejects(
+        () => entregarComoGarcom(20, '44444444-4444-4000-8000-444444444444', [201, 999999]),
+        (error) => error.status === 404
+      );
+      assert.equal(estado.itens[0].status, 'concluido');
+      assert.equal(estado.commits, 0);
+    } finally { restore(); }
+  });
+
+  test('etapas fora de ordem são recusadas: não entrega sem retirar, não retira sem aceitar', async () => {
+    const { criarEstado, install } = require('./helpers/fake-pool-itens.cjs');
+    const token = '44444444-4444-4000-8000-444444444444';
+    const estado = criarEstado({
+      garcons: [{ id: 2, nome: 'Ana Garçonete', token, ativo: true }],
+      sessao: { id: 100, garcom_responsavel_id: 2 },
+      pedido: { id: 20, sessao_id: 100, status: 'concluido' },
+      itens: [{ id: 201, pedido_id: 20, status: 'concluido' }],
+    });
+    const restore = install(pool, estado);
+    try {
+      await assert.rejects(() => entregarComoGarcom(20, token, [201], null, 'retirar'), e => e.status === 409);
+      await assert.rejects(() => entregarComoGarcom(20, token, [201], null, 'entregar'), e => e.status === 409);
+      assert.equal(estado.itens[0].status, 'concluido');
+      const { retirarComoGarcom } = require('../db/garcons');
+      await entregarComoGarcom(20, token, [201], null, 'aceitar');
+      assert.equal(estado.itens[0].status, 'aceito');
+      await retirarComoGarcom(20, token, null, [201]);
+      assert.equal(estado.itens[0].status, 'retirado');
+      assert.equal(estado.sessao.valor_total, 0, 'retirado ainda não é cobrável');
+      await entregarComoGarcom(20, token, [201], null, 'entregar');
+      assert.equal(estado.itens[0].status, 'entregue');
+      assert.equal(estado.sessao.valor_total, 10);
+    } finally { restore(); }
   });
 
   test('Fechamento de mesa consolida sessão e desocupa a mesa', async () => {

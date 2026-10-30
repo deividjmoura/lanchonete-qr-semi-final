@@ -30,23 +30,30 @@ test.afterEach(() => {
   pool.connect = originalConnect;
 });
 
-test('dois garçons em dispositivos distintos recebem somente a fila de suas próprias mesas', async () => {
-  const mainQueries = [];
+test('fila de retirada é compartilhada e as permissões são por item, não por dono da mesa', async () => {
+  // Regressão do bug original: a fila era filtrada por garcom_responsavel_id e
+  // escondia itens prontos de qualquer outro garçom (inclusive o da própria mesa
+  // quando o pedido tinha origem 'garcom'). Agora a fila é compartilhada e cada
+  // item informa quem pode aceitá-lo/retirá-lo/entregá-lo.
+  const itensProntos = [
+    { id: 1501, pedido_id: 501, nome: 'Item pronto', quantidade: 1, status: 'concluido', setor: 'cozinha',
+      aceito_por_id: null, retirado_por_id: null, entregue_por_id: null },
+    { id: 1502, pedido_id: 501, nome: 'Item aceito por Ana', quantidade: 1, status: 'aceito', setor: 'bar',
+      aceito_por_id: 1, aceito_por_nome: 'Ana', retirado_por_id: null, entregue_por_id: null },
+  ];
   pool.query = async (sql, params = []) => {
     if (/FROM garcons WHERE token = \$1/i.test(sql)) {
       const row = tokens[params[0]];
       return { rows: row ? [row] : [] };
     }
     if (/SELECT DISTINCT p\.id/i.test(sql)) {
-      mainQueries.push({ sql, id: params[0] });
-      assert.match(sql, /s\.status\s*=\s*'aberta'/);
-      assert.match(sql, /s\.garcom_responsavel_id\s*=\s*\$1/);
-      return { rows: [{ id: params[0] === 1 ? 501 : 502, status: 'concluido', criado_em: new Date(0), mesa: params[0] === 1 ? 4 : 8 }] };
+      assert.match(sql, /s\.status='aberta'/);
+      assert.match(sql, /ip\.status IN \('concluido','aceito','retirado'\)/);
+      assert.doesNotMatch(sql, /s\.garcom_responsavel_id=\$1/, 'fila não pode ser restrita ao dono da mesa');
+      assert.doesNotMatch(sql, /origem_pedido\s*=\s*'cliente'/, 'fila não pode esconder pedido lançado pelo garçom');
+      return { rows: [{ id: 501, status: 'concluido', criado_em: new Date(0), mesa: 4, sessao_id: 90, garcom_responsavel_id: 1, garcom_responsavel_nome: 'Ana' }] };
     }
-    if (/SELECT ip\.id, ip\.pedido_id, pr\.nome/i.test(sql)) {
-      const orderId = params[0][0];
-      return { rows: [{ id: orderId + 1000, pedido_id: orderId, nome: 'Item pronto', quantidade: 1, status: 'concluido', setor: 'cozinha' }] };
-    }
+    if (/SELECT ip\.id,ip\.pedido_id,pr\.nome/i.test(sql)) return { rows: itensProntos.map(i => ({ ...i })) };
     if (/FROM itens_pedido_adicionais/i.test(sql) || /FROM itens_pedido_remocoes/i.test(sql)) return { rows: [] };
     throw new Error('Query inesperada no teste de fila: ' + sql);
   };
@@ -56,11 +63,22 @@ test('dois garçons em dispositivos distintos recebem somente a fila de suas pr�
     listarPedidosProntosGarcom('00000000-0000-4000-8000-000000000002'),
   ]);
 
+  // Ambos enxergam os itens prontos da mesa 4, mesmo Bruno não sendo o responsável.
   assert.deepEqual(ana.map(p => p.id), [501]);
-  assert.deepEqual(bruno.map(p => p.id), [502]);
-  assert.deepEqual(mainQueries.map(q => q.id).sort(), [1, 2]);
-  assert.ok(ana.every(p => p.mesa === 4));
-  assert.ok(bruno.every(p => p.mesa === 8));
+  assert.deepEqual(bruno.map(p => p.id), [501]);
+  assert.equal(ana[0].itensProntos, 1);
+  assert.equal(bruno[0].responsavelMesaNome, 'Ana');
+  for (const fila of [ana, bruno]) {
+    const pronto = fila[0].itens.find(i => i.id === 1501);
+    const aceito = fila[0].itens.find(i => i.id === 1502);
+    assert.equal(pronto.podeAceitar, true, 'item pronto pode ser aceito por qualquer garçom ativo');
+    assert.equal(aceito.podeAceitar, false, 'item já aceito não pode ser tomado de novo');
+    assert.equal(aceito.garcomAceitoNome, 'Ana');
+  }
+  // Só quem aceitou pode retirar/entregar aquele item.
+  assert.equal(ana[0].itens.find(i => i.id === 1502).podeRetirar, true);
+  assert.equal(bruno[0].itens.find(i => i.id === 1502).podeRetirar, false);
+  assert.equal(bruno[0].itens.find(i => i.id === 1502).podeEntregar, false);
 });
 
 test('transferência grava origem, destino e ator; pedidos prontos não são alterados', async () => {
@@ -146,21 +164,65 @@ test('iniciar atendimento não permite tomar mesa já atribuída, mesmo com tran
   assert.equal(calls.some(c => /INSERT INTO mesa_atendimento_historico/i.test(c.sql)), false);
 });
 
-test('garçom anterior recebe 403 ao tentar entregar após a transferência', async () => {
-  stubTokenLookup();
-  const calls = [];
-  pool.connect = async () => ({
-    async query(sql, params = []) {
-      calls.push(sql);
-      if (/SELECT sessao_id FROM pedidos/i.test(sql)) return { rows: [{ sessao_id: 90 }] };
-      if (/SELECT id, status, garcom_responsavel_id FROM mesa_sessoes/i.test(sql)) return { rows: [{ id: 90, status: 'aberta', garcom_responsavel_id: 2 }] };
-      return { rows: [] };
-    },
-    release() {},
+test('após transferência, ex-responsável não avança item aceito por outro garçom', async () => {
+  const { criarEstado, install } = require('./helpers/fake-pool-itens.cjs');
+  const estado = criarEstado({
+    garcons: [tokens['00000000-0000-4000-8000-000000000001'], tokens['00000000-0000-4000-8000-000000000002']],
+    sessao: { id: 90, garcom_responsavel_id: 2 },
+    pedido: { id: 501, sessao_id: 90, status: 'aceito' },
+    itens: [{ id: 1501, pedido_id: 501, status: 'aceito', aceito_por_id: 2 }],
   });
-  await assert.rejects(() => entregarComoGarcom(501, '00000000-0000-4000-8000-000000000001'), err => err.status === 403);
-  assert.equal(calls.some(sql => /UPDATE itens_pedido/i.test(sql)), false);
-  assert.equal(calls.some(sql => /COMMIT/i.test(sql)), false);
+  const restore = install(pool, estado);
+  try {
+    await assert.rejects(
+      () => entregarComoGarcom(501, '00000000-0000-4000-8000-000000000001', [1501], null, 'retirar'),
+      err => err.status === 403
+    );
+    assert.equal(estado.commits, 0);
+    assert.equal(estado.rollbacks, 1);
+    assert.equal(estado.itens[0].status, 'aceito');
+    assert.equal(estado.historico.filter(h => h.tipo === 'item').length, 0);
+  } finally { restore(); }
+});
+
+test('garçom colaborador assume item pronto sem transferir a mesa do responsável', async () => {
+  const { criarEstado, install } = require('./helpers/fake-pool-itens.cjs');
+  const { assumirEntregaComoGarcom } = require('../db/garcons');
+  const estado = criarEstado({
+    garcons: [tokens['00000000-0000-4000-8000-000000000001'], tokens['00000000-0000-4000-8000-000000000002']],
+    sessao: { id: 90, garcom_responsavel_id: 1 },
+    pedido: { id: 501, sessao_id: 90, status: 'concluido' },
+    itens: [{ id: 1501, pedido_id: 501, status: 'concluido' }],
+  });
+  const restore = install(pool, estado);
+  try {
+    const out = await assumirEntregaComoGarcom(501, '00000000-0000-4000-8000-000000000002', 'req-helper', [1501]);
+    assert.equal(out.responsabilidadeAtribuida, false);
+    assert.equal(Number(out.responsavelMesa.id), 1, 'responsabilidade da mesa permanece com Ana');
+    assert.equal(estado.sessao.garcom_responsavel_id, 1);
+    assert.equal(estado.itens[0].status, 'aceito');
+    assert.equal(Number(estado.itens[0].aceito_por_id), 2, 'posse do item é de quem aceitou');
+    assert.equal(estado.commits, 1);
+  } finally { restore(); }
+});
+
+test('primeiro aceite de mesa sem responsável atribui a mesa no servidor', async () => {
+  const { criarEstado, install } = require('./helpers/fake-pool-itens.cjs');
+  const { assumirEntregaComoGarcom } = require('../db/garcons');
+  const estado = criarEstado({
+    garcons: [tokens['00000000-0000-4000-8000-000000000002']],
+    sessao: { id: 90, garcom_responsavel_id: null },
+    pedido: { id: 501, sessao_id: 90, status: 'concluido' },
+    itens: [{ id: 1501, pedido_id: 501, status: 'concluido' }],
+  });
+  const restore = install(pool, estado);
+  try {
+    const out = await assumirEntregaComoGarcom(501, '00000000-0000-4000-8000-000000000002', 'req-first', [1501]);
+    assert.equal(out.responsabilidadeAtribuida, true);
+    assert.equal(Number(estado.sessao.garcom_responsavel_id), 2);
+    assert.ok(estado.historico.some(h => h.tipo === 'mesa'));
+    assert.ok(estado.auditoria.some(a => a.acao === 'mesa_assumida'));
+  } finally { restore(); }
 });
 
 test('A lista de mesas identifica pedido iniciado pelo cliente via QR', () => {

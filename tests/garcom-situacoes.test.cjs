@@ -11,8 +11,8 @@ test('Pedido adicional exige responsável atribuído e não transfere a mesa par
  assert.match(api,/acao: 'mesa_liberada'/);
  assert.match(read('db/pedidos.js'),/acao: 'pedido_editado'/);
  assert.match(read('server.js'),/editarPedidoGarcom\(m\[1\],m\[2\],await body\(req\),reqId\)/);
- assert.match(read('db/garcons.js'),/acao: 'itens_entregues'/);
- assert.match(read('server.js'),/entregarComoGarcom\(Number\(m\[2\]\), m\[1\], itemIds \|\| null, reqId\)/);
+ assert.match(read('db/entregas.js'),/acao=destino==='aceito'\?'entrega_assumida':destino==='retirado'\?'itens_retirados':'itens_entregues'/);
+ assert.match(read('server.js'),/entregarComoGarcom\(Number\(m\[2\]\), m\[1\], itemIds, reqId, etapa\)/);
  assert.match(read('server.js'),/transferirMesa\(m\[1\], m\[2\], payload\.garcomDestinoId, reqId\)/);
  assert.match(read('server.js'),/deixarMesa\(m\[1\],m\[2\],reqId\)/);
  assert.match(read('server.js'),/assumirMesa\(m\[1\], m\[2\], await body\(req\), reqId\)/);
@@ -37,11 +37,13 @@ test('Toque na mesa abre detalhes; iniciar atende mesa vazia ou QR e transferir 
  assert.match(api,/origem_pedido='cliente'/);
  assert.match(api,/async function transferirMesa/);
 });
-test('Fila e entrega ficam restritas ao responsável atual da mesa',()=>{
- const api=read('db/atendimento.js'),garcons=read('db/garcons.js'),pedidos=read('db/pedidos.js'),server=read('server.js');
+test('Fila de retirada é compartilhada; posse da mesa e do item são separadas',()=>{
+ const api=read('db/atendimento.js'),entregas=read('db/entregas.js'),pedidos=read('db/pedidos.js'),server=read('server.js');
  assert.match(api,/s\.garcom_responsavel_id=\$1/);
- assert.match(garcons,/Este pedido não pertence a uma mesa sob sua responsabilidade atual/);
- assert.match(pedidos,/garcomId/);
+ assert.match(pedidos,/ip\.status IN \('concluido','aceito','retirado'\)/);
+ assert.match(entregas,/Outro garçom já assumiu estes itens/);
+ assert.match(entregas,/Estes itens foram aceitos por outro garçom/);
+ assert.match(entregas,/responsabilidadeAtribuida/);
  assert.match(server,/listarAtendimentosGarcom/);
 });
 test('Caixa fecha quitação simples só quando não há pedidos ou avisos PIX pendentes',()=>{

@@ -1,5 +1,10 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { randomUUID } = require('node:crypto');
+
+// Request ids únicos por execução: a auditoria é permanente e ids fixos
+// fariam o teste ler eventos de execuções anteriores.
+const REQ = (nome) => `req-${nome}-ci-${randomUUID().slice(0, 8)}`;
 
 assert.ok(process.env.DATABASE_URL, 'Este teste deve rodar apenas contra o PostgreSQL descartável do CI');
 // Trava de segurança: o teste insere fixtures; nunca rodar contra produção.
@@ -16,6 +21,7 @@ const { getFilaCozinha, getFilaBar } = require('../db/pedidos');
 const { entregarComoGarcom, assumirEntregaComoGarcom } = require('../db/garcons');
 
 test('PostgreSQL real: fila acompanha a transferência e só o novo responsável pode entregar', async () => {
+  const reqs = { assume: REQ('assume'), transfer: REQ('transfer'), claim: REQ('claim'), delivery: REQ('delivery'), leave: REQ('leave') };
   const ids = { categoria: null, produto: null, garcomA: null, garcomB: null, mesa: null, sessao: null, pedido: null, item: null };
   const mesaNumero = 6;
   const tokenA = '00000000-0000-4000-8000-000000000201';
@@ -64,11 +70,11 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
     );
     ids.pedido = pedido.rows[0].id;
 
-    const inicio = await assumirMesa(tokenA, mesaNumero, { clienteNome: 'Teste CI' }, 'req-assume-ci');
+    const inicio = await assumirMesa(tokenA, mesaNumero, { clienteNome: 'Teste CI' }, reqs.assume);
     assert.equal(Number(inicio.garcom.id), Number(ids.garcomA));
     const auditAssume = await pool.query(
       'SELECT ator_tipo,ator_id,acao,alvo_id,request_id,contexto FROM auditoria_eventos WHERE request_id=$1',
-      ['req-assume-ci']
+      [reqs.assume]
     );
     assert.equal(auditAssume.rows[0].ator_tipo, 'garcom');
     assert.equal(Number(auditAssume.rows[0].ator_id), Number(ids.garcomA));
@@ -85,13 +91,13 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
     const filaA = await listarPedidosProntosGarcom(tokenA);
     assert.ok(filaA.some((row) => Number(row.id) === Number(ids.pedido)));
 
-    const transfer = await transferirMesa(tokenA, mesaNumero, ids.garcomB, 'req-transfer-ci');
+    const transfer = await transferirMesa(tokenA, mesaNumero, ids.garcomB, reqs.transfer);
     assert.equal(transfer.transferida, true);
     assert.equal(Number(transfer.de.id), Number(ids.garcomA));
     assert.equal(Number(transfer.para.id), Number(ids.garcomB));
     const auditTransfer = await pool.query(
       'SELECT ator_tipo,ator_id,acao,alvo_id,request_id,contexto FROM auditoria_eventos WHERE request_id=$1',
-      ['req-transfer-ci']
+      [reqs.transfer]
     );
     assert.equal(auditTransfer.rows[0].ator_tipo, 'garcom');
     assert.equal(Number(auditTransfer.rows[0].ator_id), Number(ids.garcomA));
@@ -108,13 +114,25 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
     assert.ok(filaAntesClaimA.some((row) => Number(row.id) === Number(ids.pedido)));
     assert.ok(filaAntesClaimB.some((row) => Number(row.id) === Number(ids.pedido)));
 
-    await assumirEntregaComoGarcom(ids.pedido, tokenB, 'req-claim-ci');
+    await assumirEntregaComoGarcom(ids.pedido, tokenB, reqs.claim);
     const [filaDepoisA, filaDepoisB] = await Promise.all([
       listarPedidosProntosGarcom(tokenA),
       listarPedidosProntosGarcom(tokenB),
     ]);
-    assert.equal(filaDepoisA.some((row) => Number(row.id) === Number(ids.pedido)), false);
-    assert.ok(filaDepoisB.some((row) => Number(row.id) === Number(ids.pedido)));
+    // A fila é compartilhada: o item aceito continua visível para a equipe, mas
+    // só quem aceitou pode retirá-lo/entregá-lo. Esconder o pedido do outro
+    // garçom era justamente o bug que travava a liberação progressiva.
+    const pedidoEmA = filaDepoisA.find((row) => Number(row.id) === Number(ids.pedido));
+    const pedidoEmB = filaDepoisB.find((row) => Number(row.id) === Number(ids.pedido));
+    assert.ok(pedidoEmA, 'fila permanece visível para a equipe');
+    assert.ok(pedidoEmB);
+    const itemEmA = pedidoEmA.itens.find((i) => Number(i.id) === Number(ids.item));
+    const itemEmB = pedidoEmB.itens.find((i) => Number(i.id) === Number(ids.item));
+    assert.equal(itemEmA.status, 'aceito');
+    assert.equal(itemEmA.podeAceitar, false, 'item já aceito não pode ser tomado duas vezes');
+    assert.equal(itemEmA.podeRetirar, false, 'ex-responsável não retira item aceito por outro');
+    assert.equal(itemEmB.podeRetirar, true, 'quem aceitou pode retirar');
+    assert.equal(Number(itemEmB.garcomAceitoId), Number(ids.garcomB));
 
     const historico = await pool.query(
       'SELECT garcom_anterior_id, garcom_novo_id, alterado_por_id, alterado_em FROM mesa_atendimento_historico WHERE sessao_id = $1 ORDER BY id DESC LIMIT 1',
@@ -136,12 +154,13 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
       (error) => error.status === 403
     );
 
-    await entregarComoGarcom(ids.pedido, tokenB, [ids.item], 'req-delivery-ci');
+    await entregarComoGarcom(ids.pedido, tokenB, [ids.item], reqs.delivery);
     const finalItem = await pool.query('SELECT status FROM itens_pedido WHERE id = $1', [ids.item]);
     assert.equal(finalItem.rows[0].status, 'entregue');
     const auditDelivery = await pool.query(
-      'SELECT ator_tipo,ator_id,acao,alvo_id,request_id,contexto FROM auditoria_eventos WHERE request_id=$1',
-      ['req-delivery-ci']
+      `SELECT ator_tipo,ator_id,acao,alvo_id,request_id,contexto FROM auditoria_eventos
+        WHERE request_id=$1 AND acao='itens_entregues'`,
+      [reqs.delivery]
     );
     assert.equal(auditDelivery.rows[0].ator_tipo, 'garcom');
     assert.equal(Number(auditDelivery.rows[0].ator_id), Number(ids.garcomB));
@@ -180,17 +199,21 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
     const aindaExiste = await pool.query('SELECT COUNT(*)::int AS n FROM pedidos WHERE sessao_id = $1', [ids.sessao]);
     assert.equal(aindaExiste.rows[0].n, 1);
 
-    const liberacao = await deixarMesa(tokenB, mesaNumero, 'req-leave-ci');
+    const liberacao = await deixarMesa(tokenB, mesaNumero, reqs.leave);
     assert.equal(liberacao.liberada, true);
     const auditLeave = await pool.query(
       'SELECT ator_tipo,ator_id,acao,alvo_id,request_id,contexto FROM auditoria_eventos WHERE request_id=$1',
-      ['req-leave-ci']
+      [reqs.leave]
     );
     assert.equal(auditLeave.rows[0].ator_tipo, 'garcom');
     assert.equal(Number(auditLeave.rows[0].ator_id), Number(ids.garcomB));
     assert.equal(auditLeave.rows[0].acao, 'mesa_liberada');
     assert.equal(String(auditLeave.rows[0].alvo_id), String(ids.sessao));
   } finally {
+    for (const rid of Object.values(reqs)) {
+      await pool.query('DELETE FROM auditoria_eventos WHERE request_id=$1', [rid]).catch(() => {});
+    }
+    if (ids.pedido) await pool.query('DELETE FROM itens_pedido_historico WHERE pedido_id = $1', [ids.pedido]).catch(() => {});
     if (ids.item) await pool.query('DELETE FROM itens_pedido WHERE id = $1', [ids.item]).catch(() => {});
     if (ids.pedido) await pool.query('DELETE FROM pedidos WHERE id = $1', [ids.pedido]).catch(() => {});
     if (ids.sessao) await pool.query('DELETE FROM mesa_sessoes WHERE id = $1', [ids.sessao]).catch(() => {});
@@ -203,6 +226,7 @@ test('PostgreSQL real: fila acompanha a transferência e só o novo responsável
 });
 
 test('PostgreSQL real: outro garçom pode acrescentar pedido sem tomar a responsabilidade da mesa', async () => {
+  const reqs = { assumeAdditional: REQ('assume-additional'), edit: REQ('edit') };
   const ids = { categoria: null, produto: null, garcomA: null, garcomB: null, mesa: null, sessao: null, pedidoPai: null };
   const mesaNumero = 8;
   const tokenA = '00000000-0000-4000-8000-000000000211';
@@ -238,16 +262,17 @@ test('PostgreSQL real: outro garçom pode acrescentar pedido sem tomar a respons
       [ids.sessao]
     )).rows[0].id;
 
-    await assumirMesa(tokenA, mesaNumero, { clienteNome: 'Teste cruzado' }, 'req-assume-additional-ci');
+    await assumirMesa(tokenA, mesaNumero, { clienteNome: 'Teste cruzado' }, reqs.assumeAdditional);
     const editadoPai = await editarPedidoGarcom(tokenA, ids.pedidoPai, {
       clienteNome: 'Teste cruzado',
       note: 'Auditoria de edição',
       items: [{ productId: ids.produto, qty: 1 }],
-    }, 'req-edit-ci');
+    }, reqs.edit);
     assert.equal(editadoPai.editado, true);
     const auditEdit = await pool.query(
-      'SELECT ator_tipo,ator_id,acao,alvo_id,request_id,contexto FROM auditoria_eventos WHERE request_id=$1',
-      ['req-edit-ci']
+      `SELECT ator_tipo,ator_id,acao,alvo_id,request_id,contexto FROM auditoria_eventos
+        WHERE request_id=$1 AND acao='pedido_editado'`,
+      [reqs.edit]
     );
     assert.equal(auditEdit.rows[0].ator_tipo, 'garcom');
     assert.equal(Number(auditEdit.rows[0].ator_id), Number(ids.garcomA));
@@ -313,6 +338,9 @@ test('PostgreSQL real: outro garçom pode acrescentar pedido sem tomar a respons
     assert.equal(pedidosOutroGarcom.some((p) => Number(p.id) === Number(pedidoNovo.id)), false,
       'o pedido adicional não deve mover a mesa para quem o lançou');
   } finally {
+    for (const rid of Object.values(reqs)) {
+      await pool.query('DELETE FROM auditoria_eventos WHERE request_id=$1', [rid]).catch(() => {});
+    }
     if (ids.sessao) {
       await pool.query(
         'DELETE FROM itens_pedido_adicionais WHERE item_pedido_id IN (SELECT id FROM itens_pedido WHERE pedido_id IN (SELECT id FROM pedidos WHERE sessao_id=$1))',
