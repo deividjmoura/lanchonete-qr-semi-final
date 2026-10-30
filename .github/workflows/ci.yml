@@ -66,6 +66,10 @@ jobs:
         if: ${{ hashFiles('tests/postgres-waiter-integration.test.cjs') != '' }}
         run: node --test tests/postgres-waiter-integration.test.cjs
 
+      - name: Progressive delivery and offline replay on clean PostgreSQL
+        if: ${{ hashFiles('tests/postgres-entregas-progressivas.test.cjs') != '' }}
+        run: node --test tests/postgres-entregas-progressivas.test.cjs
+
       - name: QR/session lifecycle integration on clean PostgreSQL
         if: ${{ hashFiles('tests/postgres-qr-session.test.cjs') != '' }}
         run: node --test tests/postgres-qr-session.test.cjs

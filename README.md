@@ -24,16 +24,25 @@ O QR Admin é uma aplicação **single-tenant**: uma instalação representa um 
 ## Fluxo operacional
 
 ```text
-Cliente escaneia o QR da mesa
+Cliente escaneia o QR da mesa (ou o garçom lança o pedido)
         ↓
 Cardápio → carrinho → pedido
         ↓
-Cozinha ou bar prepara os itens
+Cada ITEM cai direto na fila do seu setor (cozinha ou bar)
         ↓
-Garçom entrega os itens prontos
+Setor inicia o preparo e conclui item por item
         ↓
-Caixa confere os itens entregues, registra pagamento e fecha a comanda
+Item pronto fica disponível ao garçom NA HORA
+        ↓
+Garçom aceita → retira → entrega aquele item
+        ↓
+Caixa cobra só os itens entregues e fecha a comanda
 ```
+
+**Liberação progressiva:** a bebida que ficou pronta não espera o prato. Cada
+item tem estado, autor e horário próprios, e o status do pedido é apenas uma
+projeção dos itens. **Não existe etapa de aprovação:** o "aceite" da cozinha/bar
+só indica que a produção começou.
 
 A comanda da mesa é acumulativa: a mesa pode receber vários pedidos durante a visita. O total cobrável é calculado no servidor a partir dos itens entregues, não do total enviado pelo navegador.
 
@@ -47,20 +56,38 @@ A comanda da mesa é acumulativa: a mesa pode receber vários pedidos durante a 
 - O cliente **não registra pagamento nem confirma recebimento PIX** pela tela pública nesta versão.
 
 ### Cozinha e bar
-- Filas separadas por setor de produção.
-- Transições de status dos itens e pedidos.
+- Filas separadas por setor: cada tela vê **apenas os itens do seu setor**.
+- Avanço de status **por item** (iniciar preparo / concluir), sem depender do
+  outro setor nem do pedido inteiro.
+- O setor é gravado no item no momento do pedido: reclassificar o produto no
+  admin não move item já lançado.
 - Atualização em tempo real via Server-Sent Events (SSE) e alertas sonoros/voz nas telas compatíveis.
 
 ### Garçom
 - Link individual por token, que pode ser desativado pelo administrador.
-- Atribuição de mesas, identificação do responsável e histórico de transferência.
-- Entrega total ou parcial dos itens que ficaram prontos.
-- PWA em `/garcom-pwa/`, com manifesto instalável e fila local no IndexedDB para pedidos criados sem conexão.
-- A sincronização offline depende de reconexão e do aplicativo voltar a executar no navegador. Preços, disponibilidade e estoque são sempre validados pelo servidor; um conflito precisa ser revisado, não presumido como pedido confirmado.
-- **A PWA ainda precisa de validação ponta a ponta em navegador/dispositivo real e PostgreSQL isolado antes de ser considerada pronta para a venda.**
+- Fila **compartilhada** de itens prontos: nada fica escondido por causa do dono
+  da mesa ou de quem lançou o pedido.
+- Entrega em três etapas por item — **aceitar → retirar → entregar** — com autor
+  e horário registrados em cada uma. "Retirado" (a caminho da mesa) é distinto de
+  "entregue" (cobrável).
+- O primeiro aceite numa mesa sem responsável define o responsável no servidor.
+  Colegas podem ajudar em outros itens **sem** tomar a mesa.
+- Transferência explícita pelo responsável ou pelo administrador, sempre auditada.
+- Histórico de movimentação por item consultável na própria tela.
+- PWA em `/garcom-pwa/`, instalável, com fila persistente em IndexedDB: o pedido
+  sobrevive a fechar/reiniciar o app, reenvia sozinho quando a conexão volta e
+  nunca duplica (chave de idempotência por operação).
+- Preços, disponibilidade e estoque são sempre revalidados pelo servidor.
+  Conflito fica visível para revisão e **nunca** é tratado como pedido confirmado.
+- Validado ponta a ponta em Chromium real + PostgreSQL isolado (offline →
+  reinício → sincronização → aceite). **Ainda pendente:** validação em aparelho
+  físico Android/iOS e notificação com o app fechado (Web Push não implementado).
 
 ### Caixa
-- Lista de comandas abertas e itens entregues.
+- Lista de comandas abertas e itens entregues; cobra **apenas o que foi entregue**.
+- Cancelamento de item com motivo obrigatório, devolvendo estoque uma única vez.
+  Item cancelado não é cobrado e não bloqueia o fechamento.
+- Comanda inteiramente cancelada fecha com total zero e libera a mesa.
 - Registro de pagamentos parciais, fechamento de comanda, desconto e taxa de serviço.
 - Formas de pagamento registradas: dinheiro, PIX, débito e crédito.
 - Comprovante de consumo **não fiscal**.
@@ -70,6 +97,7 @@ A comanda da mesa é acumulativa: a mesa pode receber vários pedidos durante a 
 - Categorias, produtos, preços, disponibilidade, setor de produção, estoque e adicionais.
 - Configuração de mesas e geração de QR fixo por mesa (até 70 mesas habilitadas pela interface atual).
 - Cadastro e ativação/desativação de garçons.
+- Transferência administrativa do responsável da mesa e devolução de aceite à fila.
 - Indicadores diários, relatórios por período, histórico e ferramenta de limpeza de histórico.
 - Upload/otimização de fotos para WebP.
 
@@ -148,12 +176,54 @@ npm run test:carga70
 npm run test:dia
 ```
 
-- `test:regression`: regressões automatizadas, incluindo contratos do backend e testes estáticos da PWA.
+- `test:regression` (ou `npm test`): regressões automatizadas, contratos do backend, testes estáticos da PWA e testes comportamentais da fila offline em IndexedDB simulado (`fake-indexeddb`). Não precisa de banco.
 - `test:smoke` e `test:full`: precisam de servidor, PostgreSQL e usuários/cardápio preparados; criam ou alteram dados.
 - `test:seguranca`: testa autorização, IDOR, CSRF, limite de corpo e outras defesas contra um servidor real; cria/edita dados de teste e não deve apontar para produção.
 - `test:carga`, `test:carga70` e `test:dia`: cenários operacionais/concor­rentes que alteram dados. Rode-os **somente em ambiente isolado**, nunca no banco usado pela lanchonete.
 
-O CI do GitHub executa instalação limpa, TypeScript, build, testes de regressão e verificações de sintaxe. CI verde não substitui teste de integração contra PostgreSQL, teste visual em navegador real nem validação no Railway.
+### Integração com PostgreSQL real e E2E em navegador
+
+Estes testes **exigem banco descartável** e recusam qualquer database que não se
+chame `qradmin_test`:
+
+```bash
+export DATABASE_URL=postgres://usuario:senha@host:5432/qradmin_test
+export NODE_ENV=test
+npm run db:migrate
+
+# Cenário completo: entrega progressiva por setor, corrida de aceite,
+# cancelamento, transferência, fechamento e replay offline
+node --test tests/postgres-entregas-progressivas.test.cjs
+
+# Demais suítes de integração
+node --test tests/postgres-integration.test.cjs \
+            tests/postgres-financial-integration.test.cjs \
+            tests/postgres-financial-concurrency.test.cjs \
+            tests/postgres-waiter-integration.test.cjs \
+            tests/postgres-qr-session.test.cjs \
+            tests/postgres-password-change.test.cjs
+
+# E2E em Chromium real: pedido offline → reinício do app → sincronização
+# automática → item pronto → aceite pela interface
+node tests/e2e/garcom-offline.e2e.cjs
+
+# Drill de backup/restore (exige pg_dump/pg_restore e banco isolado vazio)
+RESTORE_DRILL_CONFIRM=isolated-target npm run db:restore-drill
+```
+
+O CI do GitHub executa instalação limpa, TypeScript, build, regressões,
+verificações de sintaxe, as suítes de PostgreSQL em `postgres:16` e o drill de
+backup/restore. **CI verde não substitui validação em aparelho físico nem no
+ambiente de operação.**
+
+### Documentação técnica
+
+- [`docs/CORRECAO-ENTREGA-PROGRESSIVA.md`](docs/CORRECAO-ENTREGA-PROGRESSIVA.md) —
+  diagnóstico, causas-raiz, correções, evidência de teste e limites da validação.
+- [`docs/CONTRATO-ATENDIMENTO-GARCOM.md`](docs/CONTRATO-ATENDIMENTO-GARCOM.md) —
+  contrato de API, estados por item, idempotência e erros.
+- [`docs/PWA-ATENDIMENTO-GARCOM.md`](docs/PWA-ATENDIMENTO-GARCOM.md) —
+  arquitetura do PWA, garantias e limites da fila offline.
 
 ## Banco e deploy
 
@@ -161,19 +231,25 @@ O CI do GitHub executa instalação limpa, TypeScript, build, testes de regress�
 - O servidor tenta verificar/aplicar migrations ao iniciar, mas esse caminho é **best-effort**: pode iniciar mesmo se a migration falhar. Confira os logs do deploy e confirme que todas as migrations esperadas foram aplicadas antes de operar.
 - Não rode migrations, seed ou testes mutáveis sem confirmar qual banco está conectado.
 - Antes da primeira operação comercial, valide login/perfis, pedido até entrega, estoque, fechamento e pagamentos em banco isolado; teste também restauração de backup.
-- A PWA deve ser validada em Android/navegador real, inclusive reconexão, conflito de sincronização, atualização do Service Worker e links de mesa/garçom.
+- A PWA foi validada em Chromium real (offline, reinício, sincronização e aceite). Ainda deve ser validada em Android/iOS físicos, incluindo instalação, suspensão prolongada e atualização do Service Worker.
+- A migration `0027_entregas_progressivas_offline.sql` é aditiva. Faça backup antes de aplicá-la em produção e rode o drill de restore em banco isolado.
 
 ## Estado honesto do produto
 
 | Área | Situação |
 |---|---|
-| Fluxo base de QR, comanda, cozinha/bar e caixa | Implementado; requer validação final no ambiente de operação |
-| Segurança e concorrência do backend | Há proteções e regressões automatizadas; ainda requer auditoria comportamental e teste com PostgreSQL real |
-| PWA de atendimento do garçom | Implementação integrada; requer validação ponta a ponta antes de ser considerada estável |
+| Fluxo base de QR, comanda, cozinha/bar e caixa | Implementado e coberto por integração em PostgreSQL real; requer validação final no ambiente de operação |
+| Entrega progressiva por item, autoria e responsabilidade | Implementado; validado em PostgreSQL real, incluindo corrida de aceite entre garçons |
+| Segurança e concorrência do backend | Preços, permissões e transições revalidados no servidor sob lock; regressões + integração comportamental em PostgreSQL |
+| Fila offline do garçom | Persistência, reinício, reenvio automático, idempotência e conflito validados em Chromium real; pendente aparelho físico |
+| PWA de atendimento do garçom | Fluxo completo validado em navegador real; pendente Android/iOS físicos |
+| Notificação com app fechado (Web Push) | **Não implementado** — sem VAPID, subscrição ou serviço de envio |
+| Backup/restore | Script e teste existem e rodam no CI; **não executado no ambiente local desta rodada** |
 | Comprovante de consumo não fiscal | Implementado; não substitui documento fiscal |
 | PIX | QR/chave estática e lançamento manual; sem gateway ou confirmação bancária automática |
 | Multi-loja / multi-tenant | Fora do escopo atual |
-| Pronto para venda/produção | **Não declarar pronto até concluir a validação isolada e operacional** |
+| Deploy em produção (Railway) | **Não realizado nem validado nesta rodada** |
+| Pronto para venda/produção | **Não declarar pronto antes do drill de backup, do deploy validado e do teste em aparelho real** |
 
 ---
 

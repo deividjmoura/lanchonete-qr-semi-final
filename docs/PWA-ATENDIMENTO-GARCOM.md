@@ -1,82 +1,152 @@
 # PWA de atendimento do garçom
 
-## Estado e arquitetura
+> Aplicativo operacional real em `public/garcom-pwa/`, servido pelo próprio
+> backend Node. Não é protótipo nem mock. Contrato de API:
+> [`CONTRATO-ATENDIMENTO-GARCOM.md`](./CONTRATO-ATENDIMENTO-GARCOM.md).
 
-O PWA operacional está em `public/garcom-pwa/` e usa o backend real do QR Admin. Não está em modo mock. O token individual do garçom identifica e autoriza as rotas operacionais; a API e o PostgreSQL são a fonte de verdade para mesas, pedidos, preparo, entregas e cobranças.
+## Arquitetura
 
-O Service Worker armazena apenas o shell estático do PWA. Requisições `/api/` não são armazenadas em cache. O IndexedDB guarda pedidos locais pendentes, com uma chave de idempotência por operação.
+| Camada | Onde | Responsabilidade |
+|---|---|---|
+| Shell estático | `public/garcom-pwa/{index.html,styles.css,app.js}` | interface do garçom |
+| Fila offline | `public/garcom-pwa/offline.js` | IndexedDB + motor de sincronização |
+| Service Worker | `public/garcom-pwa/sw.js` | cache **apenas** do shell, network-first |
+| Tempo real | `public/js/realtime.js` | SSE com reconexão e fallback |
+| Autoridade | `server.js` + `db/*.js` + PostgreSQL | preços, permissões, estados, concorrência |
 
-## Fluxo de mesas e pedidos
+O Service Worker **nunca** intercepta `/api/`. Nenhuma resposta de API é
+cacheada: o servidor é a única fonte de verdade. O cache do shell é versionado
+(`garcom-pwa-shell-v18`); qualquer mudança no shell exige subir essa versão, ou
+o aparelho continua executando JavaScript antigo.
 
-1. O PWA consulta `GET /api/garcom/:token/mesas` para obter mesas habilitadas, sessão aberta e responsável atual.
-2. O garçom pode iniciar atendimento em mesa vazia por `POST /api/garcom/:token/mesas/:numero/iniciar`. A operação cria ou reutiliza uma sessão aberta, atribui o responsável sob lock transacional e registra o histórico/auditoria. Se outro garçom já for responsável, responde 409; transferência continua sendo uma ação explícita.
-3. Para uma mesa já iniciada, qualquer garçom ativo pode acrescentar itens; a responsabilidade da sessão não muda.
-4. O pedido é enviado por `POST /api/garcom/:token/mesas/:numero/pedidos` com `clienteNome`, `items`, `note`, `idempotencyKey` e, opcionalmente, `pedidoPaiId`.
-5. O servidor valida sessão, responsável existente, produtos, disponibilidade, estoque, adicionais e idempotência. O preço oficial é calculado no backend.
-6. A cozinha e o bar consultam suas filas operacionais; o garçom consulta `GET /api/garcom/:token/atendimentos` para acompanhar estados por item e `GET /api/garcom/:token/pedidos` para itens prontos para entrega.
+## Entrega em três etapas, item por item
 
-### Regras importantes
+Na aba **Entregas**, cada item pronto tem sua própria ação:
 
-- `POST .../assumir` continua reservado ao fluxo de assumir sessão criada por pedido QR do cliente. O PWA usa `.../iniciar` para iniciar o atendimento presencial sem exigir que o cliente faça primeiro um pedido QR.
-- O início de atendimento não transfere mesa atribuída a outro garçom.
-- A chave `idempotencyKey` precisa permanecer igual em todas as tentativas da mesma operação. Um replay retorna o pedido original, sem duplicar itens.
-- HTTP 201 confirma pedido novo; HTTP 200 pode indicar replay idempotente. O PWA só mostra “Confirmado” após resposta de sucesso.
-- HTTP 4xx vira conflito local e deve exibir o motivo; falhas de rede permanecem pendentes para nova sincronização.
-- Pedidos adicionais vinculados usam `pedidoPaiId` e precisam referenciar pedido não entregue da mesma sessão.
+1. **Aceitar item** — o garçom assume a entrega daquele item. O primeiro aceite
+   numa mesa sem responsável torna esse garçom o responsável principal, decidido
+   no servidor. Aceites seguintes de outros garçons são colaboração e **não**
+   transferem a mesa.
+2. **Retirar** — confirma a retirada no balcão. Só quem aceitou pode retirar.
+   O item fica `retirado`: saiu da produção, mas **ainda não** foi à mesa e
+   **ainda não** é cobrável.
+3. **Confirmar entrega** — só quem retirou pode entregar. A partir daí o valor
+   do item entra na conta.
 
-## Rotas consumidas
+Há também **Aceitar todos os prontos** (agrupa apenas os itens `concluido`
+daquele pedido) e **Histórico de movimentação**, que mostra a trilha real de
+atores e horários por item.
 
-| Operação | Rota |
-|---|---|
-| Identidade/validação | `GET /api/garcom/:token/me` |
-| Mesas e responsável | `GET /api/garcom/:token/mesas` |
-| Garçons ativos para transferência | `GET /api/garcom/:token/garcons-ativos` |
-| Iniciar sessão em mesa vazia ou sem responsável | `POST /api/garcom/:token/mesas/:numero/iniciar` |
-| Assumir sessão que veio de pedido QR | `POST /api/garcom/:token/mesas/:numero/assumir` |
-| Transferir mesa | `POST /api/garcom/:token/mesas/:numero/transferir` |
-| Pedidos ativos para acrescentar itens | `GET /api/garcom/:token/mesas/:numero/pedidos-ativos` |
-| Enviar pedido | `POST /api/garcom/:token/mesas/:numero/pedidos` |
-| Acompanhar pedidos/status por item | `GET /api/garcom/:token/atendimentos` |
-| Consultar pedidos prontos | `GET /api/garcom/:token/pedidos` |
-| Confirmar entrega | `POST /api/garcom/:token/pedidos/:id/entregar` |
-| Resumo de cobrança | `GET /api/garcom/:token/sessoes/:sessaoId/resumo-pagamento` |
-| Registrar recebimento parcial | `POST /api/garcom/:token/sessoes/:sessaoId/pagamentos` |
+Cada item libera assim que o setor conclui: se o bar termina antes da cozinha,
+a bebida aparece na hora e pode ser entregue enquanto o prato ainda é produzido.
 
 ## Fila offline
 
-- `offline`: pedido salvo localmente, ainda não confirmado no servidor.
-- `sync`: tentativa de envio em andamento.
-- `confirmed`: servidor confirmou a criação ou replay idempotente.
-- `conflict`: servidor respondeu erro 4xx; o motivo deve permanecer visível para o operador.
+`offline.js` implementa a persistência e o reenvio. Estados visíveis ao garçom:
 
-A fila é local ao navegador/dispositivo. Limpar dados do site, remover o PWA ou perder o dispositivo pode apagar pedidos ainda não sincronizados. Não tratar rascunho offline como pedido recebido pela cozinha.
+| Estado | Texto na tela | Significado |
+|---|---|---|
+| `offline` | AGUARDANDO SINCRONIZAÇÃO | salvo no aparelho, ainda não aceito pelo servidor |
+| `sync` | SINCRONIZANDO | envio em andamento |
+| `confirmed` | SINCRONIZADO | servidor respondeu com id do pedido |
+| `conflict` | CONFLITO — REVISAR | servidor recusou (4xx); exige decisão humana |
+| `error` | ERRO DE SINCRONIZAÇÃO | várias tentativas falharam; continua preservado |
 
-## Atualização de status, entregas e notificações
+Garantias implementadas e cobertas por teste:
 
-O PWA atualiza status/entregas por consulta periódica enquanto está aberto e em primeiro plano. O intervalo atual é de aproximadamente 7 segundos, com atualização adicional ao retornar à aba. A notificação local de item pronto depende do PWA ativo e do suporte do navegador.
+- **Persistência real.** O pedido é gravado em IndexedDB (`orders`, `meta`,
+  `leases`) antes de qualquer tentativa de envio. Fechar o app, recarregar ou
+  reiniciar o aparelho não perde a pendência.
+- **Sem confirmação prematura.** `confirmed` só existe depois de resposta HTTP
+  de sucesso **com id**. Resposta sem identificador é tratada como falha.
+- **Sem duplicidade.** Cada operação nasce com `idempotencyKey` UUID v4, mantida
+  em todo reenvio. O servidor devolve o mesmo pedido; o estoque baixa uma vez.
+- **Conectividade medida de verdade.** O motor consulta o backend
+  (`probeBackend`), em vez de confiar em `navigator.onLine`, que mente em Wi-Fi
+  sem saída e em redes com proxy.
+- **Retomada automática.** Ao voltar a resposta do servidor, a fila esvazia
+  sozinha. Também há reenvio ao voltar o foco, ao evento `online` e por timer
+  periódico de 15 s.
+- **Backoff progressivo.** 2 s até 5 min, com jitter, para não saturar a rede nem
+  o servidor em horário de pico.
+- **Uma aba por vez.** Lease com TTL e heartbeat em IndexedDB impede que duas
+  abas enviem a mesma fila simultaneamente. Lease expirado de aba morta é
+  recuperado pelas demais.
+- **Envio interrompido.** Registro deixado em `sync` por queda do app volta para
+  `offline` no boot, com a mesma chave — o replay é seguro.
+- **Conflito nunca é descartado.** 4xx preserva o pedido, o conteúdo original e o
+  motivo. **Revisar conflito** permite reenviar o original ou, no caso de mesa
+  com outro responsável, confirmar o envio como colaborador.
+- **Isolamento por garçom.** A fila é filtrada pelo token dono; trocar de link no
+  mesmo aparelho não mistura nem expõe pedidos de outro garçom.
+- **Exportar pendências** gera JSON sem o token, para recuperação assistida.
 
-**Web Push com o PWA fechado não está implementado/verificado.** O Service Worker possui handlers de evento push, mas ainda não há subscrição `PushManager`, armazenamento de subscrições por garçom, chaves VAPID nem serviço backend de envio. Não prometer notificação com aplicativo encerrado.
+Limites honestos: a fila vive no navegador. Limpar dados do site, desinstalar o
+PWA ou perder o aparelho pode apagar pedidos não sincronizados. O app pede
+`navigator.storage.persist()` para reduzir o risco de descarte automático, mas
+isso depende do navegador. **Rascunho offline não é pedido recebido pela
+cozinha** — a tela mostra isso explicitamente.
+
+## Mesas e pedidos
+
+1. `GET /api/garcom/:token/mesas` traz mesas habilitadas, sessão e responsável.
+   O token QR da mesa só vem preenchido para mesas sob responsabilidade do
+   garçom autenticado.
+2. **Iniciar atendimento** (`POST .../iniciar`) cria ou reutiliza sessão e atribui
+   o responsável sob lock. Mesa de outro garçom → 409.
+3. **Assumir** (`POST .../assumir`) é o caminho da mesa que já tem pedido QR.
+4. O pedido vai por `POST .../pedidos` com `idempotencyKey` e `clientCreatedAt`.
+   O servidor revalida tudo e calcula o preço oficial.
+5. Sem rede, o garçom ainda monta o pedido, gera o QR da mesa a partir de dados
+   em cache e edita rascunhos **que nunca foram enviados** (`attempts = 0`).
+   Rascunho já transmitido não é editável: isso criaria divergência com o servidor.
+
+## Notificações
+
+O aviso de item pronto funciona com o PWA aberto (SSE + toast + som opcional) e
+exige consentimento explícito no primeiro uso, que pode ser recusado.
+
+**Web Push com o aplicativo fechado não está implementado nem validado.** O
+Service Worker tem handlers de `push`, mas não há subscrição `PushManager`,
+chaves VAPID, tabela de subscrições nem serviço de envio no backend. A própria
+tela de consentimento informa isso. Não prometer esse comportamento.
 
 ## Cobrança e PIX
 
-O PWA consulta saldo e registra recebimentos parciais somente para sessão sob responsabilidade do garçom atual. O PIX gera QR/copia-e-cola com o valor informado; o operador deve conferir o crédito no aplicativo bancário e confirmar manualmente. O PWA não integra gateway, não confirma liquidação automaticamente e não fecha a sessão. O fechamento final permanece no Caixa.
+O garçom consulta saldo e registra recebimento **parcial** apenas de sessão sob
+sua responsabilidade, sempre online. O PIX gera QR/copia-e-cola com o valor
+informado; o operador confere o crédito no banco e confirma manualmente. Não há
+gateway nem confirmação automática de liquidação. O garçom não fecha a comanda:
+o fechamento final é do Caixa.
 
-## Segurança e operação
+## Segurança
 
-- O token individual é uma credencial bearer e atualmente aparece no caminho das rotas. Logs HTTP do proxy podem registrar caminhos completos; evitar compartilhar logs com tokens e planejar migração futura para sessão curta/cookie protegido.
-- Nunca imprimir tokens em logs, telas ou documentação.
-- Se a API responder 401, solicitar ao administrador um link individual válido/ativo; não continuar tentando enviar pedidos com credencial inválida.
-- Transferência de mesa é explícita e auditada; o garçom anterior não pode entregar nem cobrar após perder a responsabilidade.
-- Não executar testes que escrevem no banco de produção. Testes PostgreSQL devem usar exclusivamente banco descartável `qradmin_test`.
+- O token individual é credencial bearer e hoje aparece no caminho da rota.
+  Não compartilhar logs com tokens; não imprimir token em tela ou documentação.
+  Migração para sessão curta/cookie protegido segue recomendada.
+- 401/403 marcam a fila como conflito de autenticação e a tela mostra
+  **LINK INVÁLIDO OU DESATIVADO**, sem descartar pedidos.
+- Toda permissão é revalidada no servidor, dentro da transação. Checagem de
+  interface é conveniência, nunca autoridade.
+- Testes que escrevem só podem rodar em banco descartável `qradmin_test`.
 
-## Testes e validação pendente
+## Como validar
 
-A suíte contém testes estáticos de UI/rotas, testes de regras de atendimento e integração PostgreSQL. Isso não substitui E2E com navegador/dispositivo real. Antes de declarar o PWA pronto, validar:
-- iniciar sessão vazia, enviar pedido, visualizar na cozinha/bar e confirmar recebimento;
-- pedido QR de cliente, assumir mesa e acrescentar itens;
-- pedido adicional, idempotência em timeout e recuperação após reiniciar o navegador;
-- transferência durante uso concorrente e acesso de garçom anterior;
-- entrega parcial/total e atualização dos status;
-- cobrança parcial e confirmação manual PIX;
-- offline/online, falha do IndexedDB, link inválido e atualização do Service Worker;
-- instalação e comportamento em Android/Chrome e iOS/Safari.
+```bash
+npm test                                    # regressão + offline (fake-indexeddb)
+npm run typecheck && npm run build
+
+# PostgreSQL descartável (CI usa postgres:16; local foi validado em 18.4)
+NODE_ENV=test DATABASE_URL=postgres://.../qradmin_test npm run db:migrate
+NODE_ENV=test DATABASE_URL=postgres://.../qradmin_test \
+  node --test tests/postgres-entregas-progressivas.test.cjs
+
+# E2E em Chromium real: offline → reinício → sincronização → aceite
+NODE_ENV=test DATABASE_URL=postgres://.../qradmin_test \
+  node tests/e2e/garcom-offline.e2e.cjs
+```
+
+Validado em Chromium headless. **Não** foi validado em dispositivo físico
+Android/iOS, Safari/iOS, nem em rede móvel real com perda de pacote. Instalação
+em iOS, comportamento de suspensão prolongada e notificação com app fechado
+permanecem pendentes de teste em aparelho.
