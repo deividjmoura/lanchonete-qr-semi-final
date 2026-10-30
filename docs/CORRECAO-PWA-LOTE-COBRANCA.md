@@ -105,8 +105,8 @@ própria (`#billingBlocked`, `role="status"`) e texto específico por causa.
 | `npm run test:e2e` | **3/3 cenários, 22 verificações + 64 layouts visuais** |
 | `npm run typecheck` | limpo |
 | `npm run build` | ok, `dist/garcom-pwa/*` byte a byte igual ao `public/`, shell v20 |
-| CI `PostgreSQL integration` | **success**, drill de backup e E2E novos incluídos |
-| CI `CI` | **success** (migrations, typecheck, build, dist, regressão) |
+| CI `PostgreSQL integration` | **success** no merge com o #141 (run 41058234768): drill de backup + os 3 E2E |
+| CI `CI` | **success** no merge com o #141 (run 41058234456): migrations, typecheck, build, dist, regressão |
 
 O E2E novo prova, em Chromium real contra servidor Node e PostgreSQL:
 
