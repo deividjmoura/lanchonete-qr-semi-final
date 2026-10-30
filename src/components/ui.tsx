@@ -4,11 +4,47 @@ import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "../utils/cn";
 import { alternarTema, temaAtual, EVENTO_TEMA, type Tema } from "../lib/tema";
 
-/* Marca provisória do produto: QR Admin. */
-export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
+/* =============================================================================
+   ui.tsx — primitivos do Design System "Mesa & Brasa".
+   As assinaturas públicas foram mantidas (nenhuma tela precisa mudar por causa
+   daqui). Só a aparência mudou: marca, botões, badges, modal, campos.
+   ========================================================================== */
+
+/** Marca: símbolo (mark) + assinatura tipográfica "QR Admin". */
+export function Logo({
+  size = "md",
+  className,
+  somenteMarca = false,
+}: {
+  size?: "sm" | "md" | "lg";
+  className?: string;
+  somenteMarca?: boolean;
+}) {
+  const dim = size === "sm" ? "size-9" : size === "lg" ? "size-16 sm:size-[4.5rem]" : "size-11";
+  const word = size === "sm" ? "text-[15px]" : size === "lg" ? "text-3xl sm:text-[2rem]" : "text-lg";
   return (
-    <span className={cn("brand-logo inline-flex shrink-0 items-center overflow-hidden rounded-xl bg-white",size === "sm" ? "h-10 w-[90px] sm:w-[118px]" : size === "lg" ? "h-[118px] w-[270px] sm:h-[145px] sm:w-[330px]" : "h-16 w-[150px]")}>
-      <img src="/logo/qradmin-horizontal.png" alt="QR Admin" className="w-full h-full object-contain" draggable={false}/>
+    <span className={cn("inline-flex items-center gap-2.5 select-none", className)}>
+      <img
+        src="/logo/qradmin-mark.svg"
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        className={cn("shrink-0 rounded-[28%] shadow-[var(--shadow-soft)]", dim)}
+      />
+      {!somenteMarca && (
+        <span className={cn("flex-col leading-none whitespace-nowrap", size === "sm" ? "hidden sm:flex" : "flex")}>
+          <span className={cn("font-display tracking-tight", word)}>
+            <span className="text-navy-900">QR </span>
+            <span className="text-brand-600">Admin</span>
+          </span>
+          {size === "lg" && (
+            <span className="mt-2 text-[10px] font-bold uppercase tracking-[0.32em] text-slate-500">
+              pedidos por QR Code
+            </span>
+          )}
+        </span>
+      )}
+      <span className="sr-only">QR Admin</span>
     </span>
   );
 }
@@ -27,12 +63,62 @@ export function ThemeToggle({ className }: { className?: string }) {
       title={tema === "claro" ? "Ativar tema escuro" : "Ativar tema claro"}
       aria-label={tema === "claro" ? "Ativar tema escuro" : "Ativar tema claro"}
       className={cn(
-        "btn-press grid place-items-center size-10 rounded-full border cursor-pointer transition-colors",
-        "border-slate-200 bg-slate-100/70 text-slate-500 hover:text-navy-800",
+        "btn-press grid place-items-center size-10 rounded-full border cursor-pointer",
+        "border-slate-200 bg-white text-slate-500 hover:text-brand-600 hover:border-brand-500/40",
         className
       )}
     >
-      {tema === "claro" ? <Moon className="size-4.5" /> : <Sun className="size-4.5" />}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={tema}
+          initial={{ rotate: -35, opacity: 0, scale: 0.7 }}
+          animate={{ rotate: 0, opacity: 1, scale: 1 }}
+          exit={{ rotate: 35, opacity: 0, scale: 0.7 }}
+          transition={{ duration: 0.18 }}
+          className="grid place-items-center"
+        >
+          {tema === "claro" ? <Moon className="size-4.5" /> : <Sun className="size-4.5" />}
+        </motion.span>
+      </AnimatePresence>
+    </button>
+  );
+}
+
+/** Botão de ícone do DS — usado nas barras de ferramentas. */
+export function IconButton({
+  children,
+  onClick,
+  label,
+  active,
+  tone = "brand",
+  className,
+}: {
+  children: ReactNode;
+  onClick?: () => void;
+  label: string;
+  active?: boolean;
+  tone?: "brand" | "danger" | "neutral";
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      data-on={active ? "true" : "false"}
+      className={cn(
+        "btn-press grid place-items-center size-10 rounded-full border cursor-pointer",
+        "border-slate-200 bg-white text-slate-500",
+        !active && tone === "brand" && "hover:text-brand-600 hover:border-brand-500/40",
+        !active && tone === "danger" && "hover:text-rose-600 hover:border-rose-500/40",
+        !active && tone === "neutral" && "hover:text-navy-900",
+        active && tone === "brand" && "border-brand-500/40 bg-brand-500/10 text-brand-600",
+        active && tone === "danger" && "border-rose-500/40 bg-rose-600/10 text-rose-600",
+        className
+      )}
+    >
+      {children}
     </button>
   );
 }
@@ -56,25 +142,21 @@ export function Btn({
 }) {
   return (
     <motion.button
-      whileTap={{ scale: 0.96 }}
-      whileHover={disabled ? undefined : { y: -1 }}
+      whileTap={{ scale: 0.965 }}
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "btn-press inline-flex items-center justify-center gap-2 rounded-2xl font-semibold select-none cursor-pointer",
-        "transition-colors disabled:opacity-35 disabled:pointer-events-none",
-        size === "sm" && "h-9 px-3.5 text-xs",
+        "btn-press ds-btn font-sans",
+        size === "sm" && "ds-btn--sm",
         size === "md" && "h-11 px-5 text-sm",
-        size === "lg" && "h-13 px-7 text-base",
-        full && "w-full",
-        variant === "brand" &&
-          "bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-[0_10px_30px_-8px_rgba(240,94,74,0.5)] hover:shadow-[0_14px_38px_-6px_rgba(240,94,74,0.65)]",
-        variant === "lime" &&
-          "bg-gradient-to-br from-teal-400 to-teal-600 text-white shadow-[0_10px_30px_-8px_rgba(20,184,166,0.45)]",
-        variant === "ghost" && "bg-slate-100/70 text-slate-700 hover:bg-slate-100 border border-slate-200",
-        variant === "glass" && "glass text-slate-800 hover:border-brand-500/50",
-        variant === "outline" && "border border-brand-500/50 text-brand-600 hover:bg-brand-500/10",
-        variant === "danger" && "bg-rose-600/10 text-rose-600 border border-rose-500/40 hover:bg-rose-600/10",
+        size === "lg" && "ds-btn--lg",
+        full && "ds-btn--block",
+        variant === "brand" && "ds-btn--brand",
+        variant === "lime" && "ds-btn--success",
+        variant === "ghost" && "ds-btn--surface",
+        variant === "glass" && "ds-btn--surface bg-white",
+        variant === "outline" && "ds-btn--outline",
+        variant === "danger" && "ds-btn--danger",
         className
       )}
     >
@@ -97,17 +179,22 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest",
-        tone === "amber" && "bg-amber-500/10 text-amber-700 border border-amber-500/30",
-        tone === "lime" && "bg-teal-500/10 text-teal-700 border border-teal-500/30",
-        tone === "sky" && "bg-navy-700/10 text-navy-700 border border-navy-700/25",
-        tone === "rose" && "bg-rose-600/10 text-rose-600 border border-rose-400/40",
-        tone === "violet" && "bg-violet-500/10 text-violet-700 border border-violet-500/30",
-        tone === "zinc" && "bg-slate-100/80 text-slate-600 border border-slate-200",
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] whitespace-nowrap",
+        tone === "amber" && "bg-amber-500/12 text-amber-700 border-amber-500/30",
+        tone === "lime" && "bg-teal-500/12 text-teal-700 border-teal-500/30",
+        tone === "sky" && "bg-sky-500/10 text-sky-700 border-sky-500/25",
+        tone === "rose" && "bg-rose-600/10 text-rose-600 border-rose-500/30",
+        tone === "violet" && "bg-violet-500/10 text-violet-700 border-violet-500/25",
+        tone === "zinc" && "bg-slate-100 text-slate-600 border-slate-200",
         className
       )}
     >
-      {pulse && <span className="size-1.5 rounded-full bg-current animate-pulse-soft" />}
+      {pulse && (
+        <span className="relative flex size-1.5">
+          <span className="absolute inline-flex h-full w-full rounded-full bg-current opacity-60 animate-ping" />
+          <span className="relative inline-flex size-1.5 rounded-full bg-current" />
+        </span>
+      )}
       {children}
     </span>
   );
@@ -138,28 +225,30 @@ export function Modal({
             if (closeOnBackdrop) onClose();
           }}
         >
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-[#1a110b]/60 backdrop-blur-[3px]" />
           <motion.div
             role="dialog"
             aria-modal="true"
-            initial={{ y: 60, opacity: 0, scale: 0.98 }}
+            initial={{ y: 60, opacity: 0, scale: 0.99 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: 50, opacity: 0, scale: 0.98 }}
-            transition={{ type: "spring", stiffness: 320, damping: 30 }}
+            exit={{ y: 50, opacity: 0, scale: 0.99 }}
+            transition={{ type: "spring", stiffness: 320, damping: 32 }}
             onClick={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
             className={cn(
-              "relative glass-deep noise rounded-t-4xl sm:rounded-4xl w-full max-h-[92dvh] overflow-y-auto no-scrollbar",
+              "relative glass-deep rounded-t-4xl sm:rounded-4xl w-full max-h-[92dvh] overflow-y-auto no-scrollbar",
+              "border-slate-200",
               wide ? "sm:max-w-2xl" : "sm:max-w-md"
             )}
           >
+            <div aria-hidden="true" className="sm:hidden mx-auto mt-2.5 h-1.5 w-11 rounded-full bg-slate-300" />
             <button
               type="button"
               onClick={onClose}
               aria-label="Fechar"
-              className="btn-press absolute top-4 right-4 z-10 grid place-items-center size-10 rounded-full bg-slate-100 border border-slate-200 text-navy-900 hover:bg-slate-200 cursor-pointer"
+              className="btn-press absolute top-3.5 right-3.5 z-10 grid place-items-center size-9 rounded-full bg-white/90 border border-slate-200 text-slate-500 hover:text-navy-900 backdrop-blur-sm cursor-pointer"
             >
-              <X className="size-4.5" />
+              <X className="size-4" />
             </button>
             {children}
           </motion.div>
@@ -186,15 +275,24 @@ export function Qtd({
       )}
     >
       <button
+        type="button"
+        aria-label="Diminuir"
         className="btn-press h-full aspect-square grid place-items-center text-slate-600 hover:text-brand-600 cursor-pointer text-lg font-bold"
         onClick={() => onChange(Math.max(1, valor - 1))}
       >
         −
       </button>
-      <span className={cn("tabular font-mono font-semibold text-navy-900", size === "sm" ? "w-6 text-xs" : "w-8 text-sm", "text-center")}>
+      <span
+        className={cn(
+          "tabular font-mono font-semibold text-navy-900 text-center",
+          size === "sm" ? "w-6 text-xs" : "w-8 text-sm"
+        )}
+      >
         {valor}
       </span>
       <button
+        type="button"
+        aria-label="Aumentar"
         className="btn-press h-full aspect-square grid place-items-center text-slate-600 hover:text-brand-600 cursor-pointer text-lg font-bold"
         onClick={() => onChange(valor + 1)}
       >
@@ -206,9 +304,9 @@ export function Qtd({
 
 export function LivePill({ label = "ao vivo" }: { label?: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-500/10 border border-teal-500/30 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-teal-600">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-500/10 border border-teal-500/30 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-teal-700">
       <span className="relative flex size-1.5">
-        <span className="absolute inline-flex h-full w-full rounded-full bg-teal-500 opacity-75 animate-ping" />
+        <span className="absolute inline-flex h-full w-full rounded-full bg-teal-500 opacity-70 animate-ping" />
         <span className="relative inline-flex size-1.5 rounded-full bg-teal-500" />
       </span>
       {label}
@@ -220,10 +318,10 @@ export function Secao({ kicker, titulo, right }: { kicker: string; titulo: React
   return (
     <div className="flex items-end justify-between gap-4">
       <div>
-        <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.28em] text-brand-600">
+        <p className="ds-kicker">
           <Flame className="size-3.5" /> {kicker}
         </p>
-        <h2 className="font-display text-4xl sm:text-5xl leading-none mt-1 text-navy-900">{titulo}</h2>
+        <h2 className="font-display text-3xl sm:text-4xl leading-[1.05] mt-2 text-navy-900 tracking-tight">{titulo}</h2>
       </div>
       {right}
     </div>
@@ -255,11 +353,7 @@ export function Input({
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className={cn(
-          "w-full h-12 rounded-2xl bg-slate-100 border border-slate-200 text-sm text-navy-900 placeholder:text-slate-400",
-          "focus:outline-none focus:border-brand-500/60 focus:ring-2 focus:ring-brand-500/20 transition",
-          prefix ? "pl-11 pr-4" : "px-4"
-        )}
+        className={cn("ds-input h-12", prefix ? "pl-11 pr-4" : "px-4")}
       />
     </div>
   );

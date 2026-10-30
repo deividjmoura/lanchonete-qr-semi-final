@@ -12,6 +12,17 @@ O QR Admin é apresentado como uma solução genérica de pedidos e operação p
 
 ---
 
+## Design System
+
+O visual do QR Admin segue o design system **“Mesa & Brasa” v2** (papel creme, brasa, manjericão,
+Bricolage Grotesque + Plus Jakarta Sans, tema claro e escuro em todas as áreas).
+
+- Documentação: [`docs/design-system.md`](docs/design-system.md)
+- Manual visual interativo: [`docs/design-system/index.html`](docs/design-system/index.html)
+- Tokens: [`src/index.css`](src/index.css) (fonte única) e [`src/lib/tema.ts`](src/lib/tema.ts)
+
+---
+
 ## Objetivo e escopo
 
 O QR Admin é uma aplicação **single-tenant**: uma instalação representa um único estabelecimento. O foco atual é colocar o produto em operação em uma lanchonete real, com fluxo simples e dados consistentes.

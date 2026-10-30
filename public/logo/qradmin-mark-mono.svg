@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="QR Admin">
+  <g fill="currentColor">
+    <rect x="96" y="96" width="104" height="104" rx="30"/>
+    <rect x="312" y="96" width="104" height="104" rx="30"/>
+    <rect x="96" y="312" width="104" height="104" rx="30"/>
+    <rect x="312" y="312" width="44" height="44" rx="13"/>
+    <rect x="372" y="312" width="44" height="44" rx="13" opacity=".7"/>
+    <rect x="312" y="372" width="44" height="44" rx="13" opacity=".7"/>
+    <rect x="372" y="372" width="44" height="44" rx="13"/>
+    <rect x="122" y="122" width="52" height="52" rx="15" fill="#0000" stroke="currentColor" stroke-width="0"/>
+  </g>
+</svg>

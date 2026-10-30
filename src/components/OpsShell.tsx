@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePub } from "../store/usePub";
 import { ir } from "../router";
 import { cn } from "../utils/cn";
-import { LivePill, Logo, ThemeToggle } from "./ui";
+import { IconButton, LivePill, Logo, ThemeToggle } from "./ui";
 import { TrocarSenha } from "./TrocarSenha";
 import { audioMudo, beepAlerta, beepDuplo, falar, setMudo } from "../lib/sonus";
 import { FRASES_GARCOM } from "../lib/data";
@@ -96,18 +96,22 @@ export function OpsShell({
 
   return (
     <div className="relative min-h-dvh">
-      {/* ambientes */}
+      {/* ambientes — luz quente difusa, sem ruído */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
-        <div className="glow-orb absolute -top-40 left-1/4 size-[34rem] bg-brand-500/12" />
-        <div className="glow-orb absolute top-1/3 -right-40 size-[28rem] bg-amber-500/10" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(240,94,74,0.07),transparent_62%)]" />
+        <div className="glow-orb absolute -top-44 left-1/4 size-[36rem] bg-brand-500/12" />
+        <div className="glow-orb absolute top-1/3 -right-44 size-[30rem] bg-teal-500/10" />
       </div>
 
-      {/* Marca d'água discreta do QR Admin */}
-      <div aria-hidden="true" className="fixed -z-10 bottom-0 right-0 w-36 sm:w-52 h-80 opacity-[.045] pointer-events-none" style={{ background:"url('/logo/qradmin-mark.png') center bottom / contain no-repeat" }} />
+      {/* Marca d'água discreta */}
+      <div
+        aria-hidden="true"
+        className="fixed -z-10 bottom-0 right-0 w-32 sm:w-44 h-72 opacity-[.035] pointer-events-none"
+        style={{ background: "url('/logo/qradmin-mark.svg') center bottom / contain no-repeat" }}
+      />
+
       {/* header */}
-      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-3 sm:px-6 h-14 sm:h-16 flex items-center gap-1.5 sm:gap-3 min-w-0">
+      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/85 backdrop-blur-xl supports-[backdrop-filter]:bg-white/70">
+        <div className="mx-auto max-w-7xl px-3 sm:px-6 h-15 sm:h-16 flex items-center gap-2 sm:gap-3 min-w-0">
           <button
             onClick={() => {
               if (role === "admin") ir("/admin");
@@ -117,30 +121,33 @@ export function OpsShell({
               else ir("/");
             }}
             className="cursor-pointer shrink-0"
+            aria-label="Início do painel"
           >
             <Logo size="sm" />
           </button>
-          <span className="hidden md:block h-6 w-px bg-slate-200" />
-          <p className="hidden md:flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.3em] text-slate-500">
+
+          <span className="hidden lg:block h-6 w-px bg-slate-200" />
+          <p className="hidden xl:flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.26em] text-slate-500">
             {kicker} <LivePill />
           </p>
 
           <div className="flex-1 min-w-0" />
 
-          <nav className="flex items-center gap-0.5 sm:gap-1 rounded-full bg-slate-100/70 border border-slate-200 p-0.5 sm:p-1 overflow-x-auto no-scrollbar max-w-[55vw] sm:max-w-none shrink">
+          <nav className="flex items-center gap-0.5 rounded-full bg-slate-100 border border-slate-200 p-1 overflow-x-auto no-scrollbar max-w-[48vw] sm:max-w-none shrink">
             {nav.map((n) => (
               <button
                 key={n.id}
                 onClick={() => ir(n.to)}
+                aria-current={ativo === n.id ? "page" : undefined}
                 className={cn(
-                  "btn-press relative flex items-center gap-1.5 rounded-full px-3 sm:px-3.5 h-9 text-xs font-semibold cursor-pointer transition-colors",
-                  ativo === n.id ? "text-white" : "text-slate-500 hover:text-navy-800"
+                  "btn-press relative flex items-center gap-1.5 rounded-full px-3 sm:px-3.5 h-8 text-xs font-bold cursor-pointer transition-colors",
+                  ativo === n.id ? "text-white" : "text-slate-500 hover:text-navy-900"
                 )}
               >
                 {ativo === n.id && (
                   <motion.span
                     layoutId="ops-nav"
-                    className="absolute inset-0 rounded-full bg-gradient-to-br from-brand-500 to-brand-600"
+                    className="absolute inset-0 rounded-full fill-brand"
                     transition={{ type: "spring", stiffness: 420, damping: 32 }}
                   />
                 )}
@@ -150,56 +157,45 @@ export function OpsShell({
             ))}
           </nav>
 
-          <ThemeToggle />
-          <button
-            onClick={toggleSom}
-            title={somLigado ? "Silenciar alertas de voz" : "Ativar alertas de voz"}
-            className={cn(
-              "btn-press grid place-items-center size-10 rounded-full border cursor-pointer transition-colors",
-              somLigado
-                ? "bg-brand-500/10 border-brand-500/40 text-brand-600"
-                : "bg-slate-100/70 border-slate-200 text-slate-500"
-            )}
-          >
-            {somLigado ? <Volume2 className="size-4.5" /> : <VolumeX className="size-4.5" />}
-          </button>
-          <button
-            onClick={() => {
-              ir("/");
-            }}
-            title="Início"
-            className="btn-press hidden sm:grid place-items-center size-10 rounded-full bg-slate-100/70 border border-slate-200 text-slate-500 hover:text-navy-800 cursor-pointer"
-          >
-            <House className="size-4.5" />
-          </button>
-          {role && (
-            <button
-              onClick={() => setTrocando(true)}
-              title="Alterar senha"
-              aria-label="Alterar senha"
-              className="btn-press hidden sm:grid place-items-center size-10 rounded-full bg-slate-100/70 border border-slate-200 text-slate-500 hover:text-navy-800 cursor-pointer"
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <ThemeToggle />
+            <IconButton
+              label={somLigado ? "Silenciar alertas de voz" : "Ativar alertas de voz"}
+              onClick={toggleSom}
+              active={somLigado}
             >
-              <KeyRound className="size-4.5" />
-            </button>
-          )}
-          <button
-            onClick={() => {
-              logout();
-              ir("/login");
-            }}
-            title="Sair"
-            className="btn-press hidden sm:grid place-items-center size-10 rounded-full bg-slate-100/70 border border-slate-200 text-slate-500 hover:text-rose-600 cursor-pointer"
-          >
-            <LogOut className="size-4.5" />
-          </button>
+              {somLigado ? <Volume2 className="size-4.5" /> : <VolumeX className="size-4.5" />}
+            </IconButton>
+            <IconButton label="Início" tone="neutral" onClick={() => ir("/")} className="hidden sm:grid">
+              <House className="size-4.5" />
+            </IconButton>
+            {role && (
+              <IconButton label="Alterar senha" tone="neutral" onClick={() => setTrocando(true)} className="hidden sm:grid">
+                <KeyRound className="size-4.5" />
+              </IconButton>
+            )}
+            <IconButton
+              label="Sair"
+              tone="danger"
+              onClick={() => {
+                logout();
+                ir("/login");
+              }}
+              className="hidden sm:grid"
+            >
+              <LogOut className="size-4.5" />
+            </IconButton>
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10 pb-24">
-        <div className="flex flex-wrap items-end justify-between gap-4 mb-6 sm:mb-8">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-brand-600">{kicker}</p>
-            <h1 className="font-display text-4xl sm:text-6xl lg:text-7xl leading-[0.95] text-navy-900 mt-1 break-words">{titulo}</h1>
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-9 pb-24">
+        <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3 mb-6 sm:mb-8">
+          <div className="min-w-0">
+            <p className="ds-kicker">{kicker}</p>
+            <h1 className="font-display text-[2.1rem] sm:text-5xl leading-[0.95] text-navy-900 mt-1.5 break-words">
+              {titulo}
+            </h1>
           </div>
           {extra}
         </div>

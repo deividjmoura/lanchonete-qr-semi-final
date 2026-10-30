@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="claro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QR Admin · Design System v2 — Mesa &amp; Brasa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* =============================================================================
+   Tokens idênticos a src/index.css — esta página é o "manual vivo" do DS.
+   ========================================================================== */
+:root {
+  color-scheme: light;
+  --font-display: "Bricolage Grotesque", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --white: #ffffff; --page: #faf6f0; --card: #ffffff; --card-2: #fbf7f2;
+  --ink: #241c16; --ink-2: #3a2a20; --ink-3: #5c3a26; --muted: #7c6b5c;
+  --line: #e8dfd1; --line-2: #d7c9b7;
+  --s50: #fbf7f2; --s100: #f4efe7; --s200: #e8dfd1; --s300: #d7c9b7; --s400: #a9998a; --s500: #7c6b5c; --s600: #5f5145;
+
+  --brand-50: #fff4ed; --brand-100: #ffe5d5; --brand-200: #fec9ac; --brand-300: #fba57c;
+  --brand-400: #f47f50; --brand-500: #e85d2f; --brand-600: #d1481f; --brand-700: #a93a1a;
+
+  --teal-400: #4cb98a; --teal-500: #2c9b6d; --teal-600: #1f8059; --teal-700: #17694a;
+  --amber-500: #f0a020; --amber-600: #c9820f; --amber-700: #8f5a08;
+  --rose-400: #f87c6e; --rose-500: #e2453a; --rose-600: #c3302a; --rose-700: #9d2521;
+  --violet-500: #8a5cd6; --violet-600: #7145c2; --violet-700: #5c37a0;
+  --sky-500: #2b7fbf; --sky-600: #1f6ba5; --sky-700: #17527f;
+
+  --fill-brand-from: #d94e22; --fill-brand-to: #b03c17;
+  --fill-success-from: #1f8059; --fill-success-to: #17694a;
+  --fill-danger-from: #c3302a; --fill-danger-to: #9d2521;
+
+  --shadow-soft: 0 1px 2px rgba(58,37,20,.04), 0 8px 20px -14px rgba(58,37,20,.16);
+  --shadow-card: 0 1px 2px rgba(58,37,20,.05), 0 14px 34px -20px rgba(58,37,20,.2);
+  --shadow-lift: 0 2px 6px rgba(58,37,20,.06), 0 26px 54px -26px rgba(58,37,20,.26);
+  --shadow-brand: 0 10px 26px -12px rgba(199,66,27,.55);
+  --shadow-success: 0 10px 26px -12px rgba(23,105,74,.45);
+
+  --r-sm: .5rem; --r-md: .75rem; --r-lg: 1rem; --r-xl: 1.125rem;
+  --r-2xl: 1.375rem; --r-3xl: 1.75rem; --r-4xl: 2.25rem;
+  --ease: cubic-bezier(.16,1,.3,1);
+}
+
+html[data-theme="escuro"] {
+  color-scheme: dark;
+  --white: #221c16; --page: #14100d; --card: #221c16; --card-2: #2a221c;
+  --ink: #f7eee3; --ink-2: #f6dcc2; --ink-3: #f0c9a8; --muted: #b6a28e;
+  --line: #3a2f27; --line-2: #4e4034;
+  --s50: #14100d; --s100: #2a221c; --s200: #3a2f27; --s300: #4e4034; --s400: #8c7a68; --s500: #b6a28e; --s600: #cbb8a4;
+
+  --brand-50: #3a2117; --brand-100: #4a2a1c; --brand-200: #5e3423; --brand-300: #8a4a2c;
+  --brand-400: #ff8b57; --brand-500: #ff7a45; --brand-600: #ff9364; --brand-700: #ffb08a;
+
+  --teal-400: #4ed3a0; --teal-500: #35c08c; --teal-600: #5fe0ae; --teal-700: #8cebc5;
+  --amber-500: #f7b84b; --amber-600: #ffc96b; --amber-700: #ffd89a;
+  --rose-400: #ff8a80; --rose-500: #ff6b5e; --rose-600: #ff8f84; --rose-700: #ffb4ac;
+  --violet-500: #a78bfa; --violet-600: #b49cfc; --violet-700: #cbb8ff;
+  --sky-500: #6cb6ea; --sky-600: #8ac8f4; --sky-700: #b0dcff;
+
+  --fill-brand-from: #c9451c; --fill-brand-to: #a03616;
+  --fill-success-from: #17694a; --fill-success-to: #12543b;
+  --fill-danger-from: #a52a24; --fill-danger-to: #84211d;
+
+  --shadow-soft: 0 1px 2px rgba(0,0,0,.5), 0 10px 24px -18px rgba(0,0,0,.9);
+  --shadow-card: 0 1px 2px rgba(0,0,0,.6), 0 20px 40px -24px rgba(0,0,0,.95);
+  --shadow-lift: 0 2px 8px rgba(0,0,0,.6), 0 32px 60px -28px rgba(0,0,0,1);
+  --shadow-brand: 0 10px 26px -12px rgba(201,69,28,.7);
+  --shadow-success: 0 10px 26px -12px rgba(23,105,74,.65);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--page); color: var(--ink); font-family: var(--font-sans);
+  font-size: 15px; line-height: 1.55; letter-spacing: -0.01em;
+  background-image:
+    radial-gradient(60rem 32rem at 82% -8%, color-mix(in srgb, var(--brand-500) 12%, transparent), transparent 70%),
+    radial-gradient(48rem 28rem at 4% 4%, color-mix(in srgb, var(--teal-500) 9%, transparent), transparent 72%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px 96px; }
+
+/* ---------------------------------------------------------------- cabeçalho */
+.top {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 14px 0; margin-bottom: 8px;
+  background: color-mix(in srgb, var(--page) 82%, transparent);
+  backdrop-filter: blur(18px); border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-mark {
+  width: 38px; height: 38px; border-radius: 12px; flex: 0 0 auto;
+  background: linear-gradient(160deg, #F0703F, #E85D2F 55%, #C4431C);
+  box-shadow: var(--shadow-brand); display: grid; place-items: center;
+}
+.brand b { font-family: var(--font-display); font-size: 17px; letter-spacing: -.02em; }
+.brand b em { color: var(--brand-600); font-style: normal; }
+.brand small { display: block; font-size: 9px; font-weight: 800; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); }
+.spacer { flex: 1; }
+.switch {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink-2);
+  border-radius: 999px; padding: 8px 14px; font: inherit; font-size: 12px; font-weight: 700;
+  box-shadow: var(--shadow-soft); transition: border-color .2s var(--ease), transform .2s var(--ease);
+}
+.switch:hover { border-color: var(--brand-500); transform: translateY(-1px); }
+
+/* ---------------------------------------------------------------- estrutura */
+.hero { padding: 34px 0 26px; }
+.kicker {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 10px; font-weight: 800; letter-spacing: .26em; text-transform: uppercase; color: var(--ink-3);
+}
+h1 {
+  font-family: var(--font-display); font-size: clamp(2.2rem, 6vw, 3.6rem); line-height: .95;
+  letter-spacing: -.035em; margin: 12px 0 0;
+}
+h1 em { color: var(--brand-600); font-style: normal; }
+.lede { max-width: 62ch; margin: 14px 0 0; color: var(--muted); font-size: 15px; }
+.lede b { color: var(--ink-2); }
+
+section.block { margin-top: 54px; }
+.block > header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+.block h2 {
+  font-family: var(--font-display); font-size: clamp(1.5rem, 3.4vw, 2rem); letter-spacing: -.03em; margin: 0;
+}
+.block h2 span { color: var(--brand-600); }
+.block header p { margin: 0; color: var(--muted); font-size: 13px; }
+.grid { display: grid; gap: 14px; margin-top: 22px; }
+.g2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.g3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.g4 { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+
+.card {
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--r-2xl);
+  box-shadow: var(--shadow-card); padding: 20px;
+}
+.card h3 { font-family: var(--font-display); font-size: 17px; letter-spacing: -.02em; margin: 0 0 2px; }
+.card .hint { font-size: 12px; color: var(--muted); margin: 0; }
+.sub { font-size: 10px; font-weight: 800; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); margin: 0 0 12px; }
+
+/* ---------------------------------------------------------------- paleta */
+.swatches { display: grid; gap: 10px; margin-top: 12px; }
+.sw { display: grid; grid-template-columns: 56px 1fr; gap: 12px; align-items: center; }
+.sw i { height: 44px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent); box-shadow: inset 0 1px 0 rgba(255,255,255,.14); }
+.sw b { display: block; font-size: 12.5px; font-weight: 700; }
+.sw code { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); letter-spacing: -.02em; }
+.ramp { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-top: 12px; }
+.ramp div { border-radius: 10px; height: 52px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; font-family: var(--font-mono); font-size: 9px; color: #fff; }
+.ramp div.lite { color: #7c6b5c; }
+
+/* ---------------------------------------------------------------- tipografia */
+.spec { font-family: var(--font-display); letter-spacing: -.035em; line-height: 1; margin: 0; }
+.type-row { display: grid; grid-template-columns: 120px 1fr; gap: 16px; align-items: baseline; padding: 11px 0; border-bottom: 1px dashed var(--line); }
+.type-row:last-child { border: 0; }
+.type-row span { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.num-tab { font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+
+/* ---------------------------------------------------------------- componentes */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: 1px solid transparent; border-radius: 14px; padding: 0 18px; height: 42px;
+  font: inherit; font-size: 13.5px; font-weight: 700; letter-spacing: -.01em;
+  cursor: pointer; transition: transform .16s var(--ease), box-shadow .2s var(--ease), background-color .2s, border-color .2s;
+}
+.btn:active { transform: scale(.97); }
+.btn--brand { background: linear-gradient(168deg, var(--fill-brand-from), var(--fill-brand-to)); color: #fff; box-shadow: var(--shadow-brand); }
+.btn--brand:hover { box-shadow: 0 14px 30px -12px rgba(199,66,27,.7); transform: translateY(-1px); }
+.btn--success { background: linear-gradient(168deg, var(--fill-success-from), var(--fill-success-to)); color: #fff; box-shadow: var(--shadow-success); }
+.btn--danger { background: linear-gradient(168deg, var(--fill-danger-from), var(--fill-danger-to)); color: #fff; }
+.btn--surface { background: var(--card); color: var(--ink-2); border-color: var(--line); box-shadow: var(--shadow-soft); }
+.btn--surface:hover { border-color: var(--line-2); }
+.btn--outline { background: transparent; color: var(--brand-700); border-color: color-mix(in srgb, var(--brand-500) 40%, transparent); }
+.btn--sm { height: 34px; border-radius: 11px; padding: 0 13px; font-size: 12px; }
+.btn--lg { height: 50px; border-radius: 16px; padding: 0 24px; font-size: 15px; }
+.btn--block { width: 100%; }
+.btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+.field { display: grid; gap: 6px; }
+.field label { font-size: 10px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+.input {
+  height: 44px; border-radius: 13px; border: 1px solid var(--line); background: var(--card-2);
+  color: var(--ink); padding: 0 14px; font: inherit; font-size: 14px; width: 100%;
+  transition: border-color .18s, box-shadow .18s;
+}
+.input::placeholder { color: var(--muted); }
+.input:focus { outline: 0; border-color: var(--brand-500); box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-500) 18%, transparent); }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+  border: 1px solid transparent; white-space: nowrap;
+}
+.chip--brand { background: var(--brand-50); color: var(--brand-700); border-color: color-mix(in srgb, var(--brand-500) 26%, transparent); }
+.chip--success { background: color-mix(in srgb, var(--teal-500) 12%, transparent); color: var(--teal-700); border-color: color-mix(in srgb, var(--teal-500) 30%, transparent); }
+.chip--warn { background: color-mix(in srgb, var(--amber-500) 15%, transparent); color: var(--amber-700); border-color: color-mix(in srgb, var(--amber-500) 35%, transparent); }
+.chip--danger { background: color-mix(in srgb, var(--rose-500) 12%, transparent); color: var(--rose-700); border-color: color-mix(in srgb, var(--rose-500) 30%, transparent); }
+.chip--info { background: color-mix(in srgb, var(--sky-500) 12%, transparent); color: var(--sky-700); border-color: color-mix(in srgb, var(--sky-500) 30%, transparent); }
+.chip--violet { background: color-mix(in srgb, var(--violet-500) 13%, transparent); color: var(--violet-700); border-color: color-mix(in srgb, var(--violet-500) 30%, transparent); }
+.chip--neutral { background: var(--s100); color: var(--s600); border-color: var(--line); }
+.dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+
+table.ds { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+table.ds th {
+  text-align: left; font-size: 9.5px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--muted); padding: 0 10px 9px; border-bottom: 1px solid var(--line); font-weight: 800;
+}
+table.ds td { padding: 11px 10px; border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+table.ds tr:last-child td { border-bottom: 0; }
+table.ds td.n { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+
+.modal-demo { display: grid; gap: 10px; background: var(--card-2); border: 1px dashed var(--line-2); border-radius: var(--r-xl); padding: 14px; }
+.modal-demo .bar { display: flex; justify-content: space-between; align-items: center; }
+.modal-demo .bar strong { font-family: var(--font-display); font-size: 16px; letter-spacing: -.02em; }
+.x { width: 30px; height: 30px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink-2); display: grid; place-items: center; cursor: pointer; font-size: 14px; }
+
+.bar-track { height: 8px; border-radius: 999px; background: var(--s200); overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--teal-500), var(--teal-400)); }
+
+.token-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 8px; }
+.token-table td { padding: 7px 0; border-bottom: 1px dashed var(--line); }
+.token-table td:first-child { font-family: var(--font-mono); font-size: 11.5px; color: var(--brand-700); white-space: nowrap; padding-right: 14px; }
+.token-table td:last-child { color: var(--muted); }
+
+.rules { display: grid; gap: 10px; counter-reset: r; margin: 18px 0 0; padding: 0; list-style: none; }
+.rules li {
+  counter-increment: r; position: relative; padding: 12px 16px 12px 46px;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg);
+  font-size: 13px; color: var(--ink-2); box-shadow: var(--shadow-soft);
+}
+.rules li::before {
+  content: counter(r, decimal-leading-zero); position: absolute; left: 14px; top: 12px;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--brand-600);
+}
+.rules b { color: var(--ink); }
+.screens { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 18px; }
+.screen { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 14px 16px; box-shadow: var(--shadow-soft); }
+.screen b { display: block; font-size: 13px; }
+.screen span { font-size: 12px; color: var(--muted); }
+footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="7" height="7" rx="2" fill="#fff"/><rect x="15" y="2" width="7" height="7" rx="2" fill="#fff"/><rect x="2" y="15" width="7" height="7" rx="2" fill="#fff"/><rect x="15" y="15" width="3" height="3" rx="1" fill="#fff"/><rect x="19" y="19" width="3" height="3" rx="1" fill="#fff"/></svg>
+      </span>
+      <span>
+        <small>design system · v2</small>
+        <b>Mesa <em>&amp; Brasa</em></b>
+      </span>
+    </div>
+    <span class="spacer"></span>
+    <button class="switch" id="themeBtn" type="button">◐ Tema escuro</button>
+  </header>
+
+  <div class="hero">
+    <p class="kicker">QR Admin · lanchonete por QR</p>
+    <h1>Papel creme, brasa acesa<br>e <em>comida quente</em>.</h1>
+    <p class="lede">Sistema visual do QR Admin: <b>creme de papel</b> como superfície, <b>brasa</b> como marca e <b>manjericão</b> como confirmação. Sombras tingidas de marrom, raio generoso, tipografia display Bricolage Grotesque e números tabulares. Alto contraste onde a equipe trabalha no escuro (cozinha, bar, caixa) e aconchego onde o cliente pede.</p>
+  </div>
+
+  <!-- ============================================================ 1. PALETA -->
+  <section class="block">
+    <header>
+      <h2>01 · <span>Paleta</span></h2>
+      <p>Primária, secundária, neutros, semânticas e superfícies — cada tom existe em claro e escuro.</p>
+    </header>
+
+    <div class="grid g2">
+      <div class="card">
+        <p class="sub">Primária · brasa</p>
+        <h3>Brasa</h3>
+        <p class="hint">Ação, marca, preço, foco. Nunca em texto corrido: só em títulos, links e CTA.</p>
+        <div class="ramp">
+          <div style="background:#fff4ed;color:#a93a1a">50</div>
+          <div style="background:#ffe5d5;color:#a93a1a">100</div>
+          <div style="background:#fec9ac;color:#7a2a10">200</div>
+          <div style="background:#fba57c;color:#5c1e0b">300</div>
+          <div style="background:#f47f50">400</div>
+          <div style="background:#e85d2f">500</div>
+          <div style="background:#d1481f">600</div>
+          <div style="background:#a93a1a">700</div>
+        </div>
+        <div class="swatches" style="margin-top:14px">
+          <div class="sw"><i style="background:var(--brand-500)"></i><div><b>brand-500 · primária</b><code>claro #e85d2f · escuro #ff7a45</code></div></div>
+          <div class="sw"><i style="background:var(--brand-600)"></i><div><b>brand-600 · hover / palavra-chave</b><code>claro #d1481f · escuro #ff9364</code></div></div>
+          <div class="sw"><i style="background:var(--fill-brand-from)"></i><div><b>fill-brand (botão)</b><code>claro #d94e22→#b03c17 · escuro #c9451c→#a03616</code></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="sub">Secundária · manjericão</p>
+        <h3>Manjericão</h3>
+        <p class="hint">Confirmação, dinheiro recebido, pronto para servir, salão livre.</p>
+        <div class="ramp">
+          <div style="background:#eaf7f1;color:#17694a">50</div>
+          <div style="background:#d3f0e2;color:#17694a">100</div>
+          <div style="background:#a9e3c9;color:#0f4a34">200</div>
+          <div style="background:#4cb98a">400</div>
+          <div style="background:#2c9b6d">500</div>
+          <div style="background:#1f8059">600</div>
+          <div style="background:#17694a">700</div>
+          <div style="background:#0f4a34">800</div>
+        </div>
+        <div class="swatches" style="margin-top:14px">
+          <div class="sw"><i style="background:var(--teal-500)"></i><div><b>teal-500 · sucesso de estado</b><code>claro #2c9b6d · escuro #35c08c</code></div></div>
+          <div class="sw"><i style="background:var(--teal-600)"></i><div><b>teal-600 · texto sobre creme</b><code>claro #1f8059 · escuro #5fe0ae</code></div></div>
+          <div class="sw"><i style="background:var(--fill-success-from)"></i><div><b>fill-success (botão)</b><code>claro #1f8059→#17694a · escuro #17694a→#12543b</code></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="sub">Neutros · papel</p>
+        <h3>Creme &amp; tinta</h3>
+        <p class="hint">Fundo creme, cartão branco, tinta quente. Nada de cinza puro em nenhuma tela.</p>
+        <div class="ramp">
+          <div style="background:#faf6f0;color:#7c6b5c">page</div>
+          <div style="background:#fbf7f2;color:#7c6b5c">50</div>
+          <div style="background:#f4efe7;color:#7c6b5c">100</div>
+          <div style="background:#e8dfd1;color:#5f5145">line</div>
+          <div style="background:#d7c9b7;color:#463b32">300</div>
+          <div style="background:#a9998a">400</div>
+          <div style="background:#7c6b5c">500</div>
+          <div style="background:#241c16">900</div>
+        </div>
+        <div class="swatches" style="margin-top:14px">
+          <div class="sw"><i style="background:var(--page)"></i><div><b>page · fundo</b><code>claro #faf6f0 · escuro #14100d</code></div></div>
+          <div class="sw"><i style="background:var(--card)"></i><div><b>card · superfície</b><code>claro #ffffff · escuro #221c16</code></div></div>
+          <div class="sw"><i style="background:var(--line)"></i><div><b>line · hairline</b><code>claro #e8dfd1 · escuro #3a2f27</code></div></div>
+          <div class="sw"><i style="background:var(--ink)"></i><div><b>ink · texto principal</b><code>claro #241c16 · escuro #f7eee3</code></div></div>
+          <div class="sw"><i style="background:var(--muted)"></i><div><b>muted · texto secundário</b><code>claro #7c6b5c · escuro #b6a28e</code></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="sub">Semânticas</p>
+        <h3>Estados</h3>
+        <p class="hint">Cor + ícone + palavra. Nunca cor sozinha (daltonismo e luz forte de cozinha).</p>
+        <div class="swatches" style="margin-top:12px">
+          <div class="sw"><i style="background:var(--teal-500)"></i><div><b>Sucesso · teal-500</b><code>#2c9b6d / escuro #35c08c</code></div></div>
+          <div class="sw"><i style="background:var(--amber-500)"></i><div><b>Aviso · amber-500</b><code>#f0a020 / escuro #f7b84b</code></div></div>
+          <div class="sw"><i style="background:var(--rose-500)"></i><div><b>Erro · rose-500</b><code>#e2453a / escuro #ff6b5e</code></div></div>
+          <div class="sw"><i style="background:var(--sky-500)"></i><div><b>Info · sky-500</b><code>#2b7fbf / escuro #6cb6ea</code></div></div>
+          <div class="sw"><i style="background:var(--violet-500)"></i><div><b>Garçom · violet-500</b><code>#8a5cd6 / escuro #a78bfa</code></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================== 2. TIPOGRAFIA -->
+  <section class="block">
+    <header>
+      <h2>02 · <span>Tipografia</span></h2>
+      <p>Bricolage Grotesque (display) + Plus Jakarta Sans (interface) + JetBrains Mono (números).</p>
+    </header>
+
+    <div class="grid g2">
+      <div class="card">
+        <p class="sub">display · Bricolage Grotesque</p>
+        <p class="spec" style="font-size:44px;font-weight:800">Bateu a fome?</p>
+        <p class="spec" style="font-size:26px;font-weight:700;margin-top:10px">Chapa <span style="color:var(--brand-600)">acesa</span></p>
+        <p class="hint" style="margin-top:12px">Títulos, números grandes de KPI, preços de destaque. Peso 700/800, tracking −0.02 a −0.035em, sempre com uma palavra em brasa.</p>
+      </div>
+      <div class="card">
+        <p class="sub">interface · Plus Jakarta Sans</p>
+        <p style="font-size:16px;margin:0 0 8px">Comanda da mesa 3 · 2 pessoas · aberta há 24 min</p>
+        <p style="font-size:13.5px;color:var(--muted);margin:0 0 8px">Texto corrido, descrições de produto, ajuda contextual e mensagens de estado.</p>
+        <p style="font-family:var(--font-mono);font-size:12px;margin:0;letter-spacing:.02em">#1041 · R$ 56,00 · 12:04</p>
+        <p class="hint" style="margin-top:12px">Corpo 13–15px, peso 400–600. Rótulos em caixa alta 10px/0.2em são apenas para metadados.</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <p class="sub">escala</p>
+      <div class="type-row"><span>3xs · 10px</span><div style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;font-weight:800">rótulo de tabela / metadado</div></div>
+      <div class="type-row"><span>2xs · 11px</span><div style="font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase">kicker de seção</div></div>
+      <div class="type-row"><span>xs · 12px</span><div style="font-size:12px">legenda e apoio · 12px / 1.5</div></div>
+      <div class="type-row"><span>sm · 13px</span><div style="font-size:13px">corpo compacto de cartões e listas</div></div>
+      <div class="type-row"><span>base · 15px</span><div style="font-size:15px">corpo padrão da interface</div></div>
+      <div class="type-row"><span>lg · 17px</span><div style="font-family:var(--font-display);font-size:17px;font-weight:700;letter-spacing:-.02em">título de cartão</div></div>
+      <div class="type-row"><span>2xl · 24px</span><div style="font-family:var(--font-display);font-size:24px;font-weight:800;letter-spacing:-.03em">título de bloco</div></div>
+      <div class="type-row"><span>4xl · 36px</span><div style="font-family:var(--font-display);font-size:36px;font-weight:800;letter-spacing:-.035em">título de tela</div></div>
+      <div class="type-row"><span>6xl · 60px</span><div style="font-family:var(--font-display);font-size:60px;font-weight:800;letter-spacing:-.04em;line-height:1">hero</div></div>
+    </div>
+  </section>
+
+  <!-- ============================================ 3. ESPAÇO, RAIO, SOMBRA -->
+  <section class="block">
+    <header>
+      <h2>03 · <span>Espaço, raio e sombra</span></h2>
+      <p>Grade de 4px, raio generoso e sombra marrom — a base do "aconchegante".</p>
+    </header>
+    <div class="grid g3">
+      <div class="card">
+        <p class="sub">espaçamento</p>
+        <div class="row" style="gap:8px;align-items:flex-end">
+          <span style="width:4px;height:24px;background:var(--brand-500);display:inline-block;border-radius:2px"></span>
+          <span style="width:8px;height:24px;background:var(--brand-500);display:inline-block;border-radius:2px"></span>
+          <span style="width:12px;height:24px;background:var(--brand-500);display:inline-block;border-radius:2px"></span>
+          <span style="width:16px;height:24px;background:var(--brand-500);display:inline-block;border-radius:2px"></span>
+          <span style="width:24px;height:24px;background:var(--brand-500);display:inline-block;border-radius:2px"></span>
+          <span style="width:32px;height:24px;background:var(--brand-500);display:inline-block;border-radius:3px"></span>
+          <span style="width:48px;height:24px;background:var(--brand-500);display:inline-block;border-radius:3px"></span>
+        </div>
+        <p class="hint" style="margin-top:12px">4 · 8 · 12 · 16 · 24 · 32 · 48. Cartão <b>p-5/p-6</b>; entre cartões <b>gap-3/gap-4</b>; seções <b>py-14/py-20</b>.</p>
+      </div>
+      <div class="card">
+        <p class="sub">raio</p>
+        <div class="row">
+          <span style="width:44px;height:44px;background:var(--brand-100);border:1px solid var(--brand-300);border-radius:.5rem"></span>
+          <span style="width:44px;height:44px;background:var(--brand-100);border:1px solid var(--brand-300);border-radius:1rem"></span>
+          <span style="width:44px;height:44px;background:var(--brand-100);border:1px solid var(--brand-300);border-radius:1.375rem"></span>
+          <span style="width:44px;height:44px;background:var(--brand-100);border:1px solid var(--brand-300);border-radius:1.75rem"></span>
+          <span style="width:44px;height:44px;background:var(--brand-100);border:1px solid var(--brand-300);border-radius:999px"></span>
+        </div>
+        <p class="hint" style="margin-top:12px">sm 8 (input/badge) · lg 16 (botão) · 2xl 22 (cartão) · 3xl 28 (bloco) · 4xl 36 (hero/faixa) · full (pílula).</p>
+      </div>
+      <div class="card">
+        <p class="sub">sombra</p>
+        <div class="row" style="gap:14px">
+          <span style="width:44px;height:44px;border-radius:12px;background:var(--card);box-shadow:var(--shadow-soft)"></span>
+          <span style="width:44px;height:44px;border-radius:12px;background:var(--card);box-shadow:var(--shadow-card)"></span>
+          <span style="width:44px;height:44px;border-radius:12px;background:var(--card);box-shadow:var(--shadow-lift)"></span>
+          <span style="width:44px;height:44px;border-radius:12px;background:linear-gradient(168deg,var(--fill-brand-from),var(--fill-brand-to));box-shadow:var(--shadow-brand)"></span>
+        </div>
+        <p class="hint" style="margin-top:12px">soft (repouso) · card (superfície) · lift (hover/modal) · brand (CTA). Todas tingidas de <b>#3a2514</b>; no escuro, preto puro.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================== 4. BOTÕES -->
+  <section class="block">
+    <header>
+      <h2>04 · <span>Botões</span></h2>
+      <p>Uma ação primária por tela; o resto é superfície ou contorno.</p>
+    </header>
+    <div class="grid g2">
+      <div class="card">
+        <p class="sub">variantes</p>
+        <div class="row">
+          <button class="btn btn--brand">Aceitar pedido</button>
+          <button class="btn btn--success">Concluir</button>
+          <button class="btn btn--danger">Cancelar</button>
+          <button class="btn btn--surface">Imprimir comanda</button>
+          <button class="btn btn--outline">Montar</button>
+          <button class="btn btn--brand" disabled>Registrar pagamento</button>
+        </div>
+        <p class="hint" style="margin-top:12px"><b>brand</b> avança o fluxo · <b>success</b> confirma pronto/entrega · <b>danger</b> só em destrutivo · <b>surface</b> ações secundárias · <b>outline</b> atalhos e "montar".</p>
+      </div>
+      <div class="card">
+        <p class="sub">tamanhos</p>
+        <div class="row" style="align-items:center">
+          <button class="btn btn--brand btn--sm">Sm · 34</button>
+          <button class="btn btn--brand">Md · 42</button>
+          <button class="btn btn--brand btn--lg">Lg · 50</button>
+        </div>
+        <p class="sub" style="margin-top:18px">largura total</p>
+        <button class="btn btn--brand btn--block">Adicionar ao pedido · R$ 38,90</button>
+        <p class="hint" style="margin-top:12px">Alvo mínimo 42px (44 na cozinha/bar). <code class="mono">active:scale(.97)</code> dá o retorno tátil.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ 5. INPUTS E SELETORES -->
+  <section class="block">
+    <header>
+      <h2>05 · <span>Campos</span></h2>
+      <p>Rótulo em caixa alta, campo creme, foco em brasa.</p>
+    </header>
+    <div class="grid g3">
+      <div class="card">
+        <div class="field"><label for="i1">Nome do cliente</label><input class="input" id="i1" placeholder="Ex.: Patrícia"></div>
+        <div class="field" style="margin-top:14px"><label for="i2">Buscar no cardápio</label><input class="input" id="i2" placeholder="Digite o nome do produto…"></div>
+      </div>
+      <div class="card">
+        <div class="field"><label for="i3">Posto</label><select class="input" id="i3"><option>Cozinha</option><option>Bar</option><option>Caixa</option></select></div>
+        <div class="field" style="margin-top:14px"><label for="i4">Valor por pessoa</label><input class="input num-tab" id="i4" value="R$ 13,00"></div>
+      </div>
+      <div class="card">
+        <p class="sub">chips de escolha</p>
+        <div class="row">
+          <span class="chip chip--brand">Tudo</span>
+          <span class="chip chip--neutral">Hambúrgueres</span>
+          <span class="chip chip--neutral">Bebidas</span>
+        </div>
+        <p class="sub" style="margin-top:18px">status</p>
+        <div class="row">
+          <span class="chip chip--warn"><i class="dot"></i>Novo</span>
+          <span class="chip chip--info">Em produção</span>
+          <span class="chip chip--success">Pronto</span>
+          <span class="chip chip--danger">Cancelado</span>
+          <span class="chip chip--violet">Garçom</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================== 6. CARDS, TABELA, MODAL, PROGRESSO -->
+  <section class="block">
+    <header>
+      <h2>06 · <span>Superfícies compostas</span></h2>
+      <p>Cartão de métrica, cartão de item, tabela de operação, modal e progresso.</p>
+    </header>
+
+    <div class="grid g3">
+      <div class="card">
+        <p class="sub">métrica</p>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+          <div>
+            <p style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-weight:800;color:var(--muted);margin:0">Faturamento hoje</p>
+            <p class="spec num-tab" style="font-size:32px;margin:6px 0 0">R$ 1.284,50</p>
+            <p style="font-size:12px;color:var(--muted);margin:2px 0 0">sessões fechadas no caixa</p>
+          </div>
+          <span style="width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:var(--brand-50);color:var(--brand-600);border:1px solid color-mix(in srgb,var(--brand-500) 22%,transparent)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 17l5-6 4 3 4-6 5 5"/></svg></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="sub">progresso de pagamento</p>
+        <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--ink-2)">
+          <span>Pago R$ 30,00</span><span style="color:var(--teal-700)">54%</span>
+        </div>
+        <div class="bar-track" style="margin:10px 0 0"><div class="bar-fill" style="width:54%"></div></div>
+        <p class="hint" style="margin-top:12px">Saldo em <b>brasa</b> quando há pendência; barra em <b>manjericão</b> quando a conta fecha.</p>
+      </div>
+
+      <div class="card">
+        <p class="sub">vazio</p>
+        <div style="display:grid;place-items:center;text-align:center;padding:16px 6px">
+          <span style="width:46px;height:46px;border-radius:999px;border:1px dashed var(--line-2);display:grid;place-items:center;color:var(--brand-500)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 3v7a2 2 0 0 0 4 0V3M6 12v9M17 3c-1.5 2-2 4-2 6a2 2 0 0 0 4 0c0-2-.5-4-2-6zM17 12v9"/></svg></span>
+          <b style="margin-top:10px;font-size:13px">Carrinho vazio por aqui…</b>
+          <span style="font-size:12px;color:var(--muted);max-width:26ch">Bateu aquela fome? Toque em um item do cardápio.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card">
+        <p class="sub">tabela</p>
+        <table class="ds">
+          <thead><tr><th>Item</th><th>Status</th><th style="text-align:right">Valor</th></tr></thead>
+          <tbody>
+            <tr><td>1× X-Bacon duplo</td><td><span class="chip chip--info">Produção</span></td><td class="n">R$ 38,90</td></tr>
+            <tr><td>2× Chopp artesanal</td><td><span class="chip chip--success">Entregue</span></td><td class="n">R$ 28,00</td></tr>
+            <tr><td>1× Batata rústica</td><td><span class="chip chip--warn"><i class="dot"></i>Na fila</span></td><td class="n">R$ 26,00</td></tr>
+          </tbody>
+        </table>
+        <p class="hint" style="margin-top:12px">Cabeçalho 10px/0.2em, linha 11–12px de padding, valores à direita em <b>tabular</b>. Nunca zebra: separador hairline.</p>
+      </div>
+
+      <div class="card">
+        <p class="sub">modal / folha</p>
+        <div class="modal-demo">
+          <div class="bar">
+            <div><span style="font-size:9px;font-weight:800;letter-spacing:.22em;color:var(--muted)">novo atendimento</span><br><strong>Montar pedido</strong></div>
+            <button class="x" type="button" aria-label="Fechar">×</button>
+          </div>
+          <div class="field"><label for="m1">Mesa</label><select class="input" id="m1"><option>Mesa 3 · Patrícia</option></select></div>
+          <div class="field"><label for="m2">Buscar produto</label><input class="input" id="m2" placeholder="Digite o nome do produto…"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding-top:12px">
+            <b class="mono" style="font-size:15px">R$ 0,00</b>
+            <button class="btn btn--brand btn--sm">Salvar pedido</button>
+          </div>
+        </div>
+        <p class="hint" style="margin-top:12px">Mobile: folha central com <b>max-height 84dvh</b>, cabeçalho e rodapé fixos, corpo rolável, backdrop 55% + blur 4px.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================== 7. REGRAS / TOKENS -->
+  <section class="block">
+    <header>
+      <h2>07 · <span>Regras de consistência</span></h2>
+      <p>O que mantém as oito telas parecendo um produto só.</p>
+    </header>
+    <ol class="rules">
+      <li><b>Zero hex em componente.</b> Cor sempre por token (<code class="mono">bg-brand-500</code>, <code class="mono">var(--qr-card)</code>). Trocar tema é trocar variáveis.</li>
+      <li><b>Superfície = <code class="mono">ds-card</code></b> (branco, hairline, raio 2xl, sombra card). Nunca duas sombras fortes na mesma hierarquia.</li>
+      <li><b>Uma primária por tela.</b> O CTA em brasa é único; o resto vira superfície ou contorno.</li>
+      <li><b>Status é sempre chip/badge</b> com cor + palavra. Cozinha e bar confirmam com <b>manjericão</b>, nunca com brasa.</li>
+      <li><b>Dinheiro, tempo e contadores</b> usam <code class="mono">tabular-nums</code> — nada de número dançando na atualização em tempo real.</li>
+      <li><b>Kicker + título display</b> abre cada área: rótulo 10–11px com ícone Lucide e título com uma palavra em brasa.</li>
+      <li><b>Header sticky</b> <code class="mono">bg-white/85 + backdrop-blur</code>; navegação de posto em pílula segmentada com indicador em brasa.</li>
+      <li><b>Movimento discreto:</b> 0.2–0.5s, <code class="mono">cubic-bezier(.16,1,.3,1)</code>, entrada com fade+8px, hover só eleva 1–2px. Respeita <code class="mono">prefers-reduced-motion</code>.</li>
+      <li><b>Contraste primeiro:</b> texto secundário nunca abaixo de <code class="mono">slate-500</code>; sobre brasa, só branco puro e pesos ≥500.</li>
+      <li><b>Mobile-first:</b> alvo de toque 42px, barra inferior com safe-area, nada de hover como única pista.</li>
+    </ol>
+  </section>
+
+  <!-- ====================================================== 8. APLICAÇÃO -->
+  <section class="block">
+    <header>
+      <h2>08 · <span>Onde foi aplicado</span></h2>
+      <p>Mesmo vocabulário em oito superfícies, uma identidade.</p>
+    </header>
+    <div class="screens">
+      <div class="screen"><b>Landing</b><span>Hero com métricas ao vivo, fluxo em 4 passos, faixa escura de CTA.</span></div>
+      <div class="screen"><b>Login</b><span>Cartão único, seletor de posto colorido, campo com prefixo e toggle de tema.</span></div>
+      <div class="screen"><b>Mesa (cliente)</b><span>Hero apetitoso, chips de categoria, cartões com foto + preço flutuante e painel de pedido/conta.</span></div>
+      <div class="screen"><b>Cozinha</b><span>Três colunas (fila · chapa · prontos) com acento por estágio e botões de ação grandes.</span></div>
+      <div class="screen"><b>Bar</b><span>Mesma gramática da cozinha com acento violeta e foco em bebidas.</span></div>
+      <div class="screen"><b>Caixa</b><span>Lista de comandas + detalhe com divisão de conta, PIX, pagamentos e fechamento.</span></div>
+      <div class="screen"><b>Admin</b><span>KPIs, gráfico da semana, campeões de venda e abas de cardápio/mesas/garçons/funções.</span></div>
+      <div class="screen"><b>PWA do garçom</b><span>Tokens espelhados no CSS próprio: header, painéis, folha de pedido e barra inferior de 4 abas.</span></div>
+    </div>
+  </section>
+
+  <footer>
+    <span>QR Admin · Design System v2 “Mesa &amp; Brasa” — tokens em <code class="mono">src/index.css</code>.</span>
+    <span>Claro &amp; escuro · mobile-first · <code class="mono">prefers-reduced-motion</code></span>
+  </footer>
+</div>
+
+<script>
+  const btn = document.getElementById('themeBtn');
+  const html = document.documentElement;
+  const stored = localStorage.getItem('ds-tema');
+  if (stored) html.dataset.theme = stored;
+  const paint = () => { btn.textContent = html.dataset.theme === 'escuro' ? '☀ Tema claro' : '◐ Tema escuro'; };
+  paint();
+  btn.addEventListener('click', () => {
+    html.dataset.theme = html.dataset.theme === 'escuro' ? 'claro' : 'escuro';
+    localStorage.setItem('ds-tema', html.dataset.theme);
+    paint();
+  });
+</script>
+</body>
+</html>

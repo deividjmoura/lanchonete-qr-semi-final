@@ -59,7 +59,7 @@ export default function Garcom({ token }: { token: string }) {
   return (
     <OpsShell ativo="garcom" kicker="operação · garçom" titulo={<>Fila do <span className="text-gradient">garçom</span></>} extra={extras}>
       {lastError && (
-        <p className="mb-4 rounded-2xl border border-rose-400/40 bg-rose-600/10 px-4 py-3 text-sm text-rose-700">
+        <p className="mb-4 rounded-xl border border-rose-500/30 bg-rose-600/10 px-4 py-2.5 text-xs font-semibold text-rose-700">
           {lastError}
         </p>
       )}
@@ -73,14 +73,18 @@ export default function Garcom({ token }: { token: string }) {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="grid place-items-center rounded-3xl border border-dashed border-slate-200 py-24 text-center"
+                className="ds-empty !py-20"
               >
                 <div>
-                  <motion.div animate={{ rotate: [0, 6, -6, 0] }} transition={{ repeat: Infinity, duration: 3 }}>
-                    <ConciergeBell className="size-14 text-slate-400 mx-auto" />
+                  <motion.div
+                    animate={{ rotate: [0, 6, -6, 0] }}
+                    transition={{ repeat: Infinity, duration: 3 }}
+                    className="mx-auto grid place-items-center size-16 rounded-3xl border border-slate-200 bg-white"
+                  >
+                    <ConciergeBell className="size-7 text-slate-400" />
                   </motion.div>
-                  <h3 className="font-display text-4xl text-navy-900 mt-4">Nada na bancada</h3>
-                  <p className="text-sm text-slate-500 mt-1.5">
+                  <h3 className="font-display text-3xl text-navy-900 mt-4">Nada na bancada</h3>
+                  <p className="text-sm text-slate-500 mt-1.5 max-w-xs mx-auto">
                     Quando a cozinha concluir, sua voz de rádio anuncia o número da mesa.
                   </p>
                 </div>
@@ -101,7 +105,7 @@ export default function Garcom({ token }: { token: string }) {
 
         {/* entregues */}
         <aside className="glass rounded-3xl p-5 h-fit">
-          <h3 className="font-display text-3xl text-navy-900 flex items-center gap-2">
+          <h3 className="font-display text-2xl text-navy-900 flex items-center gap-2">
             <CheckCheck className="size-5 text-teal-600" /> Entregues
           </h3>
           <p className="text-[11px] text-slate-500 mt-0.5 mb-4">últimas corridas do salão</p>
@@ -119,9 +123,9 @@ export default function Garcom({ token }: { token: string }) {
                   initial={{ opacity: 0, x: 24 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0 }}
-                  className="flex items-center gap-3 rounded-2xl bg-slate-100/60 border border-slate-200 p-3"
+                  className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-2.5"
                 >
-                  <span className="grid place-items-center size-10 rounded-xl bg-teal-500/10 border border-teal-500/30 font-display text-2xl text-teal-600 leading-none pt-0.5">
+                  <span className="grid place-items-center size-10 rounded-xl bg-teal-500/10 border border-teal-500/30 font-display text-xl text-teal-700 leading-none">
                     {p.mesaNome.replace("Mesa ", "")}
                   </span>
                   <div className="flex-1 min-w-0">
@@ -188,20 +192,20 @@ function CardPronto({
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}
       transition={{ type: "spring", stiffness: 320, damping: 28 }}
-      className="relative overflow-hidden rounded-3xl glass-deep noise p-6 text-center"
+      className="relative overflow-hidden rounded-3xl glass-deep p-5 text-center"
     >
-      <div className="glow-orb absolute -top-16 -right-16 size-44 bg-brand-500/15" />
+      <div className="glow-orb absolute -top-16 -right-16 size-44 bg-brand-500/12" />
       <Badge tone={esfriando ? "rose" : "amber"} pulse>
         {esfriando ? "esfriando!" : prontos.length ? "pronto p/ entrega" : "aguardando"}
       </Badge>
 
-      <p className="mt-3 text-[10px] uppercase tracking-[0.3em] font-bold text-slate-500">levar para a</p>
+      <p className="mt-3 text-[10px] uppercase tracking-[0.24em] font-bold text-slate-500">levar para a</p>
       <motion.p
         key={pedido.id}
         initial={{ scale: 0.6 }}
         animate={{ scale: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 12 }}
-        className="font-display leading-[0.9] text-[clamp(3.5rem,22vw,8.5rem)] text-gradient drop-shadow-[0_0_40px_rgba(255,150,20,0.25)]"
+        className="font-display leading-[0.85] text-[clamp(3.25rem,20vw,7rem)] text-brand-600 tabular"
       >
         {pedido.mesaNome.replace("Mesa ", "")}
       </motion.p>
@@ -213,7 +217,7 @@ function CardPronto({
         <span className="font-mono text-xs text-slate-500">pedido #{pedido.id}</span>
       </p>
 
-      <ul className="mx-auto mt-4 max-w-xs space-y-1.5 rounded-2xl bg-slate-100 border border-slate-200 p-3.5 text-left">
+      <ul className="mx-auto mt-4 max-w-xs space-y-1.5 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-left">
         {pedido.itens.map((i) => {
           const st = labelItemStatus(i.status);
           return (

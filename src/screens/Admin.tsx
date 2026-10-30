@@ -60,18 +60,18 @@ export default function Admin() {
   const [aba, setAba] = useState<AbaId>("painel");
 
   const extras = (
-    <nav className="flex flex-wrap items-center gap-1 rounded-2xl bg-slate-100 border border-slate-200 p-1">
+    <nav className="flex flex-wrap items-center gap-1 rounded-full border border-slate-200 bg-slate-100 p-1">
       {ABAS.map((a) => (
         <button
           key={a.id}
           onClick={() => setAba(a.id)}
           className={cn(
-            "btn-press relative flex items-center gap-1.5 rounded-xl px-3 h-9 text-xs font-bold cursor-pointer transition-colors",
+            "btn-press relative flex items-center gap-1.5 rounded-full px-3 sm:px-3.5 h-8 text-xs font-bold cursor-pointer transition-colors",
             aba === a.id ? "text-white" : "text-slate-500 hover:text-navy-800"
           )}
         >
           {aba === a.id && (
-            <motion.span layoutId="adm-aba" className="absolute inset-0 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600" transition={{ type: "spring", stiffness: 420, damping: 32 }} />
+            <motion.span layoutId="adm-aba" className="absolute inset-0 rounded-full fill-brand" transition={{ type: "spring", stiffness: 420, damping: 32 }} />
           )}
           <a.icon className="relative z-10 size-3.5" />
           <span className="relative z-10 hidden sm:inline">{a.label}</span>
@@ -81,7 +81,7 @@ export default function Admin() {
   );
 
   return (
-    <OpsShell ativo="admin" kicker="gestão · QR Admin" titulo={<>QR <span className="text-gradient">Admin</span></>} extra={extras}>
+    <OpsShell ativo="admin" kicker="gestão · salão" titulo={<>QR <span className="text-gradient">Admin</span></>} extra={extras}>
       <AnimatePresence mode="wait">
         <motion.div
           key={aba}
@@ -186,28 +186,28 @@ function Painel() {
       label: "faturamento hoje",
       valor: loadingDash ? "…" : BRL(fatHoje),
       sub: "sessões fechadas no caixa",
-      tom: "from-brand-500/20 text-brand-600",
+      icone: "bg-brand-500/10 text-brand-600 border-brand-500/20",
     },
     {
       icon: Users,
       label: "consumo em aberto",
       valor: loadingDash ? "…" : BRL(emAberto),
       sub: "comandas no salão",
-      tom: "from-navy-700/15 text-navy-700",
+      icone: "bg-amber-500/10 text-amber-700 border-amber-500/20",
     },
     {
       icon: Receipt,
       label: "pedidos no dia",
       valor: loadingDash ? "…" : String(qtdPedidos),
       sub: "criados hoje",
-      tom: "from-violet-500/20 text-violet-700",
+      icone: "bg-violet-500/10 text-violet-700 border-violet-500/20",
     },
     {
       icon: TrendingUp,
       label: "ticket médio",
       valor: loadingDash ? "…" : BRL(ticket),
       sub: "por conta fechada",
-      tom: "from-teal-500/20 text-teal-600",
+      icone: "bg-teal-500/10 text-teal-700 border-teal-500/20",
     },
   ];
 
@@ -221,13 +221,16 @@ function Painel() {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.06 }}
-            className="glass rounded-3xl p-5 relative overflow-hidden"
+            className="glass rounded-2xl p-4 sm:p-5 relative overflow-hidden hover:shadow-[var(--shadow-card)] transition-shadow"
           >
-            <div className={cn("glow-orb absolute -top-10 -right-10 size-24 bg-gradient-to-br to-transparent opacity-30", c.tom.split(" ")[0])} />
-            <c.icon className={cn("size-5", c.tom.split(" ")[1])} />
-            <p className="mt-3 font-display text-4xl sm:text-5xl text-navy-900 leading-none">{c.valor}</p>
-            <p className="mt-1.5 text-[10px] uppercase tracking-[0.22em] font-bold text-slate-500">{c.label}</p>
-            <p className="text-[10px] text-slate-400">{c.sub}</p>
+            <div className="flex items-start justify-between gap-2">
+              <span className={cn("grid place-items-center size-9 rounded-xl border", c.icone)}>
+                <c.icon className="size-4.5" />
+              </span>
+              <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">{c.label}</span>
+            </div>
+            <p className="mt-3 font-display text-[1.7rem] sm:text-[2rem] text-navy-900 leading-none tabular truncate">{c.valor}</p>
+            <p className="mt-1.5 text-[11px] text-slate-500">{c.sub}</p>
           </motion.div>
         ))}
       </div>
@@ -236,22 +239,27 @@ function Painel() {
         {/* gráfico semana */}
         <div className="glass-deep noise rounded-3xl p-5 sm:p-6">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="font-display text-3xl text-navy-900">Semana do pub</h3>
+            <h3 className="font-display text-2xl text-navy-900">Semana do pub</h3>
             <Badge tone="zinc">faturamento / dia</Badge>
           </div>
-          <div className="flex items-end gap-2.5 sm:gap-4 h-44">
+          <div className="flex items-stretch gap-2 sm:gap-3 h-44">
             {semana.map((d) => (
-              <div key={d.dia} className="flex-1 flex flex-col items-center gap-2">
-                <div
-                  className={cn(
-                    "w-full rounded-t-lg transition-all",
-                    d.dia === "Hoje"
-                      ? "bg-gradient-to-t from-brand-600 to-brand-400 shadow-[0_0_28px_-4px_rgba(0,196,180,0.45)]"
-                      : "bg-slate-100"
-                  )}
-                  style={{ height: `${Math.max(4, (d.valor / maxSemana) * 100)}%` }}
-                />
-                <span className={cn("text-[10px] font-bold uppercase tracking-wider", d.dia === "Hoje" ? "text-brand-600" : "text-slate-500")}>{d.dia}</span>
+              <div key={d.dia} className="flex-1 flex flex-col items-center gap-2 min-w-0">
+                <span className={cn("font-mono text-[9px] tabular truncate max-w-full", d.dia === "Hoje" ? "text-brand-600 font-bold" : "text-slate-400")}>
+                  {d.dia === "Hoje" && d.valor > 0 ? BRL(d.valor).replace("R$", "").trim() : "\u00a0"}
+                </span>
+                <div className="flex-1 w-full rounded-lg bg-slate-100 border border-slate-200/70 p-1 flex items-end">
+                  <div
+                    className={cn(
+                      "w-full rounded-md transition-all",
+                      d.dia === "Hoje"
+                        ? "bg-gradient-to-t from-brand-600 to-brand-400 shadow-[var(--shadow-brand)]"
+                        : "bg-slate-300/80"
+                    )}
+                    style={{ height: `${Math.max(6, (d.valor / maxSemana) * 100)}%` }}
+                  />
+                </div>
+                <span className={cn("text-[10px] font-bold uppercase tracking-[0.08em]", d.dia === "Hoje" ? "text-brand-600" : "text-slate-500")}>{d.dia}</span>
               </div>
             ))}
           </div>
@@ -261,7 +269,7 @@ function Painel() {
         {/* top produtos */}
         <div className="glass-deep noise rounded-3xl p-5 sm:p-6">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="font-display text-3xl text-navy-900 flex items-center gap-2">
+            <h3 className="font-display text-2xl text-navy-900 flex items-center gap-2">
               <Trophy className="size-5 text-brand-600" /> Campeões de venda
             </h3>
             <Badge tone="amber">top 5</Badge>
@@ -339,8 +347,8 @@ function Cardapio() {
       key={p.id}
       layout
       className={cn(
-        "rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden transition-opacity",
-        !p.ativo && "opacity-55"
+        "rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-[var(--shadow-soft)] transition-shadow hover:shadow-[var(--shadow-card)]",
+        !p.ativo && "opacity-60"
       )}
     >
       <div className="flex gap-3.5 p-3.5">
@@ -376,7 +384,7 @@ function Cardapio() {
               type="button"
               onClick={() => setEditando(p)}
               title="Editar"
-              className="btn-press grid place-items-center size-8 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-600 hover:text-brand-600 cursor-pointer"
+              className="btn-press grid place-items-center size-8 rounded-lg bg-white border border-slate-200 text-slate-600 hover:border-brand-500/40 hover:text-brand-600 cursor-pointer"
             >
               <Pencil className="size-3.5" />
             </button>
@@ -384,7 +392,7 @@ function Cardapio() {
               type="button"
               onClick={() => remover(p.id)}
               title="Excluir"
-              className="btn-press grid place-items-center size-8 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-500 hover:text-rose-600 cursor-pointer"
+              className="btn-press grid place-items-center size-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:border-rose-500/40 hover:text-rose-600 cursor-pointer"
             >
               <Trash2 className="size-3.5" />
             </button>
@@ -438,7 +446,7 @@ function Cardapio() {
           const lista = produtos.filter((p) => p.categoria === c.nome);
           const open = abertas.has(c.id);
           return (
-            <li key={c.id} className="rounded-2xl border border-slate-200 bg-slate-100 overflow-hidden">
+            <li key={c.id} className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-[var(--shadow-soft)]">
               {/* cabeçalho da categoria — ordem + expandir */}
               <div className="flex flex-wrap items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2.5">
                 <button
@@ -460,7 +468,7 @@ function Cardapio() {
                   title="Subir"
                   disabled={i === 0}
                   onClick={() => moverCategoria(c.id, -1)}
-                  className="btn-press grid place-items-center size-8 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-600 hover:text-brand-600 disabled:opacity-30 cursor-pointer shrink-0"
+                  className="btn-press grid place-items-center size-8 rounded-lg bg-white border border-slate-200 text-slate-600 hover:border-brand-500/40 hover:text-brand-600 disabled:opacity-30 cursor-pointer shrink-0"
                 >
                   <ArrowUp className="size-3.5" />
                 </button>
@@ -469,7 +477,7 @@ function Cardapio() {
                   title="Descer"
                   disabled={i === catsOrdenadas.length - 1}
                   onClick={() => moverCategoria(c.id, 1)}
-                  className="btn-press grid place-items-center size-8 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-600 hover:text-brand-600 disabled:opacity-30 cursor-pointer shrink-0"
+                  className="btn-press grid place-items-center size-8 rounded-lg bg-white border border-slate-200 text-slate-600 hover:border-brand-500/40 hover:text-brand-600 disabled:opacity-30 cursor-pointer shrink-0"
                 >
                   <ArrowDown className="size-3.5" />
                 </button>
@@ -480,7 +488,7 @@ function Cardapio() {
                     const n = prompt("Nome da categoria:", c.nome);
                     if (n && n.trim()) renameCategoria(c.id, n);
                   }}
-                  className="btn-press grid place-items-center size-8 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-600 hover:text-brand-600 cursor-pointer shrink-0"
+                  className="btn-press grid place-items-center size-8 rounded-lg bg-white border border-slate-200 text-slate-600 hover:border-brand-500/40 hover:text-brand-600 cursor-pointer shrink-0"
                 >
                   <Pencil className="size-3.5" />
                 </button>
@@ -488,7 +496,7 @@ function Cardapio() {
                   type="button"
                   title={lista.length > 0 ? `Excluir categoria e ${lista.length} produto(s)` : "Excluir categoria"}
                   onClick={() => removeCategoria(c.id)}
-                  className="btn-press grid place-items-center size-8 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-500 hover:text-rose-600 cursor-pointer shrink-0"
+                  className="btn-press grid place-items-center size-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:border-rose-500/40 hover:text-rose-600 cursor-pointer shrink-0"
                 >
                   <Trash2 className="size-3.5" />
                 </button>
@@ -714,7 +722,7 @@ function ProdutoForm({ produto, novo, onClose }: { produto?: Produto | null; nov
   return (
     <Modal open={open} onClose={onClose} wide closeOnBackdrop={false}>
       <div className="p-5 sm:p-7">
-        <h3 className="font-display text-4xl text-navy-900 mb-5">{editando ? "Editar produto" : "Novo produto"}</h3>
+        <h3 className="font-display text-3xl text-navy-900 mb-5">{editando ? "Editar produto" : "Novo produto"}</h3>
 
         <div className="grid sm:grid-cols-[220px_1fr] gap-5">
           {/* foto */}
@@ -740,7 +748,7 @@ function ProdutoForm({ produto, novo, onClose }: { produto?: Produto | null; nov
             </div>
             <div className="relative mt-2">
               <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-slate-500" />
-              <input value={foto.startsWith("data:") ? "" : foto} onChange={(e) => setFoto(e.target.value)} placeholder="…ou cole um link https://" className="w-full h-10 rounded-xl bg-slate-100 border border-slate-200 pl-8.5 pr-3 text-[11px] text-navy-900 placeholder:text-slate-400 focus:outline-none focus:border-brand-500/50" />
+              <input value={foto.startsWith("data:") ? "" : foto} onChange={(e) => setFoto(e.target.value)} placeholder="…ou cole um link https://" className="ds-input h-10 pl-8.5 pr-3 !text-[11px]" />
             </div>
             {foto.startsWith("data:") && <p className="mt-1.5 text-[10px] text-teal-600 font-mono">webp HQ · ~960px · salvo no banco</p>}
           </div>
@@ -752,7 +760,7 @@ function ProdutoForm({ produto, novo, onClose }: { produto?: Produto | null; nov
             <div className="grid grid-cols-2 gap-3">
               <Input value={preco} onChange={setPreco} placeholder="0,00" prefix="R$" type="number" />
               <div className="relative">
-                <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className="w-full h-12 rounded-2xl bg-slate-100 border border-slate-200 px-4 text-sm text-navy-900 focus:outline-none focus:border-brand-500/60 appearance-none cursor-pointer">
+                <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className="ds-select h-12 cursor-pointer">
                   {(nomesCat.length ? nomesCat : CATEGORIAS).map((c) => <option key={c} value={c} className="bg-white">{c}</option>)}
                 </select>
               </div>
@@ -973,7 +981,7 @@ function Garcons() {
         {erroMetricas && <p role="alert" className="text-sm text-rose-600 mb-3">{erroMetricas}</p>}
         <div className="overflow-x-auto">
           <table className="w-full min-w-[460px] text-sm text-left">
-            <thead className="border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
+            <thead className="border-b border-slate-200 text-slate-500 text-[10px] uppercase tracking-[0.1em]">
               <tr><th className="py-3 pr-2">Garçom</th><th className="py-3 px-2 text-right">Contas</th><th className="py-3 px-2 text-right">Ticket médio</th><th className="py-3 pl-2 text-right">Vendas</th></tr>
             </thead>
             <tbody>
@@ -1050,7 +1058,7 @@ function Garcons() {
                   type="button"
                   title="Copiar link"
                   onClick={() => void copiar(g)}
-                  className="btn-press grid place-items-center size-9 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-600 hover:text-brand-600 cursor-pointer"
+                  className="btn-press grid place-items-center size-9 rounded-lg bg-white border border-slate-200 text-slate-600 hover:border-brand-500/40 hover:text-brand-600 cursor-pointer"
                 >
                   {copiado === g.id ? <span className="text-[10px] font-bold text-teal-600">OK</span> : <Copy className="size-3.5" />}
                 </button>
@@ -1058,7 +1066,7 @@ function Garcons() {
                   type="button"
                   title="Abrir fila"
                   onClick={() => ir(`/garcom/${g.token}`)}
-                  className="btn-press grid place-items-center size-9 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-600 hover:text-brand-600 cursor-pointer"
+                  className="btn-press grid place-items-center size-9 rounded-lg bg-white border border-slate-200 text-slate-600 hover:border-brand-500/40 hover:text-brand-600 cursor-pointer"
                 >
                   <Link2 className="size-3.5" />
                 </button>
@@ -1081,7 +1089,7 @@ function Garcons() {
                   title="Remover"
                   disabled={busy}
                   onClick={() => void remover(g)}
-                  className="btn-press grid place-items-center size-9 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-500 hover:text-rose-600 cursor-pointer"
+                  className="btn-press grid place-items-center size-9 rounded-lg bg-white border border-slate-200 text-slate-500 hover:border-rose-500/40 hover:text-rose-600 cursor-pointer"
                 >
                   <Trash2 className="size-3.5" />
                 </button>
@@ -1378,14 +1386,14 @@ function Estoque() {
                 const n = pedirQtd("Definir estoque absoluto:", q);
                 if (n != null) setEstoque(p.id, n);
               }}
-              className="btn-press h-8 px-2.5 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-600 text-[11px] font-bold cursor-pointer"
+              className="btn-press h-8 px-2.5 rounded-lg bg-white border border-slate-200 text-slate-600 text-[11px] font-bold hover:border-slate-300 cursor-pointer"
             >
               definir
             </button>
             <button
               type="button"
               onClick={() => setEstoque(p.id, Math.max(0, q - 1))}
-              className="btn-press h-8 px-2.5 rounded-lg bg-slate-100/70 border border-slate-200 text-slate-500 text-[11px] font-bold cursor-pointer"
+              className="btn-press h-8 px-2.5 rounded-lg bg-white border border-slate-200 text-slate-400 text-[11px] font-bold hover:border-slate-300 cursor-pointer"
             >
               −1
             </button>
@@ -1518,7 +1526,7 @@ function Relatorio() {
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            className="mt-1 block h-11 rounded-xl bg-slate-100 border border-slate-200 px-3 text-sm text-navy-900"
+            className="ds-input mt-1 block h-11 px-3"
           />
         </label>
         <label className="text-xs text-slate-500">
@@ -1527,7 +1535,7 @@ function Relatorio() {
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            className="mt-1 block h-11 rounded-xl bg-slate-100 border border-slate-200 px-3 text-sm text-navy-900"
+            className="ds-input mt-1 block h-11 px-3"
           />
         </label>
         <Btn size="sm" onClick={() => void buscar()} disabled={loading}>
@@ -1596,7 +1604,7 @@ function Relatorio() {
         <div className="glass rounded-3xl p-4 sm:p-5 overflow-x-auto">
           <h3 className="font-display text-2xl text-navy-900 mb-3">Por dia</h3>
           <table className="w-full text-left text-sm">
-            <thead className="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
+            <thead className="text-[10px] uppercase tracking-[0.1em] text-slate-500 border-b border-slate-200">
               <tr>
                 <th className="py-2 pr-3">Dia</th>
                 <th className="py-2 pr-3">Contas</th>
@@ -1642,7 +1650,7 @@ function Relatorio() {
           </p>
         ) : (
           <table className="w-full text-left text-xs sm:text-sm">
-            <thead className="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
+            <thead className="text-[10px] uppercase tracking-[0.1em] text-slate-500 border-b border-slate-200">
               <tr>
                 <th className="py-2 pr-2">#</th>
                 <th className="py-2 pr-2">Mesa</th>
@@ -1791,7 +1799,7 @@ function HistoricoPedidos({
             type="date"
             value={histFrom}
             onChange={(e) => setHistFrom(e.target.value)}
-            className="mt-1 block h-11 rounded-xl bg-slate-100 border border-slate-200 px-3 text-sm text-navy-900"
+            className="ds-input mt-1 block h-11 px-3"
           />
         </label>
         <label className="text-xs text-slate-500">
@@ -1800,7 +1808,7 @@ function HistoricoPedidos({
             type="date"
             value={histTo}
             onChange={(e) => setHistTo(e.target.value)}
-            className="mt-1 block h-11 rounded-xl bg-slate-100 border border-slate-200 px-3 text-sm text-navy-900"
+            className="ds-input mt-1 block h-11 px-3"
           />
         </label>
         <Btn size="sm" disabled={busy} onClick={onBuscar}>
@@ -1821,7 +1829,7 @@ function HistoricoPedidos({
           return (
             <div
               key={id || JSON.stringify(p)}
-              className="rounded-2xl border border-slate-200 bg-slate-100 overflow-hidden"
+              className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-[var(--shadow-soft)]"
             >
               <button
                 type="button"
@@ -2010,14 +2018,14 @@ function Funcoes() {
 
   return (
     <div className="space-y-5">
-      <nav className="flex flex-wrap gap-1 rounded-2xl bg-slate-100 border border-slate-200 p-1">
+      <nav className="flex flex-wrap gap-1 rounded-full border border-slate-200 bg-slate-100 p-1">
         {subs.map((s) => (
           <button
             key={s.id}
             type="button"
             onClick={() => setSub(s.id)}
             className={cn(
-              "btn-press relative flex items-center gap-1.5 rounded-xl px-3 h-9 text-xs font-bold cursor-pointer transition-colors",
+              "btn-press relative flex items-center gap-1.5 rounded-full px-3 sm:px-3.5 h-8 text-xs font-bold cursor-pointer transition-colors",
               sub === s.id ? "text-white" : "text-slate-500 hover:text-navy-800"
             )}
           >
@@ -2064,7 +2072,7 @@ function Funcoes() {
                 type="date"
                 value={purgeBefore}
                 onChange={(e) => setPurgeBefore(e.target.value)}
-                className="mt-1 block h-11 rounded-xl bg-slate-100 border border-slate-200 px-3 text-sm text-navy-900"
+                className="ds-input mt-1 block h-11 px-3"
               />
             </label>
             <Btn size="sm" variant="outline" disabled={busy} onClick={() => void previewPurge()}>

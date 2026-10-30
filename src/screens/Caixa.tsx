@@ -66,8 +66,8 @@ export default function Caixa() {
   }, 0);
 
   const extras = (
-    <div className="flex items-center gap-2">
-      <Badge tone="amber" pulse>{abertas.length} abertas</Badge>
+    <div className="flex flex-wrap items-center gap-2">
+      <Badge tone="amber" pulse>{abertas.length} comandas abertas</Badge>
       <Badge tone="lime">a receber · {BRL(Math.max(0, totalSalao))}</Badge>
     </div>
   );
@@ -75,13 +75,18 @@ export default function Caixa() {
   return (
     <OpsShell ativo="caixa" kicker="operação · caixa" titulo={<>
       {lastError && (
-        <p className="mb-4 rounded-2xl border border-rose-400/40 bg-rose-600/10 px-4 py-3 text-sm text-rose-700">{lastError}</p>
-      )}Fecha <span className="text-gradient">a conta</span></>} extra={extras}>
+        <span className="mb-3 flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-600/10 px-3.5 py-2 text-xs font-semibold text-rose-700">
+          {lastError}
+        </span>
+      )}Fecha <span className="text-brand-600">a conta</span></>} extra={extras}>
       <div className="grid gap-5 lg:grid-cols-12">
         {/* -------- lista de comandas -------- */}
         <section className="lg:col-span-5 xl:col-span-4">
-          <h2 className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.26em] text-slate-500">
-            <Receipt className="size-4 text-brand-600" /> comandas no salão <LivePill />
+          <h2 className="mb-3 flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2 ds-kicker ds-kicker--muted">
+              <Receipt className="size-4 text-brand-600" /> comandas no salão
+            </span>
+            <LivePill />
           </h2>
           <div className="space-y-2.5">
             <AnimatePresence mode="popLayout">
@@ -90,10 +95,15 @@ export default function Caixa() {
                   key="vazio"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="rounded-3xl border border-dashed border-slate-200 py-16 text-center"
+                  className="ds-empty"
                 >
-                  <Wallet className="size-10 text-slate-400 mx-auto" />
-                  <p className="mt-3 text-sm text-slate-500">Salão zerado — nenhuma conta aberta.</p>
+                  <div>
+                    <span className="mx-auto grid place-items-center size-14 rounded-2xl border border-dashed border-slate-300 bg-white/60">
+                      <Wallet className="size-6 text-slate-400" />
+                    </span>
+                    <p className="mt-3 text-sm font-semibold text-navy-900">Salão zerado</p>
+                    <p className="mt-1 text-xs text-slate-500">Nenhuma conta aberta neste momento.</p>
+                  </div>
                 </motion.div>
               )}
               {abertas.map((s) => {
@@ -111,32 +121,39 @@ export default function Caixa() {
                     exit={{ opacity: 0, x: -30, scale: 0.95 }}
                     onClick={() => setSelId(s.id)}
                     className={cn(
-                      "btn-press w-full text-left rounded-3xl p-4 cursor-pointer transition-all border",
-                      ativo ? "glass-deep ring-brand border-brand-500/30" : "glass hover:border-slate-300"
+                      "btn-press w-full text-left rounded-2xl p-4 cursor-pointer transition-all border",
+                      ativo
+                        ? "bg-white border-brand-500/45 ring-brand"
+                        : "border-slate-200 bg-white/70 hover:border-slate-300 hover:bg-white"
                     )}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-display text-3xl text-navy-900 leading-none">{s.mesaNome}</p>
-                      <div className="flex items-center gap-1.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-display text-2xl text-navy-900 leading-none truncate">{s.mesaNome}</p>
+                        <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                          {s.clienteNome || "cliente no balcão"}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
                         {s.pixAvisos > 0 && <Badge tone="lime" pulse>pix {s.pixAvisos}×</Badge>}
                         <Badge tone="zinc">
                           <Timer className="size-3" /> {elapsed(s.abertaEm)}
                         </Badge>
                       </div>
                     </div>
-                    <div className="mt-3 flex items-end justify-between">
-                      <div>
-                        <p className="text-[10px] uppercase tracking-widest font-bold text-slate-500">consumo</p>
-                        <p className="font-mono text-lg font-bold text-navy-900">{BRL(consumo)}</p>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+                        <p className="text-[9px] uppercase tracking-[0.14em] font-bold text-slate-500">consumo</p>
+                        <p className="font-mono text-base font-bold text-navy-900 tabular">{BRL(consumo)}</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-[10px] uppercase tracking-widest font-bold text-slate-500">falta</p>
-                        <p className={cn("font-mono text-lg font-bold", consumo - pago <= 0.005 ? "text-teal-600" : "text-amber-700")}>
+                      <div className={cn("rounded-xl border px-2.5 py-1.5", consumo - pago <= 0.005 ? "border-teal-500/30 bg-teal-500/10" : "border-amber-500/30 bg-amber-500/10")}>
+                        <p className="text-[9px] uppercase tracking-[0.14em] font-bold text-slate-500">falta</p>
+                        <p className={cn("font-mono text-base font-bold tabular", consumo - pago <= 0.005 ? "text-teal-700" : "text-amber-700")}>
                           {BRL(Math.max(0, consumo - pago))}
                         </p>
                       </div>
                     </div>
-                    <div className="mt-2.5 h-1.5 rounded-full bg-slate-100/80 overflow-hidden">
+                    <div className="mt-2.5 h-1.5 rounded-full bg-slate-200 overflow-hidden">
                       <motion.div
                         className="h-full rounded-full bg-gradient-to-r from-teal-500 to-teal-600"
                         animate={{ width: `${pct}%` }}
@@ -167,10 +184,12 @@ export default function Caixa() {
                 <DetalheCaixa sessao={selecionada} />
               </motion.div>
             ) : (
-              <motion.div key="nada" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid place-items-center rounded-3xl border border-dashed border-slate-200 py-24 text-center">
+              <motion.div key="nada" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="ds-empty !py-20">
                 <div>
-                  <CircleDollarSign className="size-12 text-slate-400 mx-auto" />
-                  <h3 className="font-display text-4xl text-navy-900 mt-4">Caixa livre</h3>
+                  <span className="mx-auto grid place-items-center size-16 rounded-3xl border border-slate-200 bg-white">
+                    <CircleDollarSign className="size-7 text-slate-400" />
+                  </span>
+                  <h3 className="font-display text-3xl text-navy-900 mt-4">Caixa livre</h3>
                   <p className="text-sm text-slate-500 mt-1">Quando uma mesa pedir, a comanda aparece aqui em tempo real.</p>
                 </div>
               </motion.div>
@@ -179,24 +198,24 @@ export default function Caixa() {
         </section>
       </div>
       <section className="mt-6 glass rounded-3xl p-4 sm:p-5" aria-label="Comprovantes de contas fechadas">
-        <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="flex items-start justify-between gap-3 mb-3">
           <div>
-            <h2 className="font-semibold text-navy-900">Comprovantes recentes</h2>
-            <p className="text-xs text-slate-500">Reimprima o consumo e os pagamentos das últimas contas fechadas</p>
+            <h2 className="font-display text-xl text-navy-900">Comprovantes recentes</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Reimprima o consumo e os pagamentos das últimas contas fechadas</p>
           </div>
           <Btn size="sm" variant="outline" onClick={atualizarComprovantes}>Atualizar</Btn>
         </div>
         <div className="space-y-2">
-          {comprovantes.map(c => <div key={c.id} className="flex items-center gap-3 justify-between rounded-xl bg-slate-100 p-3">
+          {comprovantes.map(c => <div key={c.id} className="flex items-center gap-3 justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-navy-900">Mesa {c.mesa} · Conta #{c.id}</p>
-              <p className="text-xs text-slate-500">{c.clienteNome || "Cliente não informado"} · {BRL(c.total)}</p>
+              <p className="text-sm font-bold text-navy-900 truncate">Mesa {c.mesa} · Conta <span className="font-mono text-slate-500">#{c.id}</span></p>
+              <p className="text-xs text-slate-500 truncate">{c.clienteNome || "Cliente não informado"} · <span className="font-mono tabular">{BRL(c.total)}</span></p>
             </div>
             <Btn size="sm" variant="outline" onClick={() => void imprimirConta(c.id)}>
               <Receipt className="size-4"/> Imprimir
             </Btn>
           </div>)}
-          {!comprovantes.length && <p className="text-sm text-slate-500 py-3">Nenhuma conta fechada recentemente.</p>}
+          {!comprovantes.length && <p className="rounded-xl border border-dashed border-slate-200 px-3 py-4 text-center text-xs text-slate-500">Nenhuma conta fechada recentemente.</p>}
         </div>
       </section>
     </OpsShell>
@@ -296,20 +315,20 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
   };
 
   return (
-    <div className="glass-deep noise rounded-3xl overflow-hidden">
+    <div className="glass-deep rounded-3xl overflow-hidden">
       {/* topo */}
-      <div className="relative px-5 sm:px-7 py-5 border-b border-slate-200 bg-gradient-to-r from-brand-500/10 to-transparent">
+      <div className="relative px-4 sm:px-7 py-4 sm:py-5 border-b border-slate-200 bg-gradient-to-r from-brand-500/[0.09] to-transparent">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.28em] font-bold text-brand-600">comanda #{sessao.id}</p>
-            <h2 className="font-display text-5xl text-navy-900 leading-none mt-1">{sessao.mesaNome}</h2>
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-[0.22em] font-bold text-brand-600">comanda <span className="font-mono">#{sessao.id}</span></p>
+            <h2 className="font-display text-3xl sm:text-4xl text-navy-900 leading-none mt-1.5">{sessao.mesaNome}</h2>
             {sessao.clienteNome && (
-              <p className="text-xs text-brand-700 mt-1 font-semibold">{sessao.clienteNome}</p>
+              <p className="text-xs text-slate-600 mt-1 font-semibold">{sessao.clienteNome}</p>
             )}
           </div>
-          <div className="text-right">
-            <p className="text-[10px] uppercase tracking-widest font-bold text-slate-500">em aberto</p>
-            <p className="font-mono text-sm text-slate-600 tabular">{elapsed(sessao.abertaEm)}</p>
+          <div className="text-right rounded-xl border border-slate-200 bg-white px-3 py-2">
+            <p className="text-[9px] uppercase tracking-[0.14em] font-bold text-slate-500">em aberto há</p>
+            <p className="font-mono text-sm font-semibold text-navy-900 tabular">{elapsed(sessao.abertaEm)}</p>
           </div>
         </div>
       </div>
@@ -317,11 +336,11 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
       <div className="grid lg:grid-cols-2 gap-0">
         {/* ---- itens + ajustes ---- */}
         <div className="p-5 sm:p-7 border-b lg:border-b-0 lg:border-r border-slate-200">
-          <h3 className="text-[11px] font-bold uppercase tracking-[0.26em] text-slate-500 mb-3.5">consumo da sessão</h3>
+          <h3 className="ds-kicker ds-kicker--muted mb-3">consumo da sessão</h3>
           <div className="space-y-3 max-h-72 overflow-y-auto pr-1 no-scrollbar">
             {pedidos.map((p) => (
-              <div key={p.id} className="rounded-2xl bg-slate-100/50 border border-slate-200 p-3.5">
-                <p className="text-[11px] font-bold text-slate-500 mb-1.5">
+              <div key={p.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500 mb-1.5">
                   #{p.id} · {p.clienteNome}
                 </p>
                 {p.itens.map((i) => (
@@ -331,7 +350,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                       {i.escolha && <span className="text-navy-700 text-[11px]"> · {i.escolha.nome}</span>}
                       {i.status && <span className="ml-1.5 text-[9px] font-bold uppercase tracking-wider text-slate-500">{i.status === "concluido" ? "pronto" : i.status === "em_producao" ? "preparando" : i.status === "aceito" ? "aceito" : i.status === "retirado" ? "retirado" : i.status === "entregue" ? "entregue" : i.status === "cancelado" ? "cancelado" : "na fila"}</span>}
                       {i.status && i.status !== "entregue" && i.status !== "cancelado" && (
-                        <button type="button" className="ml-2 text-[10px] font-bold text-rose-600 hover:underline cursor-pointer" onClick={() => cancelarItem(Number(i.id))}>Cancelar item</button>
+                        <button type="button" className="ml-2 rounded-md px-1 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-rose-600 hover:bg-rose-600/10 cursor-pointer transition-colors" onClick={() => cancelarItem(Number(i.id))}>Cancelar</button>
                       )}
                     </span>
                     <span className="font-mono text-slate-500">{BRL(i.totalUnit * i.qtd)}</span>
@@ -349,34 +368,34 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
           </div>
 
           {/* resumo */}
-          <div className="mt-5 space-y-1.5 rounded-2xl bg-slate-100 border border-slate-200 p-4 font-mono text-sm">
+          <div className="mt-5 space-y-1.5 rounded-2xl border border-slate-200 bg-slate-50 p-4 font-mono text-sm">
             <Linha label="Consumo" valor={BRL(consumo)} />
             <Linha label="Desconto" valor={`− ${BRL(sessao.desconto)}`} tom="text-teal-600" />
             <Linha label="Taxa" valor={`+ ${BRL(sessao.taxa)}`} tom="text-amber-700" />
             <div className="border-t border-slate-200 pt-2 mt-2 flex justify-between items-baseline">
               <span className="text-slate-500 text-xs uppercase tracking-widest font-sans font-bold">total</span>
-              <span className="font-display text-4xl text-gradient">{BRL(total)}</span>
+              <span className="font-display text-3xl text-navy-900 tabular">{BRL(total)}</span>
             </div>
           </div>
         </div>
 
         {/* ---- pagamento ---- */}
         <div className="p-5 sm:p-7">
-          <h3 className="text-[11px] font-bold uppercase tracking-[0.26em] text-slate-500 mb-3.5 flex items-center gap-1.5">
+          <h3 className="ds-kicker ds-kicker--muted mb-3 flex items-center gap-1.5">
             <HandCoins className="size-4 text-teal-600" /> recebimento
           </h3>
 
           {/* divisão */}
-          <div className="rounded-2xl border border-slate-200 bg-slate-100/50 p-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex items-center justify-between gap-3">
-              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-600">
+              <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-600">
                 <Users className="size-4 text-navy-700" /> dividir a conta
               </p>
               <div className="flex items-center gap-2">
                 <button onClick={() => setPessoas((p) => Math.max(1, p - 1))} className="btn-press grid place-items-center size-8 rounded-full bg-slate-100/70 border border-slate-200 text-slate-600 hover:text-navy-800 cursor-pointer">
                   <Minus className="size-3.5" />
                 </button>
-                <span className="w-12 text-center font-display text-3xl text-navy-900">{pessoas}</span>
+                <span className="w-10 text-center font-display text-2xl text-navy-900 tabular">{pessoas}</span>
                 <button onClick={() => setPessoas((p) => Math.min(20, p + 1))} className="btn-press grid place-items-center size-8 rounded-full bg-slate-100/70 border border-slate-200 text-slate-600 hover:text-navy-800 cursor-pointer">
                   <Plus className="size-3.5" />
                 </button>
@@ -384,7 +403,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
             </div>
             <button
               onClick={usarPorPessoa}
-              className="btn-press mt-3 w-full h-11 rounded-xl border border-navy-700/40 bg-navy-700/10 text-navy-700 text-xs font-bold uppercase tracking-wider inline-flex items-center justify-center gap-2 cursor-pointer hover:bg-navy-700/15 transition-colors"
+              className="btn-press mt-3 w-full h-11 rounded-xl border border-brand-500/30 bg-brand-500/[0.08] text-brand-700 text-[11px] font-bold uppercase tracking-[0.08em] inline-flex items-center justify-center gap-2 cursor-pointer hover:bg-brand-500/15 transition-colors"
             >
               <Split className="size-4" /> usar valor/pessoa · {pessoas > 0 ? BRL(restante / pessoas) : "—"}
             </button>
@@ -398,12 +417,13 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                   value={valor}
                   onChange={(e) => setValor(e.target.value)}
                   placeholder="0,00"
-                  className="w-full h-12 rounded-xl bg-slate-100 border border-slate-200 pl-10 pr-3 font-mono text-base text-navy-900 focus:outline-none focus:border-brand-500/60 transition"
+                  aria-label="Valor do pagamento"
+                  className="ds-input h-12 pl-10 pr-3 font-mono text-base font-semibold tabular"
                 />
               </div>
               <button
                 onClick={() => setValor(restante.toFixed(2))}
-                className="btn-press h-12 px-3.5 rounded-xl bg-slate-100/70 border border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:text-navy-800 cursor-pointer"
+                className="btn-press h-12 px-3.5 rounded-xl bg-white border border-slate-200 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600 hover:text-navy-900 hover:border-slate-300 cursor-pointer"
               >
                 tudo
               </button>
@@ -418,8 +438,8 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                   className={cn(
                     "btn-press h-10 rounded-xl text-[10px] font-bold uppercase tracking-wide cursor-pointer border transition-all inline-flex items-center justify-center gap-1",
                     forma === f.id
-                      ? "bg-gradient-to-br from-brand-500 to-teal-600 text-white border-transparent"
-                      : "bg-slate-100/60 border-slate-200 text-slate-500 hover:text-navy-800"
+                      ? "bg-gradient-to-br from-brand-500 to-brand-600 text-white border-transparent shadow-[var(--shadow-brand)]"
+                      : "bg-white border-slate-200 text-slate-500 hover:text-navy-900 hover:border-slate-300"
                   )}
                 >
                   {f.id === "pix" ? <QrCode className="size-3" /> : f.id === "dinheiro" ? <Banknote className="size-3" /> : <CreditCard className="size-3" />}
@@ -465,11 +485,11 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
 
           {/* Instruções da forma escolhida; PIX mostra QR com o valor da cobrança. */}
           {forma === "pix" ? (
-            <div className="mt-4 rounded-2xl border border-brand-500/30 bg-gradient-to-br from-brand-500/10 to-transparent p-4">
+            <div className="mt-4 rounded-2xl border border-brand-500/30 bg-gradient-to-br from-brand-500/[0.08] to-transparent p-3.5">
               <div className="flex items-center gap-4">
                 <div className="rounded-xl qr-paper p-2.5 shadow-lg shrink-0">
                   {pixCodigo ? (
-                    <QRCodeSVG value={pixCodigo} size={96} fgColor="#0a2540" level="M" />
+                    <QRCodeSVG value={pixCodigo} size={96} fgColor="#241c16" level="M" />
                   ) : (
                     <div className="size-[96px] rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-[9px] text-slate-500 text-center px-1">
                       Configure PIX_CHAVE no servidor
@@ -491,8 +511,8 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
               </div>
             </div>
           ) : (
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-100/50 p-3 text-sm text-slate-600">
-              Forma selecionada: <b>{FORMAS.find((f) => f.id === forma)?.label}</b>.
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs leading-relaxed text-slate-600">
+              Forma selecionada: <b className="text-navy-900">{FORMAS.find((f) => f.id === forma)?.label}</b>.
               Confirme o recebimento na maquininha ou no caixa antes de registrar {BRL(Number(valor) || 0)}.
             </div>
           )}
@@ -514,7 +534,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                 {total <= 0 ? "Encerrar comanda sem consumo" : <>Fechar conta {restante > 0.004 ? `· quita ${BRL(restante)}` : "· já quitada"}</>}
               </Btn>
             ) : (
-              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-teal-500/40 bg-teal-500/10 p-4">
+              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-teal-500/40 bg-teal-500/[0.08] p-4">
                 <p className="text-sm font-bold text-navy-900">Fechar a {sessao.mesaNome}?</p>
                 <p className="text-[11px] text-slate-500 mt-0.5">
                   {restante > 0.004
@@ -525,7 +545,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                   <Btn full variant="lime" onClick={fechar}>
                     <Check className="size-4.5" /> Confirmar fechamento
                   </Btn>
-                  <Btn variant="glass" onClick={() => setFechando(false)}>
+                  <Btn variant="ghost" onClick={() => setFechando(false)} className="!px-3.5" aria-label="Cancelar">
                     <X className="size-4" />
                   </Btn>
                 </div>
@@ -546,10 +566,10 @@ function Ajuste({ label, valor, onChange, tom }: { label: string; valor: number;
     onChange(novo);
   };
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-100/50 p-3">
-      <p className={cn("text-[10px] font-bold uppercase tracking-[0.22em] mb-2", tom)}>{label}</p>
+    <div className="rounded-2xl border border-slate-200 bg-white p-3">
+      <p className={cn("text-[10px] font-bold uppercase tracking-[0.14em] mb-2", tom)}>{label}</p>
       <div className="flex items-center gap-1.5">
-        <button onClick={() => aplicar(-1)} className="btn-press grid place-items-center size-8 rounded-lg bg-slate-100 border border-slate-200 text-slate-500 hover:text-navy-800 cursor-pointer">
+        <button onClick={() => aplicar(-1)} aria-label="Diminuir" className="btn-press grid place-items-center size-8 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 hover:text-navy-900 cursor-pointer">
           <Minus className="size-3.5" />
         </button>
         <input
@@ -560,9 +580,9 @@ function Ajuste({ label, valor, onChange, tom }: { label: string; valor: number;
             const n = Number(e.target.value);
             if (!Number.isNaN(n) && n >= 0) onChange(n);
           }}
-          className="btn-press w-full h-8 rounded-lg bg-slate-100 border border-slate-200 text-center font-mono text-sm text-navy-900 focus:outline-none focus:border-brand-500/50"
+          className="btn-press w-full h-8 rounded-lg bg-slate-50 border border-slate-200 text-center font-mono text-sm font-semibold text-navy-900 tabular focus:outline-none focus:border-brand-500/50"
         />
-        <button onClick={() => aplicar(1)} className="btn-press grid place-items-center size-8 rounded-lg bg-slate-100 border border-slate-200 text-slate-500 hover:text-navy-800 cursor-pointer">
+        <button onClick={() => aplicar(1)} aria-label="Aumentar" className="btn-press grid place-items-center size-8 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 hover:text-navy-900 cursor-pointer">
           <Plus className="size-3.5" />
         </button>
       </div>

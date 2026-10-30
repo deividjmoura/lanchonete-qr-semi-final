@@ -1,30 +1,30 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 import {
-  ArrowRight, ChefHat, ConciergeBell, QrCode, Smartphone,
-  Split, Wallet, Boxes, ChartNoAxesColumn, UtensilsCrossed, Zap, Beer,
+  ArrowRight, ArrowUpRight, ChefHat, ConciergeBell, QrCode, Smartphone,
+  Split, Wallet, Boxes, ChartNoAxesColumn, UtensilsCrossed, Zap,
 } from "lucide-react";
-import { Badge, LivePill, Logo, Secao, ThemeToggle } from "../components/ui";
+import { Badge, Logo, Secao, ThemeToggle } from "../components/ui";
 import { ir } from "../router";
 import { usePub, totalSessao } from "../store/usePub";
 import { BRL } from "../lib/utils";
 
 const fadeUp = {
-  initial: { opacity: 0, y: 28 },
+  initial: { opacity: 0, y: 26 },
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true, margin: "-80px" },
-  transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] as const },
+  transition: { duration: 0.65, ease: [0.16, 1, 0.3, 1] as const },
 };
 
 const FLUXO = [
-  { icon: Smartphone, passo: "01", titulo: "Cliente", texto: "Escaneia o QR da mesa, monta o pedido no celular e personaliza tudo — sem app, sem fila.", tom: "text-sky-700" },
-  { icon: ChefHat, passo: "02", titulo: "Cozinha", texto: "Recebe na hora com alerta de voz: mesa + cliente. Aceita, produz e marca como pronto.", tom: "text-brand-600" },
-  { icon: ConciergeBell, passo: "03", titulo: "Garçom", texto: "Voz leve anunciando o nº da mesa. Entrega e confirma com um toque.", tom: "text-violet-700" },
-  { icon: Wallet, passo: "04", titulo: "Caixa", texto: "Fecha a sessão acumulativa, divide a conta, aplica desconto e confirma o PIX.", tom: "text-teal-600" },
+  { icon: Smartphone, passo: "01", titulo: "Cliente", texto: "Escaneia o QR da mesa, monta o pedido no celular e personaliza tudo — sem app, sem fila.", tom: "text-sky-700", bg: "bg-sky-500/10" },
+  { icon: ChefHat, passo: "02", titulo: "Cozinha", texto: "Recebe na hora com alerta de voz: mesa + cliente. Aceita, produz e marca como pronto.", tom: "text-brand-600", bg: "bg-brand-500/10" },
+  { icon: ConciergeBell, passo: "03", titulo: "Garçom", texto: "Voz leve anunciando o nº da mesa. Entrega e confirma com um toque.", tom: "text-violet-700", bg: "bg-violet-500/10" },
+  { icon: Wallet, passo: "04", titulo: "Caixa", texto: "Fecha a comanda acumulativa, divide a conta, aplica desconto e confirma o PIX.", tom: "text-teal-700", bg: "bg-teal-500/10" },
 ];
 
 const RECURSOS = [
-  { icon: QrCode, titulo: "Conta acumulativa", texto: "Uma comanda por visita: a mesa pode pedir várias vezes, o caixa fecha a sessão." },
+  { icon: QrCode, titulo: "Comanda acumulativa", texto: "Uma conta por visita: a mesa pede várias vezes, o caixa fecha a sessão." },
   { icon: Split, titulo: "Divisão de conta", texto: "N pessoas, valor por pessoa, pagamentos parciais com badge pago/restante." },
   { icon: Zap, titulo: "PIX instantâneo", texto: "QR dinâmico com valor, copia-e-cola e botão “Já paguei” que avisa o caixa." },
   { icon: Boxes, titulo: "Estoque vivo", texto: "Baixa automática a cada pedido e alerta de item acabando." },
@@ -52,161 +52,186 @@ export default function Landing() {
   return (
     <div className="relative min-h-dvh overflow-x-clip w-full max-w-[100vw]">
       {/* fundo */}
-      <div className="fixed inset-0 -z-10">
-        <div className="glow-orb absolute -top-32 left-[8%] size-[30rem] bg-brand-500/15" />
-        <div className="glow-orb absolute bottom-0 right-[-6rem] size-[26rem] bg-brand-500/10" />
-        <div className="noise absolute inset-0" />
+      <div className="fixed inset-0 -z-10 overflow-hidden">
+        <div className="glow-orb absolute -top-40 left-[6%] size-[34rem] bg-brand-500/14" />
+        <div className="glow-orb absolute bottom-0 right-[-8rem] size-[28rem] bg-teal-500/10" />
       </div>
 
       {/* nav */}
-      <header className="relative z-10 mx-auto max-w-7xl px-5 sm:px-8 pt-6 flex items-center justify-between">
-        <Logo />
-        <div className="flex items-center gap-2.5">
-          <Badge tone="lime" pulse>salão aberto</Badge>
+      <header className="relative z-10 mx-auto max-w-6xl px-5 sm:px-8 pt-5 sm:pt-7 flex items-center justify-between gap-3">
+        <Logo size="md" />
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          <button
+            type="button"
+            onClick={() => ir("/login")}
+            className="btn-press ds-btn ds-btn--brand ds-btn--sm"
+          >
+            Entrar <ArrowUpRight className="size-3.5" />
+          </button>
           <ThemeToggle />
         </div>
       </header>
 
       {/* HERO */}
-      <section className="relative mx-auto max-w-7xl px-5 sm:px-8 pt-8 sm:pt-12">
-        <div className="relative overflow-hidden rounded-[2rem] sm:rounded-[3rem] border border-slate-200">
-          <div className="absolute inset-0 bg-gradient-to-br from-white via-slate-50 to-brand-50" />
-          <div className="glow-orb absolute -top-24 right-[10%] size-[22rem] bg-brand-500/15" />
-          <div className="glow-orb absolute -bottom-32 left-[5%] size-[20rem] bg-navy-500/10" />
+      <section className="relative mx-auto max-w-6xl px-5 sm:px-8 pt-8 sm:pt-14">
+        <div className="grid lg:grid-cols-[1.15fr_0.85fr] gap-8 lg:gap-12 items-center">
+          <motion.div initial={{ opacity: 0, y: 26 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge tone="lime" pulse>salão aberto</Badge>
+              <Badge tone="zinc">sem app · direto do QR da mesa</Badge>
+            </div>
 
-          <div className="relative px-6 sm:px-12 pt-14 sm:pt-20 pb-10">
-            <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}>
-              <div className="flex flex-wrap items-center gap-2 mb-6">
-                <Badge tone="amber">pedidos por QR code</Badge>
-                <Badge tone="zinc">nesse dispositivo · sem app</Badge>
+            <h1 className="font-display text-[clamp(2.9rem,8.5vw,5.2rem)] leading-[0.92] text-navy-900 mt-5">
+              Sentou.
+              <br />
+              Escaneou.
+              <br />
+              <span className="text-gradient">Pediu.</span>
+            </h1>
+
+            <p className="mt-5 max-w-xl text-[15px] sm:text-base leading-relaxed text-slate-600">
+              Do celular do cliente até a <b className="font-semibold text-navy-900">cozinha</b>, o{" "}
+              <b className="font-semibold text-navy-900">garçom</b> e o{" "}
+              <b className="font-semibold text-navy-900">caixa</b> — tudo conectado em tempo real.
+              Uma comanda por visita, vários pedidos, PIX na mesa e divisão de conta sem dor de cabeça.
+            </p>
+
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <button type="button" onClick={() => ir("/login")} className="btn-press ds-btn ds-btn--brand ds-btn--lg">
+                Abrir o painel <ArrowRight className="size-4" />
+              </button>
+              <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 h-11 text-xs font-semibold text-slate-600">
+                <QrCode className="size-4 text-brand-600" /> cliente: QR fixo na mesa
+              </span>
+            </div>
+          </motion.div>
+
+          {/* placar ao vivo */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="relative"
+          >
+            <div className="absolute -inset-3 rounded-[2.2rem] bg-gradient-to-br from-brand-500/12 to-teal-500/8 blur-xl" aria-hidden="true" />
+            <div className="relative glass-deep rounded-4xl p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <p className="ds-kicker ds-kicker--muted">agora no salão</p>
+                <Badge tone="lime" pulse>ao vivo</Badge>
               </div>
-              <h1 className="font-display leading-[0.85] text-[clamp(4.5rem,14vw,12rem)]">
-                <span className="block text-navy-900">SENTOU.</span>
-                <span className="block stroke-text">ESCANEOU.</span>
-                <span className="block shine">PEDIU.</span>
-              </h1>
-              <p className="mt-6 max-w-xl text-slate-600 text-base sm:text-lg leading-relaxed">
-                Do celular do cliente até a <b className="text-navy-900">cozinha</b>, o <b className="text-navy-900">garçom</b> e o{" "}
-                <b className="text-navy-900">caixa</b> — tudo conectado em tempo real. Uma comanda por visita, vários pedidos,
-                PIX na mesa e divisão de conta sem dor de cabeça.
+              <div className="mt-4 space-y-2.5">
+                {[
+                  { v: String(comandas), l: "comandas abertas", tom: "text-brand-600" },
+                  { v: String(naFila), l: "pedidos na chapa", tom: "text-amber-600" },
+                  { v: BRL(consumoAberto), l: "consumo no salão", tom: "text-teal-700" },
+                ].map((m) => (
+                  <div key={m.l} className="flex items-baseline justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50/60 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{m.l}</p>
+                    <p className={"font-display text-2xl sm:text-[1.75rem] tabular leading-none " + m.tom}>{m.v}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-4 text-[11px] leading-relaxed text-slate-500">
+                Números reais do salão — a mesma base que alimenta cozinha, bar e caixa.
               </p>
-
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <div className="inline-flex items-center gap-3 rounded-2xl border border-brand-500/30 bg-brand-500/10 px-4 py-3">
-                  <QrCode className="size-6 text-brand-600 shrink-0" />
-                  <p className="text-sm text-slate-700 leading-snug max-w-xs">
-                    <b className="text-navy-900">Cliente:</b> escaneie o QR Code fixo da sua mesa — o cardápio e os pedidos iniciam direto por ele.
-                  </p>
-                </div>
-              </div>
-
-            </motion.div>
-
-            {/* placar ao vivo */}
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25, duration: 0.8 }}
-              className="mt-10 grid grid-cols-3 gap-1.5 sm:gap-4 max-w-lg w-full"
-            >
-              {[
-                { v: String(comandas), l: "comandas abertas" },
-                { v: String(naFila), l: "pedidos na chapa" },
-                { v: BRL(consumoAberto), l: "consumo no salão" },
-              ].map((m) => (
-                <div key={m.l} className="glass rounded-2xl px-4 py-3.5">
-                  <p className="font-display text-3xl sm:text-4xl text-gradient leading-none">{m.v}</p>
-                  <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-slate-500 font-semibold">{m.l}</p>
-                </div>
-              ))}
-            </motion.div>
-          </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* marquee */}
-      <div className="relative mt-10 border-y border-slate-200 bg-slate-100/40 py-3 overflow-hidden">
-        <div className="flex w-max animate-marquee gap-10 whitespace-nowrap">
-          {Array.from({ length: 2 }).map((_, r) => (
-            <div key={r} className="flex items-center gap-10 text-[13px] font-semibold uppercase tracking-[0.3em] text-slate-500">
-              {["cardápio digital", "alerta de voz", "pix na mesa", "divisão de conta", "estoque vivo", "dashboard em tempo real", "comanda acumulativa"].map((t) => (
-                <span key={t} className="flex items-center gap-10">
-                  {t} <Beer className="size-4 text-brand-500" />
-                </span>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* FLUXO */}
-      <section className="mx-auto max-w-7xl px-5 sm:px-8 py-16 sm:py-24">
+      <section className="mx-auto max-w-6xl px-5 sm:px-8 py-14 sm:py-20">
         <motion.div {...fadeUp}>
-          <Secao kicker="o fluxo" titulo={<>Quatro telas, <span className="text-gradient">zero atrito</span></>} right={<LivePill />} />
+          <Secao kicker="o fluxo" titulo={<>Quatro telas, <span className="text-brand-600">zero atrito</span></>} />
         </motion.div>
-        <div className="mt-10 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {FLUXO.map((f, i) => (
             <motion.div
               key={f.passo}
               {...fadeUp}
-              transition={{ ...fadeUp.transition, delay: i * 0.08 }}
-              className="group relative glass rounded-3xl p-6 overflow-hidden hover:border-brand-500/40 transition-colors"
+              transition={{ ...fadeUp.transition, delay: i * 0.07 }}
+              className="group relative glass rounded-3xl p-5 overflow-hidden hover:border-brand-500/35 transition-colors"
             >
-              <span className="font-display text-7xl leading-none text-navy-900/[0.07] absolute -top-2 right-3 group-hover:text-brand-500/10 transition-colors">
+              <span className="font-display text-6xl leading-none text-navy-900/[0.055] absolute top-1 right-4 tabular">
                 {f.passo}
               </span>
-              <f.icon className={`size-7 ${f.tom}`} />
-              <h3 className="font-display text-3xl mt-4 text-navy-900">{f.titulo}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-500">{f.texto}</p>
-              {i < 3 && <ArrowRight className="absolute bottom-6 right-6 size-4 text-slate-400 group-hover:text-brand-500 group-hover:translate-x-1 transition-all" />}
+              <span className={"grid place-items-center size-10 rounded-xl border border-slate-200 " + f.bg}>
+                <f.icon className={"size-5 " + f.tom} />
+              </span>
+              <h3 className="font-display text-2xl mt-4 text-navy-900">{f.titulo}</h3>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-slate-500">{f.texto}</p>
+              {i < 3 && (
+                <ArrowRight className="absolute bottom-5 right-5 size-4 text-slate-300 group-hover:text-brand-500 group-hover:translate-x-0.5 transition-all" />
+              )}
             </motion.div>
           ))}
         </div>
       </section>
 
       {/* RECURSOS */}
-      <section className="mx-auto max-w-7xl px-5 sm:px-8 pb-16 sm:pb-24">
+      <section className="mx-auto max-w-6xl px-5 sm:px-8 pb-14 sm:pb-20">
         <motion.div {...fadeUp}>
-          <Secao kicker="tudo incluso" titulo={<>O sistema inteiro, <span className="text-gradient">num bolso só</span></>} />
+          <Secao kicker="tudo incluso" titulo={<>O sistema inteiro, <span className="text-brand-600">num bolso só</span></>} />
         </motion.div>
-        <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {RECURSOS.map((r, i) => (
             <motion.div
               key={r.titulo}
               {...fadeUp}
-              transition={{ ...fadeUp.transition, delay: i * 0.06 }}
-              className="glass rounded-3xl p-6 hover:bg-slate-100 transition-colors"
+              transition={{ ...fadeUp.transition, delay: i * 0.05 }}
+              className="glass rounded-3xl p-5 hover:border-slate-300 transition-colors"
             >
-              <div className="grid place-items-center size-11 rounded-2xl bg-gradient-to-br from-brand-500/15 to-teal-600/10 border border-brand-500/25">
+              <div className="grid place-items-center size-10 rounded-xl bg-brand-500/10 border border-brand-500/20">
                 <r.icon className="size-5 text-brand-600" />
               </div>
-              <h3 className="mt-4 font-semibold text-navy-900">{r.titulo}</h3>
-              <p className="mt-1.5 text-sm text-slate-500 leading-relaxed">{r.texto}</p>
+              <h3 className="mt-4 text-[15px] font-bold text-navy-900">{r.titulo}</h3>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-slate-500">{r.texto}</p>
             </motion.div>
           ))}
         </div>
       </section>
 
-
-      {/* footer */}
-      <footer className="border-t border-slate-200">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8 py-10 flex flex-col sm:flex-row items-center justify-between gap-5">
-          <div>
-            <Logo size="sm" />
-            <p className="mt-2 text-xs text-slate-500 max-w-sm">
-              Pedidos por QR Code — do celular do cliente até a cozinha, o garçom e o caixa. Redesign completo do repositório
-              <span className="font-mono text-slate-500"> lanchonete-qr</span>.
-            </p>
-          </div>
-          <div className="flex items-center gap-2.5">
+      {/* faixa de ação */}
+      <section className="mx-auto max-w-6xl px-5 sm:px-8 pb-14">
+        <div className="relative overflow-hidden rounded-4xl border border-slate-200 bg-gradient-to-br from-navy-900 to-[#3c2417] px-6 py-10 sm:px-10 sm:py-12">
+          <div aria-hidden="true" className="glow-orb absolute -top-24 right-0 size-72 bg-brand-500/30" />
+          <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.26em] text-brand-200">pronto pra rodar</p>
+              <h2 className="font-display text-3xl sm:text-4xl text-white mt-2 leading-tight">
+                Sua equipe entra em 30 segundos.
+              </h2>
+              <p className="mt-2 max-w-md text-sm leading-relaxed text-white/70">
+                Cada posto tem sua tela: cozinha, bar, caixa e admin. O garçom usa o PWA no celular.
+              </p>
+            </div>
             <button
               type="button"
               onClick={() => ir("/login")}
-              className="text-[11px] text-slate-400 hover:text-slate-500 transition-colors cursor-pointer"
+              className="btn-press ds-btn ds-btn--brand ds-btn--lg shrink-0"
             >
-              equipe
+              Entrar agora <ArrowRight className="size-4" />
             </button>
           </div>
+        </div>
+      </section>
+
+      {/* footer */}
+      <footer className="border-t border-slate-200">
+        <div className="mx-auto max-w-6xl px-5 sm:px-8 py-9 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+          <div>
+            <Logo size="sm" />
+            <p className="mt-2.5 text-xs leading-relaxed text-slate-500 max-w-sm">
+              Pedidos por QR Code — do celular do cliente até a cozinha, o garçom e o caixa.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => ir("/login")}
+            className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400 hover:text-brand-600 transition-colors cursor-pointer"
+          >
+            equipe
+          </button>
         </div>
       </footer>
     </div>

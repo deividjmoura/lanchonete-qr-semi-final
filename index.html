@@ -3,16 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#e9eef3" />
-    <meta name="description" content="QR Admin — Pedidos por QR Code: do celular do cliente até a cozinha, o garçom e o caixa." />
+    <meta name="theme-color" content="#faf6f0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="QR Admin — pedidos por QR Code na mesa: cardápio digital, cozinha, bar, garçom e caixa conectados em tempo real."
+    />
     <title>QR Admin · Pedidos por QR Code</title>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..600&family=JetBrains+Mono:wght@400..700&display=swap"
       rel="stylesheet"
     />
-    <link rel="icon" type="image/png" href="/logo/favicon.png" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicons/mesa.svg" />
+    <link rel="apple-touch-icon" href="/logo/favicon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="QR Admin" />
+
     <script>
       /* Tema antes do primeiro paint — sem flash em nenhum dos dois sentidos.
          Valores canônicos: "claro" | "escuro" (aceita legados "light"/"dark").
@@ -28,13 +39,13 @@
         root.setAttribute("data-theme", t);
         root.classList.toggle("dark", t === "escuro");
         if (t === "escuro") {
-          root.style.setProperty("--qr-page", "#0b1524");
-          root.style.setProperty("--qr-text", "#eaf2fb");
-          root.style.setProperty("--qr-white", "#12233a");
+          root.style.setProperty("--qr-page", "#14100d");
+          root.style.setProperty("--qr-text", "#f7eee3");
+          root.style.setProperty("--qr-white", "#221c16");
         } else {
-          root.style.setProperty("--qr-page", "#e9eef3");
-          root.style.setProperty("--qr-text", "#0a2540");
-          root.style.setProperty("--qr-white", "#f7f9fb");
+          root.style.setProperty("--qr-page", "#faf6f0");
+          root.style.setProperty("--qr-text", "#241c16");
+          root.style.setProperty("--qr-white", "#ffffff");
         }
       })();
     </script>

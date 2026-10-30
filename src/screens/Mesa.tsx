@@ -4,7 +4,6 @@ import {
   ChevronRight,
   ClipboardList,
   ConciergeBell,
-  Flame,
   HandPlatter,
   Minus,
   PartyPopper,
@@ -189,9 +188,17 @@ export default function Mesa({ token }: { token: string }) {
     return (
       <div className="min-h-dvh grid place-items-center p-6 text-center">
         <div>
-          <div className="mx-auto size-16 rounded-full border border-slate-200 grid place-items-center text-2xl animate-pulse">🍺</div>
-          <h1 className="font-display text-4xl text-navy-900 mt-6">Carregando mesa…</h1>
-          <p className="text-slate-500 mt-2 text-sm">Conferindo o QR no servidor.</p>
+          <div className="relative mx-auto grid place-items-center size-16">
+            <span className="absolute inset-0 rounded-3xl border-2 border-slate-200" />
+            <motion.span
+              className="absolute inset-0 rounded-3xl border-2 border-transparent border-t-brand-500"
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 1.1, ease: "linear" }}
+            />
+            <img src="/logo/qradmin-mark.svg" alt="" className="size-9 rounded-xl" />
+          </div>
+          <h1 className="font-display text-3xl text-navy-900 mt-6">Carregando mesa…</h1>
+          <p className="text-slate-500 mt-1.5 text-sm">Conferindo o QR no servidor.</p>
         </div>
       </div>
     );
@@ -200,19 +207,21 @@ export default function Mesa({ token }: { token: string }) {
   if (!mesa) {
     return (
       <div className="min-h-dvh grid place-items-center p-6 text-center">
-        <div>
-          <div className="mx-auto size-16 rounded-full border border-slate-200 grid place-items-center text-2xl">🍺</div>
-          <h1 className="font-display text-5xl text-navy-900 mt-6">QR inválido</h1>
-          <p className="text-slate-500 mt-2 text-sm">
+        <div className="glass-deep rounded-3xl p-7 sm:p-9 max-w-md w-full">
+          <div className="mx-auto grid place-items-center size-14 rounded-2xl border border-rose-500/25 bg-rose-600/10">
+            <X className="size-6 text-rose-600" />
+          </div>
+          <h1 className="font-display text-3xl text-navy-900 mt-5">QR inválido</h1>
+          <p className="text-slate-600 mt-2 text-sm leading-relaxed">
             {lastError || "Este QR Code não pertence a nenhuma mesa do pub."}
           </p>
-          <p className="text-slate-400 mt-3 text-xs font-mono break-all max-w-sm mx-auto">
+          <p className="mt-3 text-slate-400 text-[11px] font-mono break-all">
             token: {token || "(vazio)"}
           </p>
-          <p className="text-slate-500 mt-3 text-xs max-w-sm mx-auto">
+          <p className="mt-4 rounded-xl border border-slate-200 bg-slate-100/60 p-3 text-slate-600 text-xs leading-relaxed">
             Use o QR Code da mesa (link com o token cadastrado no sistema).
           </p>
-          <p className="mt-8 text-xs text-slate-500">Peça o QR Code impresso na mesa ao estabelecimento.</p>
+          <p className="mt-5 text-[11px] text-slate-500">Peça o QR Code impresso na mesa ao estabelecimento.</p>
         </div>
       </div>
     );
@@ -250,15 +259,26 @@ export default function Mesa({ token }: { token: string }) {
   /* ==================== painéis reutilizáveis ==================== */
 
   const painelCarrinho = (
-    <div className="flex h-full flex-col">
-      <h3 className="font-display text-3xl text-navy-900 flex items-center gap-2">
-        <ShoppingBag className="size-6 text-brand-600" /> Seu pedido
-      </h3>
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-display text-2xl text-navy-900 flex items-center gap-2">
+          <ShoppingBag className="size-5 text-brand-600" /> Seu pedido
+        </h3>
+        {qtdCart > 0 && (
+          <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600">
+            {qtdCart} {qtdCart === 1 ? "item" : "itens"}
+          </span>
+        )}
+      </div>
+
       {cart.length === 0 ? (
         <div className="flex-1 grid place-items-center py-14 text-center">
           <div>
-            <UtensilsCrossed className="size-10 text-slate-400 mx-auto" />
-            <p className="mt-3 text-sm text-slate-500">Carrinho vazio por aqui…<br />Bateu aquela fome?</p>
+            <span className="mx-auto grid place-items-center size-14 rounded-2xl border border-dashed border-slate-300 bg-slate-100/60">
+              <UtensilsCrossed className="size-6 text-slate-400" />
+            </span>
+            <p className="mt-4 text-sm font-semibold text-navy-900">Carrinho vazio por aqui…</p>
+            <p className="mt-1 text-xs text-slate-500">Bateu aquela fome? Toque em um item do cardápio.</p>
           </div>
         </div>
       ) : (
@@ -272,24 +292,33 @@ export default function Mesa({ token }: { token: string }) {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20, height: 0, marginBottom: 0 }}
-                  className="flex gap-3 rounded-2xl bg-slate-100/60 border border-slate-200 p-3"
+                  className="flex gap-3 rounded-2xl border border-slate-200 bg-slate-100/60 p-2.5"
                 >
-                  <img src={fotoSrc(c.produto.foto) || FOTO_PLACEHOLDER} alt="" className="size-14 rounded-xl object-cover" onError={(e) => fallbackFoto(e, c.produto.nome, c.produto.categoria)} />
+                  <img
+                    src={fotoSrc(c.produto.foto) || FOTO_PLACEHOLDER}
+                    alt=""
+                    className="size-14 shrink-0 rounded-xl object-cover"
+                    onError={(e) => fallbackFoto(e, c.produto.nome, c.produto.categoria)}
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-semibold text-navy-900 leading-tight">{c.produto.nome}</p>
-                      <button onClick={() => setCart((x) => x.filter((y) => y.uid !== c.uid))} className="text-slate-500 hover:text-rose-700 cursor-pointer shrink-0">
+                      <p className="text-[13px] font-bold text-navy-900 leading-tight">{c.produto.nome}</p>
+                      <button
+                        onClick={() => setCart((x) => x.filter((y) => y.uid !== c.uid))}
+                        aria-label={`Remover ${c.produto.nome}`}
+                        className="shrink-0 rounded-full p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-600/10 cursor-pointer transition-colors"
+                      >
                         <Trash2 className="size-3.5" />
                       </button>
                     </div>
                     <p className="mt-0.5 text-[11px] text-slate-500 leading-snug">
-                      {c.escolha && <span className="text-navy-700">{c.escolha.nome} · </span>}
-                      {c.adicionais.map((a) => `+${a.nome}`).join(", ")}
+                      {c.escolha && <span className="text-navy-700 font-medium">{c.escolha.nome}</span>}
+                      {c.adicionais.length > 0 && <span className="text-teal-700"> · {c.adicionais.map((a) => `+${a.nome}`).join(", ")}</span>}
                       {c.removidos.length > 0 && <span className="text-rose-600"> · sem {c.removidos.join(", ")}</span>}
                     </p>
-                    <div className="mt-1.5 flex items-center justify-between">
+                    <div className="mt-1.5 flex items-center justify-between gap-2">
                       <Qtd size="sm" valor={c.qtd} onChange={(v) => setCart((x) => x.map((y) => (y.uid === c.uid ? { ...y, qtd: v } : y)))} />
-                      <span className="font-mono text-sm font-semibold text-brand-600">{BRL(totalItem(c))}</span>
+                      <span className="font-mono text-sm font-bold text-brand-600 tabular">{BRL(totalItem(c))}</span>
                     </div>
                   </div>
                 </motion.div>
@@ -297,11 +326,11 @@ export default function Mesa({ token }: { token: string }) {
             </AnimatePresence>
           </div>
 
-          <div className="pt-4 mt-4 border-t border-slate-200 space-y-3">
+          <div className="mt-4 space-y-3 border-t border-slate-200 pt-4">
             <Input value={nome} onChange={setNome} placeholder="Seu nome (p/ a cozinha chamar)" />
-            <div className="flex items-center justify-between">
-              <span className="text-xs uppercase tracking-widest text-slate-500 font-bold">total do pedido</span>
-              <span className="font-display text-4xl text-gradient">{BRL(totalCart)}</span>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">total do pedido</span>
+              <span className="font-display text-3xl text-navy-900 tabular">{BRL(totalCart)}</span>
             </div>
             <Btn full size="lg" onClick={enviar} disabled={!cart.length}>
               Enviar pra cozinha <ChevronRight className="size-4.5" />
@@ -313,27 +342,37 @@ export default function Mesa({ token }: { token: string }) {
   );
 
   const painelConta = (
-    <div className="flex h-full flex-col">
-      <h3 className="font-display text-3xl text-navy-900 flex items-center gap-2">
-        <Receipt className="size-6 text-brand-600" /> Sua conta
-      </h3>
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-display text-2xl text-navy-900 flex items-center gap-2">
+          <Receipt className="size-5 text-brand-600" /> Sua conta
+        </h3>
+        {pedidosMesa.length > 0 && (
+          <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600">
+            {pedidosMesa.length} {pedidosMesa.length === 1 ? "pedido" : "pedidos"}
+          </span>
+        )}
+      </div>
 
       {garcomResponsavel && (
-        <div className="mt-3 flex items-center gap-2 rounded-2xl bg-violet-500/10 border border-violet-500/20 px-3.5 py-2.5 text-xs text-violet-900">
+        <div className="mt-3 flex items-center gap-2 rounded-xl border border-violet-500/25 bg-violet-500/10 px-3 py-2 text-xs text-violet-900">
           <ConciergeBell className="size-4 text-violet-600 shrink-0" />
-          <span>Garçom responsável: <strong className="font-semibold">{garcomResponsavel}</strong></span>
+          <span>Garçom responsável: <strong className="font-bold">{garcomResponsavel}</strong></span>
         </div>
       )}
 
       {pedidosMesa.length === 0 ? (
         <div className="flex-1 grid place-items-center py-14 text-center">
           <div>
-            <Timer className="size-10 text-slate-400 mx-auto" />
-            <p className="mt-3 text-sm text-slate-500">Nenhum pedido ainda nesta visita.<br />Faça o primeiro!</p>
+            <span className="mx-auto grid place-items-center size-14 rounded-2xl border border-dashed border-slate-300 bg-slate-100/60">
+              <Timer className="size-6 text-slate-400" />
+            </span>
+            <p className="mt-4 text-sm font-semibold text-navy-900">Nenhum pedido nesta visita.</p>
+            <p className="mt-1 text-xs text-slate-500">Faça o primeiro — a cozinha já está avisada.</p>
           </div>
         </div>
       ) : (
-        <div className="mt-4 flex-1 space-y-3 overflow-y-auto pr-1 no-scrollbar">
+        <div className="mt-4 flex-1 space-y-2.5 overflow-y-auto pr-1 no-scrollbar">
           {pedidosMesa.map((p) => {
             const cancelado = p.status === "cancelado";
             const idx = STATUS_ORDEM.findIndex((s) => s.id === p.status);
@@ -341,14 +380,14 @@ export default function Mesa({ token }: { token: string }) {
             // STATUS_ORDEM[-1] derrubava a tela do cliente com TypeError.
             const stepIdx = cancelado ? -1 : Math.max(0, idx);
             return (
-              <div key={p.id} className="rounded-2xl bg-slate-100/60 border border-slate-200 p-3.5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold text-slate-500">
-                      Pedido <span className="font-mono text-navy-900">#{p.id}</span> · {p.clienteNome}
+              <div key={p.id} className="rounded-2xl border border-slate-200 bg-slate-100/50 p-3.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">
+                      pedido <span className="font-mono text-navy-900">#{p.id}</span> · {p.clienteNome}
                     </p>
                     {p.garcomNome && (
-                      <p className="text-[11px] text-violet-700 font-semibold flex items-center gap-1 mt-0.5">
+                      <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-violet-700">
                         <ConciergeBell className="size-3 text-violet-600" />
                         <span>Garçom: {p.garcomNome}</span>
                       </p>
@@ -363,26 +402,31 @@ export default function Mesa({ token }: { token: string }) {
                 <div className="mt-3 flex items-center gap-1">
                   {STATUS_ORDEM.map((s, i) => (
                     <div key={s.id} className="flex-1">
-                      <div className={cn("h-1.5 rounded-full transition-colors duration-500", cancelado ? "bg-rose-100" : i <= stepIdx ? "bg-gradient-to-r from-brand-500 to-teal-600" : "bg-slate-100")} />
+                      <div
+                        className={cn(
+                          "h-1.5 rounded-full transition-colors duration-500",
+                          cancelado ? "bg-rose-500/20" : i <= stepIdx ? "bg-gradient-to-r from-brand-500 to-teal-500" : "bg-slate-200"
+                        )}
+                      />
                     </div>
                   ))}
                 </div>
 
-                <ul className="mt-3 space-y-1">
+                <ul className="mt-3 space-y-1.5">
                   {p.itens.map((i) => (
                     <li key={i.id} className="flex justify-between gap-3 text-[13px] text-slate-600">
                       <span className="leading-snug">
                         <b className="text-navy-900 font-mono">{i.qtd}×</b> {i.nome}
                         {i.status && (
                           <span className={
-                            "ml-1.5 text-[9px] font-bold uppercase tracking-wider " +
+                            "ml-1.5 text-[9px] font-bold uppercase tracking-[0.08em] " +
                             (i.status === "entregue"
-                              ? "text-teal-600"
+                              ? "text-teal-700"
                               : i.status === "concluido"
-                                ? "text-teal-700"
+                                ? "text-teal-600"
                                 : i.status === "em_producao"
-                                  ? "text-navy-700"
-                                  : "text-amber-700")
+                                  ? "text-amber-700"
+                                  : "text-slate-500")
                           }>
                             {i.status === "recebido"
                               ? "na fila"
@@ -399,7 +443,7 @@ export default function Mesa({ token }: { token: string }) {
                           {[i.escolha?.nome, ...i.adicionais.map((a) => `+${a.nome}`), i.removidos.length ? `sem ${i.removidos.join(", ")}` : null].filter(Boolean).join(" · ")}
                         </span>
                       </span>
-                      <span className="font-mono text-slate-500">{BRL(i.totalUnit * i.qtd)}</span>
+                      <span className="font-mono text-slate-500 tabular">{BRL(i.totalUnit * i.qtd)}</span>
                     </li>
                   ))}
                 </ul>
@@ -465,48 +509,52 @@ export default function Mesa({ token }: { token: string }) {
       )}
 
       {/* total dos pedidos */}
-      <div className="pt-4 mt-4 border-t border-slate-200">
-        <div className="flex items-center justify-between">
-          <span className="text-xs uppercase tracking-widest text-slate-500 font-bold">total dos pedidos</span>
-          <span className="font-display text-4xl text-gradient">{BRL(totalConta)}</span>
+      <div className="mt-4 border-t border-slate-200 pt-4">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">total dos pedidos</span>
+          <span className="font-display text-3xl text-navy-900 tabular">{BRL(totalConta)}</span>
         </div>
+        <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+          Vários pedidos, uma conta só. O fechamento é feito no caixa.
+        </p>
       </div>
     </div>
   );
 
   /* ==================== render ==================== */
   return (
-    <div className="relative min-h-dvh pb-[calc(8rem+env(safe-area-inset-bottom,0px))] lg:pb-12 overflow-x-clip">
+    <div className="relative min-h-dvh pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] lg:pb-12 overflow-x-clip">
       {/* fundo */}
-      <div className="fixed inset-0 -z-10">
-        <div className="glow-orb absolute -top-40 right-[10%] size-[28rem] bg-brand-500/10" />
-        <div className="glow-orb absolute bottom-[-8rem] left-[-6rem] size-[26rem] bg-brand-500/10" />
-        <div className="noise absolute inset-0" />
+      <div className="fixed inset-0 -z-10 overflow-hidden">
+        <div className="glow-orb absolute -top-44 right-[10%] size-[30rem] bg-brand-500/10" />
+        <div className="glow-orb absolute bottom-[-10rem] left-[-8rem] size-[26rem] bg-teal-500/8" />
       </div>
 
       {/* header */}
-      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-3 sm:px-6 h-14 sm:h-16 flex items-center gap-2 sm:gap-3 min-w-0">
+      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/85 backdrop-blur-xl supports-[backdrop-filter]:bg-white/70">
+        <div className="mx-auto max-w-6xl px-3 sm:px-6 h-15 sm:h-16 flex items-center gap-2 sm:gap-3 min-w-0">
           <Logo size="sm" />
-          <Badge tone="amber" className="ml-1">{mesa.nome}</Badge>
+          <span className="hidden sm:block h-6 w-px bg-slate-200 shrink-0" />
+          <Badge tone="amber" className="shrink-0">{mesa.nome}</Badge>
           {garcomResponsavel && (
-            <Badge tone="violet" className="ml-1 inline-flex items-center gap-1">
+            <Badge tone="violet" className="hidden sm:inline-flex shrink-0">
               <ConciergeBell className="size-3" />
-              <span>{garcomResponsavel}</span>
+              <span className="truncate max-w-24">{garcomResponsavel}</span>
             </Badge>
           )}
           <div className="flex-1" />
           <ThemeToggle />
           <button
             onClick={() => setSheet("conta")}
-            className="btn-press lg:hidden flex items-center gap-2 rounded-full bg-slate-100/70 border border-slate-200 h-10 pl-3.5 pr-4 text-xs font-bold text-slate-700 cursor-pointer"
+            className="btn-press lg:hidden flex items-center gap-2 rounded-full border border-slate-200 bg-white h-10 pl-3 pr-3.5 text-xs font-bold text-slate-700 hover:border-slate-300 cursor-pointer"
           >
             <Receipt className="size-4 text-brand-600" />
             <span className="tabular">{BRL(totalConta)}</span>
           </button>
           <button
             onClick={() => setSheet("cart")}
-            className="btn-press relative grid place-items-center size-10 rounded-full bg-gradient-to-br from-brand-500 to-teal-600 text-white cursor-pointer"
+            aria-label="Abrir pedido"
+            className="btn-press relative grid place-items-center size-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-[var(--shadow-brand)] cursor-pointer"
           >
             <ShoppingBag className="size-4.5" />
             <AnimatePresence>
@@ -515,7 +563,7 @@ export default function Mesa({ token }: { token: string }) {
                   key={qtdCart}
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute -top-1.5 -right-1.5 grid place-items-center min-w-5 h-5 px-1 rounded-full bg-teal-500 text-white text-[10px] font-bold border-2 border-white"
+                  className="absolute -top-1.5 -right-1.5 grid place-items-center min-w-5 h-5 px-1 rounded-full bg-navy-900 text-white text-[10px] font-bold border-2 border-white tabular"
                 >
                   {qtdCart}
                 </motion.span>
@@ -525,27 +573,34 @@ export default function Mesa({ token }: { token: string }) {
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="lg:grid lg:grid-cols-12 lg:gap-8">
           {/* -------- coluna cardápio -------- */}
-          <section className="lg:col-span-8 xl:col-span-8">
+          <section className="lg:col-span-8">
             {/* hero da mesa */}
-            <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }} className="pt-8 sm:pt-10 pb-6">
-              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.3em] text-brand-600">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              className="pt-7 sm:pt-9 pb-5"
+            >
+              <p className="ds-kicker">
                 <HandPlatter className="size-4" /> bem-vindo(a) à {mesa.nome}
               </p>
-              <h1 className="font-display text-[clamp(2.5rem,11vw,5.5rem)] sm:text-7xl lg:text-8xl leading-[0.9] text-navy-900 mt-2">
-                Bateu a fome?<br /><span className="text-gradient">Pede sem esperar.</span>
+              <h1 className="font-display text-[clamp(2.35rem,9vw,4.6rem)] leading-[0.92] text-navy-900 mt-2.5">
+                Bateu a fome?
+                <br />
+                <span className="text-brand-600">Pede sem esperar.</span>
               </h1>
-              <div className="mt-4 flex flex-wrap items-center gap-2">
+              <div className="mt-4 flex flex-wrap items-center gap-1.5">
                 <Badge tone="lime" pulse>cozinha recebendo</Badge>
                 {garcomResponsavel && (
-                  <Badge tone="violet" className="inline-flex items-center gap-1">
+                  <Badge tone="violet">
                     <ConciergeBell className="size-3" /> atendido por {garcomResponsavel}
                   </Badge>
                 )}
                 <Badge tone="zinc">peça quantas vezes quiser</Badge>
-                <Badge tone="zinc">tudo entra na mesma conta</Badge>
+                <Badge tone="zinc">tudo na mesma conta</Badge>
               </div>
             </motion.div>
 
@@ -553,56 +608,50 @@ export default function Mesa({ token }: { token: string }) {
             <div
               className={cn(
                 "overflow-hidden transition-all duration-300 ease-out",
-                catsHidden ? "max-h-0 opacity-0 mb-0 pointer-events-none" : "max-h-24 opacity-100 mb-2"
+                catsHidden ? "max-h-0 opacity-0 mb-0 pointer-events-none" : "max-h-24 opacity-100 mb-1"
               )}
             >
               <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 py-1">
-                {categorias.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => {
-                      setCategoria(c);
-                      setBusca("");
-                      irParaLista();
-                    }}
-                    className={cn(
-                      "btn-press relative shrink-0 h-10 px-4.5 rounded-full text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors border",
-                      categoria === c && !busca
-                        ? "text-white border-transparent"
-                        : "text-slate-500 border-slate-200 hover:text-navy-800 bg-slate-100/50"
-                    )}
-                  >
-                    {categoria === c && !busca && (
-                      <motion.span
-                        layoutId="cat-pill"
-                        className="absolute inset-0 rounded-full bg-gradient-to-br from-brand-500 to-teal-600"
-                        transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                      />
-                    )}
-                    <span className="relative z-10">{c}</span>
-                  </button>
-                ))}
+                {categorias.map((c) => {
+                  const sel = categoria === c && !busca;
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => {
+                        setCategoria(c);
+                        setBusca("");
+                        irParaLista();
+                      }}
+                      data-active={sel ? "true" : "false"}
+                      className="btn-press ds-chip shrink-0"
+                    >
+                      <span className="relative z-10">{c}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             {/* search sticky — limpo, sem fundo pesado */}
-            <div className="sticky top-14 sm:top-16 z-40 py-2">
+            <div className="sticky top-15 z-40 py-2">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-slate-500 pointer-events-none" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
                 <input
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder="Buscar no cardápio…"
-                  className="w-full h-11 rounded-full bg-transparent border border-slate-300 pl-11 pr-10 text-sm text-navy-900 placeholder:text-slate-400 focus:outline-none focus:border-brand-500/60 transition"
+                  aria-label="Buscar no cardápio"
+                  className="w-full h-11 rounded-full border border-slate-200 bg-white/95 backdrop-blur pl-11 pr-10 text-sm font-medium text-navy-900 placeholder:text-slate-400 shadow-[var(--shadow-soft)] focus:outline-none focus:border-brand-500/50 focus:shadow-[0_0_0_3px_rgba(232,93,47,0.14)] transition"
                 />
                 {busca && (
                   <button
                     type="button"
                     onClick={() => setBusca("")}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-navy-800 cursor-pointer"
+                    aria-label="Limpar busca"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 grid place-items-center size-7 rounded-full bg-slate-100 text-slate-500 hover:text-navy-900 cursor-pointer"
                   >
-                    <X className="size-4" />
+                    <X className="size-3.5" />
                   </button>
                 )}
               </div>
@@ -613,25 +662,26 @@ export default function Mesa({ token }: { token: string }) {
 
             {/* título da seção */}
             <div className="mt-3 mb-3 flex items-center gap-2 min-w-0">
-              <Flame className="size-4 text-brand-600 shrink-0" />
-              <h2 className="font-display text-2xl sm:text-3xl text-navy-900 truncate">
+              <h2 className="font-display text-2xl text-navy-900 truncate">
                 {busca
                   ? `Resultados p/ “${busca}”`
                   : categoria === "Tudo"
                     ? "Cardápio"
                     : categoria}
               </h2>
-              <span className="text-xs font-mono text-slate-500 shrink-0">{lista.length} itens</span>
+              <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-[10px] font-bold font-mono text-slate-500 shrink-0">
+                {lista.length}
+              </span>
             </div>
 
             {gruposCardapio ? (
-              <div className="space-y-8 pb-28 lg:pb-10 w-full min-w-0">
+              <div className="space-y-7 pb-28 lg:pb-10 w-full min-w-0">
                 {gruposCardapio.map((g) => (
                   <section key={g.nome}>
-                    <div className="mb-3 flex items-center gap-2">
-                      <span className="h-px flex-1 bg-gradient-to-r from-brand-500/30 to-transparent" />
-                      <h3 className="font-display text-xl sm:text-2xl text-brand-700 tracking-wide">{g.nome}</h3>
-                      <span className="h-px flex-1 bg-gradient-to-l from-brand-500/30 to-transparent" />
+                    <div className="mb-3 flex items-center gap-3">
+                      <h3 className="font-display text-lg text-navy-900">{g.nome}</h3>
+                      <span className="h-px flex-1 bg-slate-200" />
+                      <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{g.itens.length}</span>
                     </div>
                     <motion.div layout className="grid-cardapio grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3.5 w-full min-w-0">
                       <AnimatePresence mode="popLayout">
@@ -664,13 +714,22 @@ export default function Mesa({ token }: { token: string }) {
                     />
                   ))}
                 </AnimatePresence>
+                {lista.length === 0 && (
+                  <div className="col-span-full ds-empty">
+                    <div>
+                      <Search className="size-7 text-slate-400 mx-auto" />
+                      <p className="mt-3 text-sm font-semibold text-navy-900">Nada encontrado por aqui</p>
+                      <p className="mt-1 text-xs text-slate-500">Tente outro termo ou volte para “Tudo”.</p>
+                    </div>
+                  </div>
+                )}
               </motion.div>
             )}
           </section>
 
           {/* -------- coluna lateral (desktop) -------- */}
-          <aside className="hidden lg:block lg:col-span-4 pt-10">
-            <div className="sticky top-24 glass-deep noise rounded-3xl p-5 max-h-[calc(100dvh-8.5rem)] flex flex-col gap-0 overflow-hidden">
+          <aside className="hidden lg:block lg:col-span-4 pt-9">
+            <div className="sticky top-24 glass-deep rounded-3xl p-5 max-h-[calc(100dvh-8rem)] flex flex-col gap-0 overflow-hidden">
               <PainelComAbas
                 cart={cart}
                 totalConta={totalConta}
@@ -690,20 +749,20 @@ export default function Mesa({ token }: { token: string }) {
             animate={{ y: 0 }}
             exit={{ y: 90 }}
             transition={{ type: "spring", stiffness: 300, damping: 28 }}
-            className="lg:hidden fixed bottom-0 inset-x-0 z-50 p-3 sm:p-4 pt-8 pb-[max(1rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-slate-50 via-white/90 to-transparent"
+            className="lg:hidden fixed bottom-0 inset-x-0 z-50 px-3 sm:px-4 pt-10 pb-[max(0.85rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-[var(--qr-page)] via-[var(--qr-page)]/90 to-transparent"
           >
             <div className="flex gap-2.5 max-w-md mx-auto">
               <button
                 onClick={() => setSheet("conta")}
-                className="btn-press flex-1 h-13 rounded-2xl glass-deep flex items-center justify-center gap-2 cursor-pointer"
+                className="btn-press flex-1 h-13 rounded-2xl glass-deep flex items-center justify-center gap-2 px-3 cursor-pointer"
               >
                 <Receipt className="size-4.5 text-brand-600" />
                 <span className="text-sm font-bold text-navy-900 tabular">{BRL(totalConta)}</span>
-                <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500">conta</span>
+                <span className="text-[10px] uppercase tracking-[0.12em] font-bold text-slate-500">conta</span>
               </button>
               <button
                 onClick={() => setSheet("cart")}
-                className="btn-press flex-[1.3] h-13 rounded-2xl bg-gradient-to-br from-brand-500 to-teal-600 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-[0_14px_38px_-8px_rgba(0,196,180,0.55)] cursor-pointer"
+                className="btn-press flex-[1.35] h-13 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-[var(--shadow-brand)] cursor-pointer"
               >
                 <ShoppingBag className="size-4.5" />
                 {qtdCart === 0 ? "Pedir" : `Pedir · ${BRL(totalCart)}`}
@@ -715,10 +774,10 @@ export default function Mesa({ token }: { token: string }) {
 
       {/* -------- sheets mobile -------- */}
       <Modal open={sheet === "cart"} onClose={() => setSheet(null)}>
-        <div className="p-5 sm:p-6 min-h-[55dvh]">{painelCarrinho}</div>
+        <div className="p-4 sm:p-6 min-h-[55dvh]">{painelCarrinho}</div>
       </Modal>
       <Modal open={sheet === "conta"} onClose={() => setSheet(null)}>
-        <div className="p-5 sm:p-6 min-h-[55dvh]">{painelConta}</div>
+        <div className="p-4 sm:p-6 min-h-[55dvh]">{painelConta}</div>
       </Modal>
 
       {/* -------- modal produto -------- */}
@@ -737,23 +796,23 @@ export default function Mesa({ token }: { token: string }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-95 grid place-items-center bg-white/85 backdrop-blur-md p-6"
+            className="fixed inset-0 z-95 grid place-items-center bg-[var(--qr-page)]/92 backdrop-blur-md p-6"
           >
             <motion.div
-              initial={{ scale: 0.7, y: 40 }}
+              initial={{ scale: 0.8, y: 40 }}
               animate={{ scale: 1, y: 0 }}
-              transition={{ type: "spring", stiffness: 260, damping: 18 }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
               className="text-center"
             >
               <motion.div
-                animate={{ rotate: [0, -8, 8, 0] }}
-                transition={{ repeat: Infinity, duration: 1.4 }}
-                className="mx-auto grid place-items-center size-24 rounded-3xl bg-gradient-to-br from-teal-400 to-teal-600 text-white shadow-[0_20px_60px_-10px_rgba(20,184,166,0.5)]"
+                animate={{ rotate: [0, -6, 6, 0] }}
+                transition={{ repeat: Infinity, duration: 1.6 }}
+                className="mx-auto grid place-items-center size-20 rounded-3xl bg-gradient-to-br from-teal-500 to-teal-700 text-white shadow-[var(--shadow-success)]"
               >
-                <PartyPopper className="size-11" />
+                <PartyPopper className="size-9" />
               </motion.div>
-              <h2 className="font-display text-6xl text-navy-900 mt-6">PEDIDO ENVIADO!</h2>
-              <p className="mt-2 text-slate-600 flex items-center justify-center gap-2 text-sm">
+              <h2 className="font-display text-4xl sm:text-5xl text-navy-900 mt-6">Pedido enviado!</h2>
+              <p className="mt-2 flex items-center justify-center gap-2 text-sm text-slate-600">
                 <Check className="size-4 text-teal-600" /> Já está na fila da cozinha — acompanhe na sua conta
               </p>
             </motion.div>
@@ -797,8 +856,8 @@ function ItemCard({
       exit={{ opacity: 0, scale: 0.97 }}
       transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
-        "card-produto card-img-zoom group relative flex h-full min-h-0 flex-col glass rounded-3xl overflow-hidden",
-        esgotado && "opacity-55 grayscale-[0.55]"
+        "card-produto card-img-zoom group relative flex h-full min-h-0 flex-col glass rounded-2xl sm:rounded-3xl overflow-hidden transition-shadow hover:shadow-[var(--shadow-lift)]",
+        esgotado && "opacity-60 grayscale-[0.5]"
       )}
     >
       {/* Foto — altura fixa por aspect-ratio, nunca empurra o texto */}
@@ -818,28 +877,28 @@ function ItemCard({
             fallbackFoto(e, p.nome, p.categoria);
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-50/95 via-slate-50/20 to-transparent pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[var(--qr-white)] via-[var(--qr-white)]/60 to-transparent pointer-events-none" />
         <div className="absolute top-2 left-2 right-2 flex flex-wrap gap-1 pointer-events-none z-[1]">
           {p.estoque !== null && p.estoque > 0 && p.estoque <= 8 && (
             <Badge tone="rose" pulse>
-              {p.estoque} un
+              últimas {p.estoque}
             </Badge>
           )}
           {esgotado && <Badge tone="zinc">esgotado</Badge>}
         </div>
-        <span className="absolute bottom-2 left-2 z-[1] rounded-lg bg-white/85 backdrop-blur-sm px-2 py-0.5 font-mono text-xs sm:text-sm font-bold text-navy-900 tabular-nums pointer-events-none">
+        <span className="absolute bottom-2 left-2 z-[1] rounded-lg bg-white/92 backdrop-blur-sm px-2 py-1 font-mono text-xs sm:text-[13px] font-bold text-navy-900 tabular border border-slate-200/70 pointer-events-none">
           {BRL(p.preco)}
         </span>
       </button>
 
       {/* Corpo — flex column com rodapé sempre no fundo */}
-      <div className="flex flex-1 flex-col min-h-0 p-2.5 sm:p-3.5 gap-1.5">
+      <div className="flex flex-1 flex-col min-h-0 p-2.5 sm:p-3 gap-1.5">
         <button
           type="button"
           onClick={() => onOpen(p)}
           className="text-left cursor-pointer min-w-0"
         >
-          <h3 className="font-semibold text-navy-900 leading-snug text-[13px] sm:text-sm line-clamp-2 min-h-[2.5em] break-words">
+          <h3 className="font-bold text-navy-900 leading-snug text-[13px] sm:text-sm line-clamp-2 min-h-[2.5em] break-words">
             {p.nome}
           </h3>
           <p className="mt-0.5 text-[10px] sm:text-[11px] text-slate-500 leading-snug line-clamp-2 min-h-[2.4em] break-words">
@@ -848,7 +907,7 @@ function ItemCard({
         </button>
 
         <div className="mt-auto pt-1 flex flex-col gap-1.5 min-w-0">
-          <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.14em] font-bold text-slate-500 truncate">
+          <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.12em] font-bold text-slate-400 truncate">
             {meta}
           </span>
           {p.tipo === "simples" ? (
@@ -857,7 +916,7 @@ function ItemCard({
               full
               disabled={esgotado}
               onClick={() => onAdd(p)}
-              className="!h-9 !px-2 !text-[11px] sm:!text-xs shrink-0"
+              className="!h-9 !px-2 !text-[11px] sm:!text-xs shrink-0 !rounded-xl"
             >
               <Plus className="size-3.5 shrink-0" />
               <span className="truncate">Adicionar</span>
@@ -869,10 +928,10 @@ function ItemCard({
               full
               disabled={esgotado}
               onClick={() => onOpen(p)}
-              className="!h-9 !px-2 !text-[11px] sm:!text-xs shrink-0"
+              className="!h-9 !px-2 !text-[11px] sm:!text-xs shrink-0 !rounded-xl"
             >
               <span className="truncate">{ctaLabel}</span>
-              <ChevronRight className="size-3.5 shrink-0 opacity-80" />
+              <ChevronRight className="size-3.5 shrink-0 opacity-70" />
             </Btn>
           )}
         </div>
@@ -895,25 +954,33 @@ function PainelComAbas({
   const [aba, setAba] = useState<"cart" | "conta">("cart");
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 border border-slate-200 p-1 mb-5">
+      <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 border border-slate-200 p-1 mb-4">
         {([
-          { id: "cart", label: "Seu pedido", icon: ShoppingBag },
-          { id: "conta", label: `Conta · ${BRL(totalConta)}`, icon: ClipboardList },
+          { id: "cart", label: "Pedido", icon: ShoppingBag },
+          { id: "conta", label: `Conta ${BRL(totalConta)}`, icon: ClipboardList },
         ] as const).map((t) => (
           <button
             key={t.id}
             onClick={() => setAba(t.id)}
             className={cn(
-              "relative h-10 rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors",
-              aba === t.id ? "text-white" : "text-slate-500 hover:text-navy-800"
+              "relative h-10 rounded-xl text-[11px] font-bold uppercase tracking-[0.04em] whitespace-nowrap cursor-pointer transition-colors",
+              aba === t.id ? "text-white" : "text-slate-500 hover:text-navy-900"
             )}
           >
             {aba === t.id && (
-              <motion.span layoutId="painel-aba" className="absolute inset-0 rounded-xl bg-gradient-to-br from-brand-500 to-teal-600" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
+              <motion.span
+                layoutId="painel-aba"
+                className="absolute inset-0 rounded-xl fill-brand"
+                transition={{ type: "spring", stiffness: 420, damping: 34 }}
+              />
             )}
             <span className="relative z-10 inline-flex items-center gap-1.5">
               <t.icon className="size-3.5" /> {t.label}
-              {t.id === "cart" && cart.length > 0 && <span className="grid place-items-center min-w-4.5 h-4.5 px-1 rounded-full bg-slate-200/60 text-[10px] font-bold">{cart.length}</span>}
+              {t.id === "cart" && cart.length > 0 && (
+                <span className={cn("grid place-items-center min-w-4.5 h-4.5 px-1 rounded-full text-[10px] font-bold", aba === "cart" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-600")}>
+                  {cart.length}
+                </span>
+              )}
             </span>
           </button>
         ))}
@@ -980,7 +1047,7 @@ function ProdutoModal({
     <Modal open onClose={onClose} wide closeOnBackdrop={false}>
       <div className="overflow-hidden">
         {/* imagem + título colados — sem gap */}
-        <div className="relative w-full aspect-[16/11] sm:aspect-[16/10] bg-white">
+        <div className="relative w-full aspect-[16/11] sm:aspect-[16/10] bg-slate-100">
           <img
             src={fotoSrc(produto.foto) || FOTO_PLACEHOLDER}
             alt={produto.nome}
@@ -989,23 +1056,23 @@ function ProdutoModal({
               fallbackFoto(e, produto.nome, produto.categoria);
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-50 via-slate-50/20 to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[var(--qr-white)] via-[var(--qr-white)]/25 to-transparent pointer-events-none" />
           <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5 pointer-events-none">
             <Badge tone="amber">{produto.categoria}</Badge>
-            <h3 className="font-display text-3xl sm:text-4xl text-navy-900 leading-none mt-2 drop-shadow-lg break-words">
+            <h3 className="font-display text-3xl sm:text-4xl text-navy-900 leading-none mt-2 break-words">
               {produto.nome}
             </h3>
-            <p className="mt-1.5 font-mono text-lg font-bold text-brand-600 drop-shadow">{BRL(produto.preco)}</p>
+            <p className="mt-2 font-mono text-lg font-bold text-brand-600">{BRL(produto.preco)}</p>
           </div>
         </div>
 
         <div className="p-4 sm:p-5 space-y-4">
-          <p className="text-sm text-slate-500 leading-relaxed">{desc}</p>
+          <p className="text-sm text-slate-600 leading-relaxed">{desc}</p>
 
           {/* doses: com / sem gelo */}
           {dose && (
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-navy-700 mb-2.5">gelo</p>
+              <p className="ds-label">gelo</p>
               <div className="flex flex-wrap gap-2">
                 {(
                   [
@@ -1020,8 +1087,8 @@ function ProdutoModal({
                     className={cn(
                       "btn-press inline-flex items-center gap-1.5 rounded-full border px-3.5 h-10 text-xs font-semibold cursor-pointer transition-all",
                       gelo === g.id
-                        ? "border-navy-700/50 bg-navy-700/10 text-navy-700"
-                        : "border-slate-200 bg-slate-100/50 text-slate-600 hover:border-slate-300"
+                        ? "border-brand-500/60 bg-brand-500/10 text-brand-700"
+                        : "border-slate-200 bg-slate-100/60 text-slate-600 hover:border-slate-300"
                     )}
                   >
                     {gelo === g.id ? <Check className="size-3.5" /> : <Plus className="size-3.5" />}
@@ -1035,7 +1102,7 @@ function ProdutoModal({
 
           {precisaEscolha && (
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-navy-700 mb-2.5">escolha uma opção</p>
+              <p className="ds-label">escolha uma opção</p>
               <div className="space-y-2">
                 {produto.adicionais.map((a) => (
                   <button
@@ -1043,19 +1110,19 @@ function ProdutoModal({
                     type="button"
                     onClick={() => setEscolha(a)}
                     className={cn(
-                      "btn-press w-full flex items-center gap-3 rounded-2xl border p-3.5 text-left cursor-pointer transition-all",
+                      "btn-press w-full flex items-center gap-3 rounded-xl border p-3 text-left cursor-pointer transition-all",
                       escolha?.id === a.id
-                        ? "border-brand-500/60 bg-brand-500/10"
+                        ? "border-brand-500/60 bg-brand-500/[0.08]"
                         : "border-slate-200 bg-slate-100/50 hover:border-slate-300"
                     )}
                   >
                     <span
                       className={cn(
                         "grid place-items-center size-5 rounded-full border-2 shrink-0",
-                        escolha?.id === a.id ? "border-brand-400" : "border-slate-300"
+                        escolha?.id === a.id ? "border-brand-500" : "border-slate-300"
                       )}
                     >
-                      {escolha?.id === a.id && <span className="size-2.5 rounded-full bg-brand-400" />}
+                      {escolha?.id === a.id && <span className="size-2.5 rounded-full bg-brand-500" />}
                     </span>
                     <span className="flex-1 text-sm font-semibold text-navy-900">{a.nome}</span>
                     <span className="font-mono text-xs text-slate-500">
@@ -1069,7 +1136,7 @@ function ProdutoModal({
 
           {!precisaEscolha && produto.adicionais.length > 0 && (
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-600 mb-2.5">adições</p>
+              <p className="ds-label">adições</p>
               <div className="flex flex-wrap gap-2">
                 {produto.adicionais.map((a) => {
                   const on = ads.some((x) => x.id === a.id);
@@ -1097,7 +1164,7 @@ function ProdutoModal({
 
           {produto.removiveis.length > 0 && (
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-rose-600 mb-2.5">tirar do jeito que vem</p>
+              <p className="ds-label !text-rose-600">tirar do jeito que vem</p>
               <div className="flex flex-wrap gap-2">
                 {produto.removiveis.map((r) => {
                   const on = rems.includes(r.nome);
@@ -1107,9 +1174,9 @@ function ProdutoModal({
                       type="button"
                       onClick={() => setRems((x) => (on ? x.filter((y) => y !== r.nome) : [...x, r.nome]))}
                       className={cn(
-                        "btn-press inline-flex items-center gap-1.5 rounded-full border px-3.5 h-9 text-xs font-semibold cursor-pointer transition-all",
+                        "btn-press inline-flex items-center gap-1.5 rounded-full border px-3 h-9 text-xs font-semibold cursor-pointer transition-all",
                         on
-                          ? "border-rose-500/60 bg-rose-600/10 text-rose-700"
+                          ? "border-rose-500/50 bg-rose-600/10 text-rose-700"
                           : "border-slate-200 bg-slate-100/50 text-slate-500 hover:border-slate-300"
                       )}
                     >
@@ -1123,11 +1190,11 @@ function ProdutoModal({
 
           <Input value={obs} onChange={setObs} placeholder="Observação p/ cozinha (opcional)" />
 
-          <div className="flex items-center justify-between gap-4 pt-1">
+          <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-100/60 p-3">
             <Qtd valor={qtd} onChange={setQtd} />
             <div className="text-right">
-              <p className="text-[10px] uppercase tracking-widest font-bold text-slate-500">subtotal</p>
-              <p className="font-display text-4xl text-gradient leading-none">{BRL(unit * qtd)}</p>
+              <p className="text-[10px] uppercase tracking-[0.14em] font-bold text-slate-500">subtotal</p>
+              <p className="font-display text-3xl text-navy-900 leading-none tabular">{BRL(unit * qtd)}</p>
             </div>
           </div>
 
