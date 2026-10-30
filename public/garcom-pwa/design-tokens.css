@@ -1,151 +1,287 @@
-/* QR Admin · fonte única de tokens para React e PWA. Sem dependências externas. */
+/*
+ * QR Admin — Design Tokens Compartilhados (SPA + PWA do Garçom)
+ * Direção estética: "A COMANDA / Taproom Brasa"
+ *
+ * Arquitetura em dois níveis:
+ *   1. Primitivos de marca (--prim-*): paleta base sem branco ou preto puros.
+ *   2. Tokens semânticos (--surface*, --text*, --brand*, --accent*, --line*, --status-*):
+ *      únicos tokens consumidos por componentes no SPA e no PWA.
+ */
+
 @font-face {
-  font-family: "Manrope";
-  src: url("./fonts/manrope-latin.woff2") format("woff2");
+  font-family: "Archivo";
+  src: url("./fonts/archivo-latin-wdth-normal.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
   font-style: normal;
-  font-weight: 200 800;
   font-display: swap;
 }
-:root {
-  --qr-font: "Manrope", "Segoe UI", system-ui, sans-serif;
-  --qr-radius: 18px;
-  --qr-radius-control: 12px;
-  --qr-action: #bf402e;
-  --qr-action-hover: #a93424;
-  --qr-success-action: #26704f;
-  --qr-on-action: #ffffff;
-  --qr-focus: #c74732;
-  color-scheme: light;
-  --qr-white: #ffffff;
-  --qr-slate-50: #f7f8f7;
-  --qr-slate-100: #f0f2f0;
-  --qr-slate-200: #dfe5e1;
-  --qr-slate-300: #c3cfc8;
-  --qr-slate-400: #6f8078;
-  --qr-slate-500: #596b62;
-  --qr-slate-600: #43564b;
-  --qr-slate-700: #304439;
-  --qr-slate-800: #24392e;
-  --qr-navy-500: #587464;
-  --qr-navy-700: #344f3f;
-  --qr-navy-800: #293e32;
-  --qr-navy-900: #21382b;
-  --qr-brand-50: #fff0eb;
-  --qr-brand-400: #e77860;
-  --qr-brand-500: #c74732;
-  --qr-brand-600: #b83b29;
-  --qr-brand-700: #a43424;
-  --qr-teal-400: #4b9870;
-  --qr-teal-500: #32815a;
-  --qr-teal-600: #26704f;
-  --qr-teal-700: #205e42;
-  --qr-page: #f5f7f4;
-  --qr-text: #21382b;
-  --qr-grad-from: #21382b;
-  --qr-stroke: rgba(33, 56, 43, 0.24);
-  --qr-card-shadow:
-    0 2px 4px rgba(24, 46, 33, 0.025), 0 8px 24px -16px rgba(24, 46, 33, 0.12);
-  --qr-card-shadow-deep:
-    0 4px 6px rgba(24, 46, 33, 0.025), 0 16px 40px -24px rgba(24, 46, 33, 0.18);
-  --qr-scrollbar: #c3cfc8;
-  --qr-amber-500: #d99516;
-  --qr-amber-700: #8a580a;
-  --qr-rose-400: #fb7185;
-  --qr-rose-500: #e54562;
-  --qr-rose-600: #c72f4c;
-  --qr-rose-700: #a5203a;
-  --qr-violet-500: #8b5cf6;
-  --qr-violet-700: #7042af;
-  --qr-sky-500: #2185b0;
-  --qr-sky-700: #176282;
+
+@font-face {
+  font-family: "Martian Mono";
+  src: url("./fonts/martian-mono-latin-wght-normal.woff2") format("woff2-variations");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
 }
+
+/* ==========================================================================
+   1. PRIMITIVOS DE MARCA (Nível 1 — não consumir diretamente em componentes)
+   ========================================================================== */
+:root {
+  /* Âncoras da casa */
+  --prim-stout: #17120e;
+  --prim-papel: #f0e6d2;
+  --prim-brasa: #e8501f;
+  --prim-latao: #c99a2e;
+  --prim-lupulo: #3e7b3a;
+  --prim-cobalto: #2c5fa8;
+  --prim-carmim: #b3261e;
+  --prim-lousa: #141813;
+
+  /* Derivações tonais quentes — zero branco/preto puros */
+  --prim-stout-profundo: #100c09;
+  --prim-stout-suave: #2b221b;
+  --prim-malte-medio: #594b3e;
+  --prim-malte-claro: #746353;
+
+  --prim-papel-claro: #f7f0e2;
+  --prim-papel-rebaixo: #e5d8be;
+  --prim-papel-hover: #eae0ca;
+  --prim-papel-borda: #cfc0a3;
+  --prim-papel-forte: #b09d7b;
+
+  --prim-lousa-rebaixo: #0f120e;
+  --prim-lousa-elevada: #1c211b;
+  --prim-lousa-hover: #242a22;
+  --prim-lousa-borda: #2e362c;
+  --prim-lousa-forte: #434e40;
+
+  --prim-giz: #ede5d5;
+  --prim-giz-medio: #b0a795;
+  --prim-giz-sutil: #8c8372;
+
+  --prim-brasa-escura: #bf3b11;
+  --prim-brasa-hover-claro: #a3300c;
+  --prim-brasa-tinta: #b5360d;
+  --prim-brasa-clara: #ff7d52;
+  --prim-brasa-hover-escuro: #f26435;
+
+  --prim-latao-tinta-claro: #755308;
+  --prim-latao-tinta-escuro: #e5b94e;
+
+  --prim-lupulo-escuro: #255722;
+  --prim-lupulo-claro: #74ba6f;
+
+  --prim-cobalto-escuro: #1f4987;
+  --prim-cobalto-claro: #7aa8eb;
+
+  --prim-carmim-escuro: #941c15;
+  --prim-carmim-claro: #f2847d;
+
+  /* Tipografia */
+  --font-sans: "Archivo", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Archivo", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "Martian Mono", ui-monospace, "Cascadia Mono", "SFMono-Regular", monospace;
+
+  /* Geometria seca (0 a 4 px por padrão) */
+  --radius-none: 0px;
+  --radius-xs: 2px;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-pill: 999px;
+
+  /* Espaçamento e alvos operacionais */
+  --sidebar-collapsed: 72px;
+  --sidebar-expanded: 248px;
+  --sidebar-notch: 20px;
+  --touch-min: 48px;
+
+  /* Motion contido */
+  --ease-ticket: cubic-bezier(0.22, 1.18, 0.36, 1);
+  --ease-snap: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 120ms;
+  --dur-page: 160ms;
+}
+
+/* ==========================================================================
+   2. TOKENS SEMÂNTICOS — TEMA CLARO (Papel de Comanda + Stout + Brasa)
+   ========================================================================== */
+:root,
+[data-theme="claro"] {
+  color-scheme: light;
+
+  --surface: var(--prim-papel);
+  --surface-raised: var(--prim-papel-claro);
+  --surface-sunken: var(--prim-papel-rebaixo);
+  --surface-hover: var(--prim-papel-hover);
+  --surface-sidebar: var(--prim-stout);
+  --surface-overlay: rgba(23, 18, 14, 0.72);
+
+  --text: var(--prim-stout);
+  --text-muted: var(--prim-malte-medio);
+  --text-subtle: var(--prim-malte-claro);
+
+  --sidebar-text: var(--prim-giz);
+  --sidebar-muted: var(--prim-giz-medio);
+  --sidebar-line: var(--prim-stout-suave);
+
+  --brand: var(--prim-brasa-escura);
+  --brand-hover: var(--prim-brasa-hover-claro);
+  --brand-contrast: var(--prim-papel-claro);
+  --brand-ink: var(--prim-brasa-tinta);
+  --brand-surface: color-mix(in srgb, var(--prim-brasa) 11%, var(--prim-papel-claro));
+  --brand-border: color-mix(in srgb, var(--prim-brasa) 38%, var(--prim-papel-borda));
+
+  --accent: var(--prim-latao);
+  --accent-ink: var(--prim-latao-tinta-claro);
+  --accent-surface: color-mix(in srgb, var(--prim-latao) 14%, var(--prim-papel-claro));
+  --accent-border: color-mix(in srgb, var(--prim-latao) 42%, var(--prim-papel-borda));
+
+  --line: var(--prim-papel-borda);
+  --line-strong: var(--prim-papel-forte);
+  --focus-ring: var(--prim-brasa-tinta);
+
+  --status-success: var(--prim-lupulo-escuro);
+  --status-success-ink: var(--prim-lupulo-escuro);
+  --status-success-contrast: var(--prim-papel-claro);
+  --status-success-surface: color-mix(in srgb, var(--prim-lupulo) 13%, var(--prim-papel-claro));
+  --status-success-border: color-mix(in srgb, var(--prim-lupulo) 40%, var(--prim-papel-borda));
+
+  --status-warning: var(--prim-latao);
+  --status-warning-ink: var(--prim-latao-tinta-claro);
+  --status-warning-surface: color-mix(in srgb, var(--prim-latao) 16%, var(--prim-papel-claro));
+  --status-warning-border: color-mix(in srgb, var(--prim-latao) 46%, var(--prim-papel-borda));
+
+  --status-info: var(--prim-cobalto-escuro);
+  --status-info-ink: var(--prim-cobalto-escuro);
+  --status-info-surface: color-mix(in srgb, var(--prim-cobalto) 12%, var(--prim-papel-claro));
+  --status-info-border: color-mix(in srgb, var(--prim-cobalto) 38%, var(--prim-papel-borda));
+
+  --status-danger: var(--prim-carmim-escuro);
+  --status-danger-ink: var(--prim-carmim-escuro);
+  --status-danger-contrast: var(--prim-papel-claro);
+  --status-danger-surface: color-mix(in srgb, var(--prim-carmim) 11%, var(--prim-papel-claro));
+  --status-danger-border: color-mix(in srgb, var(--prim-carmim) 38%, var(--prim-papel-borda));
+
+  /* Aliases semânticos de aviso consumidos por regra auditada no PWA */
+  --qr-amber-500: var(--status-warning);
+  --qr-amber-700: var(--status-warning-ink);
+}
+
+/* ==========================================================================
+   3. TOKENS SEMÂNTICOS — TEMA ESCURO (Lousa Quente + Sidebar Stout Profundo)
+   ========================================================================== */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="claro"]):not([data-theme="light"]) {
+  :root:not([data-theme="claro"]) {
     color-scheme: dark;
-    --qr-white: #1c2623;
-    --qr-slate-50: #141d19;
-    --qr-slate-100: #26332c;
-    --qr-slate-200: #37483d;
-    --qr-slate-300: #506458;
-    --qr-slate-400: #a0b4a7;
-    --qr-slate-500: #b0c3b7;
-    --qr-slate-600: #c3d2c8;
-    --qr-slate-700: #d7e2da;
-    --qr-slate-800: #e5ede7;
-    --qr-navy-500: #99b5a3;
-    --qr-navy-700: #bed5c6;
-    --qr-navy-800: #d6e5da;
-    --qr-navy-900: #eef4ef;
-    --qr-brand-50: #3b2822;
-    --qr-brand-400: #f49a82;
-    --qr-brand-500: #f1846e;
-    --qr-brand-600: #f79a87;
-    --qr-brand-700: #ffb5a2;
-    --qr-teal-400: #88cba4;
-    --qr-teal-500: #72bc92;
-    --qr-teal-600: #88cba4;
-    --qr-teal-700: #a3dfbc;
-    --qr-page: #141d19;
-    --qr-text: #eef4ef;
-    --qr-grad-from: #eef4ef;
-    --qr-stroke: rgba(238, 244, 239, 0.28);
-    --qr-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    --qr-card-shadow-deep: 0 8px 28px -16px rgba(0, 0, 0, 0.4);
-    --qr-scrollbar: #506458;
-    --qr-amber-500: #edb44f;
-    --qr-amber-700: #f4ce82;
-    --qr-rose-400: #fb7185;
-    --qr-rose-500: #f46780;
-    --qr-rose-600: #ff94a6;
-    --qr-rose-700: #ffafbd;
-    --qr-violet-500: #ae8af0;
-    --qr-violet-700: #d0b5f7;
-    --qr-sky-500: #6ebde1;
-    --qr-sky-700: #9ed8f1;
+    --surface: var(--prim-lousa);
+    --surface-raised: var(--prim-lousa-elevada);
+    --surface-sunken: var(--prim-lousa-rebaixo);
+    --surface-hover: var(--prim-lousa-hover);
+    --surface-sidebar: var(--prim-stout-profundo);
+    --surface-overlay: rgba(16, 12, 9, 0.82);
+    --text: var(--prim-giz);
+    --text-muted: var(--prim-giz-medio);
+    --text-subtle: var(--prim-giz-sutil);
+    --sidebar-text: var(--prim-giz);
+    --sidebar-muted: var(--prim-giz-medio);
+    --sidebar-line: var(--prim-stout-suave);
+    --brand: var(--prim-brasa);
+    --brand-hover: var(--prim-brasa-hover-escuro);
+    --brand-contrast: var(--prim-stout);
+    --brand-ink: var(--prim-brasa-clara);
+    --brand-surface: color-mix(in srgb, var(--prim-brasa) 16%, var(--prim-lousa-elevada));
+    --brand-border: color-mix(in srgb, var(--prim-brasa) 44%, var(--prim-lousa-borda));
+    --accent: var(--prim-latao);
+    --accent-ink: var(--prim-latao-tinta-escuro);
+    --accent-surface: color-mix(in srgb, var(--prim-latao) 16%, var(--prim-lousa-elevada));
+    --accent-border: color-mix(in srgb, var(--prim-latao) 44%, var(--prim-lousa-borda));
+    --line: var(--prim-lousa-borda);
+    --line-strong: var(--prim-lousa-forte);
+    --focus-ring: var(--prim-brasa-clara);
+    --status-success: var(--prim-lupulo);
+    --status-success-ink: var(--prim-lupulo-claro);
+    --status-success-contrast: var(--prim-giz);
+    --status-success-surface: color-mix(in srgb, var(--prim-lupulo) 18%, var(--prim-lousa-elevada));
+    --status-success-border: color-mix(in srgb, var(--prim-lupulo) 48%, var(--prim-lousa-borda));
+    --status-warning: var(--prim-latao);
+    --status-warning-ink: var(--prim-latao-tinta-escuro);
+    --status-warning-surface: color-mix(in srgb, var(--prim-latao) 18%, var(--prim-lousa-elevada));
+    --status-warning-border: color-mix(in srgb, var(--prim-latao) 48%, var(--prim-lousa-borda));
+    --status-info: var(--prim-cobalto);
+    --status-info-ink: var(--prim-cobalto-claro);
+    --status-info-surface: color-mix(in srgb, var(--prim-cobalto) 20%, var(--prim-lousa-elevada));
+    --status-info-border: color-mix(in srgb, var(--prim-cobalto) 48%, var(--prim-lousa-borda));
+    --status-danger: var(--prim-carmim);
+    --status-danger-ink: var(--prim-carmim-claro);
+    --status-danger-contrast: var(--prim-giz);
+    --status-danger-surface: color-mix(in srgb, var(--prim-carmim) 20%, var(--prim-lousa-elevada));
+    --status-danger-border: color-mix(in srgb, var(--prim-carmim) 48%, var(--prim-lousa-borda));
+    --qr-amber-500: var(--status-warning);
+    --qr-amber-700: var(--status-warning-ink);
   }
 }
+
 :root[data-theme="escuro"],
-:root[data-theme="dark"],
-html.dark {
+[data-theme="escuro"],
+.dark {
   color-scheme: dark;
-  --qr-white: #1c2623;
-  --qr-slate-50: #141d19;
-  --qr-slate-100: #26332c;
-  --qr-slate-200: #37483d;
-  --qr-slate-300: #506458;
-  --qr-slate-400: #a0b4a7;
-  --qr-slate-500: #b0c3b7;
-  --qr-slate-600: #c3d2c8;
-  --qr-slate-700: #d7e2da;
-  --qr-slate-800: #e5ede7;
-  --qr-navy-500: #99b5a3;
-  --qr-navy-700: #bed5c6;
-  --qr-navy-800: #d6e5da;
-  --qr-navy-900: #eef4ef;
-  --qr-brand-50: #3b2822;
-  --qr-brand-400: #f49a82;
-  --qr-brand-500: #f1846e;
-  --qr-brand-600: #f79a87;
-  --qr-brand-700: #ffb5a2;
-  --qr-teal-400: #88cba4;
-  --qr-teal-500: #72bc92;
-  --qr-teal-600: #88cba4;
-  --qr-teal-700: #a3dfbc;
-  --qr-page: #141d19;
-  --qr-text: #eef4ef;
-  --qr-grad-from: #eef4ef;
-  --qr-stroke: rgba(238, 244, 239, 0.28);
-  --qr-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  --qr-card-shadow-deep: 0 8px 28px -16px rgba(0, 0, 0, 0.4);
-  --qr-scrollbar: #506458;
-  --qr-amber-500: #edb44f;
-  --qr-amber-700: #f4ce82;
-  --qr-rose-400: #fb7185;
-  --qr-rose-500: #f46780;
-  --qr-rose-600: #ff94a6;
-  --qr-rose-700: #ffafbd;
-  --qr-violet-500: #ae8af0;
-  --qr-violet-700: #d0b5f7;
-  --qr-sky-500: #6ebde1;
-  --qr-sky-700: #9ed8f1;
+
+  --surface: var(--prim-lousa);
+  --surface-raised: var(--prim-lousa-elevada);
+  --surface-sunken: var(--prim-lousa-rebaixo);
+  --surface-hover: var(--prim-lousa-hover);
+  --surface-sidebar: var(--prim-stout-profundo);
+  --surface-overlay: rgba(16, 12, 9, 0.82);
+
+  --text: var(--prim-giz);
+  --text-muted: var(--prim-giz-medio);
+  --text-subtle: var(--prim-giz-sutil);
+
+  --sidebar-text: var(--prim-giz);
+  --sidebar-muted: var(--prim-giz-medio);
+  --sidebar-line: var(--prim-stout-suave);
+
+  --brand: var(--prim-brasa);
+  --brand-hover: var(--prim-brasa-hover-escuro);
+  --brand-contrast: var(--prim-stout);
+  --brand-ink: var(--prim-brasa-clara);
+  --brand-surface: color-mix(in srgb, var(--prim-brasa) 16%, var(--prim-lousa-elevada));
+  --brand-border: color-mix(in srgb, var(--prim-brasa) 44%, var(--prim-lousa-borda));
+
+  --accent: var(--prim-latao);
+  --accent-ink: var(--prim-latao-tinta-escuro);
+  --accent-surface: color-mix(in srgb, var(--prim-latao) 16%, var(--prim-lousa-elevada));
+  --accent-border: color-mix(in srgb, var(--prim-latao) 44%, var(--prim-lousa-borda));
+
+  --line: var(--prim-lousa-borda);
+  --line-strong: var(--prim-lousa-forte);
+  --focus-ring: var(--prim-brasa-clara);
+
+  --status-success: var(--prim-lupulo);
+  --status-success-ink: var(--prim-lupulo-claro);
+  --status-success-contrast: var(--prim-giz);
+  --status-success-surface: color-mix(in srgb, var(--prim-lupulo) 18%, var(--prim-lousa-elevada));
+  --status-success-border: color-mix(in srgb, var(--prim-lupulo) 48%, var(--prim-lousa-borda));
+
+  --status-warning: var(--prim-latao);
+  --status-warning-ink: var(--prim-latao-tinta-escuro);
+  --status-warning-surface: color-mix(in srgb, var(--prim-latao) 18%, var(--prim-lousa-elevada));
+  --status-warning-border: color-mix(in srgb, var(--prim-latao) 48%, var(--prim-lousa-borda));
+
+  --status-info: var(--prim-cobalto);
+  --status-info-ink: var(--prim-cobalto-claro);
+  --status-info-surface: color-mix(in srgb, var(--prim-cobalto) 20%, var(--prim-lousa-elevada));
+  --status-info-border: color-mix(in srgb, var(--prim-cobalto) 48%, var(--prim-lousa-borda));
+
+  --status-danger: var(--prim-carmim);
+  --status-danger-ink: var(--prim-carmim-claro);
+  --status-danger-contrast: var(--prim-giz);
+  --status-danger-surface: color-mix(in srgb, var(--prim-carmim) 20%, var(--prim-lousa-elevada));
+  --status-danger-border: color-mix(in srgb, var(--prim-carmim) 48%, var(--prim-lousa-borda));
+
+  --qr-amber-500: var(--status-warning);
+  --qr-amber-700: var(--status-warning-ink);
 }

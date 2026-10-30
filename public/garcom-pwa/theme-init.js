@@ -1,29 +1,54 @@
-/* Tema antes do primeiro paint — sem flash em nenhum dos dois sentidos.
-         Valores canônicos: "claro" | "escuro" (aceita legados "light"/"dark").
-         Fallback inline cobre CSS antigo em cache; classes p/ CSS legado. */
 (function () {
-  var t;
+  var CHAVE = "qradmin-tema";
+  var TEMAS = {
+    claro: {
+      "--surface": "#f0e6d2",
+      "--surface-raised": "#f7f0e2",
+      "--surface-sunken": "#e5d8be",
+      "--surface-sidebar": "#17120e",
+      "--text": "#17120e",
+      "--text-muted": "#594b3e",
+      "--brand": "#bf3b11",
+      "--brand-contrast": "#f7f0e2",
+      "--brand-ink": "#b5360d",
+      "--accent": "#c99a2e",
+      "--line": "#cfc0a3",
+      "--line-strong": "#b09d7b",
+    },
+    escuro: {
+      "--surface": "#141813",
+      "--surface-raised": "#1c211b",
+      "--surface-sunken": "#0f120e",
+      "--surface-sidebar": "#100c09",
+      "--text": "#ede5d5",
+      "--text-muted": "#b0a795",
+      "--brand": "#e8501f",
+      "--brand-contrast": "#17120e",
+      "--brand-ink": "#ff7d52",
+      "--accent": "#c99a2e",
+      "--line": "#2e362c",
+      "--line-strong": "#434e40",
+    },
+  };
+  var tema = "claro";
   try {
-    t = localStorage.getItem("qradmin-tema");
-  } catch (e) {}
-  if (t === "dark") t = "escuro";
-  if (t === "light") t = "claro";
-  if (t !== "claro" && t !== "escuro")
-    t =
-      window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "escuro"
-        : "claro";
-  var root = document.documentElement;
-  root.setAttribute("data-theme", t);
-  root.classList.toggle("dark", t === "escuro");
-  if (t === "escuro") {
-    root.style.setProperty("--qr-page", "#141d19");
-    root.style.setProperty("--qr-text", "#eef4ef");
-    root.style.setProperty("--qr-white", "#1c2623");
-  } else {
-    root.style.setProperty("--qr-page", "#f5f7f4");
-    root.style.setProperty("--qr-text", "#21382b");
-    root.style.setProperty("--qr-white", "#ffffff");
+    var salvo = localStorage.getItem(CHAVE);
+    if (salvo === "escuro" || salvo === "claro") tema = salvo;
+    else if (salvo === "dark") tema = "escuro";
+    else if (salvo === "light") tema = "claro";
+    else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      tema = "escuro";
+    }
+  } catch (_) {
+    if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      tema = "escuro";
+    }
   }
+  var root = document.documentElement;
+  root.setAttribute("data-theme", tema);
+  root.classList.toggle("dark", tema === "escuro");
+  var vars = TEMAS[tema];
+  for (var nome in vars) root.style.setProperty(nome, vars[nome]);
+  var meta = document.querySelector && document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", vars["--surface"]);
 })();
