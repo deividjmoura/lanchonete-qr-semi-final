@@ -16,6 +16,7 @@ const {
   setStatusItem,
   setStatusPedido,
   avancarStatusItem,
+  listarHistoricoPedido,
   ErroPedido,
 } = require('./db/pedidos');
 const { informarPixPago, ErroPixCliente } = require('./db/pix-cliente');
@@ -64,7 +65,7 @@ const {
 } = require('./db/auth');
 const { golpePermitido } = require('./db/rateLimit');
 const { resolveClientIp, loginUserRateLimitKey } = require('./security/client-ip');
-const { ErroAtendimento, listarMesasGarcom, iniciarAtendimentoGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
+const { ErroAtendimento, transferirMesaAdmin, listarMesasGarcom, iniciarAtendimentoGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
 const { normalizarChavePix, inspecionarChavePix } = require('./db/pix-normaliza');
 const { subscribe, broadcast } = require('./db/events');
 const pool = require('./db/pool');
@@ -80,6 +81,8 @@ const {
   getGarcomPorToken,
   entregarComoGarcom,
   assumirEntregaComoGarcom,
+  retirarComoGarcom,
+  historicoPedidoGarcom,
   listPedidosRecentes,
 } = require('./db/garcons');
 const { resumoDia, topProdutosHoje } = require('./db/dashboard');
@@ -87,6 +90,7 @@ const { relatorioVendas } = require('./db/relatorio');
 const { purgeHistorico, ErroPurge } = require('./db/purge');
 const { processarUploadFoto, ErroFoto } = require('./db/foto');
 const { carregarFotoProduto } = require('./db/foto-serve');
+const { cancelarItem, liberarAceite } = require('./db/itens-operacoes');
 
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
@@ -341,7 +345,7 @@ const server = http.createServer(async (req, res) => {
         return json(res, 429, { error: 'Muitos pedidos em pouco tempo. Aguarde um instante.' });
       }
       try {
-        const pedido = await criarPedido(m[1], await body(req));
+        const pedido = await criarPedido(m[1], await body(req), null, reqId);
         broadcast('update', { type: 'pedido_criado', pedidoId: pedido.id, mesaToken: m[1] });
         return json(res, 201, pedido);
       } catch (e) {
@@ -424,9 +428,10 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/pedidos\/(\d+)\/assumir-entrega$/)) && req.method === 'POST') {
       try {
-        await body(req);
-        const out = await assumirEntregaComoGarcom(Number(m[2]), m[1], reqId);
-        broadcast('update', { type: 'entrega_assumida', pedidoId: Number(m[2]), garcom: out.garcom?.nome });
+        const payload = await body(req);
+        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return json(res,400,{error:'Corpo de aceite inválido'});
+        const out = await assumirEntregaComoGarcom(Number(m[2]), m[1], reqId, payload.itemIds ?? null);
+        broadcast('update', { type: 'entrega_assumida', pedidoId: Number(m[2]), itens: out.itensAfetados, responsavelMesaId: out.responsavelMesa?.id });
         return json(res, 200, out);
       } catch (e) {
         if (e instanceof ErroGarcom) return json(res, e.status, { error: e.message });
@@ -434,13 +439,28 @@ const server = http.createServer(async (req, res) => {
         throw e;
       }
     }
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/pedidos\/(\d+)\/retirar$/)) && req.method === 'POST') {
+      try {
+        const payload=await body(req);
+        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return json(res,400,{error:'Corpo de retirada inválido'});
+        const out=await retirarComoGarcom(Number(m[2]),m[1],reqId,payload.itemIds??null);
+        broadcast('update',{type:'itens_retirados',pedidoId:out.id,itens:out.itensAfetados});
+        return json(res,200,out);
+      } catch(e) {if(e.status>=400&&e.status<500)return json(res,e.status,{error:e.message});throw e;}
+    }
+    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/pedidos\/(\d+)\/historico$/)) && req.method === 'GET') {
+      try { return json(res,200,await historicoPedidoGarcom(m[1],Number(m[2]))); }
+      catch(e) { if(e instanceof ErroGarcom)return json(res,e.status,{error:e.message}); throw e; }
+    }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/pedidos\/(\d+)\/entregar$/)) && req.method === 'POST') {
       try {
         /* body(req) já devolve {} quando não há corpo; o catch voraz transformava
            JSON quebrado em "entregar tudo". Sem ele, 400 honesto. */
         const payload = await body(req);
-        const itemIds = payload && (payload.itemIds || payload.itens || payload.ids);
-        const out = await entregarComoGarcom(Number(m[2]), m[1], itemIds || null, reqId);
+        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return json(res,400,{error:'Corpo de entrega inválido'});
+        const itemIds = payload.itemIds ?? payload.itens ?? payload.ids ?? null;
+        const etapa = payload.etapa === 'entregar' ? 'entregar' : 'entrega_direta';
+        const out = await entregarComoGarcom(Number(m[2]), m[1], itemIds, reqId, etapa);
         broadcast('update', {
           type: 'status_alterado',
           pedidoId: Number(m[2]),
@@ -549,7 +569,7 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/pedidos$/)) && req.method === 'POST') {
       try {
-        const pedido = await criarPedidoGarcom(m[1], m[2], await body(req));
+        const pedido = await criarPedidoGarcom(m[1], m[2], await body(req), reqId);
         if (!pedido.idempotentReplay) broadcast('update', { type: 'pedido_novo', mesa: pedido.mesa });
         return json(res, pedido.idempotentReplay ? 200 : 201, pedido);
       } catch (e) {
@@ -672,7 +692,8 @@ const server = http.createServer(async (req, res) => {
     if ((m = p.match(/^\/api\/(cozinha|bar)\/itens\/(\d+)\/status$/)) && req.method === 'PATCH') {
       try {
         const setor = m[1];
-        const out = await setStatusItem(Number(m[2]), (await body(req)).status, setor);
+        const staff=await getStaffDaRequisicao(req);
+        const out = await setStatusItem(Number(m[2]), (await body(req)).status, setor, {tipo:'staff',id:staff.id,nome:staff.nome}, reqId);
         broadcast('update', {
           type: 'item_status',
           itemId: out.itemId,
@@ -719,7 +740,7 @@ const server = http.createServer(async (req, res) => {
         if (payload.setor === 'bar' || payload.setor === 'cozinha') {
           if (papel === 'admin' || papel === payload.setor) setor = payload.setor;
         }
-        const out = await setStatusPedido(Number(m[1]), payload.status, setor);
+        const out = await setStatusPedido(Number(m[1]), payload.status, setor, {tipo:'staff',id:staff.id,nome:staff.nome}, reqId);
         broadcast('update', {
           type: 'status_alterado',
           pedidoId: Number(m[1]),
@@ -807,6 +828,35 @@ const server = http.createServer(async (req, res) => {
         if (e instanceof ErroAuth) return json(res, e.status, erroAuthJson(e));
         throw e;
       }
+    }
+    if ((m=p.match(/^\/api\/admin\/mesas\/(\d+)\/transferir$/)) && req.method==='POST') {
+      try {
+        const payload=await body(req);
+        const staff=await getStaffDaRequisicao(req);
+        const out=await transferirMesaAdmin(staff,Number(m[1]),payload?.garcomDestinoId,reqId);
+        broadcast('update',{type:'mesa_transferida',mesa:out.mesa,para:out.garcomResponsavelId});
+        return json(res,200,out);
+      } catch(e) { if(e instanceof ErroAtendimento)return json(res,e.status,{error:e.message}); throw e; }
+    }
+    if ((m=p.match(/^\/api\/admin\/pedidos\/(\d+)\/historico$/)) && req.method==='GET') {
+      return json(res,200,{pedidoId:Number(m[1]),itens:await listarHistoricoPedido(pool,Number(m[1]))});
+    }
+    if ((m=p.match(/^\/api\/admin\/itens\/(\d+)\/liberar-aceite$/)) && req.method==='POST') {
+      try {
+        const staff=await getStaffDaRequisicao(req);
+        const out=await liberarAceite(Number(m[1]),{tipo:'staff',id:staff.id,nome:staff.nome},reqId);
+        broadcast('update',{type:'item_status',itemId:out.itemId,pedidoId:out.pedidoId,status:out.status});
+        return json(res,200,out);
+      } catch(e) { if(e.status>=400&&e.status<500)return json(res,e.status,{error:e.message}); throw e; }
+    }
+    if ((m=p.match(/^\/api\/(admin|caixa)\/itens\/(\d+)\/cancelar$/)) && req.method==='POST') {
+      try {
+        const payload=await body(req);
+        const staff=await getStaffDaRequisicao(req);
+        const out=await cancelarItem(Number(m[2]),{tipo:'staff',id:staff.id,nome:staff.nome},payload?.motivo,reqId);
+        if(!out.idempotentReplay)broadcast('update',{type:'item_cancelado',itemId:out.itemId,pedidoId:out.pedidoId,status:out.status});
+        return json(res,200,out);
+      } catch(e) { if(e.status>=400&&e.status<500)return json(res,e.status,{error:e.message}); throw e; }
     }
     if (p === '/api/admin/garcons/metricas' && req.method === 'GET') {
       try { return json(res, 200, await metricasGarcons({ data: u.searchParams.get('data') })); }
@@ -1238,8 +1288,8 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, async () => {
-  console.log(`🍔 Lanchonete QR V2: http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', async () => {
+  console.log(`🍔 Lanchonete QR V2: http://0.0.0.0:${PORT}`);
   // Auto-migrate best-effort: aplica migrations pendentes na inicialização
   // (idempotente — já aplicadas são puladas). Nunca derruba o servidor.
   try {

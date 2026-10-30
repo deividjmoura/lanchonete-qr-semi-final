@@ -246,7 +246,7 @@ async function lerSessoesAbertas(client) {
           total: totalPedido,
         });
       }
-      if (p.status !== 'entregue') pendentes += 1;
+      if (!['entregue','cancelado'].includes(p.status)) pendentes += 1;
     }
     const pagamentos = pagBySessao.get(s.id) || [];
     const valorPago = Number(pagamentos.reduce((acc, p) => acc + p.valor, 0).toFixed(2));
@@ -266,13 +266,20 @@ async function lerSessoesAbertas(client) {
       pixAvisos: avisosBySessao.get(s.id) || [],
       pedidosEntregues: entregues,
       pedidosPendentes: pendentes,
+      pedidosCancelados: lista.filter((p) => p.status === 'cancelado').length,
       podeFechar: pendentes === 0,
     };
   }).filter((sessao) => {
     const semAvisos = sessao.pixAvisos.length === 0;
-    const semPedidos = sessao.pedidosEntregues.length === 0 && sessao.pedidosPendentes === 0;
+    // Comanda só com itens cancelados não tem valor a cobrar, mas continua
+    // ocupando a mesa: precisa aparecer no caixa para ser encerrada. Esconder
+    // o card (regra antiga de "sessão vazia") deixava a mesa presa para sempre.
+    const somenteCancelados = sessao.pedidosCancelados > 0
+      && sessao.pedidosEntregues.length === 0
+      && sessao.pedidosPendentes === 0;
+    const semPedidos = sessao.pedidosEntregues.length === 0 && sessao.pedidosPendentes === 0 && !somenteCancelados;
     const vazia = semPedidos && sessao.pagamentos.length === 0 && semAvisos;
-    const quitada = sessao.pedidosPendentes === 0 && sessao.valorRestante <= 0.009 && semAvisos;
+    const quitada = sessao.pedidosPendentes === 0 && sessao.valorRestante <= 0.009 && semAvisos && !somenteCancelados;
     // Não altera banco durante GET: apenas remove cards sem trabalho financeiro/operacional.
     return !vazia && !quitada;
   });
@@ -388,7 +395,7 @@ async function registrarPagamento(sessaoIdBruto, body, operadorNome = null, garc
     let sessaoFechada = false;
     if (Math.abs(total - valorPago) <= 0.009) {
       const { rows: pedidosPendentes } = await client.query(
-        `SELECT COUNT(*)::int AS n FROM pedidos WHERE sessao_id=$1 AND status <> 'entregue'`,
+        `SELECT COUNT(*)::int AS n FROM pedidos WHERE sessao_id=$1 AND status NOT IN ('entregue','cancelado')`,
         [sessaoId]
       );
       const { rows: avisosPixPendentes } = await client.query(
@@ -538,7 +545,7 @@ async function fecharSessao(sessaoIdBruto, body, operadorNome = null, opcoes = {
 
     const { rows: pendentes } = await client.query(
       `SELECT COUNT(*)::int AS n FROM pedidos
-       WHERE sessao_id = $1 AND status <> 'entregue'`,
+       WHERE sessao_id = $1 AND status NOT IN ('entregue','cancelado')`,
       [sessaoId]
     );
     if (pendentes[0].n > 0) {

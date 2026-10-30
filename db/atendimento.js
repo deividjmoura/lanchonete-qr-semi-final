@@ -208,7 +208,7 @@ async function transferirMesa(token, numeroBruto, garcomDestinoBruto, requestId 
     // Não bloqueamos a linha da mesa aqui: fechamento/início podem usar a ordem
     // mesa → sessão. A transferência bloqueia somente a sessão para evitar deadlocks.
     const { rows: mesaRows } = await client.query(
-      'SELECT id FROM mesas WHERE numero=$1', [numero]);
+      'SELECT id FROM mesas WHERE numero=$1 FOR UPDATE', [numero]);
     const mesa = mesaRows[0];
     if (!mesa) throw new ErroAtendimento(404, 'Mesa não encontrada');
 
@@ -324,7 +324,7 @@ async function deixarMesa(token, numeroBruto, requestId = null) {
     const {rows:pendentes}=await client.query(`
       SELECT COUNT(*)::int AS total FROM pedidos p
       JOIN itens_pedido ip ON ip.pedido_id=p.id
-      WHERE p.sessao_id=$1 AND COALESCE(ip.status,'recebido') <> 'entregue'`,[sessoes[0].id]);
+      WHERE p.sessao_id=$1 AND COALESCE(ip.status,'recebido') NOT IN ('entregue','cancelado')`,[sessoes[0].id]);
     if(pendentes[0].total>0)throw new ErroAtendimento(409,'Existem itens ainda não entregues. Entregue-os ou transfira a mesa para outro garçom antes de deixá-la.');
     await client.query('UPDATE mesa_sessoes SET garcom_responsavel_id=NULL WHERE id=$1',[sessoes[0].id]);
     await registrarEvento(client, {
@@ -337,28 +337,38 @@ async function deixarMesa(token, numeroBruto, requestId = null) {
     return {mesa:numero,liberada:true,sessaoId:sessoes[0].id};
   }catch(e){await client.query('ROLLBACK').catch(()=>{});throw e}finally{client.release()}
 }
-async function criarPedidoGarcom(token, numeroBruto, body) {
+async function criarPedidoGarcom(token, numeroBruto, body, requestId=null) {
   const garcom = await validarGarcom(token);
   const numero = Number(numeroBruto);
   if (!Number.isSafeInteger(numero) || numero < 1 || numero > 70) {
     throw new ErroAtendimento(400, 'Número de mesa inválido');
   }
+  const { rows: mesas } = await pool.query('SELECT token FROM mesas WHERE numero=$1', [numero]);
+  if (!mesas[0]) throw new ErroAtendimento(404, 'Mesa não encontrada');
   // Qualquer garçom ativo pode acrescentar itens a uma sessão aberta que
   // já tem responsável. A responsabilidade da mesa continua com o titular;
   // assumir/transferir é uma ação separada e nunca deve ocorrer implicitamente.
-  const { rows } = await pool.query(
-    `SELECT m.token FROM mesas m
-      JOIN mesa_sessoes s ON s.mesa_id=m.id AND s.status='aberta'
-      WHERE m.numero=$1 AND s.garcom_responsavel_id IS NOT NULL`,
+  const { rows: atribuidas } = await pool.query(
+    `SELECT s.id FROM mesa_sessoes s JOIN mesas m ON m.id=s.mesa_id
+      WHERE m.numero=$1 AND s.status='aberta' AND s.garcom_responsavel_id IS NOT NULL`,
     [numero]
   );
-  if (!rows[0]) throw new ErroAtendimento(409, 'A mesa precisa ter um atendimento aberto com garçom responsável');
+  // Replay tardio: o celular pode reenviar um pedido já gravado depois de a
+  // comanda ter sido fechada. Exigir sessão aberta ANTES do replay devolvia
+  // 409 para um pedido que o servidor já tinha aceito, e o aparelho ficava com
+  // uma pendência eterna em conflito. Com chave de idempotência deixamos o
+  // criarPedido resolver: replay devolve o original; pedido realmente novo
+  // ainda é recusado lá dentro (a sessão criada é desfeita no rollback).
+  const temChave = Boolean(body && typeof body === 'object' && (body.idempotencyKey || body.idempotency_key));
+  if (!atribuidas[0] && !temChave) {
+    throw new ErroAtendimento(409, 'A mesa precisa ter um atendimento aberto com garçom responsável');
+  }
   const { criarPedido } = require('./pedidos');
-  return criarPedido(rows[0].token, body, {
+  return criarPedido(mesas[0].token, body, {
     garcomId: garcom.id,
     garcomNome: garcom.nome,
     pedidoPaiId: body && body.pedidoPaiId,
-  });
+  }, requestId);
 }
 
 async function listarPedidosAtivosMesa(token, numeroBruto) {
@@ -381,7 +391,7 @@ async function listarPedidosAtivosMesa(token, numeroBruto) {
       LEFT JOIN produtos pr ON pr.id=ip.produto_id
      WHERE m.numero=$1
        AND s.garcom_responsavel_id IS NOT NULL
-       AND p.status <> 'entregue'
+       AND p.status NOT IN ('entregue','cancelado')
      GROUP BY p.id
      ORDER BY p.criado_em DESC
      LIMIT 50`, [numero]);
@@ -398,28 +408,33 @@ async function listarAtendimentosGarcom(token) {
   const garcom=await validarGarcom(token);
   const {rows}=await pool.query(`
     SELECT p.id,p.status,p.criado_em,p.editado_em,p.cliente_nome,p.observacao_geral,p.pedido_pai_id,
-           m.numero AS mesa,s.id AS sessao_id,
+           m.numero AS mesa,s.id AS sessao_id,s.garcom_responsavel_id,gr.nome AS garcom_responsavel_nome,
            COALESCE(json_agg(json_build_object(
-             'id',ip.id,'productId',ip.produto_id,'nome',pr.nome,
-             'qty',ip.quantidade,'unitPrice',ip.preco_unitario,
-             'status',COALESCE(ip.status,'recebido'),'setor',COALESCE(pr.setor,'cozinha'),
-             'note',ip.observacao,
-             'additions',(SELECT COALESCE(json_agg(json_build_object('id',a.adicional_id)),'[]'::json) FROM itens_pedido_adicionais a WHERE a.item_pedido_id=ip.id),
+             'id',ip.id,'productId',ip.produto_id,'nome',pr.nome,'qty',ip.quantidade,'unitPrice',ip.preco_unitario,
+             'status',ip.status,'setor',ip.setor,'note',ip.observacao,'pontoCarne',ip.ponto_carne,
+             'garcomAceitoId',ip.aceito_por_id,'garcomAceitoNome',ga.nome,'garcomRetirouId',ip.retirado_por_id,
+             'garcomRetirouNome',gret.nome,'garcomEntregouId',ip.entregue_por_id,'garcomEntregouNome',ge.nome,
+             'prontoEm',ip.pronto_em,'aceitoEm',ip.aceito_em,'retiradoEm',ip.retirado_em,'entregueEm',ip.entregue_em,
+             'additions',(SELECT COALESCE(json_agg(json_build_object('id',a.adicional_id,'nome',ad.nome)),'[]'::json)
+               FROM itens_pedido_adicionais a JOIN adicionais ad ON ad.id=a.adicional_id WHERE a.item_pedido_id=ip.id),
              'removals',(SELECT COALESCE(json_agg(ing.ingrediente),'[]'::json) FROM itens_pedido_remocoes ing WHERE ing.item_pedido_id=ip.id)
            ) ORDER BY ip.id) FILTER(WHERE ip.id IS NOT NULL),'[]'::json) AS itens
-    FROM mesa_sessoes s
-    JOIN mesas m ON m.id=s.mesa_id
-    JOIN pedidos p ON p.sessao_id=s.id
-    LEFT JOIN itens_pedido ip ON ip.pedido_id=p.id
-    LEFT JOIN produtos pr ON pr.id=ip.produto_id
-    WHERE s.status='aberta' AND s.garcom_responsavel_id=$1
-    GROUP BY p.id,m.numero,s.id
-    ORDER BY p.criado_em DESC LIMIT 250`,[garcom.id]);
+    FROM mesa_sessoes s JOIN mesas m ON m.id=s.mesa_id JOIN pedidos p ON p.sessao_id=s.id
+    LEFT JOIN garcons gr ON gr.id=s.garcom_responsavel_id
+    LEFT JOIN itens_pedido ip ON ip.pedido_id=p.id LEFT JOIN produtos pr ON pr.id=ip.produto_id
+    LEFT JOIN garcons ga ON ga.id=ip.aceito_por_id LEFT JOIN garcons gret ON gret.id=ip.retirado_por_id
+    LEFT JOIN garcons ge ON ge.id=ip.entregue_por_id
+    WHERE s.status='aberta' AND (s.garcom_responsavel_id=$1 OR EXISTS (
+      SELECT 1 FROM itens_pedido mine WHERE mine.pedido_id=p.id AND (mine.aceito_por_id=$1 OR mine.retirado_por_id=$1)
+    ))
+    GROUP BY p.id,m.numero,s.id,gr.nome ORDER BY p.criado_em DESC LIMIT 250`,[garcom.id]);
   return rows.map(x=>({id:x.id,mesa:x.mesa,sessaoId:x.sessao_id,status:x.status,
+    garcomResponsavelId:x.garcom_responsavel_id,garcomResponsavelNome:x.garcom_responsavel_nome,
     pedidoPaiId:x.pedido_pai_id||null,criadoEm:x.criado_em,editadoEm:x.editado_em,clienteNome:x.cliente_nome,
     note:x.observacao_geral,itens:x.itens,
-    podeEditar:x.status==='recebido'&&x.itens.every(i=>i.status==='recebido')}));
+    podeEditar:Number(x.garcom_responsavel_id)===Number(garcom.id)&&x.status==='recebido'&&x.itens.every(i=>i.status==='recebido')}));
 }
+
 async function editarPedidoGarcom(token,pedidoId,body,requestId=null){
   const garcom=await validarGarcom(token);
   const id=Number(pedidoId);
@@ -449,11 +464,35 @@ async function metricasGarcons({ data } = {}) {
     FROM garcons g
     LEFT JOIN mesa_sessoes s
       ON s.garcom_responsavel_id=g.id AND s.status='fechada'
-     AND (s.fechada_em AT TIME ZONE 'America/Sao_Paulo')::date = $1::date
+     AND (s.fechada_em AT TIME ZONE $2)::date = $1::date
     GROUP BY g.id, g.nome, g.ativo
-    ORDER BY vendas DESC, g.nome ASC`, [dia]);
+    ORDER BY vendas DESC, g.nome ASC`, [dia, process.env.APP_TIMEZONE || 'America/Sao_Paulo']);
   return { data: dia, criterio: 'contas fechadas atribuídas ao responsável pela sessão',
     garcons: rows.map(x=>({ id:x.id, nome:x.nome, ativo:x.ativo, atendimentos:x.atendimentos,
       vendas:Number(x.vendas), ticketMedio:Number(x.ticket_medio) })) };
 }
-module.exports={ ErroAtendimento, listarMesasGarcom, iniciarAtendimentoGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons };
+async function transferirMesaAdmin(staff,numeroBruto,destinoBruto,requestId=null) {
+  const numero=Number(numeroBruto),destinoId=Number(destinoBruto);
+  if(!Number.isSafeInteger(numero)||numero<1||numero>70||!Number.isSafeInteger(destinoId)||destinoId<1)throw new ErroAtendimento(400,'Mesa ou garçom de destino inválido');
+  const client=await pool.connect();
+  try{
+    await client.query('BEGIN');
+    const {rows:mesas}=await client.query('SELECT id FROM mesas WHERE numero=$1 FOR UPDATE',[numero]);
+    if(!mesas[0])throw new ErroAtendimento(404,'Mesa não encontrada');
+    const {rows:sessoes}=await client.query("SELECT id,garcom_responsavel_id FROM mesa_sessoes WHERE mesa_id=$1 AND status='aberta' FOR UPDATE",[mesas[0].id]);
+    if(!sessoes[0])throw new ErroAtendimento(409,'Não há atendimento aberto para transferir');
+    const {rows:destinos}=await client.query('SELECT id,nome,ativo FROM garcons WHERE id=$1 FOR SHARE',[destinoId]);
+    if(!destinos[0]?.ativo)throw new ErroAtendimento(409,'O garçom de destino não está ativo');
+    const anterior=sessoes[0].garcom_responsavel_id;
+    if(Number(anterior)===destinoId)throw new ErroAtendimento(409,'Este garçom já é o responsável pela mesa');
+    await client.query('UPDATE mesa_sessoes SET garcom_responsavel_id=$2 WHERE id=$1',[sessoes[0].id,destinoId]);
+    await client.query(`INSERT INTO mesa_atendimento_historico
+      (sessao_id,garcom_anterior_id,garcom_novo_id,alterado_por_staff_id) VALUES ($1,$2,$3,$4)`,[sessoes[0].id,anterior,destinoId,staff.id]);
+    await registrarEvento(client,{atorTipo:'staff',atorId:staff.id,atorNome:staff.nome,acao:'mesa_transferida',alvoTipo:'mesa_sessao',alvoId:sessoes[0].id,
+      requestId,contexto:{mesa:numero,garcomAnteriorId:anterior,garcomNovoId:destinoId,origem:'admin'}});
+    await client.query('COMMIT');
+    return {mesa:numero,sessaoId:sessoes[0].id,garcomResponsavelId:destinoId,garcomResponsavelNome:destinos[0].nome,transferida:true};
+  }catch(e){await client.query('ROLLBACK').catch(()=>{});throw e;}finally{client.release();}
+}
+
+module.exports={ ErroAtendimento, transferirMesaAdmin, listarMesasGarcom, iniciarAtendimentoGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons };

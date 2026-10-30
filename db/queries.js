@@ -90,7 +90,7 @@ async function getProdutosComRegras(client, produtoIds) {
   if (!ids.length) return porId;
 
   const { rows: produtos } = await client.query(
-    'SELECT id, nome, preco, disponivel, pede_ponto_carne, controla_estoque, estoque FROM produtos WHERE id = ANY($1::int[])',
+    'SELECT id, nome, preco, disponivel, pede_ponto_carne, controla_estoque, estoque, setor FROM produtos WHERE id = ANY($1::int[])',
     [ids]
   );
   if (!produtos.length) return porId;
