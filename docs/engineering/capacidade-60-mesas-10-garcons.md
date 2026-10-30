@@ -67,6 +67,44 @@ ponta-a-ponta), 14/14 verificações OK, reconciliação exata
 (R$ 5.940,00 na rodada 1), corrida de aceite 1 vencedor / 9 recusas 409,
 5/5 transferências aceitas sob carga e auditoria SQL zerada.
 
+### Rodada na workstation do dono (2026-10-30, CachyOS)
+
+Ambiente: 4 núcleos / 8 GB RAM, PostgreSQL 16 em Docker, servidor e
+gerador na mesma máquina, memória sob pressão durante o teste
+(5,0 GiB usados, ~0,5 GiB livres, 1,2 GiB em swap).
+
+- **Critérios funcionais: todos OK** — zero erros inesperados, SSE
+  estável (73 conexões, 0 quedas), corrida/transferências corretas e
+  invariantes zerados, igual às rodadas de referência.
+- **Latência: meta local não atingida nesse ambiente** — ~139 req/s de
+  pico e p95 de escrita entre 532–648 ms (criar_pedido, produção,
+  pagamento parcial e fechar_sessao), repetido em duas execuções.
+  Leituras e o fluxo do garçom seguiram rápidos (fila p95 ≈ 76 ms).
+- **Diagnóstico:** não é pool (as leituras quentes não esperam conexão)
+  nem correção — é o custo de commit das transações de escrita no
+  PostgreSQL em Docker disputando CPU/RAM com swap ativo. A meta de
+  500 ms é de ambiente local de referência; o teto funcional (60 mesas
+  + 10 garçons sem erro) vale nos dois ambientes. Em produção, evite
+  swap e co-localize app e banco (mesma região/provedor); no Docker
+  local, considere `--shm-size=256m` para o PostgreSQL.
+
+### Correção a partir da rodada de fumaça (deadlock em transferência)
+
+Reproduzindo em escala menor (12 mesas × 3 garçons), a transferência
+sob carga devolveu **HTTP 500 por deadlock (`40P01`)**: `transferirMesa`
+travava a linha do garçom de destino com `FOR UPDATE`, que colidia com
+o `FOR SHARE` que a entrega do próprio destino mantém sobre si enquanto
+espera a sessão. Correções em `db/atendimento.js`:
+
+- destino passou a `FOR SHARE`, alinhado a `transferirMesaAdmin`;
+- as duas transferências foram envolvidas em `comRetryConcorrencia`
+  (a vítima de deadlock aborta antes do COMMIT, então repetir é seguro),
+  para um deadlock residual nunca vazar como 500.
+
+Após a correção: fumaça 12×3 com 14/14 verificações e rodada completa
+60×10 com 14/14, transferência p95 de 44 ms e propagação SSE (métrica
+corrigida) com p95 de 70 ms.
+
 ## Gargalos verificados
 
 - **Pool do PostgreSQL (`PG_POOL_MAX=10`, padrão): suficiente.** Foram
@@ -79,7 +117,11 @@ ponta-a-ponta), 14/14 verificações OK, reconciliação exata
   propagação na mesa (≈320 ms) é o desenho da coalescência de clientes
   públicos (`SSE_PUBLIC_COALESCE_MS=300`, em `db/events.js`): a mesa
   recebe "recarregue" no máximo 1× por janela, enquanto staff recebe o
-  payload imediatamente. Não é atraso de gargalo.
+  payload imediatamente. Não é atraso de gargalo. Nas primeiras rodadas
+  a métrica era medida desde o início da produção e embutia o tempo das
+  escritas de status; o harness passou a medir a partir do fim da
+  escrita `concluido`, então séries novas não são comparáveis 1:1 com a
+  tabela acima neste indicador.
 - **Rate limits:** nenhum 429 no roteiro. O limite de pedidos é por
   IP+mesa (10/5 min), então 60 mesas atrás do mesmo NAT não competem
   entre si; rotas de garçom não têm limite por IP que bloqueie a equipe.
