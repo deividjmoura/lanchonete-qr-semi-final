@@ -165,6 +165,11 @@
   --status-danger-surface: color-mix(in srgb, var(--prim-carmim) 11%, var(--prim-papel-claro));
   --status-danger-border: color-mix(in srgb, var(--prim-carmim) 38%, var(--prim-papel-borda));
 
+  /* Superfície física de código QR e comprovante impresso (invariável em claro/escuro) */
+  --qr-paper: var(--prim-papel-claro);
+  --qr-ink: var(--prim-stout);
+  --qr-border: var(--prim-papel-borda);
+
   /* Aliases semânticos de aviso consumidos por regra auditada no PWA */
   --qr-amber-500: var(--status-warning);
   --qr-amber-700: var(--status-warning-ink);

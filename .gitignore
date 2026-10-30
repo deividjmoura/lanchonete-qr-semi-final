@@ -8,3 +8,6 @@ public/uploads/*
 
 .DS_Store
 *.local
+
+# capturas visuais de auditoria antes/depois (mantidas no workspace)
+docs/screenshots/

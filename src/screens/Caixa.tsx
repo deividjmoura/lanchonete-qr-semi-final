@@ -24,6 +24,7 @@ import type { FormaPagamento, PixConfig, Sessao } from "../lib/types";
 import { FORMAS, consumoSessao, pagoSessao, usePub } from "../store/usePub";
 import { api } from "../lib/api";
 import { imprimirComprovanteConsumo } from "../lib/print";
+import { QR_SVG_COLORS } from "../lib/tema";
 import { BRL, elapsed, montarPixEMV } from "../lib/utils";
 import { cn } from "../utils/cn";
 
@@ -648,8 +649,8 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                     <QRCodeSVG
                       value={pixCodigo}
                       size={92}
-                      fgColor="#17120e"
-                      bgColor="#f7f0e2"
+                      fgColor={QR_SVG_COLORS.fg}
+                      bgColor={QR_SVG_COLORS.bg}
                       level="M"
                     />
                   ) : (

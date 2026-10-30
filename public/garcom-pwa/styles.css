@@ -86,6 +86,13 @@ summary:focus-visible {
 }
 
 /* Icons via local Phosphor SVG sprite */
+.pwa-icon,
+.pwa-icon-sm,
+.pwa-icon-xs,
+.nav-svg {
+  fill: currentColor;
+}
+
 .pwa-icon {
   width: 19px;
   height: 19px;
@@ -151,7 +158,7 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   margin: 0;
   font-family: var(--font-display);
   font-variation-settings: "wdth" 82;
-  font-size: 1.15rem;
+  font-size: 1rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: -0.01em;
@@ -161,24 +168,24 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   flex-shrink: 0;
 }
 
 .connection-pill {
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
-  padding: 4px 9px;
+  min-height: 30px;
+  padding: 4px 7px;
   border-radius: var(--radius-xs);
   border: 1px solid var(--status-success-border);
   background: var(--status-success-surface);
   color: var(--status-success-ink);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   white-space: nowrap;
 }
 
@@ -945,8 +952,8 @@ textarea {
   margin: 0 auto;
   padding: 12px;
   border-radius: var(--radius-sm);
-  background: var(--prim-papel-50);
-  border: 1px solid var(--prim-papel-300);
+  background: var(--qr-paper);
+  border: 1px solid var(--qr-border);
 }
 
 /* Order Creation Modal Products & Cart */
@@ -1100,7 +1107,7 @@ textarea {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 2px;
   background: var(--surface-sidebar);
-  border-top: 1px solid var(--surface-sidebar-border);
+  border-top: 1px solid var(--sidebar-line);
   padding: 4px 6px calc(6px + env(safe-area-inset-bottom));
 }
 
@@ -1110,7 +1117,7 @@ textarea {
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--text-sidebar-muted);
+  color: var(--sidebar-muted);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1131,8 +1138,8 @@ textarea {
 }
 
 .bottom-nav button.active {
-  color: var(--text-sidebar);
-  background: var(--surface-sidebar-hover);
+  color: var(--sidebar-text);
+  background: color-mix(in srgb, var(--sidebar-text) 10%, transparent);
 }
 
 .bottom-nav button.active .icon-regular {
@@ -1171,7 +1178,7 @@ dialog.sheet[open] {
 }
 
 .sheet::backdrop {
-  background: var(--overlay-scrim);
+  background: var(--surface-overlay);
 }
 
 .sheet-top,

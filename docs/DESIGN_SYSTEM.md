@@ -79,7 +79,7 @@ Servida localmente em `public/garcom-pwa/fonts/` sob CSP `'self'`, totalizando *
 ## 4. Sistema Único de Ícones (Phosphor)
 
 - **SPA React:** `@phosphor-icons/react` como conjunto único.
-- **PWA do Garçom (JS puro):** sprite vetorial local `public/garcom-pwa/icons.svg` (10 KB, pré-cacheado no Service Worker) gerado a partir dos mesmos glifos oficiais Phosphor (`256×256`).
+- **PWA do Garçom (JS puro):** sprite vetorial local `public/garcom-pwa/icons.svg` (13,6 KB, 35 símbolos pré-cacheados no Service Worker) gerado a partir dos mesmos glifos oficiais Phosphor (`256×256`).
 - **Convenção de estado:** itens de navegação inativos usam traço (`regular`); o item ativo usa preenchimento sólido (`fill`).
 - **Zero emojis:** nenhum emoji é utilizado como ícone, estado vazio ou decoração.
 
@@ -119,5 +119,5 @@ Servida localmente em `public/garcom-pwa/fonts/` sob CSP `'self'`, totalizando *
 
 - **Propriedades animadas:** `transform` e `opacity` nas entradas e trocas de estado (`<= 180 ms`; padrão `--dur-page: 160ms`).
 - **Curva de comanda:** `--ease-ticket: cubic-bezier(0.22, 1.18, 0.36, 1)` para entrada discreta de comandas e retorno mecânico de carimbo (`.anim-stamp`, `150ms`).
-- **Indicador de navegação:** `motion/react` `layoutId` com spring firme (`stiffness: 520, damping: 38, mass: 0.7`).
+- **Indicador de navegação:** `framer-motion` `layoutId` com spring firme (`stiffness: 520, damping: 38, mass: 0.7`).
 - ** Movimento reduzido:** `@media (prefers-reduced-motion: reduce)` e `useReducedMotion()` neutralizam deslocamentos e animações contínuas.

@@ -173,7 +173,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--prim-papel-claro);
+  background: var(--qr-paper);
   border: 1px solid var(--sidebar-line);
   border-radius: var(--radius-sm);
   padding: 3px;
@@ -181,7 +181,7 @@
 }
 
 .qr-quiet-zone {
-  background: var(--prim-papel-claro);
+  background: var(--qr-paper);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
   padding: 10px;
@@ -406,7 +406,7 @@
   }
   #qradmin-print-frame {
     display: block !important;
-    background: var(--prim-papel-50) !important;
-    color: var(--prim-stout-900) !important;
+    background: var(--qr-paper) !important;
+    color: var(--qr-ink) !important;
   }
 }

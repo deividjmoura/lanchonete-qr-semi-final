@@ -87,6 +87,11 @@ export function aplicarTema(tema: Tema): Tema {
   return tema;
 }
 
+export const QR_SVG_COLORS = {
+  fg: "#17120e",
+  bg: "#f7f0e2",
+} as const;
+
 export function alternarTema(): Tema {
   return aplicarTema(temaAtual() === "claro" ? "escuro" : "claro");
 }

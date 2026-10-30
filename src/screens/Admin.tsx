@@ -40,6 +40,7 @@ import {
   imprimirComprovanteConsumo,
   imprimirRelatorioPdf,
 } from "../lib/print";
+import { QR_SVG_COLORS } from "../lib/tema";
 import type { ItemPedido, Pedido, Produto, TipoProduto } from "../lib/types";
 import { CATEGORIAS } from "../lib/data";
 import { faturamentoSemana, totalSessao, usePub } from "../store/usePub";
@@ -1582,8 +1583,8 @@ function Mesas() {
             size={320}
             includeMargin
             level="H"
-            fgColor="#17120e"
-            bgColor="#f7f0e2"
+            fgColor={QR_SVG_COLORS.fg}
+            bgColor={QR_SVG_COLORS.bg}
           />
         </div>
       )}

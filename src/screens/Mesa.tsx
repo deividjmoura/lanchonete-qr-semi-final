@@ -586,7 +586,7 @@ export default function Mesa({ token }: { token: string }) {
           >
             <ShoppingBag size={18} weight="bold" />
             {qtdCart > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 grid place-items-center min-w-5 h-5 px-1 rounded-xs bg-surface-sidebar text-text-sidebar font-mono text-[10px] font-bold border border-line-strong">
+              <span className="absolute -top-1.5 -right-1.5 grid place-items-center min-w-5 h-5 px-1 rounded-xs bg-surface-sidebar text-sidebar-text font-mono text-[10px] font-bold border border-line-strong">
                 {qtdCart}
               </span>
             )}
@@ -766,17 +766,17 @@ export default function Mesa({ token }: { token: string }) {
             animate={{ y: 0, opacity: 1 }}
             exit={reduceMotion ? { opacity: 0 } : { y: 40, opacity: 0 }}
             transition={{ duration: 0.16 }}
-            className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-3 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-surface-sidebar border-t border-surface-sidebar-border"
+            className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-3 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-surface-sidebar border-t border-sidebar-line"
           >
             <div className="flex gap-2 max-w-md mx-auto">
               <button
                 type="button"
                 onClick={() => setSheet("conta")}
-                className="flex-1 h-13 rounded-sm bg-surface-sidebar-hover border border-surface-sidebar-border text-text-sidebar flex items-center justify-center gap-2 px-3"
+                className="flex-1 h-13 rounded-sm bg-surface-sidebar border border-sidebar-line text-sidebar-text flex items-center justify-center gap-2 px-3"
               >
                 <Receipt size={17} className="text-accent" />
                 <span className="font-mono text-xs font-bold">{BRL(totalConta)}</span>
-                <span className="font-mono text-[10px] uppercase tracking-wider text-text-sidebar-muted">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-sidebar-muted">
                   conta
                 </span>
               </button>
@@ -816,7 +816,7 @@ export default function Mesa({ token }: { token: string }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-50 grid place-items-center bg-overlay p-6"
+            className="fixed inset-0 z-50 grid place-items-center bg-surface-overlay p-6"
           >
             <motion.div
               initial={reduceMotion ? { opacity: 0 } : { scale: 0.94, opacity: 0 }}

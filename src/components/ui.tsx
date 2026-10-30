@@ -142,7 +142,7 @@ export function Btn({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "qr-button inline-flex items-center justify-center gap-2 font-semibold select-none transition-[background-color,color,border-color,transform,opacity] duration-150 active:translate-y-px disabled:opacity-45 disabled:pointer-events-none",
+        "qr-button inline-flex items-center justify-center gap-2 font-semibold select-none transition-[background-color,color,border-color,transform,opacity] duration-150 active:translate-y-px disabled:bg-surface-sunken disabled:text-text-muted disabled:border-line disabled:pointer-events-none",
         size === "sm" && "min-h-10 px-3 text-xs rounded-sm",
         size === "md" && "min-h-12 px-4 text-sm rounded-sm",
         size === "lg" && "min-h-12 px-6 text-base rounded-md",
