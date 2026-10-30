@@ -19,10 +19,13 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
   // Confirma a versão do servidor real, não apenas a tag configurada no workflow.
   const versionResult = await pool.query('SHOW server_version');
   const serverVersion = String(versionResult.rows[0]?.server_version || '');
-  assert.match(serverVersion, /^16(?:\.|$)/,
-    'Integração exige PostgreSQL major 16 no servidor conectado');
+  const serverMajor = Number.parseInt(serverVersion, 10);
+  // O CI provisiona postgres:16; ambientes locais podem usar major mais novo.
+  // O que precisa ser garantido é o piso de recursos, não a tag exata do serviço.
+  assert.ok(Number.isInteger(serverMajor) && serverMajor >= 16,
+    `Integração exige PostgreSQL 16 ou superior no servidor conectado (recebido: ${serverVersion})`);
   // Log de diagnóstico deliberadamente limitado a campos não secretos.
-  console.log(`[postgres-integration] host=${databaseUrl.hostname} database=${databaseUrl.pathname.slice(1)} server_major=16`);
+  console.log(`[postgres-integration] host=${databaseUrl.hostname} database=${databaseUrl.pathname.slice(1)} server_major=${serverMajor}`);
 
   const token = randomUUID();
   const tokenSecundario = randomUUID();
@@ -129,7 +132,7 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
     );
     assert.equal(orderCount.rows[0].n, 1, 'pedido recusado não pode deixar pedido parcial');
 
-    // Cancelamento público restaura o estoque dentro da transação e remove o pedido.
+    // Cancelamento público restaura o estoque dentro da transação e marca o pedido como cancelado.
     const pedidoParaCancelar = await pedidos.criarPedido(token, {
       idempotencyKey: 'ci-cancel-' + randomUUID(),
       items: [{ productId: produtoId, qty: 1 }],
@@ -148,13 +151,19 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
       /Pedido não encontrado nesta mesa/
     );
 
-    await pool.query("UPDATE pedidos SET status = 'em_producao' WHERE id = $1", [pedidoParaCancelar.id]);
+    // O estado autoritativo é o do ITEM: basta um item em preparo para bloquear
+    // o cancelamento do pedido inteiro (o status do pai é apenas projeção).
+    const itemParaPreparo = (await pool.query(
+      'SELECT id FROM itens_pedido WHERE pedido_id=$1 ORDER BY id LIMIT 1', [pedidoParaCancelar.id]
+    )).rows[0].id;
+    await pedidos.setStatusItem(itemParaPreparo, 'em_producao');
     await assert.rejects(
       () => pedidos.cancelarPedidoCliente(token, pedidoParaCancelar.id),
-      /Só é possível cancelar enquanto o pedido ainda não entrou em preparo/
+      /Só é possível cancelar o pedido inteiro antes do preparo/
     );
     stock = await pool.query('SELECT estoque FROM produtos WHERE id = $1', [produtoId]);
     assert.equal(stock.rows[0].estoque, 2, 'pedido em preparo não pode restaurar estoque');
+    await pool.query("UPDATE itens_pedido SET status='recebido', iniciado_em=NULL WHERE id=$1", [itemParaPreparo]);
     await pool.query("UPDATE pedidos SET status = 'recebido' WHERE id = $1", [pedidoParaCancelar.id]);
 
     await pool.query("UPDATE mesa_sessoes SET status = 'fechada' WHERE id = $1", [sessaoId]);
@@ -170,18 +179,25 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
     assert.equal(cancelamento.cancelado, true);
     assert.equal(cancelamento.id, pedidoParaCancelar.id);
     const canceladoPersistido = await pool.query(
-      'SELECT COUNT(*)::int AS n FROM pedidos WHERE id = $1', [pedidoParaCancelar.id]
+      'SELECT status FROM pedidos WHERE id = $1', [pedidoParaCancelar.id]
     );
-    assert.equal(canceladoPersistido.rows[0].n, 0, 'pedido cancelado deve ser removido');
+    assert.equal(canceladoPersistido.rows[0].status, 'cancelado',
+      'cancelamento é lógico: o pedido permanece auditável, nunca é apagado');
     const itensCancelados = await pool.query(
-      'SELECT COUNT(*)::int AS n FROM itens_pedido WHERE pedido_id = $1', [pedidoParaCancelar.id]
+      'SELECT status, cancelado_em, cancelamento_motivo FROM itens_pedido WHERE pedido_id = $1', [pedidoParaCancelar.id]
     );
-    assert.equal(itensCancelados.rows[0].n, 0, 'itens do pedido cancelado devem ser removidos');
+    assert.ok(itensCancelados.rowCount >= 1, 'itens cancelados preservam o histórico');
+    assert.ok(itensCancelados.rows.every(i => i.status === 'cancelado' && i.cancelado_em && i.cancelamento_motivo));
+    const historicoCancel = await pool.query(
+      'SELECT COUNT(*)::int AS n FROM itens_pedido_historico WHERE pedido_id=$1 AND status=$2',
+      [pedidoParaCancelar.id, 'cancelado']
+    );
+    assert.equal(historicoCancel.rows[0].n, itensCancelados.rowCount, 'cada item cancelado tem histórico próprio');
     stock = await pool.query('SELECT estoque FROM produtos WHERE id = $1', [produtoId]);
     assert.equal(stock.rows[0].estoque, 3, 'cancelamento deve restaurar exatamente uma unidade');
 
-    // Issue #48: o cancelamento deixa evidência persistente mesmo com o
-    // pedido e seus itens excluídos, e não carrega segredos no contexto.
+    // Issue #48: o cancelamento deixa evidência persistente (pedido, itens,
+    // histórico por item e auditoria) e não carrega segredos no contexto.
     const eventosCancelamento = await pool.query(
       `SELECT ator_tipo, ator_id, acao, alvo_tipo, alvo_id, resultado, contexto
        FROM auditoria_eventos
@@ -201,12 +217,16 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
     assert.equal(Number(evento.contexto.mesaNumero), Number(mesaNumeroReal));
     assert.doesNotMatch(JSON.stringify(evento), /senha|token|segredo/i);
 
-    await assert.rejects(
-      () => pedidos.cancelarPedidoCliente(token, pedidoParaCancelar.id),
-      /Pedido não encontrado nesta mesa/
-    );
+    const cancelReplay = await pedidos.cancelarPedidoCliente(token, pedidoParaCancelar.id);
+    assert.equal(cancelReplay.idempotentReplay, true, 'repetir cancelamento é replay, não erro');
+    assert.equal(cancelReplay.status, 'cancelado');
     stock = await pool.query('SELECT estoque FROM produtos WHERE id = $1', [produtoId]);
     assert.equal(stock.rows[0].estoque, 3, 'retry de cancelamento não pode restaurar estoque novamente');
+    const eventosReplay = await pool.query(
+      `SELECT COUNT(*)::int AS n FROM auditoria_eventos WHERE acao='pedido_cancelado' AND alvo_id=$1`,
+      [String(pedidoParaCancelar.id)]
+    );
+    assert.equal(eventosReplay.rows[0].n, 1, 'replay não duplica a trilha de auditoria');
 
     // Ambos ficam prontos, mas o garçom entrega somente um item de cada vez.
     await pedidos.setStatusItem(itemRows.rows[0].id, 'concluido');
@@ -289,7 +309,7 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
     assert.equal(Number(finalState.rows[0].valor_total), 30);
     assert.equal(Number(finalState.rows[0].valor_cobrado), 30);
     assert.equal(finalState.rows[0].pagamentos, 2, 'pagamento parcial + saldo do fechamento');
-    assert.equal(finalState.rows[0].pedidos, 1);
+    assert.equal(finalState.rows[0].pedidos, 2, 'pedido entregue + pedido cancelado preservados na sessão');
   } finally {
     // Limpeza limitada aos identificadores sintéticos criados por este teste.
     if (mesaId) {
@@ -299,6 +319,7 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
       );
       for (const row of ids.rows) {
         await pool.query('DELETE FROM sessao_pagamentos WHERE sessao_id = $1', [row.id]);
+        await pool.query('DELETE FROM itens_pedido_historico WHERE pedido_id IN (SELECT id FROM pedidos WHERE sessao_id=$1)', [row.id]);
         await pool.query('DELETE FROM pedidos WHERE sessao_id = $1', [row.id]);
         await pool.query('DELETE FROM auditoria_eventos WHERE alvo_id = $1', [String(row.id)]);
       }

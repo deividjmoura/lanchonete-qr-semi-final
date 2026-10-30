@@ -17,7 +17,8 @@ test('QR fixo: pedido após fechamento abre NOVA sessão; token inválido é rej
   assert.equal(process.env.NODE_ENV, 'test');
 
   const version = await pool.query('SHOW server_version');
-  assert.match(String(version.rows[0].server_version), /^16(?:\.|$)/);
+  const major = Number.parseInt(String(version.rows[0].server_version), 10);
+  assert.ok(Number.isInteger(major) && major >= 16, 'Integração exige PostgreSQL 16 ou superior');
 
   const suffix = randomUUID().slice(0, 8);
   const token = randomUUID();

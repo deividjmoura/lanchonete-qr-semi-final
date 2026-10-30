@@ -26,14 +26,17 @@ test('PWA acessa rotas reais, não endpoint genérico de demonstração',()=>{
  assert.match(app,/\/api\/garcom\//);
  assert.match(app,/\/pedidos/);
  assert.doesNotMatch(app,/fetch\('\/api\/orders'/);
- assert.match(app,/mock=false/);
+ assert.match(app,/new OfflineStore\(db,waiterToken\)/);
+ assert.match(app,/new SyncEngine\(/);
 });
 test('Fila de sincronização preserva uma chave por operação e isola garçom',()=>{
  assert.match(app,/idempotencyKey:uid\(\)/);
  assert.match(app,/order\.idempotencyKey/);
  assert.match(app,/ownerToken:waiterToken/);
- assert.match(app,/o\.ownerToken===waiterToken/);
- assert.match(app,/err\.status&&err\.status<500\?'conflict'/);
+ const offline=fs.readFileSync(path.join(root,'offline.js'),'utf8');
+ assert.match(offline,/o\.ownerToken === this\.ownerToken/);
+ assert.match(offline,/return 'conflict'/);
+ assert.match(offline,/order\.status = 'confirmed'/);
 });
 test('QR PIX não envia payload financeiro a serviço externo',()=>{
  assert.doesNotMatch(pixJs,/api\.qrserver\.com/);

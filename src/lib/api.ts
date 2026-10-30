@@ -107,11 +107,19 @@ export const api = {
   statusPedido: (pedidoId: number, status: string, setor?: "cozinha" | "bar") =>
     apiSend(`/api/pedidos/${pedidoId}/status`, "PATCH", { status, ...(setor ? { setor } : {}) }),
 
+  statusItem: (setor: "cozinha" | "bar", itemId: number, status: string) =>
+    apiSend(`/api/${setor}/itens/${itemId}/status`, "PATCH", { status }),
+  cancelarItem: (itemId: number, motivo: string, escopo: "admin" | "caixa" = "admin") =>
+    apiSend(`/api/${escopo}/itens/${itemId}/cancelar`, "POST", { motivo }),
+  historicoPedido: (pedidoId: number) => apiGet<any>(`/api/admin/pedidos/${pedidoId}/historico`),
+  transferirMesaAdmin: (numero: number, garcomDestinoId: number) =>
+    apiSend(`/api/admin/mesas/${numero}/transferir`, "POST", { garcomDestinoId }),
+
   cozinhaPedidos: () => apiGet<any[]>("/api/cozinha/pedidos"),
   barPedidos: () => apiGet<any[]>("/api/bar/pedidos"),
   garcomPedidos: (token: string) => apiGet<any[]>(`/api/garcom/${token}/pedidos`),
-  garcomEntregar: (token: string, pedidoId: number, itemIds?: number[]) =>
-    apiSend(`/api/garcom/${token}/pedidos/${pedidoId}/entregar`, "POST", itemIds?.length ? { itemIds } : {}),
+  garcomEntregar: (token: string, pedidoId: number, itemIds?: number[], etapa?: string) =>
+    apiSend(`/api/garcom/${token}/pedidos/${pedidoId}/entregar`, "POST", { ...(itemIds?.length ? { itemIds } : {}), ...(etapa ? { etapa } : {}) }),
 
   caixaSessoes: () => apiGet<any[]>("/api/caixa/sessoes"),
   comprovantesRecentes: () => apiGet<Array<{id:number;mesa:number;fechadaEm:string;clienteNome:string|null;total:number}>>("/api/caixa/comprovantes"),
@@ -192,24 +200,41 @@ export const api = {
 export function connectEvents(onUpdate: () => void, acesso?: { mesa?: string; garcom?: string }): () => void {
   let es: EventSource | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let reconnect: ReturnType<typeof setTimeout> | null = null;
+  let closed = false;
+  let failures = 0;
   const bounce = () => {
+    if (closed) return;
     if (timer) clearTimeout(timer);
-    timer = setTimeout(() => onUpdate(), 350);
+    timer = setTimeout(() => { timer = null; onUpdate(); }, 350);
   };
-  try {
-    const query = new URLSearchParams();
-    if (acesso?.mesa) query.set("mesa", acesso.mesa);
-    if (acesso?.garcom) query.set("garcom", acesso.garcom);
-    es = new EventSource(`/api/events${query.size ? `?${query}` : ""}`);
-    es.addEventListener("update", bounce);
-    es.onerror = () => {
-      /* browser reconecta sozinho */
-    };
-  } catch (_) {
-    /* ignore */
-  }
+  const start = () => {
+    if (closed || typeof EventSource === "undefined") return;
+    try {
+      if (es) es.close();
+      const query = new URLSearchParams();
+      if (acesso?.mesa) query.set("mesa", acesso.mesa);
+      if (acesso?.garcom) query.set("garcom", acesso.garcom);
+      const qs = query.toString();
+      es = new EventSource(`/api/events${qs ? `?${qs}` : ""}`);
+      es.addEventListener("hello", () => { failures = 0; bounce(); });
+      es.addEventListener("update", bounce);
+      es.onerror = () => {
+        if (closed) return;
+        if (es) es.close();
+        es = null;
+        failures++;
+        if (reconnect) clearTimeout(reconnect);
+        reconnect = setTimeout(start, Math.min(30000, 1000 * 2 ** Math.min(failures, 5)));
+        bounce();
+      };
+    } catch { bounce(); }
+  };
+  start();
   return () => {
+    closed = true;
     if (timer) clearTimeout(timer);
+    if (reconnect) clearTimeout(reconnect);
     if (es) es.close();
   };
 }

@@ -29,33 +29,36 @@ test('falha ao listar garçons não bloqueia o carregamento das mesas',()=>{
  assert.ok(block.indexOf('populateTables()')>block.indexOf('catch(e)'));
 });
 test('sincronização inicia sessão quando mesa está vazia e mantém chave idempotente',()=>{
- const start=app.indexOf('async function syncOne(');
- const end=app.indexOf('async function syncPending',start);
+ const start=app.indexOf('async function sendOrderToServer(');
+ const end=app.indexOf('async function syncOne(',start);
  const block=app.slice(start,end);
  assert.match(block,/root\+'\/iniciar'/);
  assert.match(block,/idempotencyKey:order\.idempotencyKey/);
  assert.match(block,/await loadMesas\(\)/);
- assert.match(block,/'conflict':'offline'/);
+ const offline=fs.readFileSync(path.join(root,'public/garcom-pwa/offline.js'),'utf8');
+ assert.match(offline,/order\.status = kind === 'conflict' \? 'conflict'/);
 });
 test('salvar pedido evita duplo clique e falha de armazenamento sem confirmação falsa',()=>{
  const start=app.indexOf('async function saveOrder()');
  const end=app.indexOf('async function syncOne(',start);
  const save=app.slice(start,end);
  assert.match(save,/if\(savingOrder\)return/);
- assert.match(save,/if\(!db\)/);
+ assert.match(save,/if\(!offlineStore\)/);
  assert.match(save,/finally\{savingOrder=false;saveButton\.disabled=false;\}/);
  assert.match(save,/idempotencyKey:uid\(\)/);
 });
 test('carregamento de mesas não depende de IndexedDB nem da recuperação da fila',()=>{
- const boot=app.slice(app.indexOf('void loadProducts();'),app.indexOf('let deferredInstall=null'));
- assert.ok(boot.indexOf('void loadMesas()')<boot.indexOf('openDb().then'));
- assert.match(boot,/recoverInterruptedSync\(\)/);
- assert.match(app,/if\(!navigator\.onLine\|\|!db\)\{setConnection\(\);return\}/);
+ const boot=app.slice(app.indexOf('async function boot()'),app.indexOf('void boot();'));
+ assert.match(boot,/await openOfflineDb\(\)/);
+ assert.match(boot,/await syncEngine\.recoverInterrupted\(\)/);
+ assert.match(boot,/syncEngine\.start\(15000\)/);
+ assert.match(boot,/Promise\.allSettled\(\[loadProducts\(\),loadMesas\(\)\]\)/);
+ assert.match(app,/probe:\(\)=>probeBackend/);
 });
 test('401 do link de garçom permanece visível no estado de conexão',()=>{
  assert.match(app,/let waiterAuthInvalid=false/);
- assert.match(app,/waiterAuthInvalid=true;setConnection\(\)/);
- assert.match(app,/if\(waiterAuthInvalid\)\{/);
+ assert.match(app,/waiterAuthInvalid=true;setConnection\('auth'\)/);
+ assert.match(app,/waiterAuthInvalid\|\|syncEngine\?\.connection==='offline'/);
 });
 test('fila de pedidos não quebra quando o contador visual não existe',()=>{
  assert.match(app,/const queueCount=\$\('#queueCount'\);if\(queueCount\)queueCount\.textContent/);
@@ -63,14 +66,19 @@ test('fila de pedidos não quebra quando o contador visual não existe',()=>{
 test('pedidos diretos prontos ficam visíveis para todos e são assumidos uma única vez',()=>{
  const pedidos=fs.readFileSync(path.join(root,'db/pedidos.js'),'utf8');
  const garcons=fs.readFileSync(path.join(root,'db/garcons.js'),'utf8');
- assert.match(pedidos,/p\.origem_pedido = 'cliente' AND \(p\.garcom_id IS NULL OR p\.garcom_id = \$1\)/);
- assert.match(garcons,/async function assumirEntregaComoGarcom/);
- assert.match(garcons,/Outro garçom já assumiu esta entrega/);
+ assert.match(pedidos,/ip\.status IN \('concluido','aceito','retirado'\)/);
+ assert.match(garcons,/assumirEntregaComoGarcom: \(\.\.\.args\) => require\('\.\/entregas'\)\.assumirEntregaComoGarcom/);
+ const entregas=fs.readFileSync(path.join(root,'db/entregas.js'),'utf8');
+ assert.match(entregas,/Outro garçom já assumiu estes itens/);
  assert.match(server,/assumir-entrega/);
- assert.match(app,/Assumir entrega/);
+ assert.match(app,/Aceitar item/);
  assert.match(app,/Confirmar entrega/);
 });
 test('Service Worker não reaproveita shell anterior às correções',()=>{
- assert.match(sw,/garcom-pwa-shell-v16/);
+ // Piso de versão, não valor exato: cada correção do shell precisa subir o
+ // cache, e travar o número quebraria o teste a cada bump legítimo.
+ const versao=sw.match(/garcom-pwa-shell-v(\d+)/);
+ assert.ok(versao,'cache do shell precisa ser versionado');
+ assert.ok(Number(versao[1])>=18,'shell antigo ao fluxo por item não pode ser reutilizado');
  assert.match(sw,/pathname\.startsWith\('\/api\/'\)/);
 });

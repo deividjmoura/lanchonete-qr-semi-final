@@ -33,7 +33,7 @@ export default function Garcom({ token }: { token: string }) {
   const lastError = usePub((s) => s.lastError);
 
   const prontos = pedidos
-    .filter((p) => p.status !== "entregue" && p.itens.some((i) => i.status === "concluido"))
+    .filter((p) => p.status !== "entregue" && p.status !== "cancelado" && p.itens.some((i) => ["concluido","aceito","retirado"].includes(i.status || "")))
     .sort((a, b) => a.criadoEm - b.criadoEm);
   const entregues = pedidos
     .filter((p) => p.status === "entregue")
@@ -91,7 +91,7 @@ export default function Garcom({ token }: { token: string }) {
                   <CardPronto
                     key={p.id}
                     pedido={p}
-                    onEntregar={(ids) => entregar(p.id, token, ids)}
+                    onEntregar={(ids, etapa) => entregar(p.id, token, ids, etapa)}
                   />
                 ))}
               </div>
@@ -149,6 +149,12 @@ function labelItemStatus(s?: string) {
       return { t: "preparando", tone: "text-navy-700" };
     case "concluido":
       return { t: "pronto", tone: "text-teal-600" };
+    case "aceito":
+      return { t: "aceito", tone: "text-sky-700" };
+    case "retirado":
+      return { t: "retirado", tone: "text-violet-700" };
+    case "cancelado":
+      return { t: "cancelado", tone: "text-rose-600" };
     case "entregue":
       return { t: "entregue", tone: "text-slate-500" };
     default:
@@ -161,10 +167,12 @@ function CardPronto({
   onEntregar,
 }: {
   pedido: Pedido;
-  onEntregar: (itemIds?: number[]) => void;
+  onEntregar: (itemIds?: number[], etapa?: string) => void;
 }) {
   const esfriando = Date.now() - pedido.criadoEm > 1000 * 60 * 25;
   const prontos = pedido.itens.filter((i) => i.status === "concluido");
+  const aceitos = pedido.itens.filter((i) => i.status === "aceito");
+  const retirados = pedido.itens.filter((i) => i.status === "retirado");
   const aindaProducao = pedido.itens.filter(
     (i) => i.status === "recebido" || i.status === "em_producao"
   );
@@ -220,7 +228,13 @@ function CardPronto({
                 )}
               </span>
               <span className={"shrink-0 text-[10px] font-bold uppercase tracking-wider " + st.tone}>
-                {st.t}
+                {i.status === "concluido" ? (
+                  <button type="button" className="hover:underline cursor-pointer" onClick={() => onEntregar([Number(i.id)], "aceitar")}>Aceitar item</button>
+                ) : i.status === "aceito" ? (
+                  <button type="button" className="hover:underline cursor-pointer" onClick={() => onEntregar([Number(i.id)], "retirar")}>Retirei</button>
+                ) : i.status === "retirado" ? (
+                  <button type="button" className="hover:underline cursor-pointer" onClick={() => onEntregar([Number(i.id)], "entregar")}>Entreguei</button>
+                ) : st.t}
               </span>
             </li>
           );
@@ -242,15 +256,16 @@ function CardPronto({
           <Printer className="size-4" /> Imprimir cupom
         </Btn>
         {idsProntos.length > 0 && (
-          <Btn full size="lg" variant="lime" onClick={() => onEntregar(idsProntos)}>
+          <Btn full size="lg" variant="lime" onClick={() => onEntregar(idsProntos, "aceitar")}>
             <Footprints className="size-5" />
-            {aindaProducao.length > 0
-              ? `Levar prontos (${idsProntos.length})`
-              : "Levei na mesa!"}
+            {`Aceitar prontos (${idsProntos.length})`}
           </Btn>
         )}
-        {idsProntos.length > 1 && aindaProducao.length === 0 && (
-          <p className="text-[10px] text-slate-500">entrega completa deste pedido</p>
+        {aceitos.length > 0 && (
+          <Btn full size="sm" variant="outline" onClick={() => onEntregar(aceitos.map((i) => Number(i.id)), "retirar")}>Retirei aceitos ({aceitos.length})</Btn>
+        )}
+        {retirados.length > 0 && (
+          <Btn full size="sm" variant="lime" onClick={() => onEntregar(retirados.map((i) => Number(i.id)), "entregar")}>Entreguei retirados ({retirados.length})</Btn>
         )}
       </div>
 

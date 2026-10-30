@@ -70,226 +70,6 @@ async function getGarcomPorToken(token) {
   return rows[0] || null;
 }
 
-/**
- * Entrega parcial ou total.
- * - Sem itemIds: entrega TODOS os itens com status=concluido deste pedido.
- * - Com itemIds: entrega só esses (desde que estejam concluido).
- * mesa_sessoes.valor_total é ressincronizado a partir dos itens entregues da
- * sessão (db/conta.js) — nunca incrementado às cegas, para uma entrega
- * repetida/regressão histórica não poder somar o mesmo item duas vezes.
- */
-async function assumirEntregaComoGarcom(pedidoId, garcomToken, requestId = null) {
-  const pid = numeroInteiroPositivo(pedidoId, 'id do pedido');
-  const garcom = await getGarcomPorToken(garcomToken);
-  if (!garcom || !garcom.ativo) throw new ErroGarcom(401, 'Link de garçom inválido ou desativado');
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const { rows: referencia } = await client.query(
-      'SELECT sessao_id FROM pedidos WHERE id = $1', [pid]);
-    if (!referencia[0]) throw new ErroGarcom(404, 'Pedido não encontrado');
-    const { rows: sessoes } = await client.query(
-      `SELECT id, status FROM mesa_sessoes WHERE id = $1 FOR UPDATE`,
-      [referencia[0].sessao_id]);
-    if (!sessoes[0] || sessoes[0].status !== 'aberta') {
-      throw new ErroGarcom(409, 'A sessão desta entrega não está mais aberta');
-    }
-    const { rows } = await client.query(
-      `SELECT id, status, origem_pedido, garcom_id, garcom_nome
-         FROM pedidos WHERE id = $1 FOR UPDATE`, [pid]);
-    const pedido = rows[0];
-    if (!pedido) throw new ErroGarcom(404, 'Pedido não encontrado');
-    if (pedido.status === 'entregue') throw new ErroGarcom(409, 'Pedido já foi entregue');
-    if (pedido.origem_pedido !== 'cliente') {
-      throw new ErroGarcom(403, 'Somente pedidos diretos do cliente entram na fila compartilhada');
-    }
-    if (pedido.garcom_id && Number(pedido.garcom_id) !== Number(garcom.id)) {
-      throw new ErroGarcom(409, 'Outro garçom já assumiu esta entrega');
-    }
-    const { rows: prontos } = await client.query(
-      `SELECT id FROM itens_pedido
-        WHERE pedido_id = $1 AND COALESCE(status, 'recebido') = 'concluido'
-        FOR UPDATE`, [pid]);
-    if (!prontos.length) throw new ErroGarcom(409, 'O pedido ainda não tem itens prontos para entrega');
-    if (!pedido.garcom_id) {
-      await client.query(
-        `UPDATE pedidos SET garcom_id = $2, garcom_nome = $3, claimed_at = now()
-          WHERE id = $1 AND garcom_id IS NULL`,
-        [pid, garcom.id, garcom.nome]);
-    }
-    await registrarEvento(client, {
-      atorTipo: 'garcom', atorId: Number(garcom.id), atorNome: garcom.nome,
-      acao: 'entrega_assumida', alvoTipo: 'pedido', alvoId: pid,
-      resultado: 'sucesso', requestId,
-      contexto: { origem: 'cliente', quantidadeItensProntos: prontos.length },
-    });
-    await client.query('COMMIT');
-    return { id: pid, assumido: true, garcom: { id: garcom.id, nome: garcom.nome } };
-  } catch (err) {
-    try { await client.query('ROLLBACK'); } catch (_) {}
-    throw err;
-  } finally { client.release(); }
-}
-
-async function entregarComoGarcom(pedidoId, garcomToken, itemIds = null, requestId = null) {
-  const pid = numeroInteiroPositivo(pedidoId, 'id do pedido');
-  const garcom = await getGarcomPorToken(garcomToken);
-  if (!garcom || !garcom.ativo) {
-    throw new ErroGarcom(401, 'Link de garçom inválido ou desativado');
-  }
-
-  const { sincronizarStatusPedido } = require('./pedidos');
-
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    // Ler a sessão sem lock primeiro, depois bloquear sempre na ordem sessão → pedido.
-    // Isso serializa com transferências/fechamento sem inverter a ordem dos locks.
-    const { rows: referencia } = await client.query(
-      'SELECT sessao_id FROM pedidos WHERE id = $1', [pid]);
-    if (!referencia[0]) throw new ErroGarcom(404, 'Pedido não encontrado');
-
-    const { rows: sessoes } = await client.query(
-      `SELECT id, status, garcom_responsavel_id
-         FROM mesa_sessoes WHERE id = $1 FOR UPDATE`,
-      [referencia[0].sessao_id]
-    );
-    const sessao = sessoes[0];
-    if (!sessao || sessao.status !== 'aberta') {
-      throw new ErroGarcom(403, 'Este pedido não pertence a uma mesa sob sua responsabilidade atual');
-    }
-
-    const { rows } = await client.query(
-      'SELECT id, status, sessao_id, garcom_id FROM pedidos WHERE id = $1 FOR UPDATE',
-      [pid]);
-    const pedido = rows[0];
-    if (!pedido) throw new ErroGarcom(404, 'Pedido não encontrado');
-    const { rows: origemRows } = await client.query(
-      'SELECT origem_pedido FROM pedidos WHERE id = $1', [pid]);
-    pedido.origem_pedido = origemRows[0]?.origem_pedido || 'garcom';
-    if (Number(pedido.sessao_id) !== Number(sessao.id)) {
-      throw new ErroGarcom(409, 'A sessão do pedido mudou; atualize a fila');
-    }
-    const responsavelAtual = Number(sessao.garcom_responsavel_id);
-    const entregaAtribuidaAoGarcom = Number(pedido.garcom_id) === Number(garcom.id);
-    const pedidoDiretoDoCliente = pedido.origem_pedido === 'cliente';
-    if (responsavelAtual !== Number(garcom.id) &&
-        !(pedidoDiretoDoCliente && entregaAtribuidaAoGarcom)) {
-      if (pedidoDiretoDoCliente) {
-        throw new ErroGarcom(403, 'Este pedido não pertence a uma entrega sob sua responsabilidade');
-      }
-      throw new ErroGarcom(403, 'Este pedido não pertence a uma mesa sob sua responsabilidade atual');
-    }
-    if (pedidoDiretoDoCliente && pedido.garcom_id && !entregaAtribuidaAoGarcom) {
-      throw new ErroGarcom(409, 'Outro garçom já assumiu esta entrega');
-    }
-    if (pedido.status === 'entregue') {
-      throw new ErroGarcom(409, 'Pedido já foi totalmente entregue');
-    }
-
-    let idsFiltro = null;
-    if (Array.isArray(itemIds) && itemIds.length) {
-      if (itemIds.length > 100) throw new ErroGarcom(400, 'Muitos itens para entrega');
-      idsFiltro = itemIds.map((x) => Number(x));
-      if (!idsFiltro.every((n) => Number.isInteger(n) && n > 0)) {
-        throw new ErroGarcom(400, 'itemIds inválidos');
-      }
-      idsFiltro = [...new Set(idsFiltro)];
-    }
-
-    let itensProntos;
-    if (idsFiltro) {
-      const { rows: ir } = await client.query(
-        `SELECT ip.id, ip.quantidade, ip.preco_unitario,
-                COALESCE(ip.status, 'recebido') AS status
-         FROM itens_pedido ip
-         WHERE ip.pedido_id = $1 AND ip.id = ANY($2::int[])
-         FOR UPDATE`,
-        [pedido.id, idsFiltro]
-      );
-      itensProntos = ir.filter((i) => i.status === 'concluido');
-      if (!itensProntos.length) {
-        throw new ErroGarcom(409, 'Nenhum desses itens está pronto para entrega');
-      }
-    } else {
-      const { rows: ir } = await client.query(
-        `SELECT ip.id, ip.quantidade, ip.preco_unitario,
-                COALESCE(ip.status, 'recebido') AS status
-         FROM itens_pedido ip
-         WHERE ip.pedido_id = $1 AND COALESCE(ip.status, 'recebido') = 'concluido'
-         FOR UPDATE`,
-        [pedido.id]
-      );
-      itensProntos = ir;
-      if (!itensProntos.length) {
-        throw new ErroGarcom(409, 'Nenhum item pronto para entrega neste pedido');
-      }
-    }
-
-    const idsEntregar = itensProntos.map((i) => i.id);
-    await client.query(
-      `UPDATE itens_pedido SET status = 'entregue' WHERE id = ANY($1::int[])`,
-      [idsEntregar]
-    );
-
-    const { rows: totalRows } = await client.query(
-      `SELECT COALESCE(SUM(
-         ip.quantidade * (ip.preco_unitario + COALESCE(ad.total_adicionais, 0))
-       ), 0) AS total
-       FROM itens_pedido ip
-       LEFT JOIN (
-         SELECT item_pedido_id, SUM(preco_unitario) AS total_adicionais
-         FROM itens_pedido_adicionais GROUP BY item_pedido_id
-       ) ad ON ad.item_pedido_id = ip.id
-       WHERE ip.id = ANY($1::int[])`,
-      [idsEntregar]
-    );
-    const valorEntregue = Number(totalRows[0].total) || 0;
-    // Espelha o total autoritativo (todos os itens entregues da sessão) em vez
-    // de somar: se qualquer caminho anterior divergiu o acumulador, a conta
-    // se cura aqui em vez de carregar o erro até o fechamento.
-    await sincronizarValorTotalSessao(client, pedido.sessao_id);
-
-    await client.query(
-      `UPDATE pedidos
-       SET garcom_id = COALESCE(garcom_id, $2),
-           garcom_nome = COALESCE(garcom_nome, $3),
-           garcom_entregou_id = $2,
-           claimed_at = COALESCE(claimed_at, now())
-       WHERE id = $1`,
-      [pedido.id, garcom.id, garcom.nome]
-    );
-
-    const atualizado = await sincronizarStatusPedido(client, pedido.id);
-    await registrarEvento(client, {
-      atorTipo: 'garcom', atorId: Number(garcom.id), atorNome: garcom.nome,
-      acao: 'itens_entregues', alvoTipo: 'pedido', alvoId: pedido.id,
-      resultado: 'sucesso', requestId,
-      contexto: {
-        sessaoId: Number(pedido.sessao_id),
-        quantidadeItensEntregues: idsEntregar.length,
-        valorEntregue,
-        parcial: atualizado ? atualizado.status !== 'entregue' : true,
-      },
-    });
-    await client.query('COMMIT');
-    return {
-      id: pedido.id,
-      status: atualizado ? atualizado.status : pedido.status,
-      itensEntregues: idsEntregar,
-      valorEntregue,
-      parcial: atualizado ? atualizado.status !== 'entregue' : true,
-      garcom: { id: garcom.id, nome: garcom.nome },
-    };
-  } catch (err) {
-    try { await client.query('ROLLBACK'); } catch (_) {}
-    throw err;
-  } finally {
-    client.release();
-  }
-}
-
 async function listPedidosRecentes({ limit = 50, ativos = false, from = null, to = null } = {}) {
   const rawLimit = Number(limit);
   const lim = Number.isFinite(rawLimit) ? Math.min(200, Math.max(1, Math.trunc(rawLimit))) : 50;
@@ -332,7 +112,7 @@ async function listPedidosRecentes({ limit = 50, ativos = false, from = null, to
 
   const ids = pedidos.map((p) => p.id);
   const { rows: itensRows } = await pool.query(
-    `SELECT ip.id, ip.pedido_id, pr.nome, ip.quantidade, ip.preco_unitario, ip.ponto_carne, ip.observacao
+    `SELECT ip.id, ip.pedido_id, pr.nome, ip.quantidade, ip.preco_unitario, ip.ponto_carne, ip.observacao, ip.status, ip.setor
      FROM itens_pedido ip
      JOIN produtos pr ON pr.id = ip.produto_id
      WHERE ip.pedido_id = ANY($1::int[])
@@ -387,6 +167,8 @@ async function listPedidosRecentes({ limit = 50, ativos = false, from = null, to
       preco_unitario: item.preco_unitario,
       ponto_carne: item.ponto_carne,
       observacao: item.observacao,
+      status: item.status,
+      setor: item.setor,
       adicionais,
       remocoes,
       totalLinha: Number(linha.toFixed(2)),
@@ -413,9 +195,9 @@ module.exports = {
   setGarcomAtivo,
   removerGarcom,
   getGarcomPorToken,
-  assumirEntregaComoGarcom: (...args) =>
-    comRetryConcorrencia(() => assumirEntregaComoGarcom(...args), { rotulo: 'assumirEntregaComoGarcom' }),
-  entregarComoGarcom: (...args) =>
-    comRetryConcorrencia(() => entregarComoGarcom(...args), { rotulo: 'entregarComoGarcom' }),
+  assumirEntregaComoGarcom: (...args) => require('./entregas').assumirEntregaComoGarcom(...args),
+  retirarComoGarcom: (...args) => require('./entregas').retirarComoGarcom(...args),
+  entregarComoGarcom: (...args) => require('./entregas').entregarComoGarcom(...args),
+  historicoPedidoGarcom: (...args) => require('./entregas').historicoPedidoGarcom(...args),
   listPedidosRecentes,
 };

@@ -85,8 +85,8 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
 
   <section class="page" id="page-orders" data-page="orders" aria-label="Meus pedidos">
     <div class="section-heading"><div><span class="section-eyebrow">HISTÓRICO LOCAL</span><h3>Meus pedidos</h3></div><button class="primary small" id="newOrderOrders" type="button">＋ Novo pedido</button></div>
-    <div class="notice"><span>↻</span><p>Pedidos <strong>salvos offline</strong> permanecem aqui até serem confirmados pelo servidor. Não são considerados enviados antes disso.</p></div>
-    <div id="orders" class="orders-list"></div><div class="section-heading" style="margin-top:22px"><h4>Pedidos nas minhas mesas</h4><button class="secondary small" type="button" id="refreshOrderStatus">Atualizar ↻</button></div><button type="button" id="showActiveOrders" class="primary">Abrir pedidos das mesas</button><div id="activeOrderStatuses" class="orders-list" hidden></div>
+    <div class="notice"><span>↻</span><p>Pedidos <strong>salvos offline</strong> permanecem aqui até confirmação do servidor. O cliente pelo QR precisa de conexão; este modo offline é para o garçom. Limpar dados do site ou remover o aplicativo pode apagar pendências locais.</p></div>
+    <div class="action-row"><button id="exportPending" class="secondary small" type="button">Exportar pendências</button><span id="queueCount" class="muted small-copy">0 pendentes</span></div><div id="orders" class="orders-list"></div><div class="section-heading" style="margin-top:22px"><h4>Pedidos nas minhas mesas</h4><button class="secondary small" type="button" id="refreshOrderStatus">Atualizar ↻</button></div><button type="button" id="showActiveOrders" class="primary">Abrir pedidos das mesas</button><div id="activeOrderStatuses" class="orders-list" hidden></div>
   </section>
 
   <section class="page" id="page-deliveries" data-page="deliveries" aria-label="Entregas">
@@ -160,5 +160,7 @@ input,select,textarea{width:100%;min-width:0;padding:12px;border:1px solid #e3d5
 </dialog>
 <script src="./qrcode-generator.js" defer></script>
 <script src="../js/pix.js" defer></script>
+<script src="../js/realtime.js" defer></script>
+<dialog id="historyModal" class="sheet" aria-labelledby="historyTitle"><div class="sheet-top"><h2 id="historyTitle">Histórico do pedido</h2><button type="button" id="closeHistory" class="close-button" aria-label="Fechar">×</button></div><div class="sheet-body" id="historyContent"></div></dialog>
 <script type="module" src="./app.js"></script>
 </body></html>

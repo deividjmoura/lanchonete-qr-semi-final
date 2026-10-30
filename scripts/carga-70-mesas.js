@@ -34,7 +34,14 @@ const fs = require('node:fs');
 const { randomUUID } = require('node:crypto');
 
 const BASE = (process.env.BASE_URL || `http://127.0.0.1:${process.env.PORT || 3000}`).replace(/\/$/, '');
-const SENHA = process.env.STAFF_SEED_PASSWORD || process.env.ADMIN_PASSWORD || 'admin123';
+// Sem fallback hardcoded: senha padrão em script versionado vira credencial
+// pública de fato. Exigimos a mesma variável usada no bootstrap do servidor.
+const SENHA = process.env.STAFF_SEED_PASSWORD || process.env.ADMIN_PASSWORD || '';
+if (!SENHA) {
+  console.error('✗ Defina STAFF_SEED_PASSWORD com a senha de bootstrap do ambiente alvo.');
+  console.error('  Este script autentica como staff; não existe senha padrão embutida.');
+  process.exit(1);
+}
 const N_MESAS = Number(process.env.MESAS || 70);
 const RELATORIO_JSON = process.env.RELATORIO_JSON || '';
 

@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, 'hardening/**', 'test/**']
+    branches: [main, 'hardening/**', 'test/**', 'arena/**', 'fix/**']
 
 permissions:
   contents: read
@@ -49,6 +49,8 @@ jobs:
         run: node --test tests/postgres-financial-integration.test.cjs
       - name: Run waiter ownership PostgreSQL integration tests
         run: node --test tests/postgres-waiter-integration.test.cjs
+      - name: Run progressive delivery / offline replay PostgreSQL tests
+        run: node --test tests/postgres-entregas-progressivas.test.cjs
       - name: Run QR/session lifecycle PostgreSQL integration tests
         run: node --test tests/postgres-qr-session.test.cjs
       - name: Run financial concurrency PostgreSQL integration tests

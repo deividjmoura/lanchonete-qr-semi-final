@@ -57,7 +57,7 @@ interface PubState {
   concluirPedido: (pedidoId: number, setor?: "cozinha" | "bar") => void;
 
   /* garçom */
-  entregarPedido: (pedidoId: number, garcomToken?: string, itemIds?: number[]) => void;
+  entregarPedido: (pedidoId: number, garcomToken?: string, itemIds?: number[], etapa?: string) => void;
 
   /* caixa */
   registrarPagamento: (sessaoId: number, valor: number, forma: FormaPagamento) => void;
@@ -215,12 +215,8 @@ export const usePub = create<PubState>((set, get) => ({
 
   hydrateMesas: async () => {
     try {
-      let rows: any[];
-      try {
-        rows = await api.mesasPublic();
-      } catch {
-        rows = await api.adminMesas();
-      }
+      const isAdmin = get().auth?.role === "admin";
+      const rows: any[] = isAdmin ? await api.adminMesas() : await api.mesasPublic();
       set({ mesas: mapMesas(rows), lastError: null });
     } catch (e: any) {
       set({ lastError: e.message || "Falha ao carregar mesas" });
@@ -604,7 +600,7 @@ export const usePub = create<PubState>((set, get) => ({
     })();
   },
 
-  entregarPedido: (pedidoId, garcomToken, itemIds) => {
+  entregarPedido: (pedidoId, garcomToken, itemIds, etapa) => {
     /* otimista: marca itens entregues; se sobrar concluido, mantém na fila do garçom */
     const antes = get().pedidos.find((p) => p.id === pedidoId);
     const idsSet =
@@ -617,10 +613,10 @@ export const usePub = create<PubState>((set, get) => ({
         if (p.id !== pedidoId) return p;
         const itens = p.itens.map((it) => {
           const idNum = Number(it.id);
-          const target =
-            it.status === "concluido" &&
-            (idsSet == null || idsSet.has(idNum));
-          return target ? { ...it, status: "entregue" as const } : it;
+          const from = etapa === "aceitar" ? "concluido" : etapa === "retirar" ? "aceito" : etapa === "entregar" ? "retirado" : "concluido";
+          const to = etapa === "aceitar" ? "aceito" : etapa === "retirar" ? "retirado" : "entregue";
+          const target = it.status === from && (idsSet == null || idsSet.has(idNum));
+          return target ? { ...it, status: to as any } : it;
         });
         const aindaPronto = itens.some((it) => it.status === "concluido");
         const tudoEntregue = itens.every((it) => it.status === "entregue");
@@ -640,7 +636,7 @@ export const usePub = create<PubState>((set, get) => ({
     void (async () => {
       try {
         if (garcomToken) {
-          await api.garcomEntregar(garcomToken, pedidoId, itemIds);
+          await api.garcomEntregar(garcomToken, pedidoId, itemIds, etapa);
           endOpsMutation();
           await get().hydrateGarcom(garcomToken);
         } else {

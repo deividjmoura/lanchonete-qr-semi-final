@@ -43,7 +43,7 @@ export interface Produto {
   vendidos: number;
 }
 
-export type ItemStatus = "recebido" | "em_producao" | "concluido" | "entregue";
+export type ItemStatus = "recebido" | "em_producao" | "concluido" | "aceito" | "retirado" | "entregue" | "cancelado";
 
 export interface ItemPedido {
   id: string;
@@ -61,7 +61,7 @@ export interface ItemPedido {
   setor?: "cozinha" | "bar";
 }
 
-export type PedidoStatus = "na_fila" | "em_producao" | "pronto" | "entregue";
+export type PedidoStatus = "na_fila" | "em_producao" | "pronto" | "entregue" | "cancelado";
 
 export interface Pedido {
   id: number;
@@ -105,6 +105,8 @@ export interface Sessao {
   valorPago?: number;
   valorRestante?: number;
   pedidosPendentes?: number;
+  /** Pedidos totalmente cancelados: sem valor a cobrar, mas ainda ocupam a mesa. */
+  pedidosCancelados?: number;
   podeFechar?: boolean;
   clienteNome?: string | null;
 }
@@ -114,6 +116,9 @@ export interface Mesa {
   numero: number;
   token: string;
   nome: string;
+  garcomResponsavelId?: number | null;
+  garcomResponsavelNome?: string | null;
+  sessaoId?: number | null;
 }
 
 export type EventoTipo =

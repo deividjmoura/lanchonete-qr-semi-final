@@ -70,10 +70,10 @@ test('status agregado acompanha itens mistos e entrega parcial sem marcar pedido
     const client = {
       async query(sql, params) {
         calls.push({ sql, params });
-        if (sql.includes('SELECT COALESCE(status, \'recebido\') AS status FROM itens_pedido')) {
+        if (sql.includes("SELECT COALESCE(status,'recebido') AS status FROM itens_pedido")) {
           return { rows: scenario.items.map((status) => ({ status })) };
         }
-        if (sql.includes('UPDATE pedidos SET status = $2')) {
+        if (sql.includes('UPDATE pedidos SET status=$2')) {
           return { rows: [{ id: 81, status: params[1] }] };
         }
         throw new Error('Consulta inesperada no teste de status agregado');
@@ -206,10 +206,10 @@ function clientePedidoFake({ estoqueDisponivel = true, falharNoInsertAdicional =
       if (sql.includes('SELECT id FROM produtos WHERE id = ANY($1::int[]) ORDER BY id FOR UPDATE')) {
         return { rows: produtoExiste ? [{ id: 8 }] : [] };
       }
-      if (sql.includes('SELECT id, nome, preco, disponivel, pede_ponto_carne, controla_estoque, estoque FROM produtos')) {
+      if (sql.includes('SELECT id, nome, preco, disponivel, pede_ponto_carne, controla_estoque, estoque, setor FROM produtos')) {
         return { rows: produtoExiste ? [{
           id: 8, nome: 'Hambúrguer teste', preco: '10.25', disponivel: produtoDisponivel,
-          pede_ponto_carne: true, controla_estoque: true, estoque: 5,
+          pede_ponto_carne: true, controla_estoque: true, estoque: 5, setor: 'cozinha',
         }] : [] };
       }
       if (sql.includes('SELECT id, produto_id, nome, preco FROM adicionais')) {
@@ -227,7 +227,7 @@ function clientePedidoFake({ estoqueDisponivel = true, falharNoInsertAdicional =
       }
       if (sql.includes('UPDATE mesa_sessoes SET cliente_nome = COALESCE(cliente_nome, $2)')) return { rows: [], rowCount: 1 };
       if (sql.includes('UPDATE mesa_sessoes SET pix_informado_em = NULL')) return { rows: [], rowCount: 1 };
-      if (sql.includes('INSERT INTO itens_pedido (pedido_id, produto_id, quantidade, preco_unitario, ponto_carne, observacao)')) {
+      if (sql.includes('INSERT INTO itens_pedido (pedido_id, produto_id, quantidade, preco_unitario, ponto_carne, observacao, setor)')) {
         return { rows: [{ id: nextItemId++ }] };
       }
       if (sql.includes('INSERT INTO itens_pedido_adicionais')) {
@@ -240,6 +240,7 @@ function clientePedidoFake({ estoqueDisponivel = true, falharNoInsertAdicional =
           ? { rows: [{ estoque: 3, disponivel: true }], rowCount: 1 }
           : { rows: [], rowCount: 0 };
       }
+      if (sql.includes('INSERT INTO itens_pedido_historico') || sql.includes('INSERT INTO auditoria_eventos')) return { rows: [{ id: 1 }], rowCount: 1 };
       throw new Error('Consulta inesperada no teste de criação: ' + sql);
     },
     release() { this.released = true; },
@@ -367,9 +368,12 @@ test('pedido entregue não pode regredir para produção e a transação termina
     async query(sql, params = []) {
       calls.push({ sql, params });
       if (sql === 'BEGIN' || sql === 'ROLLBACK') return { rows: [], rowCount: 0 };
-      if (sql.includes('SELECT id, status, sessao_id FROM pedidos WHERE id = $1 FOR UPDATE')) {
-        return { rows: [{ id: 90, status: 'entregue', sessao_id: 55 }] };
-      }
+      if (sql.includes('SELECT sessao_id FROM pedidos WHERE id=$1')) return { rows: [{ sessao_id: 55 }] };
+      if (sql.includes('SELECT mesa_id FROM mesa_sessoes WHERE id=$1')) return { rows: [{ mesa_id: 10 }] };
+      if (sql.includes('SELECT id FROM mesas WHERE id=$1 FOR UPDATE')) return { rows: [{ id: 10 }] };
+      if (sql.includes('SELECT * FROM mesa_sessoes WHERE id=$1 FOR UPDATE')) return { rows: [{ id: 55, mesa_id: 10, status: 'aberta' }] };
+      if (sql.includes('SELECT * FROM pedidos WHERE id=$1 FOR UPDATE')) return { rows: [{ id: 90, status: 'entregue', sessao_id: 55 }] };
+      if (sql.includes('FROM itens_pedido ip JOIN produtos pr')) return { rows: [{ id: 700, pedido_id: 90, status: 'entregue', setor: 'cozinha' }] };
       throw new Error('consulta inesperada: ' + sql);
     },
     release() { this.released = true; },
@@ -397,7 +401,7 @@ test('pedido inexistente não avança status e libera conexão após rollback', 
     async query(sql, params = []) {
       calls.push({ sql, params });
       if (sql === 'BEGIN' || sql === 'ROLLBACK') return { rows: [], rowCount: 0 };
-      if (sql.includes('SELECT id, status, sessao_id FROM pedidos WHERE id = $1 FOR UPDATE')) return { rows: [] };
+      if (sql.includes('SELECT sessao_id FROM pedidos WHERE id=$1')) return { rows: [] };
       throw new Error('consulta inesperada: ' + sql);
     },
     release() { this.released = true; },

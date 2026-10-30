@@ -77,6 +77,8 @@ export function statusToUi(s: string): PedidoStatus {
       return "pronto";
     case "entregue":
       return "entregue";
+    case "cancelado":
+      return "cancelado";
     default:
       return "na_fila";
   }
@@ -93,6 +95,8 @@ export function statusToApi(s: PedidoStatus): string {
       return "concluido";
     case "entregue":
       return "entregue";
+    case "cancelado":
+      return "cancelado";
   }
 }
 
@@ -173,6 +177,9 @@ export function mapMesas(rows: any[]): Mesa[] {
     numero: Number(m.numero),
     token: String(m.token),
     nome: `Mesa ${String(m.numero).padStart(2, "0")}`,
+    garcomResponsavelId: m.garcomResponsavelId ?? m.garcom_responsavel_id ?? null,
+    garcomResponsavelNome: m.garcomResponsavelNome ?? m.garcom_responsavel_nome ?? null,
+    sessaoId: m.sessaoId ?? m.sessao_id ?? null,
   }));
 }
 
@@ -236,7 +243,7 @@ export function mapSessaoFromMesaApi(_token: string, mesaMeta: Mesa | undefined,
         escolha: null,
         obs: String(it.observacao || it.note || ""),
         totalUnit: qtd ? totalLinha / qtd : precoBase,
-        status: (["recebido","em_producao","concluido","entregue"].includes(String(it.status || ""))
+        status: (["recebido","em_producao","concluido","aceito","retirado","entregue","cancelado"].includes(String(it.status || ""))
           ? (String(it.status) as any)
           : "recebido"),
         setor: it.setor === "bar" ? "bar" as const : "cozinha" as const,
@@ -282,7 +289,7 @@ export function mapCozinhaPedidos(rows: any[]): Pedido[] {
         escolha: null,
         obs: String(it.observacao || ""),
         totalUnit: precoBase + adds.reduce((s: number, a: any) => s + a.preco, 0),
-        status: (["recebido","em_producao","concluido","entregue"].includes(String(it.status || ""))
+        status: (["recebido","em_producao","concluido","aceito","retirado","entregue","cancelado"].includes(String(it.status || ""))
           ? (String(it.status) as any)
           : "recebido"),
         setor: it.setor === "bar" ? "bar" as const : "cozinha" as const,
@@ -344,6 +351,7 @@ export function mapCaixaSessoes(rows: any[]): { sessoes: Sessao[]; pedidos: Pedi
         s.valorRestante ?? s.valor_restante ?? Math.max(0, valorTotal - valorPagoApi)
       ),
       pedidosPendentes: Number(s.pedidosPendentes ?? s.pedidos_pendentes ?? 0),
+      pedidosCancelados: Number(s.pedidosCancelados ?? s.pedidos_cancelados ?? 0),
       podeFechar: s.podeFechar != null ? Boolean(s.podeFechar) : Number(s.pedidosPendentes || 0) === 0,
       clienteNome: s.clienteNome || s.cliente_nome || null,
     });
@@ -371,7 +379,7 @@ export function mapCaixaSessoes(rows: any[]): { sessoes: Sessao[]; pedidos: Pedi
           escolha: null,
           obs: String(it.observacao || it.obs || ""),
           totalUnit: qtd > 0 ? sub / qtd : precoBase,
-          status: (["recebido","em_producao","concluido","entregue"].includes(String(it.status || ""))
+          status: (["recebido","em_producao","concluido","aceito","retirado","entregue","cancelado"].includes(String(it.status || ""))
             ? (String(it.status) as any)
             : "recebido"),
           setor: it.setor === "bar" ? "bar" as const : "cozinha" as const,

@@ -1,46 +1,176 @@
-# Contrato de integração — atendimento por garçom (v1)
+# Contrato de integração — atendimento por garçom (v2, entrega progressiva por item)
 
-> Branch: `feat/atendimento-garcom-core-20261019`. Endpoints disponíveis somente após merge e migration 0019. Não executar testes de escrita em produção.
+> Esta versão substitui o contrato v1. A unidade de trabalho deixou de ser o
+> **pedido** e passou a ser o **item**. Leia junto com
+> [`PWA-ATENDIMENTO-GARCOM.md`](./PWA-ATENDIMENTO-GARCOM.md) e
+> [`CORRECAO-ENTREGA-PROGRESSIVA.md`](./CORRECAO-ENTREGA-PROGRESSIVA.md).
+> Requer a migration `0027_entregas_progressivas_offline.sql`.
 
-## Autenticação
-O token UUID individual do link do garçom é uma credencial bearer na URL. Todas as rotas de garçom revalidam se o usuário está ativo; não enviar esse token a clientes. Em produção, preferir futuramente sessão autenticada de curta duração para reduzir exposição de tokens em URLs/logs.
+## Princípio do fluxo (sem aprovação)
 
-## Mesas do garçom e responsabilidade persistente
-- `GET /api/garcom/:garcomToken/mesas` → `{garcom:{id,nome},mesas:[{id,numero,token,sessaoId,clienteNome,garcomResponsavelId,garcomResponsavelNome}]}`. Retorna mesas habilitadas para uso operacional. O campo `token` só é preenchido quando a mesa está sob responsabilidade atual daquele garçom; para as demais mesas é `null`, pois o token QR é uma credencial bearer. A API administrativa continua sendo a fonte para a visão completa do administrador.
-- `POST /api/garcom/:garcomToken/mesas/:numero/assumir` é o endpoint que o PWA usa para **iniciar atendimento**; aceita `{clienteNome?:string}`. Só assume uma sessão aberta que já contenha pedido com `origem_pedido='cliente'`; não cria sessão para mesa vazia. Se outra pessoa já for responsável, devolve 409; não permite transferência implícita, mesmo se o cliente enviar `transferir:true`.
-- `GET /api/garcom/:garcomToken/garcons-ativos` → `{garcons:[{id,nome}]}`. Só retorna IDs e nomes de garçons ativos, sem tokens.
-- `POST /api/garcom/:garcomToken/mesas/:numero/transferir` aceita `{garcomDestinoId:number}`. Somente o responsável atual pode transferir a sessão aberta; o destino deve existir e estar ativo. A transação atualiza a sessão e insere no histórico o responsável anterior, o novo, o ator (`alterado_por_id`) e o horário.
-- A migração `0023_atendimento_transferencia_actor.sql` adiciona o ator à tabela `mesa_atendimento_historico` sem remover registros anteriores.
-- Pedidos/itens que já estavam prontos permanecem com status `concluido`: não são entregues nem recriados pela transferência. Como a fila é consultada por responsável atual da sessão, somem do PWA do antigo responsável e aparecem no PWA do novo. A API administrativa continua consultando o conjunto completo.
-- Pedidos adicionais feitos por outro garçom continuam na sessão do responsável atual; a fila e a cobrança continuam restritas ao responsável atual.
+Cliente ou garçom registra o pedido → cada item cai **direto** na fila do seu
+setor (cozinha ou bar). **Não existe etapa de aprovação.** O "aceite" da
+cozinha/bar apenas move o item para `em_producao` (produção iniciada), como no
+fluxo original. Qualquer item pronto fica imediatamente disponível ao garçom,
+sem esperar o restante do pedido nem o outro setor.
 
-## Pedido do garçom
-- `POST /api/garcom/:garcomToken/mesas/:numero/pedidos` → corpo equivalente ao cliente: `{clienteNome,items,note,idempotencyKey,pedidoPaiId?}`. Requer sessão aberta com um responsável ativo; qualquer garçom ativo pode acrescentar itens, mas isso nunca transfere a responsabilidade da mesa. Se não houver responsável, responde 409.
-- `GET /api/garcom/:garcomToken/mesas/:numero/pedidos-ativos` retorna pedidos ainda ativos da sessão para o seletor de “Acrescentar itens ao pedido atual”; não devolve token QR nem dados desnecessários do cliente.
-- Quando `pedidoPaiId` é enviado, ele deve referenciar um pedido não entregue da mesma sessão. O sistema cria um novo pedido filho com autoria própria e `pedidos.pedido_pai_id`; não altera itens nem autoria do pedido original. A migration `0026_pedido_pai_id.sql` registra essa relação.
-- `items` deve manter o formato existente de `api.criarPedido` (ver `src/store/usePub.ts` função `itensToApiBody`).
-- A mesma `idempotencyKey` deve ser reutilizada em todas as tentativas de sincronização **da mesma operação**. Não gere UUID novo em um retry.
-- Novo pedido retorna HTTP 201; replay retorna 200 e `idempotentReplay:true`. O banco valida preços, disponibilidade e estoque no momento de sincronizar; um pedido offline pode ser recusado com 400/409 e requer correção manual. **Nunca informar confirmado antes do HTTP de sucesso.**
-- `pedidos.origem_pedido='garcom'` e `pedidos.garcom_registrou_id` são gravados atomicamente. Pedidos do cliente mantêm `origem_pedido='cliente'`.
+## Ciclo de vida do item
 
-## Entregas
-O endpoint já existente `POST /api/garcom/:token/pedidos/:pedidoId/entregar` continua válido; registra `garcom_entregou_id` e preserva a autoria original. Antes de alterar qualquer item, o backend bloqueia e valida a sessão aberta e exige que `garcom_responsavel_id` corresponda ao token autenticado; um ex-responsável recebe 403. Para entrega parcial por diferentes garçons, `garcom_entregou_id` representa **a última entrega do pedido**, não histórico por item. Uma auditoria por item exigirá migration adicional.
+```
+recebido → em_producao → concluido → aceito → retirado → entregue
+                              (qualquer etapa não terminal) → cancelado
+```
 
-## Indicadores administrativos
-- `GET /api/admin/garcons/metricas?data=YYYY-MM-DD` exige autenticação admin. Retorna `{data,criterio,garcons:[{id,nome,ativo,atendimentos,vendas,ticketMedio}]}`.
-- Critério de vendas: **valor cobrado de contas fechadas** nessa data, atribuído ao responsável pela sessão no fechamento, não ao autor individual de cada pedido.
-- Transferências ficam registradas em `mesa_atendimento_historico`, com `alterado_por_id` e `alterado_em`. Garçons desativados mantêm o histórico.
-- Uma sessão atribuída pela primeira vez depois de pedidos do cliente passa a creditar a venda ao garçom responsável, conforme o modelo comercial definido para esta versão.
+| Estado | Significado | Quem move |
+|---|---|---|
+| `recebido` | na fila do setor, produção não iniciada | criação do pedido |
+| `em_producao` | setor começou a produzir | cozinha/bar do setor do item |
+| `concluido` | pronto, aguardando retirada | cozinha/bar do setor do item |
+| `aceito` | garçom assumiu a entrega daquele item | garçom |
+| `retirado` | garçom retirou no balcão, ainda não levou à mesa | garçom que aceitou |
+| `entregue` | entregue na mesa — **único estado cobrável** | garçom que retirou |
+| `cancelado` | terminal, com motivo e ator; não cobra e não bloqueia | staff/garçom autorizado |
 
-## Cobrança parcial pelo garçom
-- `GET /api/garcom/:token/sessoes/:sessaoId/resumo-pagamento` devolve total dos itens entregues, valor já pago e saldo. Exige que a sessão esteja aberta e pertença ao garçom autenticado.
-- `POST /api/garcom/:token/sessoes/:sessaoId/pagamentos` é implementado pela Frente 1 no PR #85 e usa o mesmo motor financeiro do caixa. O servidor verifica a responsabilidade novamente dentro da transação que registra o pagamento; não confiar apenas na conferência feita pela interface/rota.
-- O PWA envia uma chave de idempotência estável e exige confirmação explícita do recebimento. Em caso de timeout, deve-se reenviar os mesmos dados para reutilizar a chave; não iniciar outra cobrança até resolver a tentativa anterior.
-- PIX exige confirmação manual do crédito no aplicativo bancário. O formulário do garçom não gera QR dinâmico nem confirma liquidação automaticamente.
-- O garçom pode registrar pagamentos parciais; não pode fechar a sessão nem liberar a mesa. O fechamento final continua no Caixa.
+Regras aplicadas no servidor (`db/itens.js`, `db/pedidos.js`, `db/entregas.js`):
 
-## Fora deste PR
-Não há captura de pagamento offline nem Web Push funcional com o aplicativo fechado. A interface de cobrança exige conexão; o servidor valida o saldo, a sessão aberta e o responsável atual. Não usar o endpoint público de cliente para registrar pagamento.
+- Transição só avança; regressão responde **409**. Reenvio do mesmo estado é
+  replay idempotente (`idempotentReplay:true`), sem novo histórico.
+- O setor é **snapshot** gravado no item (`itens_pedido.setor`). Alterar o
+  produto no admin não move item já lançado.
+- Cozinha/bar só alteram itens do próprio setor: setor errado → **403**.
+- `cancelado` nunca é revivido por nenhuma rota.
+- O status do pedido é **derivado** dos itens e nunca sobrescreve o trabalho
+  de um setor:
+  - todos `cancelado` → `cancelado`;
+  - todos terminais (`entregue`/`cancelado`) → `entregue`;
+  - nenhum em produção → `concluido`;
+  - algum item já avançou → `em_producao`;
+  - caso contrário → `recebido`.
 
-## Testes necessários antes de produção
-Executar migrations 0019 em banco isolado; teste admin/garçom ativo/inativo, tentativa de atuar em mesa de outro garçom, transferência, idempotência, reconciliação de faturamento, data local e histórico depois de desativar funcionário. Testar frontend e endpoints das outras branches somente após integrar sem conflitos.
+## Autoria, atores e trilha
+
+Cada etapa grava ator e horário próprios no item: `preparado_por_staff_id`,
+`aceito_por_id`/`aceito_em`, `retirado_por_id`/`retirado_em`,
+`entregue_por_id`/`entregue_em`, `cancelado_por_staff_id`/`cancelado_por_garcom_id`,
+`cancelamento_motivo`, `cancelado_em`.
+
+`itens_pedido_historico` guarda toda transição (estado anterior, novo, ator,
+`request_id`, motivo, horário). `auditoria_eventos` guarda o evento de negócio.
+`pedidos.garcom_entregou_id` registra **a última** entrega do pedido e não
+substitui a autoria por item.
+
+## Responsabilidade da mesa ≠ retirada do item
+
+- O **primeiro** garçom que aceita um item de uma sessão sem responsável torna-se
+  o responsável principal, no servidor, dentro da transação
+  (`UPDATE ... WHERE garcom_responsavel_id IS NULL`), com histórico e auditoria.
+- Garçons **ajudantes** podem aceitar/retirar/entregar outros itens da mesma mesa
+  sem alterar o responsável. A resposta informa `responsabilidadeAtribuida:false`
+  e o nome do titular.
+- Só quem aceitou pode retirar; só quem retirou pode entregar. Terceiro recebe
+  **403**.
+- Transferência é sempre explícita:
+  - `POST /api/garcom/:token/mesas/:numero/transferir` — apenas o titular atual;
+  - `POST /api/admin/mesas/:numero/transferir` — administrativo, exige staff
+    admin, grava `alterado_por_staff_id`.
+- `POST .../deixar` libera a responsabilidade, recusando (409) se houver item
+  não entregue/não cancelado. O fechamento da comanda continua no Caixa.
+
+## Rotas de entrega por item
+
+Todas exigem token de garçom ativo e sessão aberta.
+
+| Operação | Rota | Corpo |
+|---|---|---|
+| Fila compartilhada de prontos | `GET /api/garcom/:token/pedidos` | — |
+| Aceitar itens | `POST /api/garcom/:token/pedidos/:id/assumir-entrega` | `{itemIds:[int]}` |
+| Retirar itens | `POST /api/garcom/:token/pedidos/:id/retirar` | `{itemIds:[int]}` |
+| Entregar itens | `POST /api/garcom/:token/pedidos/:id/entregar` | `{itemIds:[int],etapa:"entregar"}` |
+| Histórico do pedido | `GET /api/garcom/:token/pedidos/:id/historico` | — |
+| Cancelar item | `POST /api/admin/itens/:id/cancelar` | `{motivo}` (3–300 chars) |
+| Devolver aceite à fila | `POST /api/admin/itens/:id/liberar-aceite` | — |
+
+Semântica e erros:
+
+- `itemIds` é **tudo ou nada**: id de outro pedido → **404**; item em estado
+  incompatível → **409**; nada é aplicado parcialmente.
+- Sem `itemIds`, a rota aplica a etapa a todos os itens elegíveis do pedido.
+- `etapa:"entrega_direta"` (padrão do endpoint legado `entregar`) entrega
+  diretamente itens prontos **sem dono** ou do próprio garçom; item de outro
+  garçom → **403**. O PWA atual usa o fluxo em três etapas.
+- A fila é **compartilhada**: não esconde item pronto por causa do dono da mesa
+  nem da origem do pedido. Cada item traz `podeAceitar`, `podeRetirar`,
+  `podeEntregar` calculados para o garçom autenticado, mais os nomes/ids dos
+  atores. O pedido traz `itensProntos` e `itensPendentesProducao`.
+- Corrida de aceite: exatamente um garçom vence; os demais recebem **409**.
+
+## Pedido do garçom e idempotência offline
+
+`POST /api/garcom/:token/mesas/:numero/pedidos`
+
+```jsonc
+{
+  "clienteNome": "Patrícia",
+  "items": [{ "productId": 12, "qty": 2, "note": "sem cebola",
+              "additions": [{"id": 3}], "removals": ["Cebola"] }],
+  "note": "bebidas primeiro",
+  "idempotencyKey": "UUID v4 obrigatório para pedido de garçom",
+  "clientCreatedAt": "2026-10-29T18:04:11.000Z",
+  "pedidoPaiId": 481
+}
+```
+
+- Preços, disponibilidade, estoque, adicionais e remoções são **revalidados no
+  servidor**. Preço enviado pelo cliente é ignorado.
+- A chave é única **por garçom** (`uq_pedidos_garcom_idempotency`), não por
+  sessão. O replay é resolvido **antes** de exigir sessão aberta, então um
+  celular que reenvia depois de a comanda fechar recebe o pedido original em
+  vez de um conflito sem solução.
+- Mesma chave + mesmo conteúdo → **200** com o pedido original e
+  `idempotentReplay:true`; estoque não baixa de novo.
+- Mesma chave + conteúdo diferente → **409** (`payload_hash` SHA-256 do comando
+  canônico). O original é preservado; nada é sobrescrito.
+- Pedido novo (chave nova) em mesa sem sessão atribuída → **409**.
+- `clientCreatedAt` inválido → **400**. O horário local é preservado em
+  `pedidos.cliente_criado_em`, distinto de `criado_em` (recepção no servidor).
+- **Nunca** confirmar localmente antes do HTTP de sucesso com `id` do servidor.
+
+## Setores
+
+- `GET /api/cozinha/pedidos` e `GET /api/bar/pedidos` retornam apenas itens do
+  próprio setor em `recebido`/`em_producao`.
+- `PATCH /api/pedidos/:id/status` continua aceito por compatibilidade, mas age
+  **por item** dentro do setor autorizado, recalculando o pedido. Cozinha/bar
+  não podem marcar `entregue`; admin não pode marcar `entregue` enquanto houver
+  produção pendente. Regressão em lote → **409**.
+- `PATCH /api/itens/:id/status` é a rota preferida para o avanço individual.
+
+## Financeiro
+
+- Somente itens `entregue` compõem `mesa_sessoes.valor_total`
+  (`db/conta.js`, sincronizado na mesma transação da entrega).
+- Item `retirado` mas não entregue **não** é cobrável.
+- Cancelamento devolve estoque **uma única vez** (replay não devolve de novo) e
+  só reativa produto que estava indisponível por falta de estoque.
+- Item `entregue` não pode ser cancelado (**409**): usar estorno financeiro.
+- O Caixa não fecha com pedido não terminal (**409**). `cancelado` não bloqueia.
+- Comanda inteiramente cancelada fecha com total **zero** e libera a mesa; o
+  card permanece visível no caixa até ser encerrada.
+
+## Tempo real
+
+Reusa a arquitetura SSE existente (`GET /api/events`, `db/events.js`), sem
+mecanismo paralelo. O cliente envia `hello` e o servidor replica atualizações de
+mesa, pedido e item. `public/js/realtime.js` implementa reconexão com backoff,
+fallback periódico e limpeza de listeners. Painéis continuam funcionais se o
+SSE cair, pelo polling de reserva.
+
+## Fora de escopo / não prometido
+
+- **Web Push com o aplicativo fechado não está implementado.** Existem handlers
+  no Service Worker, mas não há subscrição `PushManager`, chaves VAPID,
+  armazenamento de subscrições nem serviço de envio. Não prometer esse aviso.
+- Pedido de **cliente** por QR exige conexão. Só o garçom tem fila offline.
+- Responsabilidade de mesa assumida offline é **provisória** até o servidor
+  validar; pode resultar em conflito se outro garçom assumiu primeiro.
+- Captura de pagamento offline não existe; cobrança exige conexão.
