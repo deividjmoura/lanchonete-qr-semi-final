@@ -83,6 +83,8 @@ interface PubState {
   loginApi: (usuario: string, senha: string) => Promise<Role | null>;
   /** Troca a própria senha. Retorna null em sucesso ou a mensagem de erro. */
   trocarSenhaApi: (senhaAtual: string, senhaNova: string) => Promise<string | null>;
+  /** Admin redefine a senha de qualquer setor sem a senha antiga. */
+  redefinirSenhaApi: (login: string, senhaNova: string) => Promise<string | null>;
   logout: () => void;
   toggleSom: () => void;
   limparEventos: () => void;
@@ -1057,6 +1059,28 @@ if (typeof window !== "undefined") {
       return null;
     } catch (e: any) {
       return e?.message || "Não foi possível alterar a senha.";
+    }
+  },
+
+  /* Admin redefine a senha de outro setor (ou a própria). Ao mexer na própria,
+     o servidor rotaciona o cookie; o token CSRF novo já foi adotado pelo
+     apiSend. Só nesse caso limpamos o flag de troca obrigatória local. */
+  redefinirSenhaApi: async (login: string, senhaNova: string): Promise<string | null> => {
+    try {
+      const out = await api.redefinirSenha(login, senhaNova);
+      /* Redefinir outro setor que compartilhava a senha atual do admin pode
+         marcar a própria conta para troca obrigatória. Buscamos o estado real
+         do servidor em vez de supor que nada mudou para a sessão atual. */
+      await get().hydrateMe();
+      const atual = get().auth;
+      if (out?.propriaConta && atual) {
+        const auth = { ...atual, deveTrocar: false };
+        sessionStorage.setItem("pub-auth", JSON.stringify(auth));
+        set({ auth });
+      }
+      return null;
+    } catch (e: any) {
+      return e?.message || "Não foi possível redefinir a senha.";
     }
   },
 

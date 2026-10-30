@@ -209,8 +209,8 @@ export function OpsShell({
           {role && (
             <button
               onClick={() => setTrocando(true)}
-              title="Alterar senha"
-              aria-label="Alterar senha"
+              title={role === "admin" ? "Redefinir senha de um setor" : "Alterar senha"}
+              aria-label={role === "admin" ? "Redefinir senha de um setor" : "Alterar senha"}
               className="btn-press hidden sm:grid place-items-center size-10 rounded-full bg-slate-100/70 border border-slate-200 text-slate-500 hover:text-navy-800 cursor-pointer"
             >
               <KeyRound className="size-4.5" />
