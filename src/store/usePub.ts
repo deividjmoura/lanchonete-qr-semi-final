@@ -11,7 +11,7 @@ import type {
   Role,
   Sessao,
 } from "../lib/types";
-import { api } from "../lib/api";
+import { api, aoTrocarSessao } from "../lib/api";
 import {
   itensToApiBody,
   mapCaixaSessoes,
@@ -86,6 +86,8 @@ interface PubState {
   logout: () => void;
   toggleSom: () => void;
   limparEventos: () => void;
+  /** Publica falha de operação na faixa de erro da própria tela (sem alert nativo). */
+  reportarErro: (mensagem: string | null) => void;
 }
 
 type PendingPaymentAttempt = { valor: number; formaPagamento: string; idempotencyKey: string };
@@ -371,6 +373,39 @@ export const usePub = create<PubState>((set, get) => ({
       if (opsMutating > 0) return;
       /* fila do garçom = só concluido no backend → status UI "pronto" */
       const prontos = mapCozinhaPedidos(rows).map((p) => ({ ...p, status: "pronto" as const }));
+
+/* Outra aba entrou/saiu: o cookie de sessão é do navegador inteiro, então o
+   papel e o nome exibidos aqui podem ter mudado. Re-hidrata a identidade em vez
+   de manter um cabeçalho mentiroso, e avisa quando a sessão acabou. */
+if (typeof window !== "undefined") {
+  aoTrocarSessao(() => {
+    void (async () => {
+      try {
+        const out = await api.me();
+        const me = out?.staff;
+        if (me?.papel) {
+          const auth = {
+            role: me.papel as Role,
+            nome: me.nome || me.papel,
+            login: me.login || undefined,
+            deveTrocar: Boolean(me.deveTrocarSenha),
+          };
+          sessionStorage.setItem("pub-auth", JSON.stringify(auth));
+          usePub.setState({ auth, lastError: null });
+          return;
+        }
+        sessionStorage.removeItem("pub-auth");
+        usePub.setState({ auth: null });
+      } catch {
+        sessionStorage.removeItem("pub-auth");
+        usePub.setState({
+          auth: null,
+          lastError: "Sua sessão foi encerrada em outra aba. Entre novamente para continuar.",
+        });
+      }
+    })();
+  });
+}
       const prontoIds = new Set(prontos.map((p) => p.id));
       const prev = get().pedidos;
       const prevProntos = new Set(
@@ -1033,6 +1068,7 @@ export const usePub = create<PubState>((set, get) => ({
   },
   toggleSom: () => set({ somLigado: !get().somLigado }),
   limparEventos: () => set({ eventos: [] }),
+  reportarErro: (mensagem) => set({ lastError: mensagem }),
 }));
 
 /* ---------- seletores ---------- */
