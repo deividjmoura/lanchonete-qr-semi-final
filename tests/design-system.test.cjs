@@ -207,3 +207,83 @@ test("fontes Archivo + Martian Mono (~150 KB máx) e sprite de ícones Phosphor 
   assert.doesNotMatch(read("index.html"), /fonts\.googleapis\.com/);
   assert.ok(fs.existsSync("docs/DESIGN_SYSTEM.md"), "docs/DESIGN_SYSTEM.md existe");
 });
+
+test("correções de bugs pré-existentes: MIME .woff2, print.ts sem debíto, Admin sem Pexels/estoqueMin=5 fixo e SW update ativo", () => {
+  const serverSrc = read("server.js");
+  assert.match(serverSrc, /'\.woff2':\s*'font\/woff2'/);
+  assert.match(serverSrc, /'\.woff':\s*'font\/woff'/);
+  assert.match(serverSrc, /'\.ico':\s*'image\/x-icon'/);
+
+  const printSrc = read("src/lib/print.ts");
+  assert.doesNotMatch(printSrc, /debíto/, "typo debíto removido de print.ts");
+  const printJs = ts.transpileModule(printSrc, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS },
+  }).outputText;
+  let capturedHtml = "";
+  const docStub = {
+    open() {},
+    write(h) {
+      capturedHtml = h;
+    },
+    close() {},
+  };
+  const printCtx = {
+    exports: {},
+    require: () => ({ BRL: (v) => "R$ " + Number(v || 0).toFixed(2) }),
+    setTimeout: () => 0,
+    document: {
+      createElement() {
+        return {
+          style: {},
+          setAttribute() {},
+          remove() {},
+          contentDocument: docStub,
+          contentWindow: { document: docStub, focus() {}, print() {} },
+        };
+      },
+      body: { appendChild() {} },
+    },
+  };
+  vm.runInNewContext(printJs, printCtx);
+  printCtx.exports.imprimirComprovanteConsumo({
+    id: 10,
+    mesa: 4,
+    abertaEm: "2026-10-30T18:00:00Z",
+    fechadaEm: "2026-10-30T19:00:00Z",
+    totalConsumo: 12,
+    desconto: 0,
+    taxa: 0,
+    valorCobrado: 12,
+    valorPago: 12,
+    saldo: 0,
+    itens: [{ nome: "Chopp", quantidade: 1, precoUnitario: 12, adicionais: 0, total: 12, pedidoId: 1 }],
+    pagamentos: [
+      { id: 1, valor: 6, forma: "débito", criadoEm: "2026-10-30T19:00:00Z" },
+      { id: 2, valor: 6, forma: "crédito", criadoEm: "2026-10-30T19:00:00Z" },
+    ],
+  });
+  assert.match(capturedHtml, /Cartão débito/);
+  assert.match(capturedHtml, /Cartão crédito/);
+
+  const adminSrc = read("src/screens/Admin.tsx");
+  assert.doesNotMatch(adminSrc, /pexels\.com/i, "Admin não usa fallback externo do Pexels");
+  assert.match(adminSrc, /fotoDemo\(nome\.trim\(\),\s*categoria\)/, "Admin usa fallback local fotoDemo");
+  assert.doesNotMatch(adminSrc, /useState\("5"\)/, "estoqueMin não inicia com '5' hardcoded");
+  assert.match(adminSrc, /produto\.estoqueMinimo/, "Admin carrega estoqueMinimo real ao editar produto");
+
+  const usePubSrc = read("src/store/usePub.ts");
+  assert.doesNotMatch(usePubSrc, /estoqueMinimo:\s*p\.estoque\s*!=\s*null\s*\?\s*5\s*:\s*0/);
+  assert.match(usePubSrc, /p\.estoqueMinimo/);
+
+  // Regressões estruturais já saneadas no redesign
+  const caixaSrc = read("src/screens/Caixa.tsx");
+  assert.doesNotMatch(caixaSrc, /<h1[^>]*>[\s\S]*?<p[\s>]/, "Caixa não aninha <p> dentro de <h1>");
+  assert.doesNotMatch(read("public/garcom-pwa/index.html"), /repeat\(5,/, "PWA bottom-nav não usa 5 colunas órfãs");
+  assert.doesNotMatch(read("src/screens/Mesa.tsx"), /\?\s*null\s*:\s*null/, "Mesa não possui ternário morto");
+
+  // Atualização ativa do Service Worker em aparelhos já instalados
+  const pwaApp = read("public/garcom-pwa/app.js");
+  assert.match(pwaApp, /updateViaCache:\s*'none'/);
+  assert.match(pwaApp, /swReg\?\.update\(\)/);
+});
+

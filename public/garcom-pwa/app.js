@@ -396,10 +396,11 @@ $('#startAttendance')?.addEventListener('click',async()=>{
 $('#showQr')?.addEventListener('click',()=>openQr(Number($('#tableSelect').value)));
 $('#exportPending')?.addEventListener('click',exportPending);
 $('#copyQr').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('#qrUrl').value);$('#copyQr').textContent='Endereço copiado';setTimeout(()=>$('#copyQr').textContent='Copiar endereço',1500)}catch{$('#qrUrl').select();document.execCommand('copy')}});
-window.addEventListener('online',()=>{void syncEngine?.flush();void refreshLiveData();});
+let swReg=null;
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(r=>{swReg=r;}).catch(e=>console.warn('[garcom-pwa] Service Worker indisponível:',e.message));
+window.addEventListener('online',()=>{void swReg?.update().catch(()=>{});void syncEngine?.flush();void refreshLiveData();});
 window.addEventListener('offline',()=>setConnection('offline'));
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){void syncEngine?.flush();void refreshLiveData();}});
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(e=>console.warn('[garcom-pwa] Service Worker indisponível:',e.message));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){void swReg?.update().catch(()=>{});void syncEngine?.flush();void refreshLiveData();}});
 async function refreshLiveData(){
  if(!waiterToken||!syncEngine||syncEngine.connection==='offline'||waiterAuthInvalid)return;
  await Promise.allSettled([loadMesas(),loadDeliveries(),loadOrderStatuses()]);

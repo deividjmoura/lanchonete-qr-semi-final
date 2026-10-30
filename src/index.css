@@ -182,7 +182,8 @@
 
 .qr-quiet-zone {
   background: var(--qr-paper);
-  border: 1px solid var(--line-strong);
+  color: var(--qr-ink);
+  border: 1px solid var(--qr-border);
   border-radius: var(--radius-sm);
   padding: 10px;
 }

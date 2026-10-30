@@ -164,6 +164,10 @@ export function mapCardapio(apiCats: any[]): { categorias: Categoria[]; produtos
         removiveis,
         ativo: p.disponivel === undefined ? true : Boolean(p.disponivel),
         estoque: controla ? (estoque ?? 0) : estoque,
+        estoqueMinimo:
+          p.estoqueMinimo != null || p.estoque_minimo != null
+            ? Number(p.estoqueMinimo ?? p.estoque_minimo ?? 0)
+            : 0,
         vendidos: 0,
       });
     }

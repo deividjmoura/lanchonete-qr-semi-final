@@ -796,7 +796,7 @@ if (typeof window !== "undefined") {
       disponivel: p.ativo !== false,
       controlaEstoque: p.estoque != null,
       estoque: p.estoque,
-      estoqueMinimo: p.estoque != null ? 5 : 0,
+      estoqueMinimo: p.estoque != null ? Math.max(0, Math.floor(Number(p.estoqueMinimo ?? 0) || 0)) : 0,
       setor: p.setor === "bar" ? "bar" : "cozinha",
     };
     const exists = st.produtos.some((x) => x.id === p.id);

@@ -120,4 +120,15 @@ Servida localmente em `public/garcom-pwa/fonts/` sob CSP `'self'`, totalizando *
 - **Propriedades animadas:** `transform` e `opacity` nas entradas e trocas de estado (`<= 180 ms`; padrão `--dur-page: 160ms`).
 - **Curva de comanda:** `--ease-ticket: cubic-bezier(0.22, 1.18, 0.36, 1)` para entrada discreta de comandas e retorno mecânico de carimbo (`.anim-stamp`, `150ms`).
 - **Indicador de navegação:** `framer-motion` `layoutId` com spring firme (`stiffness: 520, damping: 38, mass: 0.7`).
-- ** Movimento reduzido:** `@media (prefers-reduced-motion: reduce)` e `useReducedMotion()` neutralizam deslocamentos e animações contínuas.
+- **Movimento reduzido:** `@media (prefers-reduced-motion: reduce)` e `useReducedMotion()` neutralizam deslocamentos e animações contínuas.
+
+---
+
+## 9. Higiene de Produção e Correções Estruturais
+
+- **MIME estático completo (`server.js`):** fontes locais (`.woff2` -> `font/woff2`, `.woff` -> `font/woff`), `.ico` (`image/x-icon`) e `.txt` (`text/plain; charset=utf-8`) são entregues com cabeçalhos MIME oficiais.
+- **Impressão térmica (`src/lib/print.ts`):** normalização NFD em `formaLabel()` resolve `débito`, `debito`, `crédito` e `credito` sem chaves com grafia incorreta.
+- **Cadastro e estoque no Admin (`src/screens/Admin.tsx`, `src/lib/mappers.ts`, `src/store/usePub.ts`):** produtos sem foto usam fallback local `fotoDemo()` (zero URLs externas Pexels), e `estoqueMinimo` é persistido e carregado ponta a ponta sem sobrescrever com valor fixo `5`.
+- **Atualização ativa do Service Worker (`public/garcom-pwa/app.js`):** registro com `{ updateViaCache: 'none' }` e checagem ativa (`swReg?.update()`) ao reconectar (`online`) ou retornar ao primeiro plano (`visibilitychange`).
+- **Quiet zone óptica em QR Codes (`.qr-quiet-zone`):** fundo `--qr-paper` (`#F7F0E2`) e tinta `--qr-ink` (`#17120E`) garantem contraste de leitura para câmeras tanto no tema Claro quanto no Escuro.
+

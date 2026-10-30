@@ -35,6 +35,7 @@ import { Badge, Btn, Input, Modal } from "../components/ui";
 import { ir } from "../router";
 import { api } from "../lib/api";
 import { descricaoPadrao } from "../lib/descricao";
+import { fotoDemo } from "../lib/mappers";
 import {
   imprimirComandaHistorico,
   imprimirComprovanteConsumo,
@@ -455,7 +456,7 @@ function Cardapio() {
             {p.tipo === "escolher" ? "escolher" : p.tipo === "personalizavel" ? "personalizável" : "simples"}
           </Badge>
           {p.estoque !== null && (
-            <Badge tone={p.estoque <= 8 ? "rose" : "neutral"}>est. {p.estoque}</Badge>
+            <Badge tone={p.estoque <= (p.estoqueMinimo ?? 0) ? "rose" : "neutral"}>est. {p.estoque}</Badge>
           )}
           {!p.ativo && <Badge tone="neutral">pausado</Badge>}
         </div>
@@ -696,7 +697,7 @@ function ProdutoForm({
   const [removiveis, setRemoviveis] = useState("");
   const [controlaEstoque, setControlaEstoque] = useState(false);
   const [estoqueQtd, setEstoqueQtd] = useState("0");
-  const [estoqueMin, setEstoqueMin] = useState("5");
+  const [estoqueMin, setEstoqueMin] = useState("0");
   const [setor, setSetor] = useState<"cozinha" | "bar">("cozinha");
   const [salvando, setSalvando] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -715,7 +716,7 @@ function ProdutoForm({
       const tem = produto.estoque !== null && produto.estoque !== undefined;
       setControlaEstoque(tem);
       setEstoqueQtd(tem ? String(produto.estoque) : "0");
-      setEstoqueMin("5");
+      setEstoqueMin(tem ? String(produto.estoqueMinimo ?? 0) : "0");
       setSetor(produto.setor === "bar" ? "bar" : "cozinha");
       setSalvando(false);
     } else if (novo) {
@@ -729,7 +730,7 @@ function ProdutoForm({
       setRemoviveis("");
       setControlaEstoque(false);
       setEstoqueQtd("0");
-      setEstoqueMin("5");
+      setEstoqueMin("0");
       const catL = String(catPadrao || "").toLowerCase();
       const barish =
         catL.includes("bebida") ||
@@ -794,15 +795,14 @@ function ProdutoForm({
         descricao: descricao.trim() || descricaoPadrao(nome.trim(), categoria),
         preco: precoN,
         categoria,
-        foto:
-          foto ||
-          "https://images.pexels.com/photos/18987002/pexels-photo-18987002.jpeg?auto=compress&cs=tinysrgb&w=900",
+        foto: foto || fotoDemo(nome.trim(), categoria),
         tipo,
         adicionais: ads,
         removiveis: tipo === "personalizavel" ? rems : [],
         ativo: produto ? produto.ativo : true,
         setor,
         estoque: controlaEstoque ? Math.max(0, Number(estoqueQtd) || 0) : null,
+        estoqueMinimo: controlaEstoque ? Math.max(0, Math.floor(Number(estoqueMin) || 0)) : 0,
         vendidos: produto ? produto.vendidos : 0,
       });
       onClose();
@@ -916,7 +916,7 @@ function ProdutoForm({
                     <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted mb-1">
                       Alerta mínimo
                     </p>
-                    <Input value={estoqueMin} onChange={setEstoqueMin} placeholder="5" type="number" />
+                    <Input value={estoqueMin} onChange={setEstoqueMin} placeholder="0" type="number" />
                   </div>
                 </div>
               )}
@@ -1660,7 +1660,7 @@ function Estoque() {
   };
 
   const controlados = produtos.filter((p) => p.estoque !== null);
-  const baixos = controlados.filter((p) => (p.estoque ?? 0) <= 8);
+  const baixos = controlados.filter((p) => (p.estoque ?? 0) <= (p.estoqueMinimo ?? 0));
 
   return (
     <div className="space-y-4">
@@ -1719,7 +1719,7 @@ function Estoque() {
                           {controla ? (
                             <span
                               className={
-                                q <= 8 ? "text-status-danger-ink font-bold" : "text-status-success-ink"
+                                q <= (p.estoqueMinimo ?? 0) ? "text-status-danger-ink font-bold" : "text-status-success-ink"
                               }
                             >
                               {q} un.
