@@ -1,4 +1,4 @@
-import { KeyRound, ShieldAlert, X } from "lucide-react";
+import { Key, ShieldWarning, X } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { usePub } from "../store/usePub";
@@ -56,9 +56,15 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
         });
         setContas(ordenadas);
       })
-      .catch((e: any) => { if (ativo) setErroContas(e?.message || "Não foi possível carregar os setores."); })
-      .finally(() => { if (ativo) setCarregandoContas(false); });
-    return () => { ativo = false; };
+      .catch((e: any) => {
+        if (ativo) setErroContas(e?.message || "Não foi possível carregar os setores.");
+      })
+      .finally(() => {
+        if (ativo) setCarregandoContas(false);
+      });
+    return () => {
+      ativo = false;
+    };
   }, [admin]);
 
   const recarregarContas = () => {
@@ -81,15 +87,18 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
   // selecionado; para os demais, à própria sessão.
   const login = admin ? alvo : loginSessao;
   const aviso = dica(nova, confirmar);
-  const podeEnviar = !busy && !carregandoContas && (admin ? Boolean(alvo) : atual.length > 0) && nova.length >= MIN && nova === confirmar;
+  const podeEnviar =
+    !busy &&
+    !carregandoContas &&
+    (admin ? Boolean(alvo) : atual.length > 0) &&
+    nova.length >= MIN &&
+    nova === confirmar;
 
   const enviar = async () => {
     if (!podeEnviar) return;
     setBusy(true);
     setErro(null);
-    const msg = admin
-      ? await redefinirSenhaApi(alvo, nova)
-      : await trocarSenhaApi(atual, nova);
+    const msg = admin ? await redefinirSenhaApi(alvo, nova) : await trocarSenhaApi(atual, nova);
     setBusy(false);
     if (msg) {
       setAtual("");
@@ -99,11 +108,11 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
       return;
     }
     setOk(true);
-    // Recarrega para que a tela busque os dados que foram bloqueados enquanto a troca estava pendente.
     setTimeout(() => (obrigatorio ? window.location.reload() : onClose()), 1200);
   };
 
-  const campo = "w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 h-12 text-sm outline-none focus:border-brand-500/60";
+  const campo =
+    "mt-1 w-full rounded-sm border border-line-strong bg-surface-sunken px-3.5 h-12 text-sm text-text outline-none focus:border-brand";
   const contaSelecionada = contas.find((c) => c.login === alvo) || null;
   const rotuloAlvo = contaSelecionada
     ? `${NOME_PAPEL[contaSelecionada.papel] || contaSelecionada.nome}${contaSelecionada.login === loginSessao ? " (minha conta)" : ""}`
@@ -114,50 +123,64 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
       role="dialog"
       aria-modal="true"
       aria-labelledby="trocar-senha-titulo"
-      className="fixed inset-0 z-[100] grid place-items-center bg-navy-900/60 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 grid place-items-center bg-surface-overlay p-4"
     >
-      <div className="glass-deep max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-4xl border border-brand-500/15 p-6 shadow-xl sm:p-8">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            {obrigatorio ? <ShieldAlert className="size-6 text-amber-600" /> : <KeyRound className="size-6 text-brand-600" />}
-            <h2 id="trocar-senha-titulo" className="font-display text-2xl text-navy-900">
+      <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-md border border-line-strong bg-surface-raised p-6">
+        <div className="flex items-start justify-between gap-3 pb-3 border-b border-line">
+          <div className="flex items-center gap-2.5">
+            {obrigatorio ? (
+              <ShieldWarning size={22} weight="fill" className="text-status-warning-ink shrink-0" />
+            ) : (
+              <Key size={22} weight="regular" className="text-brand-ink shrink-0" />
+            )}
+            <h2
+              id="trocar-senha-titulo"
+              className="font-display text-2xl font-extrabold uppercase tracking-tight text-text"
+            >
               {obrigatorio ? "Defina uma nova senha" : admin ? "Redefinir senha" : "Alterar senha"}
             </h2>
           </div>
           {!obrigatorio && (
-            <button onClick={onClose} aria-label="Fechar" className="btn-press grid size-9 place-items-center rounded-full text-slate-500 hover:text-navy-800 cursor-pointer">
-              <X className="size-4" />
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Fechar"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-line text-text-muted hover:text-text hover:bg-surface-hover"
+            >
+              <X size={18} weight="bold" />
             </button>
           )}
         </div>
 
         {obrigatorio && (
-          <p className="mt-3 text-sm text-slate-600">
+          <p className="mt-3 text-xs text-text-muted leading-relaxed">
             Esta conta usa uma senha inicial ou compartilhada. Por segurança, escolha uma senha exclusiva para continuar.
           </p>
         )}
 
         {admin && !obrigatorio && (
-          <p className="mt-3 text-sm text-slate-600">
+          <p className="mt-3 text-xs text-text-muted leading-relaxed">
             Escolha o setor e defina uma nova senha. Não é necessário informar a senha antiga.
           </p>
         )}
 
         {ok ? (
-          <p role="status" className="mt-6 rounded-2xl bg-emerald-500/10 p-4 text-sm font-semibold text-emerald-700">
+          <p
+            role="status"
+            className="mt-5 rounded-sm border border-status-success-border bg-status-success-surface p-3.5 text-xs font-semibold text-status-success-ink"
+          >
             {admin && contaSelecionada && contaSelecionada.login !== loginSessao
               ? `Senha de ${rotuloAlvo} redefinida. As sessões anteriores desse setor foram desconectadas.`
               : "Senha alterada. Os outros dispositivos foram desconectados."}
           </p>
         ) : (
           <form
-            className="mt-5 space-y-3"
+            className="mt-4 space-y-3"
             onSubmit={(e) => {
               e.preventDefault();
               void enviar();
             }}
           >
-            {/* Campo de usuário invisível: sem ele o navegador oferece salvar a senha sem nome de usuário. */}
             <input
               type="text"
               name="username"
@@ -171,13 +194,16 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
             />
 
             {admin ? (
-              <label className="block text-xs font-semibold text-slate-600">
+              <label className="block font-mono text-[11px] uppercase tracking-[0.06em] text-text-muted">
                 Setor
                 <select
                   name="setor"
                   aria-label="Setor"
                   value={alvo}
-                  onChange={(e) => { setAlvo(e.target.value); setErro(null); }}
+                  onChange={(e) => {
+                    setAlvo(e.target.value);
+                    setErro(null);
+                  }}
                   className={campo}
                   disabled={carregandoContas || busy}
                   autoFocus
@@ -196,32 +222,57 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
                   })}
                 </select>
                 {erroContas && (
-                  <span className="mt-2 block text-xs font-semibold text-rose-600">
+                  <span className="mt-2 block font-sans text-xs font-semibold normal-case tracking-normal text-status-danger-ink">
                     {erroContas}{" "}
-                    <button type="button" onClick={recarregarContas} className="underline cursor-pointer">
+                    <button type="button" onClick={recarregarContas} className="underline">
                       Tentar novamente
                     </button>
                   </span>
                 )}
               </label>
             ) : (
-              <label className="block text-xs font-semibold text-slate-600">
+              <label className="block font-mono text-[11px] uppercase tracking-[0.06em] text-text-muted">
                 Senha atual
-                <input type="password" name="current-password" autoComplete="current-password" autoFocus value={atual} onChange={(e) => setAtual(e.target.value)} className={campo} />
+                <input
+                  type="password"
+                  name="current-password"
+                  autoComplete="current-password"
+                  autoFocus
+                  value={atual}
+                  onChange={(e) => setAtual(e.target.value)}
+                  className={campo}
+                />
               </label>
             )}
 
-            <label className="block text-xs font-semibold text-slate-600">
+            <label className="block font-mono text-[11px] uppercase tracking-[0.06em] text-text-muted">
               Nova senha (mín. {MIN} caracteres)
-              <input type="password" name="new-password" autoComplete="new-password" value={nova} onChange={(e) => setNova(e.target.value)} className={campo} />
+              <input
+                type="password"
+                name="new-password"
+                autoComplete="new-password"
+                value={nova}
+                onChange={(e) => setNova(e.target.value)}
+                className={campo}
+              />
             </label>
-            <label className="block text-xs font-semibold text-slate-600">
+            <label className="block font-mono text-[11px] uppercase tracking-[0.06em] text-text-muted">
               Confirmar nova senha
-              <input type="password" name="confirm-password" autoComplete="new-password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} className={campo} />
+              <input
+                type="password"
+                name="confirm-password"
+                autoComplete="new-password"
+                value={confirmar}
+                onChange={(e) => setConfirmar(e.target.value)}
+                className={campo}
+              />
             </label>
 
             {(erro || aviso) && (
-              <p role="alert" className="text-xs font-semibold text-rose-600">
+              <p
+                role="alert"
+                className="rounded-sm border border-status-danger-border bg-status-danger-surface px-3 py-2 text-xs font-semibold text-status-danger-ink"
+              >
                 {erro || aviso}
               </p>
             )}
@@ -229,7 +280,7 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
             <button
               type="submit"
               disabled={!podeEnviar}
-              className="btn-press mt-2 h-12 w-full rounded-2xl fill-brand text-sm font-bold text-white disabled:opacity-40 cursor-pointer"
+              className="mt-2 min-h-12 w-full rounded-sm bg-brand border border-brand text-sm font-bold text-brand-contrast hover:bg-brand-hover disabled:bg-surface-sunken disabled:text-text-muted disabled:border-line disabled:pointer-events-none"
             >
               {busy ? "Salvando…" : admin ? "Redefinir senha" : "Salvar nova senha"}
             </button>

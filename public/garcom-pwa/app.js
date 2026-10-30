@@ -7,7 +7,7 @@ const tables=[];
 let waiterToken=new URLSearchParams(location.search).get('token')||localStorage.getItem('waiter-token')||'';
 let waiterAuthInvalid=false,offlineStore=null,syncEngine=null,realtimeOff=null;
 let editingDraftId=null,editingServerId=null,pendingParentOrderId=null,selectedOrdersTable=null;
-let firstLiveLoad=true,savingOrder=false,deferredInstall=null;
+let firstLiveLoad=true,savingOrder=false,deferredInstall=null,syncResetTimer=null;
 const READY_STORAGE='garcom-ready-announced-'+waiterToken;
 let announcedReady=new Set();
 try{announcedReady=new Set(JSON.parse(localStorage.getItem(READY_STORAGE)||'[]'))}catch{}
@@ -19,7 +19,28 @@ if(waiterToken)localStorage.setItem('waiter-token',waiterToken);
 
 async function allOrders(){if(!offlineStore)throw new Error('Armazenamento local indisponível');return offlineStore.all();}
 async function putOrder(order){if(!offlineStore)throw new Error('Armazenamento local indisponível');return offlineStore.put(order);}
-function statusText(s){return ({offline:'AGUARDANDO SINCRONIZAÇÃO',sync:'SINCRONIZANDO',confirmed:'SINCRONIZADO',conflict:'CONFLITO — REVISAR',error:'ERRO DE SINCRONIZAÇÃO'})[s]||s;}
+function statusText(s){return ({offline:'AGUARDANDO',sync:'SINCRONIZANDO',confirmed:'SINCRONIZADO',conflict:'CONFLITO',error:'FALHA'})[s]||s;}
+function shortTime(val){
+ if(!val)return '';
+ const d=new Date(val);
+ return Number.isNaN(d.getTime())?'':d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+function attachAccordionToggle(root,card,summary,body){
+ summary.onclick=()=>{
+  const willOpen=body.hidden;
+  for(const sib of root.children){
+   if(sib!==card&&sib.children&&sib.children[1]){
+    sib.classList.remove('expanded');
+    if(sib.children[0])sib.children[0].setAttribute('aria-expanded','false');
+    sib.children[1].hidden=true;
+   }
+  }
+  body.hidden=!willOpen;
+  summary.setAttribute('aria-expanded',willOpen?'true':'false');
+  if(willOpen)card.classList.add('expanded');
+  else card.classList.remove('expanded');
+ };
+}
 function populateTables(){for(const sel of [$('#tableSelect'),$('#qrTable'),$('#modalTable')]){if(!sel)continue;const old=sel.value;sel.replaceChildren();tables.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent='Mesa '+n;sel.append(o)});if(tables.includes(Number(old)))sel.value=old;}}
 async function getJson(url,opts={}){
  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),opts.timeoutMs||12000);
@@ -41,12 +62,10 @@ async function loadMesas(){
  if(offlineStore)await offlineStore.setMeta('mesas',{garcom:data.garcom,mesas});
  tables.splice(0,tables.length,...mesas.map(x=>Number(x.numero)));
  currentWaiterId=Number(data.garcom.id);
- // A lista de garçons é auxiliar (transferência). Sua falha não pode impedir
- // que o garçom veja as mesas nem que registre pedidos.
  try{await loadActiveWaiters();}
- catch(e){activeWaiters=[];$('#tableMessage').textContent='Mesas carregadas. A lista de garçons está temporariamente indisponível para transferências.';}
+ catch(e){activeWaiters=[];$('#tableMessage').textContent='Mesas carregadas. Lista de garçons indisponível no momento.';}
  populateTables();updateQr();renderTableGrid();
- $('#identity').textContent='Garçom: '+data.garcom.nome;
+ $('#identity').textContent='Garçom · '+data.garcom.nome;
  renderMyTables();
  renderBillingSessions();
 }
@@ -60,7 +79,6 @@ function extrairProdutosCardapio(data){
    saida.push({...p,name:p.nome||p.name||'',price:Number(p.preco??p.price??0),description:p.descricao||p.description||'',categoria:cat.nome||cat.name||p.categoria||p.category||''});
   }
  }
- // Compatibilidade com respostas que já entregam a lista plana.
  if(!saida.length&&Array.isArray(data))for(const p of data){if(p&&p.id!=null&&(p.nome||p.name))saida.push({...p,name:p.nome||p.name,price:Number(p.preco??p.price??0),description:p.descricao||p.description||''});}
  return saida;
 }
@@ -77,7 +95,7 @@ async function loadProducts(){
  }
  renderProducts();
  if(!products.length){
-  $('#products').innerHTML='<p class="empty">'+(erro||'Nenhum produto disponível no cardápio.')+'</p>';
+  $('#products').innerHTML='<p class="muted">'+(erro||'Nenhum produto disponível no cardápio.')+'</p>';
   $('#connection').textContent='Cardápio indisponível';
   console.error('[garcom-pwa] Falha ao carregar produtos:',erro);
  }
@@ -107,34 +125,123 @@ function renderProducts(){
   };
   root.append(card);
  });
- if(!root.children.length)root.innerHTML=!q?'<p class="muted">Digite o nome ou a categoria para buscar produtos.</p>':'<p class="empty">Nenhum produto encontrado. Tente outro nome.</p>';
+ if(!root.children.length)root.innerHTML=!q?'<p class="muted">Digite o nome ou a categoria para buscar produtos.</p>':'<p class="muted">Nenhum produto encontrado.</p>';
 }
-function renderCart(){const root=$('#cart');root.replaceChildren();let total=0;if(!cart.size)root.innerHTML='<p class="muted">Adicione produtos ao pedido.</p>';for(const [id,item] of cart){const p=item.product;const name=p.name||p.nome;const price=Number(p.price??p.preco??0);const adicionaisPreco=(item.additions||[]).reduce((sum,sel)=>sum+Number((p.adicionais||[]).find(a=>Number(a.id)===Number(sel.id||sel))?.preco||0),0);const precoComAdicionais=price+adicionaisPreco;total+=precoComAdicionais*item.qty;const row=document.createElement('div');row.className='cart-item';row.innerHTML='<div class="cart-row"><strong class="item-name"></strong><div class="qty"><button data-act="minus" aria-label="Diminuir quantidade">−</button><span></span><button data-act="plus" aria-label="Aumentar quantidade">+</button></div><strong class="line-price"></strong></div><div class="cart-details"><label>Adicionais<input data-field="additions" placeholder="Ex.: bacon, queijo extra"></label><label>Remover ingredientes<input data-field="removals" placeholder="Ex.: sem cebola"></label><label>Observação do item<input data-field="note" placeholder="Ponto da carne, etc."></label></div>';row.querySelector('.item-name').textContent=name;row.querySelector('.qty span').textContent=item.qty;row.querySelector('.line-price').textContent=money(precoComAdicionais*item.qty);row.querySelector('[data-act="minus"]').onclick=()=>{if(item.qty<=1)cart.delete(id);else item.qty--;renderCart()};row.querySelector('[data-act="plus"]').onclick=()=>{item.qty=Math.min(99,item.qty+1);renderCart()};const opts=p.adicionais||[];
-const addInput=row.querySelector('[data-field="additions"]');
-const addWrap=document.createElement('div');addWrap.className='addon-options';
-if(opts.length){const caption=document.createElement('span');caption.textContent='Adicionais (opcionais)';addWrap.append(caption);for(const a of opts){const label=document.createElement('label');label.className='addon-choice';const cb=document.createElement('input');cb.type='checkbox';cb.checked=(item.additions||[]).some(x=>Number(x.id||x)===Number(a.id));cb.onchange=()=>{const selected=new Set((item.additions||[]).map(x=>Number(x.id||x)));if(cb.checked)selected.add(Number(a.id));else selected.delete(Number(a.id));item.additions=[...selected].map(id=>({id}));renderCart();};const title=document.createElement('span');title.textContent=a.nome+' · '+money(Number(a.preco||0));label.append(cb,title);addWrap.append(label);}}else addWrap.textContent='Sem adicionais disponíveis';
-addInput.closest('label').replaceWith(addWrap);
-for(const f of ['removals','note']){const input=row.querySelector('[data-field="'+f+'"]');input.value=Array.isArray(item[f])?item[f].join(', '):item[f];input.onchange=()=>{item[f]=f==='note'?input.value:input.value.split(',').map(x=>x.trim()).filter(Boolean)}}root.append(row)}$('#total').textContent=money(total)}
+function renderCart(){
+ const root=$('#cart');root.replaceChildren();let total=0;
+ if(!cart.size)root.innerHTML='<p class="muted">Adicione produtos ao pedido.</p>';
+ for(const [id,item] of cart){
+  const p=item.product;const name=p.name||p.nome;const price=Number(p.price??p.preco??0);
+  const adicionaisPreco=(item.additions||[]).reduce((sum,sel)=>sum+Number((p.adicionais||[]).find(a=>Number(a.id)===Number(sel.id||sel))?.preco||0),0);
+  const precoComAdicionais=price+adicionaisPreco;total+=precoComAdicionais*item.qty;
+  const row=document.createElement('div');row.className='cart-item';
+  row.innerHTML='<div class="cart-row"><strong class="item-name"></strong><div class="qty"><button data-act="minus" aria-label="Diminuir quantidade">−</button><span></span><button data-act="plus" aria-label="Aumentar quantidade">+</button></div><strong class="line-price"></strong></div><div class="cart-details"><label>Adicionais<input data-field="additions" placeholder="Ex.: bacon, queijo extra"></label><label>Remover ingredientes<input data-field="removals" placeholder="Ex.: sem cebola"></label><label>Observação do item<input data-field="note" placeholder="Ponto da carne, etc."></label></div>';
+  row.querySelector('.item-name').textContent=name;
+  row.querySelector('.qty span').textContent=item.qty;
+  row.querySelector('.line-price').textContent=money(precoComAdicionais*item.qty);
+  row.querySelector('[data-act="minus"]').onclick=()=>{if(item.qty<=1)cart.delete(id);else item.qty--;renderCart()};
+  row.querySelector('[data-act="plus"]').onclick=()=>{item.qty=Math.min(99,item.qty+1);renderCart()};
+  const opts=p.adicionais||[];
+  const addInput=row.querySelector('[data-field="additions"]');
+  const addWrap=document.createElement('div');addWrap.className='addon-options';
+  if(opts.length){
+   const caption=document.createElement('span');caption.textContent='Adicionais (opcionais)';addWrap.append(caption);
+   for(const a of opts){
+    const label=document.createElement('label');label.className='addon-choice';
+    const cb=document.createElement('input');cb.type='checkbox';
+    cb.checked=(item.additions||[]).some(x=>Number(x.id||x)===Number(a.id));
+    cb.onchange=()=>{const selected=new Set((item.additions||[]).map(x=>Number(x.id||x)));if(cb.checked)selected.add(Number(a.id));else selected.delete(Number(a.id));item.additions=[...selected].map(id=>({id}));renderCart();};
+    const title=document.createElement('span');title.textContent=a.nome+' · '+money(Number(a.preco||0));
+    label.append(cb,title);addWrap.append(label);
+   }
+  }else addWrap.textContent='Sem adicionais disponíveis';
+  addInput.closest('label').replaceWith(addWrap);
+  for(const f of ['removals','note']){
+   const input=row.querySelector('[data-field="'+f+'"]');
+   input.value=Array.isArray(item[f])?item[f].join(', '):item[f];
+   input.onchange=()=>{item[f]=f==='note'?input.value:input.value.split(',').map(x=>x.trim()).filter(Boolean)};
+  }
+  root.append(row);
+ }
+ $('#total').textContent=money(total);
+}
+
+/* Cards compactos expansíveis — Fila deste aparelho (#orders) */
 async function renderOrders(){
  const orders=await allOrders();const queueCount=$('#queueCount');if(queueCount)queueCount.textContent=orders.filter(o=>o.status!=='confirmed').length+' pendentes';
  const root=$('#orders');root.replaceChildren();
- if(!orders.length){root.innerHTML='<p class="muted">Nenhum pedido salvo neste aparelho.</p>';return;}
- for(const o of orders){
+ if(!orders.length){
+  const empty=document.createElement('p');empty.className='muted';empty.textContent='Nenhum pedido salvo neste aparelho.';
+  root.append(empty);return;
+ }
+ const sorted=[...orders].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+ for(const o of sorted){
   const card=document.createElement('article');card.className='order';card.dataset.localId=o.localId;
-  const head=document.createElement('div');head.className='order-head';const title=document.createElement('strong');title.textContent='Mesa '+o.table+' · '+o.customerName;
-  const badge=document.createElement('span');badge.className='status '+o.status;badge.textContent=statusText(o.status);head.append(title,badge);
-  const details=document.createElement('p');details.className='muted';details.textContent=o.items.map(i=>i.qty+'× '+i.name).join(', ')+' · '+money(o.total);
-  const times=document.createElement('p');times.className='muted small-copy';times.textContent='Criado: '+new Date(o.createdAt).toLocaleString('pt-BR')+(o.confirmedAt?' · Confirmado: '+new Date(o.confirmedAt).toLocaleString('pt-BR'):' · Ainda não confirmado pelo servidor')+(o.serverOrderId?' · Pedido #'+o.serverOrderId:'');
-  card.append(head,details,times);
-  if(o.lastError){const error=document.createElement('p');error.className='sync-error';error.setAttribute('role','alert');error.textContent=o.lastError+(o.nextAttemptAt?' Nova tentativa automática após '+new Date(o.nextAttemptAt).toLocaleTimeString('pt-BR'):'');card.append(error);}
-  // `sync` também ganha botão: se o envio foi interrompido, o garçom precisa de
-  // uma saída manual em vez de olhar "SINCRONIZANDO" para sempre. O flush com
-  // force recupera o órfão sob o lease e reenvia com a mesma chave.
-  if(['offline','conflict','error','sync'].includes(o.status)){const retry=document.createElement('button');retry.className='secondary';retry.textContent=o.status==='conflict'?'Revisar conflito':o.status==='sync'?'Verificar envio agora':'Tentar sincronizar';retry.onclick=()=>o.status==='conflict'?reviewConflict(o.localId):syncOne(o.localId,true);card.append(retry);}
-  if(o.status==='offline'&&!o.attempts){const edit=document.createElement('button');edit.className='secondary';edit.textContent='Editar rascunho';edit.onclick=()=>openEditDraft(o);card.append(edit);}
+  const summary=document.createElement('button');summary.type='button';summary.className='order-summary';summary.setAttribute('aria-expanded','false');
+  const main=document.createElement('div');main.className='order-summary-main';
+  const top=document.createElement('div');top.className='order-summary-top';
+  const idTag=document.createElement('span');idTag.className='order-id-tag';
+  idTag.textContent=o.serverOrderId?'#'+o.serverOrderId:'LOCAL';
+  const dest=document.createElement('strong');dest.className='order-dest';
+  dest.textContent='Mesa '+String(o.table).padStart(2,'0')+' · '+o.customerName;
+  top.append(idTag,dest);
+  const meta=document.createElement('div');meta.className='order-meta-line';
+  const hr=document.createElement('span');hr.textContent=shortTime(o.createdAt)||'agora';
+  const tot=document.createElement('span');tot.textContent=money(o.total);
+  const mesaObj=mesas.find(m=>Number(m.numero)===Number(o.table));
+  meta.append(hr,tot);
+  if(mesaObj?.garcomResponsavelNome){const resp=document.createElement('span');resp.textContent='Resp.: '+mesaObj.garcomResponsavelNome;meta.append(resp);}
+  main.append(top,meta);
+
+  const right=document.createElement('div');right.className='order-summary-right';
+  const badge=document.createElement('span');badge.className='status '+o.status;badge.textContent=statusText(o.status);
+  const chev=document.createElement('span');chev.className='order-chevron';chev.setAttribute('aria-hidden','true');chev.textContent='▾';
+  right.append(badge,chev);
+  summary.append(main,right);
+
+  const body=document.createElement('div');body.className='order-body';body.hidden=true;
+  const list=document.createElement('div');list.className='order-items';
+  for(const it of o.items||[]){
+   const line=document.createElement('div');line.className='order-item-line';
+   const label=document.createElement('strong');label.textContent=(it.qty||1)+'× '+it.name;
+   line.append(label);
+   const extras=[...(it.removals||[]).map(r=>'sem '+r),it.note].filter(Boolean);
+   if(extras.length){const ex=document.createElement('small');ex.className='item-extras';ex.textContent=extras.join(' · ');line.append(ex);}
+   list.append(line);
+  }
+  body.append(list);
+  if(o.note){const gNote=document.createElement('p');gNote.className='muted small-copy';gNote.textContent='Obs.: '+o.note;body.append(gNote);}
+  const times=document.createElement('p');times.className='muted small-copy';
+  times.textContent='Criado: '+new Date(o.createdAt).toLocaleString('pt-BR')+(o.confirmedAt?' · Confirmado: '+new Date(o.confirmedAt).toLocaleString('pt-BR'):' · Aguardando confirmação do servidor');
+  body.append(times);
+  if(o.lastError){
+   const error=document.createElement('p');error.className='sync-error';error.setAttribute('role','alert');
+   error.textContent=o.lastError+(o.nextAttemptAt?' Nova tentativa após '+new Date(o.nextAttemptAt).toLocaleTimeString('pt-BR'):'');
+   body.append(error);
+  }
+
+  attachAccordionToggle(root,card,summary,body);
+  card.append(summary);
+
+  // `sync` também ganha botão visível: se o envio foi interrompido, o garçom tem
+  // saída manual imediata sem precisar abrir detalhes; o flush com force recupera o órfão sob o lease.
+  const actions=document.createElement('div');actions.className='order-quick-actions action-row';
+  if(['offline','conflict','error','sync'].includes(o.status)){
+   const retry=document.createElement('button');retry.type='button';retry.className='secondary small';
+   retry.textContent=o.status==='conflict'?'Revisar conflito':o.status==='sync'?'Verificar envio agora':'Tentar sincronizar';
+   retry.onclick=()=>o.status==='conflict'?reviewConflict(o.localId):syncOne(o.localId,true);
+   actions.append(retry);
+  }
+  if(o.status==='offline'&&!o.attempts){
+   const edit=document.createElement('button');edit.type='button';edit.className='secondary small';
+   edit.textContent='Editar rascunho';edit.onclick=()=>openEditDraft(o);actions.append(edit);
+  }
+  if(actions.childElementCount)card.append(actions);
+  card.append(body);
   root.append(card);
  }
 }
+
 async function saveOrder(){
  if(savingOrder)return;
  savingOrder=true;const saveButton=$('#saveOrder');saveButton.disabled=true;
@@ -186,12 +293,47 @@ async function sendOrderToServer(order){
 }
 async function syncOne(localId,force=false){return syncEngine?.flush({localId,force});}
 async function syncPending(){return syncEngine?.flush();}
+function setSyncFeedback(state,message){
+ const btn=$('#syncBtn'),sr=$('#syncFeedback');
+ if(!btn)return;
+ if(syncResetTimer){clearTimeout(syncResetTimer);syncResetTimer=null;}
+ btn.dataset.syncState=state;
+ btn.disabled=state==='syncing';
+ btn.setAttribute('aria-label',message);
+ btn.title=message;
+ if(sr)sr.textContent=state==='idle'?'':message;
+ if(state==='success'||state==='error'){
+  syncResetTimer=setTimeout(()=>{
+   btn.dataset.syncState='idle';
+   btn.setAttribute('aria-label','Sincronizar pendências com o servidor');
+   btn.title='Sincronizar pendências com o servidor';
+  },2500);
+ }
+}
+async function handleGlobalSync(){
+ setSyncFeedback('syncing','Sincronizando pendências com o servidor…');
+ try{
+  await syncPending();
+  await refreshLiveData();
+  const orders=offlineStore?await allOrders():[];
+  const hasProblem=orders.some(o=>o.status==='error'||o.status==='conflict');
+  if(syncEngine?.connection==='offline'){
+   setSyncFeedback('error','Sem conexão com o servidor — pendências mantidas neste aparelho');
+  }else if(hasProblem){
+   setSyncFeedback('error','Sincronização parcial: há pedido com falha ou conflito para revisar');
+  }else{
+   setSyncFeedback('success','Sincronização concluída com o servidor');
+  }
+ }catch(e){
+  setSyncFeedback('error',e.message||'Falha ao sincronizar com o servidor');
+ }
+}
 function setConnection(state){
  const el=$('#connection');if(!el)return;
  const effective=waiterAuthInvalid?'auth':state||syncEngine?.connection||'checking';
- const labels={online:'ONLINE · servidor acessível',offline:'OFFLINE · pedidos ficam neste aparelho',checking:'VERIFICANDO CONEXÃO…',auth:'LINK INVÁLIDO OU DESATIVADO',storage:'ERRO NO ARMAZENAMENTO LOCAL'};
+ const labels={online:'Servidor online',offline:'Modo offline',checking:'Verificando…',auth:'Link inválido',storage:'Erro local'};
  el.textContent=labels[effective]||labels.checking;
- el.style.color=effective==='online'?'var(--qr-teal-700)':effective==='offline'||effective==='checking'?'var(--qr-amber-700)':'var(--qr-rose-700)';
+ el.setAttribute('data-net',effective);
 }
 async function reviewConflict(localId){
  const order=await offlineStore.get(localId);if(!order)return;
@@ -209,13 +351,29 @@ function exportPending(){
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='pedidos-pendentes-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
  }).catch(e=>alert(e.message));
 }
-function updateQr(){const n=Number($('#qrTable').value);const mesa=mesas.find(x=>Number(x.numero)===n);if(!mesa?.token){$('#qrImage').textContent='QR disponível apenas para o responsável atual da mesa.';return;}const url=new URL('../',location.href).href+'#/mesa/'+mesa.token;$('#qrUrl').value=url;try{const qr=window.qrcode(0,'M');qr.addData(url);qr.make();$('#qrImage').innerHTML=qr.createSvgTag({cellSize:4,margin:2,scalable:true,title:'QR Code da mesa '+n})}catch(e){$('#qrImage').textContent='Não foi possível gerar o QR desta mesa';console.error('Falha ao gerar QR local',e)}}$('#search').addEventListener('input',renderProducts);$('#saveOrder').addEventListener('click',saveOrder);$('#syncBtn').addEventListener('click',syncPending);$('#qrTable').addEventListener('change',updateQr);
-/* Ligações dos controles do shell.
- * Estes botões existiam no HTML sem nenhum handler: "＋ Novo pedido" não abria
- * o formulário e os "×" não fechavam as folhas modais, o que travava o
- * atendimento no celular. Encontrado pelo E2E em navegador real. */
-/* Navegação inferior: os botões existiam sem handler, então o garçom ficava
- * preso na aba Mesas e nunca alcançava Entregas/Cobrança pelo toque. */
+function updateQr(){
+ const n=Number($('#qrTable').value);const mesa=mesas.find(x=>Number(x.numero)===n);
+ if(!mesa?.token){$('#qrImage').textContent='QR disponível apenas para o responsável atual da mesa.';return;}
+ const url=new URL('../',location.href).href+'#/mesa/'+mesa.token;$('#qrUrl').value=url;
+ try{const qr=window.qrcode(0,'M');qr.addData(url);qr.make();$('#qrImage').innerHTML=qr.createSvgTag({cellSize:4,margin:2,scalable:true,title:'QR Code da mesa '+n})}
+ catch(e){$('#qrImage').textContent='Não foi possível gerar o QR desta mesa';console.error('Falha ao gerar QR local',e)}
+}
+
+$('#search').addEventListener('input',renderProducts);
+$('#saveOrder').addEventListener('click',saveOrder);
+$('#syncBtn').addEventListener('click',handleGlobalSync);
+$('#qrTable').addEventListener('change',updateQr);
+
+$('#themeToggleBtn')?.addEventListener('click',()=>{
+ const root=document.documentElement;
+ const next=root.getAttribute('data-theme')==='escuro'?'claro':'escuro';
+ root.setAttribute('data-theme',next);
+ root.style.colorScheme=next==='escuro'?'dark':'light';
+ try{localStorage.setItem('qradmin-tema',next);}catch{}
+ const meta=document.querySelector('meta[name="theme-color"]');
+ if(meta)meta.setAttribute('content',next==='escuro'?'#141813':'#f0e6d2');
+});
+
 for (const btn of document.querySelectorAll('[data-tab]')) {
   btn.addEventListener('click',()=>switchTab(btn.dataset.tab));
 }
@@ -231,7 +389,6 @@ $('#closeOrder')?.addEventListener('click',()=>$('#orderModal').close());
 $('#closeQr')?.addEventListener('click',()=>$('#qrModal').close());
 $('#closeTableDetails')?.addEventListener('click',()=>$('#tableDetailsModal').close());
 $('#modalQr')?.addEventListener('click',()=>openQr(Number($('#modalTable').value)));
-// Bloco legado oculto: mantido funcional para não deixar controle morto no DOM.
 $('#startAttendance')?.addEventListener('click',async()=>{
  try{await iniciarAtendimento(Number($('#tableSelect').value),$('#customerName').value.trim());$('#tableMessage').textContent='Atendimento iniciado.';}
  catch(e){$('#tableMessage').textContent=e.message||'Não foi possível iniciar o atendimento.';}
@@ -239,10 +396,11 @@ $('#startAttendance')?.addEventListener('click',async()=>{
 $('#showQr')?.addEventListener('click',()=>openQr(Number($('#tableSelect').value)));
 $('#exportPending')?.addEventListener('click',exportPending);
 $('#copyQr').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('#qrUrl').value);$('#copyQr').textContent='Endereço copiado';setTimeout(()=>$('#copyQr').textContent='Copiar endereço',1500)}catch{$('#qrUrl').select();document.execCommand('copy')}});
-window.addEventListener('online',()=>{void syncEngine?.flush();void refreshLiveData();});
+let swReg=null;
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(r=>{swReg=r;}).catch(e=>console.warn('[garcom-pwa] Service Worker indisponível:',e.message));
+window.addEventListener('online',()=>{void swReg?.update().catch(()=>{});void syncEngine?.flush();void refreshLiveData();});
 window.addEventListener('offline',()=>setConnection('offline'));
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){void syncEngine?.flush();void refreshLiveData();}});
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(e=>console.warn('[garcom-pwa] Service Worker indisponível:',e.message));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){void swReg?.update().catch(()=>{});void syncEngine?.flush();void refreshLiveData();}});
 async function refreshLiveData(){
  if(!waiterToken||!syncEngine||syncEngine.connection==='offline'||waiterAuthInvalid)return;
  await Promise.allSettled([loadMesas(),loadDeliveries(),loadOrderStatuses()]);
@@ -255,9 +413,9 @@ async function boot(){
    onChange:(state,error)=>{setConnection(state);void renderOrders().catch(()=>{});if(error)console.error('[garcom-pwa] fila local:',error.message);}});
   await syncEngine.recoverInterrupted();await renderOrders();syncEngine.start(15000);
   if(navigator.storage?.persist)void navigator.storage.persist().catch(()=>{});
- }catch(e){console.error('[garcom-pwa] armazenamento:',e);setConnection('storage');$('#identity').textContent='Armazenamento offline indisponível: pedidos não podem ser salvos com segurança neste navegador.';}
+ }catch(e){console.error('[garcom-pwa] armazenamento:',e);setConnection('storage');$('#identity').textContent='Armazenamento offline indisponível';}
  await Promise.allSettled([loadProducts(),loadMesas()]);
- if(!mesas.length&&offlineStore){try{const cached=await offlineStore.getMeta('mesas');if(cached?.mesas){mesas=cached.mesas;currentWaiterId=Number(cached.garcom?.id);tables.splice(0,tables.length,...mesas.map(m=>Number(m.numero)));populateTables();renderTableGrid();renderMyTables();$('#identity').textContent='Garçom: '+(cached.garcom?.nome||'')+' · dados locais';}}catch{}}
+ if(!mesas.length&&offlineStore){try{const cached=await offlineStore.getMeta('mesas');if(cached?.mesas){mesas=cached.mesas;currentWaiterId=Number(cached.garcom?.id);tables.splice(0,tables.length,...mesas.map(m=>Number(m.numero)));populateTables();renderTableGrid();renderMyTables();$('#identity').textContent='Garçom · '+(cached.garcom?.nome||'')+' (local)';}}catch{}}
  if(waiterToken&&window.LQRRealtime){realtimeOff=window.LQRRealtime.connect(()=>{void refreshLiveData();void syncEngine?.flush();},{garcom:waiterToken,fallbackMs:20000,debounceMs:200}).close;}
 }
 void boot();
@@ -270,7 +428,7 @@ function refreshInstallState(){
  $('#installHelp').hidden=!!deferredInstall;
  if(!deferredInstall){
    $('#installHelp').hidden=false;
-   $('#installHelp').textContent=ios?'Para instalar no iPhone/iPad: abra esta página no Safari, toque em Compartilhar e escolha “Adicionar à Tela de Início”.':'Este navegador não ofereceu instalação automática. Abra o menu do navegador e procure “Instalar aplicativo” ou “Adicionar à tela inicial”.';
+   $('#installHelp').textContent=ios?'Para instalar no iPhone/iPad: abra no Safari, toque em Compartilhar e escolha “Adicionar à Tela de Início”.':'Abra o menu do navegador e procure “Instalar aplicativo” ou “Adicionar à tela inicial”.';
  }
 }
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;refreshInstallState()});
@@ -283,10 +441,8 @@ installBtn?.addEventListener('click',async()=>{
 window.addEventListener('appinstalled',()=>{deferredInstall=null;refreshInstallState();updateNotificationStatus()});
 refreshInstallState();
 
-
 const ITEM_LABELS={recebido:'Aguardando preparação',em_producao:'Em preparação',concluido:'Pronto para retirada',aceito:'Aceito por garçom',retirado:'Retirado — levar à mesa',entregue:'Entregue ao cliente',cancelado:'Cancelado'};
 function itemStateText(item){return ITEM_LABELS[item.status]||item.status;}
-/** Aviso inline da área de entregas: não bloqueia a operação como o alert(). */
 function avisarEntrega(msg){const alvo=$('#alertMessage');if(alvo)alvo.textContent=msg;}
 async function deliveryAction(orderId,action,itemIds){
  const qtd=Array.isArray(itemIds)?itemIds.length:0;
@@ -302,6 +458,8 @@ async function deliveryAction(orderId,action,itemIds){
  if(out.aviso)$('#alertMessage').textContent=out.aviso;
  await refreshLiveData();
 }
+
+/* Cards compactos expansíveis — Entregas (#readyOrders), autossuficiente p/ pwa-harness */
 async function loadDeliveries(){
  if(!waiterToken)return;
  const root=$('#readyOrders');
@@ -309,17 +467,60 @@ async function loadDeliveries(){
   const orders=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/pedidos');
   root.replaceChildren();
   const active=(Array.isArray(orders)?orders:[]).filter(p=>(p.itens||[]).some(i=>['concluido','aceito','retirado'].includes(i.status)));
-  if(!active.length){root.innerHTML='<p class="muted">Nenhum item aguardando retirada ou entrega.</p>';return;}
+  if(!active.length){
+   const empty=document.createElement('p');empty.className='muted';empty.textContent='Nenhum item aguardando retirada ou entrega.';
+   root.append(empty);return;
+  }
+  const startOpen=active.length===1;
   for(const order of active){
-   const card=document.createElement('article');card.className='order';card.dataset.orderId=order.id;
-   const head=document.createElement('div');head.className='order-head';
-   const name=document.createElement('strong');name.textContent='Mesa '+String(order.mesa).padStart(2,'0')+' · Pedido #'+order.id;
-   const owner=document.createElement('span');owner.className='muted small-copy';owner.textContent='Responsável da mesa: '+(order.responsavelMesaNome||'a definir no primeiro aceite');
-   head.append(name,owner);card.append(head);
-   if(order.observacao_geral){const note=document.createElement('p');note.className='muted';note.textContent='Observação: '+order.observacao_geral;card.append(note);}
+   const card=document.createElement('article');card.className='order';
+   if(startOpen)card.classList.add('expanded');
+   card.dataset.orderId=order.id;
+
+   const summary=document.createElement('button');summary.type='button';summary.className='order-summary';
+   summary.setAttribute('aria-expanded',startOpen?'true':'false');
+   const summaryMain=document.createElement('div');summaryMain.className='order-summary-main';
+   const topLine=document.createElement('div');topLine.className='order-summary-top';
+   const idTag=document.createElement('span');idTag.className='order-id-tag';idTag.textContent='#'+order.id;
+   const dest=document.createElement('strong');dest.className='order-dest';dest.textContent='Mesa '+String(order.mesa).padStart(2,'0');
+   topLine.append(idTag,dest);
+
+   const metaLine=document.createElement('div');metaLine.className='order-meta-line';
+   const rawTime=order.criado_em||order.criadoEm||(order.itens&&order.itens[0]&&order.itens[0].pronto_em);
+   if(rawTime){
+    const dt=new Date(rawTime);
+    if(!Number.isNaN(dt.getTime())){const tEl=document.createElement('span');tEl.textContent=dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});metaLine.append(tEl);}
+   }
+   const owner=document.createElement('span');owner.textContent='Resp.: '+(order.responsavelMesaNome||'a definir');
+   metaLine.append(owner);
+   summaryMain.append(topLine,metaLine);
+
+   const summaryRight=document.createElement('div');summaryRight.className='order-summary-right';
+   const readyCount=(order.itens||[]).filter(i=>i.status==='concluido').length;
+   const badge=document.createElement('span');badge.className='status '+(readyCount?'confirmed':'sync');
+   badge.textContent=readyCount?readyCount+' pronto(s)':'Em entrega';
+   const chev=document.createElement('span');chev.className='order-chevron';chev.setAttribute('aria-hidden','true');chev.textContent='▾';
+   summaryRight.append(badge,chev);
+   summary.append(summaryMain,summaryRight);
+
+   const body=document.createElement('div');body.className='order-body';body.hidden=!startOpen;
+   summary.onclick=()=>{
+    const willOpen=body.hidden;
+    for(const sib of root.children){
+     if(sib!==card&&sib.children&&sib.children[1]){
+      sib.classList.remove('expanded');
+      if(sib.children[0])sib.children[0].setAttribute('aria-expanded','false');
+      sib.children[1].hidden=true;
+     }
+    }
+    body.hidden=!willOpen;
+    summary.setAttribute('aria-expanded',willOpen?'true':'false');
+    if(willOpen)card.classList.add('expanded');
+    else card.classList.remove('expanded');
+   };
+
+   if(order.observacao_geral){const note=document.createElement('p');note.className='muted small-copy';note.textContent='Observação: '+order.observacao_geral;body.append(note);}
    const list=document.createElement('div');list.className='order-items';
-   // Um conjunto por etapa: o lote nunca mistura etapas nem inclui item que
-   // pertence a outro garçom, porque o servidor exige o mesmo ator em cada uma.
    const lotes={assumir:[],retirar:[],entregar:[]};
    for(const item of order.itens||[]){
     const line=document.createElement('div');line.className='order-item-line';line.dataset.itemId=item.id;
@@ -338,10 +539,7 @@ async function loadDeliveries(){
     else if(['aceito','retirado'].includes(item.status)){const locked=document.createElement('small');locked.className='muted';locked.textContent='Em andamento por outro garçom';line.append(locked);}
     list.append(line);
    }
-   card.append(list);
-   // Lote por pedido e por etapa. Aparece mesmo com um item só, para o garçom
-   // ter sempre o mesmo gesto, e fica desabilitado durante o envio para não
-   // disparar duas vezes o mesmo conjunto.
+   body.append(list);
    const rotulos={assumir:'Aceitar todos os prontos',retirar:'Confirmar retirada de todos',entregar:'Confirmar entrega de todos'};
    const barra=document.createElement('div');barra.className='action-row';
    for(const etapa of ['assumir','retirar','entregar']){
@@ -356,12 +554,15 @@ async function loadDeliveries(){
     };
     barra.append(all);
    }
-   if(barra.childElementCount)card.append(barra);
-   const history=document.createElement('button');history.type='button';history.className='text-button';history.textContent='Histórico de movimentação';history.onclick=()=>showOrderHistory(order.id);card.append(history);
+   if(barra.childElementCount)body.append(barra);
+   const history=document.createElement('button');history.type='button';history.className='text-button';history.textContent='Histórico de movimentação';history.onclick=()=>showOrderHistory(order.id);body.append(history);
+
+   card.append(summary,body);
    root.append(card);
   }
  }catch(e){root.textContent='Não foi possível consultar as entregas: '+e.message;}
 }
+
 async function showOrderHistory(orderId){
  const dialog=$('#historyModal'),body=$('#historyContent');body.textContent='Carregando histórico…';dialog.showModal();
  try{const data=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/pedidos/'+orderId+'/historico');body.replaceChildren();
@@ -372,12 +573,11 @@ async function showOrderHistory(orderId){
 $('#closeHistory')?.addEventListener('click',()=>$('#historyModal').close());
 document.querySelector('#refreshDeliveries')?.addEventListener('click',loadDeliveries);
 
-/* QR Admin · navegação de páginas e fluxo sob demanda */
 const pageCopy={
- tables:['Cada mesa, bem cuidada.','Inicie um atendimento ou transfira uma mesa já atribuída.'],
- orders:['Pedidos sob controle.','Veja o que está salvo e o que chegou ao servidor.'],
- deliveries:['Tudo saindo quentinho.','Pedidos prontos para entregar aos clientes.'],
- billing:['Fechamento de conta.','As cobranças confirmadas continuam no Caixa.']
+ tables:['Mesas','Atendimentos e mapa do salão'],
+ orders:['Pedidos','Fila local e pedidos nas mesas'],
+ deliveries:['Entregas','Pratos e bebidas prontos para retirada'],
+ billing:['Cobrança','Recebimento parcial validado no servidor']
 };
 function switchTab(tab){
  if(!pageCopy[tab])return;
@@ -411,18 +611,6 @@ async function iniciarAtendimento(n,customer){
  await loadMesas();
  return result;
 }
-async function clickStartAttendance(){
- const n=Number($('#tableSelect').value);
- const name=$('#customerName').value.trim();
- const target=$('#tableMessage');
- target.textContent='Iniciando atendimento…';
- try{
-   await iniciarAtendimento(n,name);
-   target.textContent='Mesa '+n+' vinculada ao seu atendimento. Pedidos prontos aparecerão nesta conta.';
-   $('#modalTable').value=String(n);
-   if(name)$('#modalCustomer').value=name;
- }catch(e){target.textContent=e.message||'Não foi possível iniciar o atendimento.';}
-}
 function renderTableGrid(){
  const root=$('#tableGrid');if(!root)return;root.replaceChildren();
  if(!mesas.length){root.textContent='Nenhuma mesa carregada. Conecte-se para atualizar.';return}
@@ -431,7 +619,7 @@ function renderTableGrid(){
   if(m.garcomResponsavelId&&m.garcomResponsavelNome)card.classList.add('taken');
   const title=document.createElement('strong');title.textContent='Mesa '+String(m.numero).padStart(2,'0');
   const desc=document.createElement('small');
-  desc.textContent=m.garcomResponsavelNome?('Atendimento: '+m.garcomResponsavelNome):(m.pedidoClienteQr?'Pedido recebido pelo QR':(m.sessaoId?'Sessão aberta':'Pronta para atender'));
+  desc.textContent=m.garcomResponsavelNome?('Resp.: '+m.garcomResponsavelNome):(m.pedidoClienteQr?'Pedido via QR':(m.sessaoId?'Sessão aberta':'Livre'));
   card.append(title,desc);card.onclick=()=>openTableDetails(m.numero);
   root.append(card);
  }
@@ -487,34 +675,28 @@ function openTableDetails(tableNumber){
 function renderMyTables(){
  const root=$('#myTables');if(!root)return;root.replaceChildren();
  const mine=mesas.filter(m=>Number(m.garcomResponsavelId)===Number(currentWaiterId)&&m.sessaoId);
- $('#myTablesCount').textContent=mine.length+' em atendimento';
- if(!mine.length){const p=document.createElement('p');p.className='muted';p.textContent='Você ainda não iniciou um atendimento. Escolha uma mesa e toque em “Iniciar atendimento”.';root.append(p);return;}
+ $('#myTablesCount').textContent=mine.length+' ativas';
+ if(!mine.length){const p=document.createElement('p');p.className='muted';p.textContent='Nenhuma mesa sob sua responsabilidade. Toque em uma mesa do salão para iniciar atendimento.';root.append(p);return;}
  for(const m of mine){
+  const wrap=document.createElement('div');wrap.className='my-table-row';
   const btn=document.createElement('button');btn.type='button';btn.className='table-tile mine';
-  const title=document.createElement('strong');title.textContent='Mesa '+m.numero;
-  const info=document.createElement('small');info.textContent=(m.clienteNome||'Cliente não informado')+' · Anotar novo pedido ↗';
-  btn.append(title,info);btn.onclick=()=>openOrder(m.numero);root.append(btn);
+  const title=document.createElement('strong');title.textContent='Mesa '+String(m.numero).padStart(2,'0');
+  const info=document.createElement('small');info.textContent=(m.clienteNome||'Cliente na mesa')+' · Novo pedido';
+  btn.append(title,info);btn.onclick=()=>openOrder(m.numero);wrap.append(btn);
   const actions=document.createElement('div');actions.className='table-actions';
-  const detail=document.createElement('button');detail.className='secondary small';detail.textContent='Ver pedidos';detail.onclick=()=>openOrdersModal(m.numero);
-  const charge=document.createElement('button');charge.className='secondary small';charge.textContent='Cobrar';charge.onclick=()=>openBillingForSession(m.sessaoId,m.numero);
-  const transferLabel=document.createElement('label');transferLabel.className='small-copy';transferLabel.textContent='Transferir para';
+  const detail=document.createElement('button');detail.type='button';detail.className='secondary small';detail.textContent='Ver pedidos';detail.onclick=()=>openOrdersModal(m.numero);
+  const charge=document.createElement('button');charge.type='button';charge.className='secondary small';charge.textContent='Cobrar';charge.onclick=()=>openBillingForSession(m.sessaoId,m.numero);
   const select=document.createElement('select');select.className='secondary small';select.setAttribute('aria-label','Garçom de destino da mesa '+m.numero);
   const options=activeWaiters.filter(g=>Number(g.id)!==Number(currentWaiterId));
-  const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent=options.length?'Escolha o garçom':'Nenhum outro garçom ativo';select.append(placeholder);
+  const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent=options.length?'Transferir para…':'Sem outro garçom';select.append(placeholder);
   for(const g of options){const option=document.createElement('option');option.value=String(g.id);option.textContent=g.nome;select.append(option);}
-  const transfer=document.createElement('button');transfer.className='secondary small';transfer.textContent='Transferir';transfer.disabled=!options.length;
+  const transfer=document.createElement('button');transfer.type='button';transfer.className='secondary small';transfer.textContent='Transferir';transfer.disabled=!options.length;
   transfer.onclick=()=>transferTable(m.numero,Number(select.value),select.options[select.selectedIndex]?.textContent||'');
-  const leave=document.createElement('button');leave.className='secondary small leave-table';leave.textContent='Deixar mesa';leave.onclick=()=>leaveTable(m.numero);
-  actions.append(detail,charge,transferLabel,select,transfer,leave);root.append(actions);
+  const leave=document.createElement('button');leave.type='button';leave.className='secondary small leave-table';leave.textContent='Deixar mesa';leave.onclick=()=>leaveTable(m.numero);
+  actions.append(detail,charge,select,transfer,leave);wrap.append(actions);
+  root.append(wrap);
  }
 }
-/**
- * Bloqueio de cobrança sempre visível.
- *
- * Antes o botão só ficava `disabled` sem dizer o motivo, e como o QR PIX é
- * montado no navegador a partir do valor digitado, o garçom via o QR perfeito
- * ao lado de um botão que parecia morto. Agora todo bloqueio escreve a causa.
- */
 function bloquearCobranca(motivo){
  const aviso=$('#billingBlocked');
  $('#registerPayment').disabled=true;
@@ -533,9 +715,6 @@ function renderBillingSessions(){
  if(!mine.length){
   const option=document.createElement('option');option.value='';option.textContent='Nenhuma mesa sob sua responsabilidade';select.append(option);
   $('#billingSummary').textContent='Inicie ou receba uma transferência de mesa para registrar recebimentos.';
-  // distingue "perfil ainda não carregado" de "não sou o responsável".
-  // Number(null) é 0 e passaria num teste de inteiro seguro, por isso o guard
-  // explícito de nulidade e a exigência de id positivo.
   const idGarcom=Number(currentWaiterId);
   const semIdentidade=currentWaiterId===null||currentWaiterId===undefined||currentWaiterId===''||!Number.isSafeInteger(idGarcom)||idGarcom<1;
   bloquearCobranca(semIdentidade
@@ -584,7 +763,6 @@ async function loadBillingSummary(){
    return;
   }
   if(restante<=0){
-   // Saldo zero tem duas causas muito diferentes e o garçom precisa saber qual.
    bloquearCobranca(total<=0
      ?'Nenhum item desta mesa foi marcado como entregue, então ainda não há valor a cobrar. Confirme as entregas na aba Entregas e toque em “Atualizar saldo”.'
      :'Esta conta já está quitada ('+money(pago)+' recebidos). O fechamento e a liberação da mesa são feitos no Caixa.');
@@ -646,9 +824,6 @@ async function submitWaiterPayment(){
   }
  }else{
   const mesa=mesas.find(m=>Number(m.sessaoId)===sessionId);
-  // A variável local é `sessionId`; o shorthand `sessaoId` lançava
-  // ReferenceError e matava o handler antes de qualquer requisição — era o
-  // "botão de confirmar pagamento que não faz nada".
   pendingWaiterPayment={sessaoId:sessionId,mesa:mesa?.numero||'?',valor:valorArredondado,formaPagamento,key:uid()};
   localStorage.setItem(pendingPaymentStorageKey,JSON.stringify(pendingWaiterPayment));
  }
@@ -660,9 +835,6 @@ async function submitWaiterPayment(){
   });
   pendingWaiterPayment=null;localStorage.removeItem(pendingPaymentStorageKey);
   $('#billingAmount').value='';$('#billingReceivedConfirm').checked=false;
-  // Quando o valor quita a conta e não há produção pendente, o servidor já
-  // encerra a sessão e libera a mesa. Sem este aviso a mesa simplesmente
-  // desaparecia da lista e o garçom não sabia se tinha dado certo.
   $('#billingMessage').textContent=out.sessaoFechada
    ?'Recebimento de '+money(Number(out.pagamento.valor))+' registrado. Conta quitada, atendimento encerrado e mesa liberada.'
    :'Recebimento registrado: '+money(Number(out.pagamento.valor))+'. Saldo restante: '+money(Number(out.valorRestante))+(out.idempotentReplay?' (confirmação recuperada após repetição segura).':'');
@@ -672,8 +844,6 @@ async function submitWaiterPayment(){
   if(e.status&&e.status<500){pendingWaiterPayment=null;localStorage.removeItem(pendingPaymentStorageKey);}
   $('#billingMessage').textContent=(e.message||'Não foi possível registrar o recebimento.')+(pendingWaiterPayment?' Se houve timeout, tente novamente sem alterar mesa, valor ou forma para reutilizar a mesma chave.':'');
  }
- // Não reabilita no escuro: quem decide é o saldo do servidor, para o botão
- // nunca voltar aceso numa conta quitada ou sem item entregue.
  finally{button.disabled=false;await loadBillingSummary();}
 }
 $('#billingSession').addEventListener('change',()=>{if(pendingWaiterPayment&&Number($('#billingSession').value)!==Number(pendingWaiterPayment.sessaoId)){const mine=mesas.find(m=>Number(m.sessaoId)===Number(pendingWaiterPayment.sessaoId)&&Number(m.garcomResponsavelId)===Number(currentWaiterId));if(mine)$('#billingSession').value=String(pendingWaiterPayment.sessaoId);$('#billingMessage').textContent='Resolva a tentativa pendente com os mesmos dados antes de selecionar outra mesa.';}else if(!pendingWaiterPayment){$('#billingAmount').value='';$('#billingReceivedConfirm').checked=false;}void loadBillingSummary()});
@@ -723,7 +893,6 @@ function editLiveOrder(o){
  $('#modalTable').value=String(o.mesa);$('#modalCustomer').value=o.clienteNome||'';$('#orderNote').value=o.note||'';renderCart();$('#orderModal').showModal();
  $('#modalMessage').textContent='Editando pedido #'+o.id+' · permitido somente antes do preparo.';
  $('#saveOrder').textContent='Salvar alterações';
- 
 }
 function liveLabel(o){
  const statuses=(o.itens||[]).map(i=>i.status);
@@ -735,33 +904,67 @@ function liveLabel(o){
  if(statuses.some(x=>x==='em_producao'))return 'Em preparo';
  return 'Recebido';
 }
+function buildLiveOrderCard(root,o){
+ const ready=(o.itens||[]).filter(i=>i.status==='concluido');
+ const card=document.createElement('article');card.className='order';
+ const summary=document.createElement('button');summary.type='button';summary.className='order-summary';summary.setAttribute('aria-expanded','false');
+ const main=document.createElement('div');main.className='order-summary-main';
+ const top=document.createElement('div');top.className='order-summary-top';
+ const idTag=document.createElement('span');idTag.className='order-id-tag';
+ idTag.textContent='#'+o.id+(o.pedidoPaiId?' (+#'+o.pedidoPaiId+')':'');
+ const dest=document.createElement('strong');dest.className='order-dest';
+ dest.textContent='Mesa '+String(o.mesa).padStart(2,'0')+(o.clienteNome?' · '+o.clienteNome:'');
+ top.append(idTag,dest);
+ const meta=document.createElement('div');meta.className='order-meta-line';
+ const tStr=shortTime(o.criadoEm||o.criado_em);
+ if(tStr){const tEl=document.createElement('span');tEl.textContent=tStr;meta.append(tEl);}
+ const mesaObj=mesas.find(m=>Number(m.numero)===Number(o.mesa));
+ const respNome=o.responsavelMesaNome||mesaObj?.garcomResponsavelNome;
+ if(respNome){const rEl=document.createElement('span');rEl.textContent='Resp.: '+respNome;meta.append(rEl);}
+ main.append(top,meta);
+
+ const right=document.createElement('div');right.className='order-summary-right';
+ const status=document.createElement('span');status.className='status '+(ready.length?'confirmed':'sync');status.textContent=liveLabel(o);
+ const chev=document.createElement('span');chev.className='order-chevron';chev.setAttribute('aria-hidden','true');chev.textContent='▾';
+ right.append(status,chev);
+ summary.append(main,right);
+
+ const body=document.createElement('div');body.className='order-body';body.hidden=true;
+ const items=document.createElement('div');items.className='order-items';
+ for(const item of o.itens||[]){
+  const line=document.createElement('div');line.className='order-item-line';
+  const description=document.createElement('span');description.textContent=(item.qty||1)+'× '+item.nome+' · '+(item.setor==='bar'?'Bar':'Cozinha');
+  const state=document.createElement('strong');state.className='item-state state-'+item.status;state.textContent=itemStateText(item);
+  line.append(description,state);
+  const extras=[...(item.adicionais||[]).map(a=>'+ '+(a.nome||a)),...(item.removidos||item.remocoes||[]).map(r=>'sem '+r),item.note||item.observacao].filter(Boolean);
+  if(extras.length){const ex=document.createElement('small');ex.className='item-extras';ex.textContent=extras.join(' · ');line.append(ex);}
+  items.append(line);
+ }
+ body.append(items);
+ if(o.note){const gNote=document.createElement('p');gNote.className='muted small-copy';gNote.textContent='Obs.: '+o.note;body.append(gNote);}
+ if(o.podeEditar){
+  const edit=document.createElement('button');edit.type='button';edit.className='secondary small';edit.textContent='Editar pedido';
+  edit.onclick=()=>editLiveOrder(o);body.append(edit);
+ }
+ attachAccordionToggle(root,card,summary,body);
+ card.append(summary,body);
+ return card;
+}
 async function loadOrderStatuses(){
  if(!waiterToken||waiterAuthInvalid||syncEngine?.connection==='offline')return;
  try{
    const rows=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/atendimentos');
-   const root=$('#modalOrderStatuses');root.replaceChildren();
-   if(!rows.length){root.innerHTML='<p class="muted">Nenhum pedido nas suas mesas abertas.</p>'}
+   const modalRoot=$('#modalOrderStatuses');modalRoot.replaceChildren();
+   const pageRoot=$('#activeOrderStatuses');if(pageRoot)pageRoot.replaceChildren();
+   if(!rows.length){
+     modalRoot.innerHTML='<p class="muted">Nenhum pedido nas suas mesas abertas.</p>';
+     if(pageRoot)pageRoot.innerHTML='<p class="muted">Nenhum pedido nas suas mesas abertas.</p>';
+   }
    for(const o of rows){
      const showOrder=selectedOrdersTable===null||Number(o.mesa)===selectedOrdersTable;
      const ready=(o.itens||[]).filter(i=>i.status==='concluido');
-     const card=document.createElement('article');card.className='order';
-     const heading=document.createElement('div');heading.className='order-head';
-     const name=document.createElement('strong');name.textContent='Mesa '+o.mesa+' · Pedido #'+o.id+(o.pedidoPaiId?' · adicional do #'+o.pedidoPaiId:'');
-     const status=document.createElement('span');status.className='status '+(ready.length?'confirmed':'sync');status.textContent=liveLabel(o);
-     heading.append(name,status);card.append(heading);
-     const items=document.createElement('div');items.className='order-items';
-     for(const item of o.itens||[]){
-       const line=document.createElement('div');line.className='order-item-line';
-       const description=document.createElement('span');description.textContent=(item.qty||1)+'× '+item.nome+' · '+(item.setor==='bar'?'Bar':'Cozinha');
-       const state=document.createElement('strong');
-       state.className='item-state state-'+item.status;
-       state.textContent=itemStateText(item);
-       line.append(description,state);items.append(line);
-     }
-     card.append(items);
-     if(o.podeEditar){const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent='Editar pedido';edit.onclick=()=>editLiveOrder(o);card.append(edit)}
-     if(showOrder)root.append(card);
-     // Nunca repete avisos ao entrar novamente na página ou após reabrir.
+     if(showOrder)modalRoot.append(buildLiveOrderCard(modalRoot,o));
+     if(pageRoot)pageRoot.append(buildLiveOrderCard(pageRoot,o));
      const newReady=ready.filter(i=>!announcedReady.has(Number(i.id)));
      if(!firstLiveLoad&&newReady.length&&readyAlertsEnabled)notifyReady(o,newReady.length);
      ready.forEach(i=>announcedReady.add(Number(i.id)));
@@ -793,20 +996,20 @@ function notificationPermission(){
 function updateNotificationStatus(){
  const permission=notificationPermission(),installed=isStandalone();
  let state;
- if(permission==='unavailable')state='Notificações indisponíveis: este navegador não oferece a API necessária.';
+ if(permission==='unavailable')state='Notificações indisponíveis neste navegador.';
  else if(permission==='denied')state='Permissão negada nas configurações do navegador. Você pode alterá-la nas configurações do site.';
  else if(permission==='granted')state='Permissão concedida. Avisos locais dependem de o app estar executando; push em segundo plano não está configurado no servidor.';
  else state='Permissão ainda não solicitada.';
  $('#notificationStatus').textContent=(installed?'PWA instalado. ':'PWA não instalado. ')+state;
- $('#enableAlerts').textContent=permission==='granted'?'Ver status das notificações':'Configurar notificações';
+ $('#enableAlerts').textContent=permission==='granted'?'Status de avisos':'Configurar avisos';
  $('#requestNotificationPermission').disabled=permission==='unavailable'||permission==='denied';
- $('#consentPlatformNote').textContent=installed?'O PWA está instalado neste dispositivo.':'A instalação pode ser necessária para notificações em algumas plataformas. Use a opção de instalação ou siga as instruções do navegador.';
+ $('#consentPlatformNote').textContent=installed?'O PWA está instalado neste dispositivo.':'A instalação pode ser necessária para notificações em algumas plataformas.';
  refreshInstallState();
 }
 function openNotificationSetup(){
  updateNotificationStatus();
  const p=notificationPermission();
- if(p==='denied')$('#consentStatus').textContent='A permissão foi negada. Altere-a nas configurações do site no navegador; não podemos reabrir o pedido automaticamente.';
+ if(p==='denied')$('#consentStatus').textContent='A permissão foi negada. Altere-a nas configurações do site no navegador.';
  else if(p==='unavailable')$('#consentStatus').textContent='Notificações indisponíveis neste navegador ou dispositivo.';
  else if(p==='granted')$('#consentStatus').textContent='Permissão concedida, mas o servidor não possui subscrição/envio Web Push em segundo plano.';
  else $('#consentStatus').textContent='';
@@ -818,9 +1021,6 @@ consentDialog.addEventListener('close',()=>localStorage.setItem(CONSENT_SEEN,'1'
 $('#dismissNotificationConsent').addEventListener('click',()=>{localStorage.setItem(CONSENT_SEEN,'1');consentDialog.close()});
 $('#requestNotificationPermission').addEventListener('click',async()=>{
  if(!('Notification'in window)){updateNotificationStatus();return}
- // O diálogo só fecha quando houve decisão real do usuário. Se ele dispensar
- // o prompt nativo sem escolher ('default'), mantemos a folha aberta para que
- // possa tentar de novo — antes ela nunca fechava, nem depois de permitir.
  let decidiu=false;
  try{
    const result=await Notification.requestPermission();
@@ -836,8 +1036,6 @@ $('#requestNotificationPermission').addEventListener('click',async()=>{
  }catch(e){$('#consentStatus').textContent='Não foi possível solicitar permissão neste contexto. Verifique se o site usa HTTPS e tente por uma ação explícita.'}
  localStorage.setItem(CONSENT_SEEN,'1');updateNotificationStatus();
  if(decidiu){
-   // Fecha a folha e leva o resultado para o painel, que continua acessível
-   // pelo botão de notificações do cabeçalho.
    if(consentDialog.open)consentDialog.close();
    $('#alertMessage').textContent=readyAlertsEnabled
      ?'Avisos de item pronto ativados neste dispositivo. Com o app fechado não há envio em segundo plano.'
@@ -851,7 +1049,6 @@ if(!localStorage.getItem(CONSENT_SEEN)){
 }
 window.addEventListener('pageshow',updateNotificationStatus);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateNotificationStatus()});
-
 
 $('#readyToastAction').addEventListener('click',()=>{switchTab('deliveries');$('#readyToast').hidden=true});
 $('#readyToastDismiss').addEventListener('click',()=>{$('#readyToast').hidden=true});
@@ -875,11 +1072,8 @@ $('#showActiveOrders').addEventListener('click',()=>openOrdersModal(null));
 $('#closeOrdersModal').addEventListener('click',()=>$('#ordersModal').close());
 $('#ordersModal').addEventListener('close',()=>{selectedOrdersTable=null});
 
-
-// O navegador mantém o fundo inerte durante showModal(); impedir rolagem ao fundo.
 for (const modal of document.querySelectorAll('dialog.sheet')) {
   modal.addEventListener('click', event => {
-    // Fechar apenas quando o toque foi diretamente no backdrop do dialog.
     if (event.target !== modal) return;
     const rect = modal.getBoundingClientRect();
     if (event.clientX < rect.left || event.clientX > rect.right ||

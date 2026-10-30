@@ -1,10 +1,9 @@
 import { useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { BellRing, CheckCheck, ConciergeBell, Footprints, Printer, Sparkles, Timer } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { CallBell, Checks, Clock, Printer } from "@phosphor-icons/react";
 import { OpsShell, useAnuncios } from "../components/OpsShell";
 import { Badge, Btn } from "../components/ui";
 import { ir, useAgora } from "../router";
-
 import type { Pedido } from "../lib/types";
 import { usePub } from "../store/usePub";
 import { connectEvents } from "../lib/api";
@@ -12,7 +11,9 @@ import { elapsed } from "../lib/utils";
 import { imprimirComandaGarcom } from "../lib/print";
 
 export default function Garcom({ token }: { token: string }) {
-  useEffect(() => { if (token) window.location.replace(`/garcom-pwa/?token=${encodeURIComponent(token)}`); }, [token]);
+  useEffect(() => {
+    if (token) window.location.replace(`/garcom-pwa/?token=${encodeURIComponent(token)}`);
+  }, [token]);
   useAnuncios("garcom");
   useAgora(1000);
 
@@ -33,7 +34,12 @@ export default function Garcom({ token }: { token: string }) {
   const lastError = usePub((s) => s.lastError);
 
   const prontos = pedidos
-    .filter((p) => p.status !== "entregue" && p.status !== "cancelado" && p.itens.some((i) => ["concluido","aceito","retirado"].includes(i.status || "")))
+    .filter(
+      (p) =>
+        p.status !== "entregue" &&
+        p.status !== "cancelado" &&
+        p.itens.some((i) => ["concluido", "aceito", "retirado"].includes(i.status || "")),
+    )
     .sort((a, b) => a.criadoEm - b.criadoEm);
   const entregues = pedidos
     .filter((p) => p.status === "entregue")
@@ -48,43 +54,45 @@ export default function Garcom({ token }: { token: string }) {
   const tokenCurto = token.length > 8 ? token.slice(0, 8) + "…" : token;
 
   const extras = (
-    <div className="flex items-center gap-2">
-      <Badge tone="zinc">link · {tokenCurto}</Badge>
-      <Badge tone={prontos.length ? "amber" : "zinc"} pulse={prontos.length > 0}>
-        {prontos.length} pra entregar
-      </Badge>
+    <div className="flex items-center gap-1.5">
+      <Badge tone="neutral">{tokenCurto}</Badge>
+      <Badge tone={prontos.length ? "brass" : "neutral"}>{prontos.length} prontos</Badge>
     </div>
   );
 
   return (
-    <OpsShell ativo="garcom" kicker="operação · garçom" titulo={<>Fila do <span className="text-gradient">garçom</span></>} extra={extras}>
-      {lastError && (
-        <p className="mb-4 rounded-2xl border border-rose-400/40 bg-rose-600/10 px-4 py-3 text-sm text-rose-700">
-          {lastError}
-        </p>
-      )}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* prontos */}
+    <OpsShell
+      ativo="garcom"
+      regime="operational"
+      kicker="Operação · Salão"
+      titulo="Entregas"
+      extra={extras}
+      subhead={
+        lastError ? (
+          <p
+            role="alert"
+            className="rounded-sm border border-status-danger-border bg-status-danger-surface px-3.5 py-2 text-xs font-semibold text-status-danger-ink"
+          >
+            {lastError}
+          </p>
+        ) : undefined
+      }
+    >
+      <div className="grid gap-5 lg:grid-cols-3 items-start">
         <section className="lg:col-span-2">
           <AnimatePresence mode="sync">
             {prontos.length === 0 ? (
-              <motion.div
-                key="vazio"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="grid place-items-center rounded-3xl border border-dashed border-slate-200 py-24 text-center"
-              >
+              <div className="grid place-items-center rounded-md border border-dashed border-line-strong bg-surface-raised py-20 px-6 text-center">
                 <div>
-                  <motion.div animate={{ rotate: [0, 6, -6, 0] }} transition={{ repeat: Infinity, duration: 3 }}>
-                    <ConciergeBell className="size-14 text-slate-400 mx-auto" />
-                  </motion.div>
-                  <h3 className="font-display text-4xl text-navy-900 mt-4">Nada na bancada</h3>
-                  <p className="text-sm text-slate-500 mt-1.5">
-                    Quando a cozinha concluir, sua voz de rádio anuncia o número da mesa.
+                  <CallBell size={40} className="text-text-muted mx-auto" />
+                  <h3 className="font-display text-3xl font-extrabold uppercase tracking-tight text-text mt-3">
+                    Nada na bancada
+                  </h3>
+                  <p className="text-xs text-text-muted mt-1">
+                    Os avisos sonoros anunciam automaticamente a mesa quando um prato ou bebida fica pronto.
                   </p>
                 </div>
-              </motion.div>
+              </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
                 {prontos.map((p) => (
@@ -99,41 +107,29 @@ export default function Garcom({ token }: { token: string }) {
           </AnimatePresence>
         </section>
 
-        {/* entregues */}
-        <aside className="glass rounded-3xl p-5 h-fit">
-          <h3 className="font-display text-3xl text-navy-900 flex items-center gap-2">
-            <CheckCheck className="size-5 text-teal-600" /> Entregues
-          </h3>
-          <p className="text-[11px] text-slate-500 mt-0.5 mb-4">últimas corridas do salão</p>
-          <div className="space-y-2.5">
-            <AnimatePresence initial={false}>
-              {entregues.length === 0 && (
-                <p className="rounded-2xl border border-dashed border-slate-200 p-5 text-center text-xs text-slate-500">
-                  nenhuma entrega ainda
-                </p>
-              )}
-              {entregues.map((p) => (
-                <motion.div
-                  key={p.id}
-                  layout
-                  initial={{ opacity: 0, x: 24 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="flex items-center gap-3 rounded-2xl bg-slate-100/60 border border-slate-200 p-3"
-                >
-                  <span className="grid place-items-center size-10 rounded-xl bg-teal-500/10 border border-teal-500/30 font-display text-2xl text-teal-600 leading-none pt-0.5">
-                    {p.mesaNome.replace("Mesa ", "")}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold text-navy-900 truncate">
-                      {p.clienteNome} · {p.itens.reduce((a, i) => a + i.qtd, 0)} itens
-                    </p>
-                    <p className="text-[11px] text-slate-500 font-mono tabular">há {elapsed(p.criadoEm)}</p>
-                  </div>
-                  <CheckCheck className="size-4 text-teal-600 shrink-0" />
-                </motion.div>
-              ))}
-            </AnimatePresence>
+        <aside className="rounded-md border border-line-strong bg-surface-raised overflow-hidden">
+          <div className="px-4 py-3.5 border-b border-dashed border-line-strong flex items-center justify-between">
+            <h3 className="font-display text-xl font-extrabold uppercase tracking-tight text-text flex items-center gap-2">
+              <Checks size={18} className="text-status-success-ink" /> Últimas entregas
+            </h3>
+          </div>
+          <div className="divide-y divide-line">
+            {entregues.length === 0 && (
+              <p className="p-6 text-center text-xs text-text-muted">Nenhuma entrega registrada</p>
+            )}
+            {entregues.map((p) => (
+              <div key={p.id} className="flex items-center gap-3 px-4 py-3">
+                <span className="grid place-items-center size-10 rounded-sm bg-status-success-surface border border-status-success-border font-mono text-base font-bold text-status-success-ink shrink-0">
+                  {p.mesaNome.replace("Mesa ", "").padStart(2, "0")}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-text truncate">
+                    {p.clienteNome} · {p.itens.reduce((a, i) => a + i.qtd, 0)} itens
+                  </p>
+                  <p className="font-mono text-[11px] text-text-muted">há {elapsed(p.criadoEm)}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </aside>
       </div>
@@ -144,21 +140,21 @@ export default function Garcom({ token }: { token: string }) {
 function labelItemStatus(s?: string) {
   switch (s) {
     case "recebido":
-      return { t: "na fila", tone: "text-slate-500" };
+      return { t: "na fila", tone: "text-text-muted" };
     case "em_producao":
-      return { t: "preparando", tone: "text-navy-700" };
+      return { t: "preparo", tone: "text-status-info-ink" };
     case "concluido":
-      return { t: "pronto", tone: "text-teal-600" };
+      return { t: "pronto", tone: "text-status-success-ink" };
     case "aceito":
-      return { t: "aceito", tone: "text-sky-700" };
+      return { t: "aceito", tone: "text-brand-ink" };
     case "retirado":
-      return { t: "retirado", tone: "text-violet-700" };
+      return { t: "retirado", tone: "text-status-info-ink" };
     case "cancelado":
-      return { t: "cancelado", tone: "text-rose-600" };
+      return { t: "cancelado", tone: "text-status-danger-ink" };
     case "entregue":
-      return { t: "entregue", tone: "text-slate-500" };
+      return { t: "entregue", tone: "text-text-muted" };
     default:
-      return { t: s || "—", tone: "text-slate-500" };
+      return { t: s || "—", tone: "text-text-muted" };
   }
 }
 
@@ -169,72 +165,94 @@ function CardPronto({
   pedido: Pedido;
   onEntregar: (itemIds?: number[], etapa?: string) => void;
 }) {
+  const reduceMotion = useReducedMotion();
   const esfriando = Date.now() - pedido.criadoEm > 1000 * 60 * 25;
   const prontos = pedido.itens.filter((i) => i.status === "concluido");
   const aceitos = pedido.itens.filter((i) => i.status === "aceito");
   const retirados = pedido.itens.filter((i) => i.status === "retirado");
   const aindaProducao = pedido.itens.filter(
-    (i) => i.status === "recebido" || i.status === "em_producao"
+    (i) => i.status === "recebido" || i.status === "em_producao",
   );
-  const idsProntos = prontos
-    .map((i) => Number(i.id))
-    .filter((n) => Number.isFinite(n) && n > 0);
+  const idsProntos = prontos.map((i) => Number(i.id)).filter((n) => Number.isFinite(n) && n > 0);
 
   return (
     <motion.article
-      layout
-      layoutId={`garcom-${pedido.id}`}
-      initial={{ opacity: 0, scale: 0.96, y: 16 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}
-      transition={{ type: "spring", stiffness: 320, damping: 28 }}
-      className="relative overflow-hidden rounded-3xl glass-deep noise p-6 text-center"
+      layout={!reduceMotion}
+      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.22, 1.18, 0.36, 1] }}
+      className="rounded-md border border-line-strong bg-surface-raised overflow-hidden"
     >
-      <div className="glow-orb absolute -top-16 -right-16 size-44 bg-brand-500/15" />
-      <Badge tone={esfriando ? "rose" : "amber"} pulse>
-        {esfriando ? "esfriando!" : prontos.length ? "pronto p/ entrega" : "aguardando"}
-      </Badge>
+      <div className="px-4 py-3.5 bg-surface-sunken border-b border-dashed border-line-strong flex items-start justify-between gap-2">
+        <div>
+          <p className="font-mono text-4xl font-extrabold leading-none text-text">
+            {pedido.mesaNome.replace("Mesa ", "").padStart(2, "0")}
+            <span className="text-xs text-text-muted ml-1.5 font-sans font-bold uppercase tracking-wider">
+              mesa
+            </span>
+          </p>
+          <p className="mt-1.5 flex items-center gap-2 text-xs">
+            <span className="font-bold text-text">{pedido.clienteNome}</span>
+            <span className="font-mono text-brand-ink font-bold">#{pedido.id}</span>
+          </p>
+        </div>
+        <div className="text-right">
+          <Badge key={pedido.status} className="anim-stamp" tone={esfriando ? "rose" : "brass"}>
+            {esfriando ? "Esfriando" : prontos.length ? "Pronto" : "Em entrega"}
+          </Badge>
+          <p className="mt-1.5 flex items-center justify-end gap-1 font-mono text-xs text-text-muted">
+            <Clock size={13} /> {elapsed(pedido.criadoEm)}
+          </p>
+        </div>
+      </div>
 
-      <p className="mt-3 text-[10px] uppercase tracking-[0.3em] font-bold text-slate-500">levar para a</p>
-      <motion.p
-        key={pedido.id}
-        initial={{ scale: 0.6 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", stiffness: 200, damping: 12 }}
-        className="font-display leading-[0.9] text-[clamp(3.5rem,22vw,8.5rem)] text-gradient drop-shadow-[0_0_40px_rgba(255,150,20,0.25)]"
-      >
-        {pedido.mesaNome.replace("Mesa ", "")}
-      </motion.p>
-
-      <p className="mt-1 flex flex-wrap items-center justify-center gap-2 text-sm text-slate-600">
-        <span className="inline-flex items-center rounded-full bg-brand-500/10 border border-brand-500/40 px-3 py-1 text-sm font-bold text-brand-700">
-          {pedido.clienteNome}
-        </span>
-        <span className="font-mono text-xs text-slate-500">pedido #{pedido.id}</span>
-      </p>
-
-      <ul className="mx-auto mt-4 max-w-xs space-y-1.5 rounded-2xl bg-slate-100 border border-slate-200 p-3.5 text-left">
+      <ul className="px-4 py-3 divide-y divide-dashed divide-line">
         {pedido.itens.map((i) => {
           const st = labelItemStatus(i.status);
           return (
-            <li key={i.id} className="text-[13px] text-slate-700 leading-snug flex items-start justify-between gap-2">
+            <li key={i.id} className="py-2 first:pt-0 last:pb-0 flex items-start justify-between gap-2 text-sm">
               <span>
-                <b className="font-mono text-brand-600">{i.qtd}×</b> {i.nome}
+                <strong className="font-mono text-brand-ink">{i.qtd}×</strong> {i.nome}
                 {i.setor === "bar" && (
-                  <span className="ml-1 text-[9px] uppercase tracking-wider text-violet-700">bar</span>
+                  <Badge tone="violet" className="ml-1.5">
+                    Bar
+                  </Badge>
                 )}
                 {i.removidos.length > 0 && (
-                  <span className="block text-[11px] text-rose-600">sem {i.removidos.join(", ")}</span>
+                  <span className="block text-xs text-status-danger-ink">
+                    sem {i.removidos.join(", ")}
+                  </span>
                 )}
               </span>
-              <span className={"shrink-0 text-[10px] font-bold uppercase tracking-wider " + st.tone}>
+              <span className={"shrink-0 font-mono text-[11px] font-bold uppercase " + st.tone}>
                 {i.status === "concluido" ? (
-                  <button type="button" className="hover:underline cursor-pointer" onClick={() => onEntregar([Number(i.id)], "aceitar")}>Aceitar item</button>
+                  <button
+                    type="button"
+                    className="underline"
+                    onClick={() => onEntregar([Number(i.id)], "aceitar")}
+                  >
+                    Aceitar item
+                  </button>
                 ) : i.status === "aceito" ? (
-                  <button type="button" className="hover:underline cursor-pointer" onClick={() => onEntregar([Number(i.id)], "retirar")}>Retirei</button>
+                  <button
+                    type="button"
+                    className="underline"
+                    onClick={() => onEntregar([Number(i.id)], "retirar")}
+                  >
+                    Retirei
+                  </button>
                 ) : i.status === "retirado" ? (
-                  <button type="button" className="hover:underline cursor-pointer" onClick={() => onEntregar([Number(i.id)], "entregar")}>Entreguei</button>
-                ) : st.t}
+                  <button
+                    type="button"
+                    className="underline"
+                    onClick={() => onEntregar([Number(i.id)], "entregar")}
+                  >
+                    Entreguei
+                  </button>
+                ) : (
+                  st.t
+                )}
               </span>
             </li>
           );
@@ -242,37 +260,41 @@ function CardPronto({
       </ul>
 
       {aindaProducao.length > 0 && (
-        <p className="mt-2 text-[11px] text-slate-500">
-          {aindaProducao.length} item(ns) ainda na produção — pode levar o que já está pronto
+        <p className="px-4 pb-2 font-mono text-[11px] text-text-muted">
+          {aindaProducao.length} item(ns) ainda em preparo
         </p>
       )}
 
-      <p className="mt-3 flex items-center justify-center gap-1.5 font-mono text-xs text-slate-500 tabular">
-        <Timer className="size-3.5" /> há {elapsed(pedido.criadoEm)}
-      </p>
-
-      <div className="mt-4 space-y-2">
-        <Btn full size="sm" variant="outline" onClick={() => imprimirComandaGarcom(pedido)}>
-          <Printer className="size-4" /> Imprimir cupom
-        </Btn>
+      <div className="px-4 pb-4 pt-2 border-t border-line space-y-2">
         {idsProntos.length > 0 && (
-          <Btn full size="lg" variant="lime" onClick={() => onEntregar(idsProntos, "aceitar")}>
-            <Footprints className="size-5" />
+          <Btn full size="md" variant="sage" onClick={() => onEntregar(idsProntos, "aceitar")}>
             {`Aceitar prontos (${idsProntos.length})`}
           </Btn>
         )}
         {aceitos.length > 0 && (
-          <Btn full size="sm" variant="outline" onClick={() => onEntregar(aceitos.map((i) => Number(i.id)), "retirar")}>Retirei aceitos ({aceitos.length})</Btn>
+          <Btn
+            full
+            size="md"
+            variant="outline"
+            onClick={() => onEntregar(aceitos.map((i) => Number(i.id)), "retirar")}
+          >
+            Retirei aceitos ({aceitos.length})
+          </Btn>
         )}
         {retirados.length > 0 && (
-          <Btn full size="sm" variant="lime" onClick={() => onEntregar(retirados.map((i) => Number(i.id)), "entregar")}>Entreguei retirados ({retirados.length})</Btn>
+          <Btn
+            full
+            size="md"
+            variant="sage"
+            onClick={() => onEntregar(retirados.map((i) => Number(i.id)), "entregar")}
+          >
+            Entreguei retirados ({retirados.length})
+          </Btn>
         )}
+        <Btn full size="md" variant="secondary" onClick={() => imprimirComandaGarcom(pedido)}>
+          <Printer size={16} /> Imprimir cupom
+        </Btn>
       </div>
-
-      <p className="mt-3 flex items-center justify-center gap-1.5 text-[10px] text-slate-500">
-        <Sparkles className="size-3" /> entrega parcial liberada — bar e cozinha no mesmo pedido
-        <BellRing className="size-3" />
-      </p>
     </motion.article>
   );
 }

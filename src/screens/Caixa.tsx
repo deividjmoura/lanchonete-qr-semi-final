@@ -1,23 +1,37 @@
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
-  Banknote, Check, CircleDollarSign, Copy, CreditCard, HandCoins, Minus,
-  Plus, QrCode, Receipt, Split, Timer, Users, Wallet, X,
-} from "lucide-react";
+  ArrowsSplit,
+  CashRegister,
+  Check,
+  Clock,
+  Copy,
+  CreditCard,
+  HandCoins,
+  Minus,
+  Money,
+  Plus,
+  QrCode,
+  Receipt,
+  Users,
+  X,
+} from "@phosphor-icons/react";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useMemo, useState } from "react";
 import { OpsShell, useAnuncios } from "../components/OpsShell";
-import { Badge, Btn, LivePill } from "../components/ui";
+import { Badge, Btn } from "../components/ui";
 import { ir, useAgora } from "../router";
-import type { FormaPagamento, Sessao } from "../lib/types";
+import type { FormaPagamento, PixConfig, Sessao } from "../lib/types";
 import { FORMAS, consumoSessao, pagoSessao, usePub } from "../store/usePub";
 import { api } from "../lib/api";
 import { imprimirComprovanteConsumo } from "../lib/print";
+import { QR_SVG_COLORS } from "../lib/tema";
 import { BRL, elapsed, montarPixEMV } from "../lib/utils";
-import type { PixConfig } from "../lib/types";
 import { cn } from "../utils/cn";
 
 export default function Caixa() {
   const auth = usePub((s) => s.auth);
+  const reduceMotion = useReducedMotion();
+
   useEffect(() => {
     if (!auth) {
       ir("/login");
@@ -28,11 +42,14 @@ export default function Caixa() {
     }
   }, [auth]);
 
-  useAnuncios("caixa");  useAgora(1000);
+  useAnuncios("caixa");
+  useAgora(1000);
 
   const sessoes = usePub((s) => s.sessoes);
   const lastError = usePub((s) => s.lastError);
+  const reportarErro = usePub((s) => s.reportarErro);
   const hydrateCaixa = usePub((s) => s.hydrateCaixa);
+
   useEffect(() => {
     void hydrateCaixa();
     const t = setInterval(() => void hydrateCaixa(), 10000);
@@ -41,20 +58,30 @@ export default function Caixa() {
 
   const pedidos = usePub((s) => s.pedidos);
   const [selId, setSelId] = useState<number | null>(null);
-  const [comprovantes, setComprovantes] = useState<Array<{id:number;mesa:number;clienteNome:string|null;total:number;fechadaEm:string}>>([]);
+  const [comprovantes, setComprovantes] = useState<
+    Array<{ id: number; mesa: number; clienteNome: string | null; total: number; fechadaEm: string }>
+  >([]);
+
   const atualizarComprovantes = () => {
-    void api.comprovantesRecentes().then(setComprovantes).catch(() => null);
+    void api
+      .comprovantesRecentes()
+      .then(setComprovantes)
+      .catch(() => null);
   };
+
   useEffect(() => {
     atualizarComprovantes();
     const t = setInterval(atualizarComprovantes, 20000);
     return () => clearInterval(t);
   }, []);
-  const imprimirConta = async (id:number) => {
-    try { imprimirComprovanteConsumo(await api.comprovanteSessao(id)); }
-    catch (e) { alert(e instanceof Error ? e.message : "Falha ao imprimir comprovante"); }
-  };
 
+  const imprimirConta = async (id: number) => {
+    try {
+      imprimirComprovanteConsumo(await api.comprovanteSessao(id));
+    } catch (e) {
+      reportarErro(e instanceof Error ? e.message : "Falha ao imprimir comprovante");
+    }
+  };
 
   const abertas = sessoes.filter((s) => s.status === "aberta");
   const selecionada = abertas.find((s) => s.id === selId) || abertas[0] || null;
@@ -66,155 +93,216 @@ export default function Caixa() {
   }, 0);
 
   const extras = (
-    <div className="flex items-center gap-2">
-      <Badge tone="amber" pulse>{abertas.length} abertas</Badge>
-      <Badge tone="lime">a receber · {BRL(Math.max(0, totalSalao))}</Badge>
+    <div className="flex items-center gap-1.5">
+      <Badge tone="brass">{abertas.length} abertas</Badge>
+      <Badge tone="sage">A receber · {BRL(Math.max(0, totalSalao))}</Badge>
     </div>
   );
 
   return (
-    <OpsShell ativo="caixa" kicker="operação · caixa" titulo={<>
-      {lastError && (
-        <p className="mb-4 rounded-2xl border border-rose-400/40 bg-rose-600/10 px-4 py-3 text-sm text-rose-700">{lastError}</p>
-      )}Fecha <span className="text-gradient">a conta</span></>} extra={extras}>
+    <OpsShell
+      ativo="caixa"
+      regime="operational"
+      kicker="Operação · Caixa"
+      titulo="Fechamento de contas"
+      extra={extras}
+      subhead={
+        lastError ? (
+          <p
+            role="alert"
+            className="rounded-sm border border-status-danger-border bg-status-danger-surface px-3.5 py-2.5 text-xs font-semibold text-status-danger-ink"
+          >
+            {lastError}
+          </p>
+        ) : undefined
+      }
+    >
       <div className="grid gap-5 lg:grid-cols-12">
-        {/* -------- lista de comandas -------- */}
+        {/* Lista de comandas abertas */}
         <section className="lg:col-span-5 xl:col-span-4">
-          <h2 className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.26em] text-slate-500">
-            <Receipt className="size-4 text-brand-600" /> comandas no salão <LivePill />
-          </h2>
-          <div className="space-y-2.5">
-            <AnimatePresence mode="popLayout">
-              {abertas.length === 0 && (
-                <motion.div
-                  key="vazio"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="rounded-3xl border border-dashed border-slate-200 py-16 text-center"
-                >
-                  <Wallet className="size-10 text-slate-400 mx-auto" />
-                  <p className="mt-3 text-sm text-slate-500">Salão zerado — nenhuma conta aberta.</p>
-                </motion.div>
-              )}
+          <div className="flex items-center justify-between mb-3 pb-2 border-b border-line">
+            <h2 className="flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted">
+              <Receipt size={15} className="text-brand-ink" /> Comandas abertas
+            </h2>
+            <span className="font-mono text-[11px] text-text-muted">{abertas.length}</span>
+          </div>
+
+          {abertas.length === 0 ? (
+            <div className="rounded-md border border-dashed border-line-strong bg-surface-raised py-14 px-5 text-center">
+              <CashRegister size={32} className="text-text-muted mx-auto" />
+              <p className="mt-3 font-display text-lg font-bold uppercase tracking-tight text-text">
+                Nenhuma comanda aberta
+              </p>
+              <p className="mt-1 text-xs text-text-muted">
+                As mesas aparecem automaticamente assim que entram pedidos.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
               {abertas.map((s) => {
                 const consumoBruto = consumoSessao(s, pedidos);
                 const consumo = consumoBruto - s.desconto + s.taxa;
                 const pago = s.valorPago != null ? s.valorPago : pagoSessao(s);
+                const falta = Math.max(0, consumo - pago);
                 const pct = consumo > 0 ? Math.min(100, (pago / consumo) * 100) : 0;
                 const ativo = selecionada?.id === s.id;
                 return (
-                  <motion.button
+                  <button
                     key={s.id}
-                    layout
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: -30, scale: 0.95 }}
+                    type="button"
+                    aria-pressed={ativo}
                     onClick={() => setSelId(s.id)}
                     className={cn(
-                      "btn-press w-full text-left rounded-3xl p-4 cursor-pointer transition-all border",
-                      ativo ? "glass-deep ring-brand border-brand-500/30" : "glass hover:border-slate-300"
+                      "w-full text-left rounded-md p-4 border transition-colors duration-150",
+                      ativo
+                        ? "bg-surface-raised border-brand"
+                        : "bg-surface-raised border-line hover:border-line-strong hover:bg-surface-hover",
                     )}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <p className="font-display text-3xl text-navy-900 leading-none">{s.mesaNome}</p>
+                      <span className="font-display text-2xl font-extrabold uppercase tracking-tight text-text leading-none">
+                        {s.mesaNome}
+                      </span>
                       <div className="flex items-center gap-1.5">
-                        {s.pixAvisos > 0 && <Badge tone="lime" pulse>pix {s.pixAvisos}×</Badge>}
-                        <Badge tone="zinc">
-                          <Timer className="size-3" /> {elapsed(s.abertaEm)}
+                        {s.pixAvisos > 0 && <Badge tone="brass">PIX {s.pixAvisos}×</Badge>}
+                        <Badge tone="neutral">
+                          <Clock size={12} /> {elapsed(s.abertaEm)}
                         </Badge>
                       </div>
                     </div>
-                    <div className="mt-3 flex items-end justify-between">
+
+                    <div className="mt-3 pt-2.5 border-t border-dashed border-line flex items-end justify-between">
                       <div>
-                        <p className="text-[10px] uppercase tracking-widest font-bold text-slate-500">consumo</p>
-                        <p className="font-mono text-lg font-bold text-navy-900">{BRL(consumo)}</p>
+                        <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                          Consumo
+                        </p>
+                        <p className="font-mono text-base font-bold text-text">{BRL(consumo)}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-[10px] uppercase tracking-widest font-bold text-slate-500">falta</p>
-                        <p className={cn("font-mono text-lg font-bold", consumo - pago <= 0.005 ? "text-teal-600" : "text-amber-700")}>
-                          {BRL(Math.max(0, consumo - pago))}
+                        <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                          Restante
+                        </p>
+                        <p
+                          className={cn(
+                            "font-mono text-base font-bold",
+                            falta <= 0.005 ? "text-status-success-ink" : "text-accent-ink",
+                          )}
+                        >
+                          {BRL(falta)}
                         </p>
                       </div>
                     </div>
-                    <div className="mt-2.5 h-1.5 rounded-full bg-slate-100/80 overflow-hidden">
-                      <motion.div
-                        className="h-full rounded-full bg-gradient-to-r from-teal-500 to-teal-600"
-                        animate={{ width: `${pct}%` }}
-                        transition={{ type: "spring", stiffness: 120, damping: 20 }}
+
+                    <div className="mt-2.5 h-1.5 rounded-xs bg-surface-sunken overflow-hidden">
+                      <div
+                        className="h-full w-full origin-left bg-status-success transition-transform duration-150"
+                        style={{ transform: `scaleX(${Math.max(0, Math.min(1, pct / 100))})` }}
                       />
                     </div>
-                    <p className="mt-1.5 text-[10px] font-mono text-slate-500 tabular">
-                      pago {BRL(pago)} · {pct.toFixed(0)}%
+                    <p className="mt-1.5 font-mono text-[10px] text-text-muted">
+                      Pago {BRL(pago)} · {pct.toFixed(0)}%
                     </p>
-                  </motion.button>
+                  </button>
                 );
               })}
-            </AnimatePresence>
-          </div>
+            </div>
+          )}
         </section>
 
-        {/* -------- detalhe -------- */}
+        {/* Detalhe da comanda selecionada */}
         <section className="lg:col-span-7 xl:col-span-8">
           <AnimatePresence mode="wait">
             {selecionada ? (
               <motion.div
                 key={selecionada.id}
-                initial={{ opacity: 0, y: 18 }}
+                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -14 }}
-                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.22, 1, 0.36, 1] }}
               >
                 <DetalheCaixa sessao={selecionada} />
               </motion.div>
             ) : (
-              <motion.div key="nada" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid place-items-center rounded-3xl border border-dashed border-slate-200 py-24 text-center">
+              <div className="grid place-items-center rounded-md border border-dashed border-line-strong bg-surface-raised py-20 px-6 text-center">
                 <div>
-                  <CircleDollarSign className="size-12 text-slate-400 mx-auto" />
-                  <h3 className="font-display text-4xl text-navy-900 mt-4">Caixa livre</h3>
-                  <p className="text-sm text-slate-500 mt-1">Quando uma mesa pedir, a comanda aparece aqui em tempo real.</p>
+                  <CashRegister size={40} className="text-text-muted mx-auto" />
+                  <h3 className="font-display text-3xl font-extrabold uppercase tracking-tight text-text mt-3">
+                    Caixa livre
+                  </h3>
+                  <p className="text-sm text-text-muted mt-1">
+                    Selecione uma comanda aberta para dividir, conferir PIX ou encerrar a mesa.
+                  </p>
                 </div>
-              </motion.div>
+              </div>
             )}
           </AnimatePresence>
         </section>
       </div>
-      <section className="mt-6 glass rounded-3xl p-4 sm:p-5" aria-label="Comprovantes de contas fechadas">
-        <div className="flex items-center justify-between gap-3 mb-3">
+
+      {/* Comprovantes recentes em lista contínua sem cartões aninhados */}
+      <section
+        className="mt-6 rounded-md border border-line-strong bg-surface-raised overflow-hidden"
+        aria-label="Comprovantes de contas fechadas"
+      >
+        <div className="px-5 py-4 flex items-center justify-between gap-3 border-b border-dashed border-line-strong">
           <div>
-            <h2 className="font-semibold text-navy-900">Comprovantes recentes</h2>
-            <p className="text-xs text-slate-500">Reimprima o consumo e os pagamentos das últimas contas fechadas</p>
+            <h2 className="font-display text-xl font-extrabold uppercase tracking-tight text-text">
+              Comprovantes recentes
+            </h2>
+            <p className="text-xs text-text-muted mt-0.5">
+              Reimpressão de consumo e pagamentos das últimas contas encerradas
+            </p>
           </div>
-          <Btn size="sm" variant="outline" onClick={atualizarComprovantes}>Atualizar</Btn>
+          <Btn size="sm" variant="secondary" onClick={atualizarComprovantes}>
+            Atualizar
+          </Btn>
         </div>
-        <div className="space-y-2">
-          {comprovantes.map(c => <div key={c.id} className="flex items-center gap-3 justify-between rounded-xl bg-slate-100 p-3">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-navy-900">Mesa {c.mesa} · Conta #{c.id}</p>
-              <p className="text-xs text-slate-500">{c.clienteNome || "Cliente não informado"} · {BRL(c.total)}</p>
+
+        <div className="divide-y divide-line">
+          {comprovantes.map((c) => (
+            <div key={c.id} className="flex items-center gap-3 justify-between px-5 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-text">
+                  Mesa {String(c.mesa).padStart(2, "0")} ·{" "}
+                  <span className="font-mono text-xs text-brand-ink">Conta #{c.id}</span>
+                </p>
+                <p className="text-xs text-text-muted font-mono">
+                  {c.clienteNome || "Cliente não informado"} · {BRL(c.total)}
+                </p>
+              </div>
+              <Btn size="sm" variant="outline" onClick={() => void imprimirConta(c.id)}>
+                <Receipt size={15} /> Imprimir
+              </Btn>
             </div>
-            <Btn size="sm" variant="outline" onClick={() => void imprimirConta(c.id)}>
-              <Receipt className="size-4"/> Imprimir
-            </Btn>
-          </div>)}
-          {!comprovantes.length && <p className="text-sm text-slate-500 py-3">Nenhuma conta fechada recentemente.</p>}
+          ))}
+          {!comprovantes.length && (
+            <p className="text-xs text-text-muted px-5 py-6 text-center">
+              Nenhuma conta encerrada recentemente.
+            </p>
+          )}
         </div>
       </section>
     </OpsShell>
   );
 }
 
-/* =================== detalhe da comanda =================== */
+/* =================== DETALHE DA COMANDA (SEM CARTÕES ANINHADOS) =================== */
 function DetalheCaixa({ sessao }: { sessao: Sessao }) {
   const auth = usePub((s) => s.auth);
   const hydrateCaixa = usePub((s) => s.hydrateCaixa);
+  const reportarErro = usePub((s) => s.reportarErro);
+
   const cancelarItem = async (itemId: number) => {
     const motivo = prompt("Motivo do cancelamento do item (mínimo 3 caracteres):");
     if (motivo == null) return;
     try {
       await api.cancelarItem(itemId, motivo, auth?.role === "admin" ? "admin" : "caixa");
       await hydrateCaixa();
-    } catch (e) { alert(e instanceof Error ? e.message : "Falha ao cancelar item"); }
+    } catch (e) {
+      reportarErro(e instanceof Error ? e.message : "Falha ao cancelar item");
+    }
   };
+
   const pedidos = usePub((s) => s.pedidos).filter((p) => p.sessaoId === sessao.id);
   const registrar = usePub((s) => s.registrarPagamento);
   const setDesconto = usePub((s) => s.setDesconto);
@@ -227,9 +315,9 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
   const pago = sessao.valorPago != null ? Number(sessao.valorPago) : pagoSessao(sessao);
   const restante = Math.max(0, Math.round((total - pago) * 100) / 100);
 
-  // Comanda zerada (tudo cancelado) precisa poder ser encerrada para liberar a
-  // mesa; antes o botão exigia total > 0 e a mesa ficava ocupada para sempre.
-  const semPendencias = sessao.podeFechar !== false && !(sessao.pedidosPendentes != null && sessao.pedidosPendentes > 0);
+  const semPendencias =
+    sessao.podeFechar !== false &&
+    !(sessao.pedidosPendentes != null && sessao.pedidosPendentes > 0);
   const podeEncerrar = semPendencias && (total > 0 || (sessao.pedidosCancelados ?? 0) > 0);
 
   const [pessoas, setPessoas] = useState(2);
@@ -252,13 +340,10 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
       .then((c) => {
         if (!alive) return;
         if (c?.chave) setPixCfg({ chave: c.chave, nome: c.nome, cidade: c.cidade });
-        /* chave presente mas inválida: mostra o motivo em vez de um QR que o
-           banco recusa silenciosamente no meio do atendimento. */
-        if (c && c.chaveValida === false) setPixAviso(c.aviso || "Confira PIX_CHAVE no servidor");
+        if (c && c.chaveValida === false)
+          setPixAviso(c.aviso || "Confira PIX_CHAVE no servidor");
       })
-      .catch(() => {
-        /* sem PIX configurado no servidor */
-      });
+      .catch(() => {});
     return () => {
       alive = false;
     };
@@ -270,7 +355,6 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
       chave: pixCfg.chave,
       nome: pixCfg.nome || "RECEBEDOR",
       cidade: pixCfg.cidade || "BRASIL",
-      // QR PIX acompanha o valor informado para permitir pagamentos parciais.
       valor: Number(valor) > 0.005 ? Number(valor) : restante > 0.005 ? restante : total,
       txid: `S${sessao.id}P${sessao.pagamentos.length + 1}`,
     });
@@ -290,246 +374,365 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
   const copiarPix = async () => {
     try {
       await navigator.clipboard.writeText(pixCodigo);
-    } catch {/* ok */}
+    } catch {
+      /* ok */
+    }
     setCopiado(true);
     setTimeout(() => setCopiado(false), 1800);
   };
 
   return (
-    <div className="glass-deep noise rounded-3xl overflow-hidden">
-      {/* topo */}
-      <div className="relative px-5 sm:px-7 py-5 border-b border-slate-200 bg-gradient-to-r from-brand-500/10 to-transparent">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.28em] font-bold text-brand-600">comanda #{sessao.id}</p>
-            <h2 className="font-display text-5xl text-navy-900 leading-none mt-1">{sessao.mesaNome}</h2>
-            {sessao.clienteNome && (
-              <p className="text-xs text-brand-700 mt-1 font-semibold">{sessao.clienteNome}</p>
-            )}
-          </div>
-          <div className="text-right">
-            <p className="text-[10px] uppercase tracking-widest font-bold text-slate-500">em aberto</p>
-            <p className="font-mono text-sm text-slate-600 tabular">{elapsed(sessao.abertaEm)}</p>
-          </div>
+    <div className="rounded-md border border-line-strong bg-surface-raised overflow-hidden">
+      {/* Cabeçalho da comanda */}
+      <div className="px-5 sm:px-6 py-4 border-b border-dashed border-line-strong bg-surface-sunken flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-ink">
+            Comanda #{sessao.id}
+          </p>
+          <h2 className="font-display text-4xl font-extrabold uppercase tracking-tight text-text leading-none mt-1">
+            {sessao.mesaNome}
+          </h2>
+          {sessao.clienteNome && (
+            <p className="text-xs text-text-muted mt-1 font-semibold">{sessao.clienteNome}</p>
+          )}
+        </div>
+        <div className="text-right">
+          <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+            Tempo aberta
+          </p>
+          <p className="font-mono text-sm font-bold text-text">{elapsed(sessao.abertaEm)}</p>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-0">
-        {/* ---- itens + ajustes ---- */}
-        <div className="p-5 sm:p-7 border-b lg:border-b-0 lg:border-r border-slate-200">
-          <h3 className="text-[11px] font-bold uppercase tracking-[0.26em] text-slate-500 mb-3.5">consumo da sessão</h3>
-          <div className="space-y-3 max-h-72 overflow-y-auto pr-1 no-scrollbar">
-            {pedidos.map((p) => (
-              <div key={p.id} className="rounded-2xl bg-slate-100/50 border border-slate-200 p-3.5">
-                <p className="text-[11px] font-bold text-slate-500 mb-1.5">
-                  #{p.id} · {p.clienteNome}
-                </p>
-                {p.itens.map((i) => (
-                  <div key={i.id} className="flex justify-between gap-3 text-[13px] text-slate-600 py-0.5">
-                    <span className={"leading-snug " + (i.status === "cancelado" ? "line-through opacity-50" : "")}>
-                      <b className="font-mono text-navy-900">{i.qtd}×</b> {i.nome}
-                      {i.escolha && <span className="text-navy-700 text-[11px]"> · {i.escolha.nome}</span>}
-                      {i.status && <span className="ml-1.5 text-[9px] font-bold uppercase tracking-wider text-slate-500">{i.status === "concluido" ? "pronto" : i.status === "em_producao" ? "preparando" : i.status === "aceito" ? "aceito" : i.status === "retirado" ? "retirado" : i.status === "entregue" ? "entregue" : i.status === "cancelado" ? "cancelado" : "na fila"}</span>}
-                      {i.status && i.status !== "entregue" && i.status !== "cancelado" && (
-                        <button type="button" className="ml-2 text-[10px] font-bold text-rose-600 hover:underline cursor-pointer" onClick={() => cancelarItem(Number(i.id))}>Cancelar item</button>
-                      )}
-                    </span>
-                    <span className="font-mono text-slate-500">{BRL(i.totalUnit * i.qtd)}</span>
-                  </div>
-                ))}
-              </div>
-            ))}
-            {pedidos.length === 0 && <p className="text-xs text-slate-500">sem pedidos registrados</p>}
+      <div className="grid lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-line">
+        {/* Coluna 1: Itens + Ajustes + Resumo em lista contínua */}
+        <div className="p-5 sm:p-6 flex flex-col justify-between">
+          <div>
+            <h3 className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted mb-3">
+              Consumo lançado
+            </h3>
+            <div className="divide-y divide-dashed divide-line max-h-72 overflow-y-auto pr-1 no-scrollbar border-y border-dashed border-line">
+              {pedidos.map((p) => (
+                <div key={p.id} className="py-3">
+                  <p className="font-mono text-[11px] font-semibold text-text-muted mb-1.5">
+                    #{p.id} {p.clienteNome ? `· ${p.clienteNome}` : ""}
+                  </p>
+                  {p.itens.map((i) => (
+                    <div
+                      key={i.id}
+                      className="flex justify-between gap-3 text-xs text-text py-1"
+                    >
+                      <span
+                        className={cn(
+                          "leading-snug",
+                          i.status === "cancelado" && "line-through opacity-50",
+                        )}
+                      >
+                        <strong className="font-mono text-brand-ink">{i.qtd}×</strong> {i.nome}
+                        {i.escolha && (
+                          <span className="text-text-muted text-[11px]"> · {i.escolha.nome}</span>
+                        )}
+                        {i.status && (
+                          <span className="ml-1.5 font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                            {i.status === "concluido"
+                              ? "pronto"
+                              : i.status === "em_producao"
+                                ? "preparando"
+                                : i.status === "aceito"
+                                  ? "aceito"
+                                  : i.status === "retirado"
+                                    ? "retirado"
+                                    : i.status === "entregue"
+                                      ? "entregue"
+                                      : i.status === "cancelado"
+                                        ? "cancelado"
+                                        : "na fila"}
+                          </span>
+                        )}
+                        {i.status && i.status !== "entregue" && i.status !== "cancelado" && (
+                          <button
+                            type="button"
+                            className="ml-2 font-mono text-[10px] font-bold text-status-danger-ink hover:underline"
+                            onClick={() => void cancelarItem(Number(i.id))}
+                          >
+                            Cancelar item
+                          </button>
+                        )}
+                      </span>
+                      <span className="font-mono text-xs text-text shrink-0">
+                        {BRL(i.totalUnit * i.qtd)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+              {pedidos.length === 0 && (
+                <p className="py-6 text-xs text-text-muted text-center">Sem pedidos registrados</p>
+              )}
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <Ajuste
+                label="Desconto"
+                valor={sessao.desconto}
+                onChange={(v) => setDesconto(sessao.id, v)}
+                tom="text-status-success-ink"
+              />
+              <Ajuste
+                label="Taxa / Couvert"
+                valor={sessao.taxa}
+                onChange={(v) => setTaxa(sessao.id, v)}
+                tom="text-accent-ink"
+              />
+            </div>
           </div>
 
-          {/* ajustes */}
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <Ajuste label="desconto" valor={sessao.desconto} onChange={(v) => setDesconto(sessao.id, v)} tom="text-teal-600" />
-            <Ajuste label="taxa / couvert" valor={sessao.taxa} onChange={(v) => setTaxa(sessao.id, v)} tom="text-amber-700" />
-          </div>
-
-          {/* resumo */}
-          <div className="mt-5 space-y-1.5 rounded-2xl bg-slate-100 border border-slate-200 p-4 font-mono text-sm">
+          <div className="mt-5 pt-4 border-t border-dashed border-line-strong space-y-1.5 font-mono text-xs">
             <Linha label="Consumo" valor={BRL(consumo)} />
-            <Linha label="Desconto" valor={`− ${BRL(sessao.desconto)}`} tom="text-teal-600" />
-            <Linha label="Taxa" valor={`+ ${BRL(sessao.taxa)}`} tom="text-amber-700" />
-            <div className="border-t border-slate-200 pt-2 mt-2 flex justify-between items-baseline">
-              <span className="text-slate-500 text-xs uppercase tracking-widest font-sans font-bold">total</span>
-              <span className="font-display text-4xl text-gradient">{BRL(total)}</span>
+            <Linha
+              label="Desconto"
+              valor={`− ${BRL(sessao.desconto)}`}
+              tom="text-status-success-ink"
+            />
+            <Linha label="Taxa" valor={`+ ${BRL(sessao.taxa)}`} tom="text-accent-ink" />
+            <div className="border-t border-line pt-2.5 mt-2 flex justify-between items-baseline">
+              <span className="text-text-muted text-xs uppercase tracking-wider font-sans font-bold">
+                Total da comanda
+              </span>
+              <span className="font-mono text-3xl font-extrabold text-text">{BRL(total)}</span>
             </div>
           </div>
         </div>
 
-        {/* ---- pagamento ---- */}
-        <div className="p-5 sm:p-7">
-          <h3 className="text-[11px] font-bold uppercase tracking-[0.26em] text-slate-500 mb-3.5 flex items-center gap-1.5">
-            <HandCoins className="size-4 text-teal-600" /> recebimento
+        {/* Coluna 2: Divisão + Recebimento + PIX + Fechamento */}
+        <div className="p-5 sm:p-6 space-y-4">
+          <h3 className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted flex items-center gap-1.5">
+            <HandCoins size={15} className="text-status-success-ink" /> Recebimento
           </h3>
 
-          {/* divisão */}
-          <div className="rounded-2xl border border-slate-200 bg-slate-100/50 p-4">
+          {/* Divisão */}
+          <div className="pb-4 border-b border-dashed border-line-strong space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-600">
-                <Users className="size-4 text-navy-700" /> dividir a conta
+              <p className="flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-wider text-text">
+                <Users size={16} className="text-text-muted" /> Dividir conta
               </p>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setPessoas((p) => Math.max(1, p - 1))} className="btn-press grid place-items-center size-8 rounded-full bg-slate-100/70 border border-slate-200 text-slate-600 hover:text-navy-800 cursor-pointer">
-                  <Minus className="size-3.5" />
+              <div className="inline-flex items-center rounded-sm border border-line-strong bg-surface-sunken">
+                <button
+                  type="button"
+                  aria-label="Menos uma pessoa"
+                  onClick={() => setPessoas((p) => Math.max(1, p - 1))}
+                  className="size-10 grid place-items-center text-text-muted hover:text-text"
+                >
+                  <Minus size={14} weight="bold" />
                 </button>
-                <span className="w-12 text-center font-display text-3xl text-navy-900">{pessoas}</span>
-                <button onClick={() => setPessoas((p) => Math.min(20, p + 1))} className="btn-press grid place-items-center size-8 rounded-full bg-slate-100/70 border border-slate-200 text-slate-600 hover:text-navy-800 cursor-pointer">
-                  <Plus className="size-3.5" />
+                <span className="w-10 text-center font-mono text-base font-bold text-text border-x border-line">
+                  {pessoas}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Mais uma pessoa"
+                  onClick={() => setPessoas((p) => Math.min(20, p + 1))}
+                  className="size-10 grid place-items-center text-text-muted hover:text-text"
+                >
+                  <Plus size={14} weight="bold" />
                 </button>
               </div>
             </div>
+
             <button
+              type="button"
               onClick={usarPorPessoa}
-              className="btn-press mt-3 w-full h-11 rounded-xl border border-navy-700/40 bg-navy-700/10 text-navy-700 text-xs font-bold uppercase tracking-wider inline-flex items-center justify-center gap-2 cursor-pointer hover:bg-navy-700/15 transition-colors"
+              className="w-full min-h-11 rounded-sm border border-line-strong bg-surface-sunken text-text font-mono text-xs font-semibold uppercase tracking-wider inline-flex items-center justify-center gap-2 hover:bg-surface-hover transition-colors"
             >
-              <Split className="size-4" /> usar valor/pessoa · {pessoas > 0 ? BRL(restante / pessoas) : "—"}
+              <ArrowsSplit size={15} /> Usar valor/pessoa ·{" "}
+              {pessoas > 0 ? BRL(restante / pessoas) : "—"}
             </button>
 
-            <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+            <div className="grid grid-cols-[1fr_auto] gap-2">
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-500">R$</span>
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-text-muted">
+                  R$
+                </span>
                 <input
                   type="number"
                   inputMode="decimal"
                   value={valor}
                   onChange={(e) => setValor(e.target.value)}
                   placeholder="0,00"
-                  className="w-full h-12 rounded-xl bg-slate-100 border border-slate-200 pl-10 pr-3 font-mono text-base text-navy-900 focus:outline-none focus:border-brand-500/60 transition"
+                  className="w-full h-12 rounded-sm bg-surface-sunken border border-line-strong pl-10 pr-3 font-mono text-base text-text focus:outline-none focus:border-brand"
                 />
               </div>
               <button
+                type="button"
                 onClick={() => setValor(restante.toFixed(2))}
-                className="btn-press h-12 px-3.5 rounded-xl bg-slate-100/70 border border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:text-navy-800 cursor-pointer"
+                className="h-12 px-3.5 rounded-sm bg-surface-sunken border border-line-strong font-mono text-xs font-bold uppercase tracking-wider text-text hover:bg-surface-hover"
               >
-                tudo
+                Tudo
               </button>
             </div>
 
-            {/* formas */}
-            <div className="mt-2.5 grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-              {FORMAS.map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => setForma(f.id)}
-                  className={cn(
-                    "btn-press h-10 rounded-xl text-[10px] font-bold uppercase tracking-wide cursor-pointer border transition-all inline-flex items-center justify-center gap-1",
-                    forma === f.id
-                      ? "fill-brand text-white border-transparent"
-                      : "bg-slate-100/60 border-slate-200 text-slate-500 hover:text-navy-800"
-                  )}
-                >
-                  {f.id === "pix" ? <QrCode className="size-3" /> : f.id === "dinheiro" ? <Banknote className="size-3" /> : <CreditCard className="size-3" />}
-                  {f.label}
-                </button>
-              ))}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+              {FORMAS.map((f) => {
+                const selecionadaForma = forma === f.id;
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    aria-pressed={selecionadaForma}
+                    onClick={() => setForma(f.id)}
+                    className={cn(
+                      "min-h-12 rounded-sm font-mono text-[11px] font-bold uppercase tracking-wide border transition-colors inline-flex items-center justify-center gap-1.5",
+                      selecionadaForma
+                        ? "bg-brand text-brand-contrast border-brand"
+                        : "bg-surface-sunken border-line text-text-muted hover:text-text hover:border-line-strong",
+                    )}
+                  >
+                    {f.id === "pix" ? (
+                      <QrCode size={14} weight={selecionadaForma ? "fill" : "regular"} />
+                    ) : f.id === "dinheiro" ? (
+                      <Money size={14} weight={selecionadaForma ? "fill" : "regular"} />
+                    ) : (
+                      <CreditCard size={14} weight={selecionadaForma ? "fill" : "regular"} />
+                    )}
+                    {f.label}
+                  </button>
+                );
+              })}
             </div>
 
-            <Btn full className="mt-2.5" onClick={() => podeRegistrar && registrar(sessao.id, Number(valor), forma)} disabled={!podeRegistrar}>
+            <Btn
+              full
+              onClick={() => podeRegistrar && registrar(sessao.id, Number(valor), forma)}
+              disabled={!podeRegistrar}
+            >
               Registrar pagamento
             </Btn>
           </div>
 
-          {/* pagamentos parciais */}
-          <div className="mt-4">
-            <p className="flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.22em] text-slate-500 mb-2">
-              pagamentos <span className="font-mono normal-case tracking-normal text-slate-500">resta {BRL(restante)}</span>
+          {/* Pagamentos já lançados */}
+          <div>
+            <p className="flex items-center justify-between font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-text-muted mb-2">
+              <span>Pagamentos lançados</span>
+              <span className="text-text font-bold">Resta {BRL(restante)}</span>
             </p>
-            <div className="space-y-1.5 max-h-28 overflow-y-auto pr-1 no-scrollbar">
-              <AnimatePresence initial={false}>
-                {sessao.pagamentos.length === 0 && (
-                  <p className="rounded-xl border border-dashed border-slate-200 p-3 text-center text-[11px] text-slate-500">nada recebido ainda</p>
-                )}
-                {sessao.pagamentos.map((pg) => (
-                  <motion.div
-                    key={pg.id}
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    className="flex items-center justify-between rounded-xl bg-teal-500/10 border border-teal-500/25 px-3.5 py-2"
-                  >
-                    <span className="flex min-w-0 flex-col gap-0.5 text-xs font-semibold text-teal-700 uppercase tracking-wide">
-                      <span className="flex items-center gap-1.5">
-                        <Check className="size-3.5 text-teal-600 shrink-0" /> {FORMAS.find((f) => f.id === pg.forma)?.label}
-                      </span>
-                      {pg.operadorNome && <span className="pl-5 text-[10px] font-medium normal-case tracking-normal text-slate-500">registrado por {pg.operadorNome}</span>}
+            <div className="divide-y divide-line max-h-28 overflow-y-auto pr-1 no-scrollbar border-y border-line">
+              {sessao.pagamentos.length === 0 && (
+                <p className="py-3 text-center text-xs text-text-muted">Nenhum pagamento registrado</p>
+              )}
+              {sessao.pagamentos.map((pg) => (
+                <div key={pg.id} className="flex items-center justify-between py-2">
+                  <span className="flex min-w-0 flex-col gap-0.5 text-xs font-semibold text-status-success-ink">
+                    <span className="flex items-center gap-1.5 font-mono uppercase">
+                      <Check size={13} weight="bold" className="shrink-0" />
+                      {FORMAS.find((f) => f.id === pg.forma)?.label}
                     </span>
-                    <span className="font-mono text-sm text-teal-700 shrink-0">{BRL(pg.valor)}</span>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+                    {pg.operadorNome && (
+                      <span className="pl-5 text-[11px] font-normal text-text-muted">
+                        registrado por {pg.operadorNome}
+                      </span>
+                    )}
+                  </span>
+                  <span className="font-mono text-xs font-bold text-status-success-ink shrink-0">
+                    {BRL(pg.valor)}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Instruções da forma escolhida; PIX mostra QR com o valor da cobrança. */}
+          {/* Instrução da forma escolhida; PIX mostra QR dinâmico */}
           {forma === "pix" ? (
-            <div className="mt-4 rounded-2xl border border-brand-500/30 bg-gradient-to-br from-brand-500/10 to-transparent p-4">
-              <div className="flex items-center gap-4">
-                <div className="rounded-xl qr-paper p-2.5 shadow-lg shrink-0">
+            <div className="rounded-sm border border-brand-border bg-brand-surface p-3.5">
+              <div className="flex items-center gap-3.5">
+                <div className="qr-quiet-zone shrink-0">
                   {pixCodigo ? (
-                    <QRCodeSVG value={pixCodigo} size={96} fgColor="#0a2540" level="M" />
+                    <QRCodeSVG
+                      value={pixCodigo}
+                      size={92}
+                      fgColor={QR_SVG_COLORS.fg}
+                      bgColor={QR_SVG_COLORS.bg}
+                      level="M"
+                    />
                   ) : (
-                    <div className="size-[96px] rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-[9px] text-slate-500 text-center px-1">
+                    <div className="size-[92px] flex items-center justify-center text-[10px] text-text-muted text-center px-1">
                       Configure PIX_CHAVE no servidor
                     </div>
                   )}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-navy-900">PIX · {BRL(Number(valor) > 0.005 ? Number(valor) : restante)}</p>
+                  <p className="font-mono text-sm font-bold text-text">
+                    PIX · {BRL(Number(valor) > 0.005 ? Number(valor) : restante)}
+                  </p>
                   {pixAviso ? (
-                    <p className="text-[11px] font-semibold text-amber-700 leading-snug mt-0.5">{pixAviso}</p>
+                    <p className="text-xs font-semibold text-status-warning-ink leading-snug mt-1">
+                      {pixAviso}
+                    </p>
                   ) : (
-                    <p className="text-[11px] text-slate-500 leading-snug mt-0.5">O QR acompanha o valor informado. Confira o recebimento no banco antes de registrar.</p>
+                    <p className="text-xs text-text-muted leading-snug mt-1">
+                      O QR acompanha o valor informado. Confira o recebimento no banco antes de registrar.
+                    </p>
                   )}
-                  <button onClick={copiarPix} disabled={!pixCodigo} className="btn-press mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold text-brand-600 hover:text-brand-700 cursor-pointer disabled:opacity-40">
-                    {copiado ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-                    {copiado ? "copiado!" : "copiar código PIX"}
+                  <button
+                    type="button"
+                    onClick={() => void copiarPix()}
+                    disabled={!pixCodigo}
+                    className="mt-2 inline-flex items-center gap-1.5 font-mono text-xs font-bold text-brand-ink hover:underline disabled:opacity-40"
+                  >
+                    {copiado ? <Check size={14} weight="bold" /> : <Copy size={14} />}
+                    {copiado ? "Copiado!" : "Copiar código PIX"}
                   </button>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-100/50 p-3 text-sm text-slate-600">
-              Forma selecionada: <b>{FORMAS.find((f) => f.id === forma)?.label}</b>.
-              Confirme o recebimento na maquininha ou no caixa antes de registrar {BRL(Number(valor) || 0)}.
+            <div className="rounded-sm border border-line bg-surface-sunken p-3 text-xs text-text-muted">
+              Forma selecionada:{" "}
+              <strong className="text-text">{FORMAS.find((f) => f.id === forma)?.label}</strong>.
+              Confirme na maquininha ou na gaveta antes de registrar {BRL(Number(valor) || 0)}.
             </div>
           )}
 
-          <div className="mt-4">
-            {(sessao.pedidosPendentes != null && sessao.pedidosPendentes > 0) && (
-            <p className="mb-2 text-center text-[11px] text-brand-600">
-              {sessao.pedidosPendentes} pedido(s) ainda na cozinha/garçom — só fecha quando tudo estiver entregue ou cancelado.
-            </p>
-          )}
-          {!fechando ? (
+          {/* Fechamento da conta */}
+          <div className="pt-1">
+            {sessao.pedidosPendentes != null && sessao.pedidosPendentes > 0 && (
+              <p className="mb-2 text-center text-xs text-brand-ink font-medium">
+                {sessao.pedidosPendentes} pedido(s) em preparo/entrega — encerre somente após entrega ou cancelamento.
+              </p>
+            )}
+            {!fechando ? (
               <Btn
                 full
                 size="lg"
-                variant="lime"
+                variant="sage"
                 onClick={() => setFechando(true)}
                 disabled={!podeEncerrar}
               >
-                {total <= 0 ? "Encerrar comanda sem consumo" : <>Fechar conta {restante > 0.004 ? `· quita ${BRL(restante)}` : "· já quitada"}</>}
+                {total <= 0 ? (
+                  "Encerrar comanda sem consumo"
+                ) : (
+                  <>
+                    Fechar conta{" "}
+                    {restante > 0.004 ? `· quita ${BRL(restante)}` : "· já quitada"}
+                  </>
+                )}
               </Btn>
             ) : (
-              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-teal-500/40 bg-teal-500/10 p-4">
-                <p className="text-sm font-bold text-navy-900">Fechar a {sessao.mesaNome}?</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+              <div className="rounded-sm border border-status-success-border bg-status-success-surface p-3.5">
+                <p className="text-sm font-bold text-text">Fechar {sessao.mesaNome}?</p>
+                <p className="text-xs text-text-muted mt-0.5">
                   {restante > 0.004
-                    ? `O restante (${BRL(restante)}) será registrado em ${FORMAS.find((f) => f.id === forma)?.label} e a mesa fica livre.`
-                    : "Conta já quitada — a mesa fica livre na hora."}
+                    ? `O restante (${BRL(restante)}) será registrado em ${FORMAS.find((f) => f.id === forma)?.label} e a mesa será liberada.`
+                    : "Conta quitada — a mesa será liberada imediatamente."}
                 </p>
                 <div className="mt-3 flex gap-2">
-                  <Btn full variant="lime" onClick={fechar}>
-                    <Check className="size-4.5" /> Confirmar fechamento
+                  <Btn full variant="sage" onClick={fechar}>
+                    <Check size={16} weight="bold" /> Confirmar fechamento
                   </Btn>
-                  <Btn variant="glass" onClick={() => setFechando(false)}>
-                    <X className="size-4" />
+                  <Btn variant="secondary" onClick={() => setFechando(false)}>
+                    <X size={16} weight="bold" />
                   </Btn>
                 </div>
-              </motion.div>
+              </div>
             )}
           </div>
         </div>
@@ -538,7 +741,17 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
   );
 }
 
-function Ajuste({ label, valor, onChange, tom }: { label: string; valor: number; onChange: (v: number) => void; tom: string }) {
+function Ajuste({
+  label,
+  valor,
+  onChange,
+  tom,
+}: {
+  label: string;
+  valor: number;
+  onChange: (v: number) => void;
+  tom: string;
+}) {
   const [txt, setTxt] = useState(valor ? String(valor) : "");
   useEffect(() => setTxt(valor ? String(valor) : ""), [valor]);
   const aplicar = (d: number) => {
@@ -546,11 +759,18 @@ function Ajuste({ label, valor, onChange, tom }: { label: string; valor: number;
     onChange(novo);
   };
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-100/50 p-3">
-      <p className={cn("text-[10px] font-bold uppercase tracking-[0.22em] mb-2", tom)}>{label}</p>
-      <div className="flex items-center gap-1.5">
-        <button onClick={() => aplicar(-1)} className="btn-press grid place-items-center size-8 rounded-lg bg-slate-100 border border-slate-200 text-slate-500 hover:text-navy-800 cursor-pointer">
-          <Minus className="size-3.5" />
+    <div>
+      <p className={cn("font-mono text-[10px] font-bold uppercase tracking-wider mb-1.5", tom)}>
+        {label}
+      </p>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          aria-label={`Diminuir ${label}`}
+          onClick={() => aplicar(-1)}
+          className="grid place-items-center size-10 rounded-sm bg-surface-sunken border border-line-strong text-text-muted hover:text-text"
+        >
+          <Minus size={14} weight="bold" />
         </button>
         <input
           type="number"
@@ -560,10 +780,15 @@ function Ajuste({ label, valor, onChange, tom }: { label: string; valor: number;
             const n = Number(e.target.value);
             if (!Number.isNaN(n) && n >= 0) onChange(n);
           }}
-          className="btn-press w-full h-8 rounded-lg bg-slate-100 border border-slate-200 text-center font-mono text-sm text-navy-900 focus:outline-none focus:border-brand-500/50"
+          className="w-full h-10 rounded-sm bg-surface-sunken border border-line-strong text-center font-mono text-sm text-text focus:outline-none focus:border-brand"
         />
-        <button onClick={() => aplicar(1)} className="btn-press grid place-items-center size-8 rounded-lg bg-slate-100 border border-slate-200 text-slate-500 hover:text-navy-800 cursor-pointer">
-          <Plus className="size-3.5" />
+        <button
+          type="button"
+          aria-label={`Aumentar ${label}`}
+          onClick={() => aplicar(1)}
+          className="grid place-items-center size-10 rounded-sm bg-surface-sunken border border-line-strong text-text-muted hover:text-text"
+        >
+          <Plus size={14} weight="bold" />
         </button>
       </div>
     </div>
@@ -572,9 +797,9 @@ function Ajuste({ label, valor, onChange, tom }: { label: string; valor: number;
 
 function Linha({ label, valor, tom }: { label: string; valor: string; tom?: string }) {
   return (
-    <div className="flex justify-between text-slate-500">
+    <div className="flex justify-between text-text-muted">
       <span className="text-xs font-sans uppercase tracking-wider font-semibold">{label}</span>
-      <span className={tom}>{valor}</span>
+      <span className={tom || "text-text"}>{valor}</span>
     </div>
   );
 }

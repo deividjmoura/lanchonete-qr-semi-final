@@ -37,10 +37,10 @@
     "db:restore-drill": "node scripts/backup-restore-drill.js"
   },
   "dependencies": {
+    "@phosphor-icons/react": "2.1.10",
     "clsx": "2.1.1",
     "dotenv": "^16.4.5",
     "framer-motion": "^13.2.0",
-    "lucide-react": "^1.41.0",
     "pg": "^8.13.1",
     "qrcode.react": "^4.2.0",
     "react": "19.2.6",

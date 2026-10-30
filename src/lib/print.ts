@@ -9,7 +9,6 @@ const FORMA_LABEL: Record<string, string> = {
   pix: "PIX",
   dinheiro: "Dinheiro",
   credito: "Cartão crédito",
-  debíto: "Cartão débito",
   debito: "Cartão débito",
   cartao_credito: "Cartão crédito",
   cartao_debito: "Cartão débito",
@@ -25,7 +24,11 @@ function esc(s: unknown): string {
 }
 
 function formaLabel(raw: unknown): string {
-  const k = String(raw || "").trim().toLowerCase();
+  const k = String(raw || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
   if (!k) return "—";
   return FORMA_LABEL[k] || String(raw);
 }

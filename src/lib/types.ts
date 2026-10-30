@@ -40,6 +40,7 @@ export interface Produto {
   /** Quem produz: cozinha (comida) ou bar (bebida) */
   setor?: "cozinha" | "bar";
   estoque: number | null; // null = não controla
+  estoqueMinimo?: number;
   vendidos: number;
 }
 

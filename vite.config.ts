@@ -27,7 +27,7 @@ export default defineConfig({
         manualChunks: {
           react: ["react", "react-dom"],
           motion: ["framer-motion"],
-          icons: ["lucide-react"],
+          icons: ["@phosphor-icons/react"],
         },
       },
     },
