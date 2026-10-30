@@ -6,25 +6,21 @@ import { alternarTema, EVENTO_TEMA, temaAtual, type Tema } from "../lib/tema";
 
 export type BadgeTone =
   | "neutral"
+  | "brand"
   | "ember"
   | "brass"
   | "sage"
   | "rose"
   | "violet"
-  | "amber"
-  | "lime"
-  | "sky"
-  | "zinc";
+  | "sky";
 
 export type BtnVariant =
   | "brand"
   | "primary"
   | "secondary"
   | "ghost"
-  | "glass"
   | "outline"
   | "danger"
-  | "lime"
   | "sage";
 
 export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
@@ -153,9 +149,9 @@ export function Btn({
         full && "w-full",
         (variant === "brand" || variant === "primary") &&
           "bg-brand text-brand-contrast border border-brand hover:bg-brand-hover",
-        (variant === "lime" || variant === "sage") &&
+        variant === "sage" &&
           "bg-status-success text-status-success-contrast border border-status-success hover:opacity-95",
-        (variant === "ghost" || variant === "secondary" || variant === "glass") &&
+        (variant === "ghost" || variant === "secondary") &&
           "bg-surface-raised text-text border border-line-strong hover:bg-surface-hover",
         variant === "outline" &&
           "bg-transparent border border-brand-border text-brand-ink hover:bg-brand-surface",
@@ -171,12 +167,10 @@ export function Btn({
 
 const BADGE_CLASSES: Record<BadgeTone, string> = {
   neutral: "bg-surface-sunken text-text-muted border-line",
-  zinc: "bg-surface-sunken text-text-muted border-line",
+  brand: "bg-brand-surface text-brand-ink border-brand-border",
   ember: "bg-brand-surface text-brand-ink border-brand-border",
   brass: "bg-status-warning-surface text-status-warning-ink border-status-warning-border",
-  amber: "bg-status-warning-surface text-status-warning-ink border-status-warning-border",
   sage: "bg-status-success-surface text-status-success-ink border-status-success-border",
-  lime: "bg-status-success-surface text-status-success-ink border-status-success-border",
   sky: "bg-status-info-surface text-status-info-ink border-status-info-border",
   violet: "bg-status-info-surface text-status-info-ink border-status-info-border",
   rose: "bg-status-danger-surface text-status-danger-ink border-status-danger-border",
@@ -187,13 +181,11 @@ export function Badge({
   tone = "neutral",
   className,
   dot,
-  pulse,
 }: {
   children: ReactNode;
   tone?: BadgeTone;
   className?: string;
   dot?: boolean;
-  pulse?: boolean;
 }) {
   return (
     <span
@@ -203,7 +195,7 @@ export function Badge({
         className,
       )}
     >
-      {(dot || pulse) && <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />}
+      {dot && <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />}
       {children}
     </span>
   );
@@ -318,14 +310,6 @@ export function Qtd({
         +
       </button>
     </div>
-  );
-}
-
-export function LivePill({ label = "ao vivo" }: { label?: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-xs border border-line bg-surface-sunken px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.06em] text-text-muted">
-      {label}
-    </span>
   );
 }
 
