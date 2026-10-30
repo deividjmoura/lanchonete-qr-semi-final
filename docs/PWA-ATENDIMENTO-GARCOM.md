@@ -40,6 +40,15 @@ atores e horários por item.
 Cada item libera assim que o setor conclui: se o bar termina antes da cozinha,
 a bebida aparece na hora e pode ser entregue enquanto o prato ainda é produzido.
 
+## Confirmação em lote
+
+Cada pedido oferece um botão de lote por etapa — **aceitar**, **retirar** e
+**entregar** — com a contagem de itens, inclusive quando há um item só. O lote
+nunca mistura etapas nem inclui item que já pertence a outro garçom: a retirada
+exige que o aceite seja seu e a entrega exige que a retirada seja sua. Cada
+lote é uma única chamada por pedido, preservando a atomicidade do servidor.
+Falha em um lote avisa na própria tela e reabilita os botões.
+
 ## Fila offline
 
 `offline.js` implementa a persistência e o reenvio. Estados visíveis ao garçom:
@@ -106,6 +115,12 @@ cozinha** — a tela mostra isso explicitamente.
 O aviso de item pronto funciona com o PWA aberto (SSE + toast + som opcional) e
 exige consentimento explícito no primeiro uso, que pode ser recusado.
 
+A folha de consentimento **fecha sozinha** quando o garçom decide (permitir ou
+recusar e confirmar), e o resultado aparece no painel de notificações. Se ele
+dispensar o prompt do navegador sem escolher, a folha continua aberta para nova
+tentativa. Antes o caminho de "permitir" nunca chamava `close()`, e o diálogo
+ficava na tela mesmo depois de concedido.
+
 **Web Push com o aplicativo fechado não está implementado nem validado.** O
 Service Worker tem handlers de `push`, mas não há subscrição `PushManager`,
 chaves VAPID, tabela de subscrições nem serviço de envio no backend. A própria
@@ -113,11 +128,32 @@ tela de consentimento informa isso. Não prometer esse comportamento.
 
 ## Cobrança e PIX
 
-O garçom consulta saldo e registra recebimento **parcial** apenas de sessão sob
-sua responsabilidade, sempre online. O PIX gera QR/copia-e-cola com o valor
+O garçom consulta saldo e registra recebimento apenas de sessão sob sua
+responsabilidade, sempre online. O PIX gera QR/copia-e-cola com o valor
 informado; o operador confere o crédito no banco e confirma manualmente. Não há
-gateway nem confirmação automática de liquidação. O garçom não fecha a comanda:
-o fechamento final é do Caixa.
+gateway nem confirmação automática de liquidação.
+
+O valor cobrável é a soma dos itens **entregues**. Quando o recebimento quita a
+conta e não há produção pendente nem aviso PIX em aberto, o próprio servidor
+encerra a sessão e libera a mesa — o PWA avisa "conta quitada, atendimento
+encerrado e mesa liberada". Havendo pendência, o lançamento é parcial e o
+fechamento continua no Caixa.
+
+Todo bloqueio do botão de recebimento escreve o motivo na tela, em vez de apenas
+desabilitar:
+
+| Situação | Mensagem |
+| --- | --- |
+| Nenhum item entregue | aponta a aba Entregas para confirmar as entregas |
+| Conta já quitada | informa os valores e que o fechamento é no Caixa |
+| Mesa de outro responsável | pede transferência ou uso do Caixa |
+| Sem conexão | explica que o saldo precisa do servidor |
+| Tentativa pendente de outra mesa | manda resolver a pendência primeiro |
+| Perfil do garçom não carregado | pede reconexão |
+
+Isso importa porque o QR PIX é montado no navegador a partir do valor digitado:
+sem o motivo explícito, o garçom via um QR correto ao lado de um botão que
+parecia quebrado.
 
 ## Segurança
 
@@ -138,12 +174,10 @@ npm run typecheck && npm run build
 
 # PostgreSQL descartável (CI usa postgres:16; local foi validado em 18.4)
 NODE_ENV=test DATABASE_URL=postgres://.../qradmin_test npm run db:migrate
-NODE_ENV=test DATABASE_URL=postgres://.../qradmin_test \
-  node --test tests/postgres-entregas-progressivas.test.cjs
+DATABASE_URL=postgres://.../qradmin_test npm run test:pg
 
-# E2E em Chromium real: offline → reinício → sincronização → aceite
-NODE_ENV=test DATABASE_URL=postgres://.../qradmin_test \
-  node tests/e2e/garcom-offline.e2e.cjs
+# E2E em Chromium real: offline e lote/cobrança
+DATABASE_URL=postgres://.../qradmin_test npm run test:e2e
 ```
 
 Validado em Chromium headless. **Não** foi validado em dispositivo físico

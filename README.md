@@ -191,25 +191,26 @@ export DATABASE_URL=postgres://usuario:senha@host:5432/qradmin_test
 export NODE_ENV=test
 npm run db:migrate
 
-# Cenário completo: entrega progressiva por setor, corrida de aceite,
-# cancelamento, transferência, fechamento e replay offline
-node --test tests/postgres-entregas-progressivas.test.cjs
+# Todas as suítes de PostgreSQL (7 suítes + drill de backup)
+npm run test:pg
 
-# Demais suítes de integração
-node --test tests/postgres-integration.test.cjs \
-            tests/postgres-financial-integration.test.cjs \
-            tests/postgres-financial-concurrency.test.cjs \
-            tests/postgres-waiter-integration.test.cjs \
-            tests/postgres-qr-session.test.cjs \
-            tests/postgres-password-change.test.cjs
+# Sem pg_dump/psql locais, o drill roda apenas no CI:
+npm run test:pg -- --sem-backup
 
-# E2E em Chromium real: pedido offline → reinício do app → sincronização
-# automática → item pronto → aceite pela interface
-node tests/e2e/garcom-offline.e2e.cjs
+# E2E em Chromium real (os dois cenários)
+npm run test:e2e
 
 # Drill de backup/restore (exige pg_dump/pg_restore e banco isolado vazio)
 RESTORE_DRILL_CONFIRM=isolated-target npm run db:restore-drill
 ```
+
+Os dois E2E cobrem, em Chromium real:
+
+- `garcom-offline.e2e.cjs` — pedido offline → reinício do app → sincronização
+  automática → item pronto → aceite pela interface;
+- `garcom-lote-cobranca.e2e.cjs` — diálogo de notificações fechando após o
+  aceite, lote de aceite/retirada/entrega em um clique, e recebimento pelo PWA
+  até encerrar a conta e liberar a mesa.
 
 O CI do GitHub executa instalação limpa, TypeScript, build, regressões,
 verificações de sintaxe, as suítes de PostgreSQL em `postgres:16` e o drill de
@@ -220,6 +221,9 @@ ambiente de operação.**
 
 - [`docs/CORRECAO-ENTREGA-PROGRESSIVA.md`](docs/CORRECAO-ENTREGA-PROGRESSIVA.md) —
   diagnóstico, causas-raiz, correções, evidência de teste e limites da validação.
+- [`docs/CORRECAO-PWA-LOTE-COBRANCA.md`](docs/CORRECAO-PWA-LOTE-COBRANCA.md) —
+  rodada seguinte: lote de aceite/retirada/entrega, diálogo de notificações e o
+  `ReferenceError` que matava o botão de confirmar pagamento.
 - [`docs/CONTRATO-ATENDIMENTO-GARCOM.md`](docs/CONTRATO-ATENDIMENTO-GARCOM.md) —
   contrato de API, estados por item, idempotência e erros.
 - [`docs/PWA-ATENDIMENTO-GARCOM.md`](docs/PWA-ATENDIMENTO-GARCOM.md) —
