@@ -31,6 +31,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node scripts/run-tests.js",
     "test:regression": "node scripts/run-tests.js",
+    "test:pg": "node scripts/run-pg-tests.js",
+    "test:e2e": "node scripts/run-e2e-tests.js",
     "health:smoke": "node scripts/health-smoke.js",
     "db:restore-drill": "node scripts/backup-restore-drill.js"
   },

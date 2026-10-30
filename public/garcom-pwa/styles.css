@@ -1645,6 +1645,18 @@ input[type="checkbox"] {
   font-size: 13px;
   line-height: 1.6;
 }
+/* Motivo do bloqueio da cobrança: precisa ser legível nos dois temas,
+   por isso usa os tokens de âmbar em vez de cores fixas. */
+.billing-blocked {
+  margin: 10px 0 0;
+  padding: 11px 13px;
+  border-radius: var(--qr-radius-control);
+  background: color-mix(in srgb, var(--qr-amber-500) 12%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--qr-amber-500) 35%, var(--line));
+  color: var(--qr-amber-700);
+  font-weight: 700;
+  line-height: 1.5;
+}
 /* A primeira aba já está ativa no HTML, antes de qualquer interação. */
 body:has(#page-tables.active) .bottom-nav [data-tab="tables"],
 body:has(#page-orders.active) .bottom-nav [data-tab="orders"],

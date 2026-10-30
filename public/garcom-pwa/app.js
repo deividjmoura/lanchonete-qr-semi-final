@@ -283,8 +283,16 @@ refreshInstallState();
 
 const ITEM_LABELS={recebido:'Aguardando preparação',em_producao:'Em preparação',concluido:'Pronto para retirada',aceito:'Aceito por garçom',retirado:'Retirado — levar à mesa',entregue:'Entregue ao cliente',cancelado:'Cancelado'};
 function itemStateText(item){return ITEM_LABELS[item.status]||item.status;}
+/** Aviso inline da área de entregas: não bloqueia a operação como o alert(). */
+function avisarEntrega(msg){const alvo=$('#alertMessage');if(alvo)alvo.textContent=msg;}
 async function deliveryAction(orderId,action,itemIds){
- const labels={assumir:'Aceitar estes itens para retirada?',retirar:'Confirmar que retirou estes itens no setor?',entregar:'Confirmar que entregou estes itens ao cliente?'};
+ const qtd=Array.isArray(itemIds)?itemIds.length:0;
+ const plural=qtd>1;
+ const labels={
+  assumir:plural?'Aceitar estes '+qtd+' itens para retirada?':'Aceitar este item para retirada?',
+  retirar:plural?'Confirmar que retirou estes '+qtd+' itens no setor?':'Confirmar que retirou este item no setor?',
+  entregar:plural?'Confirmar que entregou estes '+qtd+' itens ao cliente?':'Confirmar que entregou este item ao cliente?'
+ };
  if(!confirm(labels[action]))return;
  const suffix=action==='assumir'?'assumir-entrega':action;
  const out=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/pedidos/'+orderId+'/'+suffix,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({itemIds,etapa:action==='assumir'?'aceitar':action})});
@@ -307,7 +315,9 @@ async function loadDeliveries(){
    head.append(name,owner);card.append(head);
    if(order.observacao_geral){const note=document.createElement('p');note.className='muted';note.textContent='Observação: '+order.observacao_geral;card.append(note);}
    const list=document.createElement('div');list.className='order-items';
-   const readyIds=[];
+   // Um conjunto por etapa: o lote nunca mistura etapas nem inclui item que
+   // pertence a outro garçom, porque o servidor exige o mesmo ator em cada uma.
+   const lotes={assumir:[],retirar:[],entregar:[]};
    for(const item of order.itens||[]){
     const line=document.createElement('div');line.className='order-item-line';line.dataset.itemId=item.id;
     const desc=document.createElement('span');desc.textContent=(item.quantidade||1)+'× '+item.nome+' · '+(item.setor==='bar'?'Bar':'Cozinha');
@@ -318,15 +328,32 @@ async function loadDeliveries(){
     const actor=item.garcomEntregouId?item.entregue_por_nome:item.garcomRetirouId?item.retirado_por_nome:item.garcomAceitoId?item.aceito_por_nome:null;
     if(actor){const who=document.createElement('small');who.className='muted';who.textContent='Garçom: '+actor;line.append(who);}
     let action=null,label='';
-    if(item.status==='concluido'){action='assumir';label='Aceitar item';readyIds.push(Number(item.id));}
+    if(item.status==='concluido'){action='assumir';label='Aceitar item';}
     else if(item.status==='aceito'&&Number(item.garcomAceitoId)===Number(currentWaiterId)){action='retirar';label='Confirmar retirada';}
     else if(item.status==='retirado'&&Number(item.garcomRetirouId)===Number(currentWaiterId)){action='entregar';label='Confirmar entrega';}
-    if(action){const btn=document.createElement('button');btn.type='button';btn.className='secondary small';btn.textContent=label;btn.onclick=async()=>{btn.disabled=true;try{await deliveryAction(order.id,action,[Number(item.id)]);}catch(e){alert(e.message||'Não foi possível atualizar a entrega.');btn.disabled=false;void loadDeliveries();}};line.append(btn);}
+    if(action){lotes[action].push(Number(item.id));const btn=document.createElement('button');btn.type='button';btn.className='secondary small';btn.textContent=label;btn.onclick=async()=>{btn.disabled=true;try{await deliveryAction(order.id,action,[Number(item.id)]);}catch(e){avisarEntrega(e.message||'Não foi possível atualizar a entrega.');btn.disabled=false;void loadDeliveries();}};line.append(btn);}
     else if(['aceito','retirado'].includes(item.status)){const locked=document.createElement('small');locked.className='muted';locked.textContent='Em andamento por outro garçom';line.append(locked);}
     list.append(line);
    }
    card.append(list);
-   if(readyIds.length>1){const all=document.createElement('button');all.type='button';all.className='primary';all.textContent='Aceitar todos os prontos ('+readyIds.length+')';all.onclick=async()=>{all.disabled=true;try{await deliveryAction(order.id,'assumir',readyIds);}catch(e){alert(e.message);all.disabled=false;void loadDeliveries();}};card.append(all);}
+   // Lote por pedido e por etapa. Aparece mesmo com um item só, para o garçom
+   // ter sempre o mesmo gesto, e fica desabilitado durante o envio para não
+   // disparar duas vezes o mesmo conjunto.
+   const rotulos={assumir:'Aceitar todos os prontos',retirar:'Confirmar retirada de todos',entregar:'Confirmar entrega de todos'};
+   const barra=document.createElement('div');barra.className='action-row';
+   for(const etapa of ['assumir','retirar','entregar']){
+    const ids=lotes[etapa];
+    if(!ids.length)continue;
+    const all=document.createElement('button');all.type='button';all.className=etapa==='assumir'?'primary':'secondary';
+    all.textContent=rotulos[etapa]+' ('+ids.length+')';
+    all.onclick=async()=>{
+     const botoes=[...barra.querySelectorAll('button')];botoes.forEach(b=>{b.disabled=true});
+     try{await deliveryAction(order.id,etapa,ids);}
+     catch(e){avisarEntrega(e.message||'Não foi possível atualizar as entregas.');botoes.forEach(b=>{b.disabled=false});void loadDeliveries();}
+    };
+    barra.append(all);
+   }
+   if(barra.childElementCount)card.append(barra);
    const history=document.createElement('button');history.type='button';history.className='text-button';history.textContent='Histórico de movimentação';history.onclick=()=>showOrderHistory(order.id);card.append(history);
    root.append(card);
   }
@@ -456,7 +483,7 @@ function openTableDetails(tableNumber){
 }
 function renderMyTables(){
  const root=$('#myTables');if(!root)return;root.replaceChildren();
- const mine=mesas.filter(m=>Number(m.garcomResponsavelId)===currentWaiterId&&m.sessaoId);
+ const mine=mesas.filter(m=>Number(m.garcomResponsavelId)===Number(currentWaiterId)&&m.sessaoId);
  $('#myTablesCount').textContent=mine.length+' em atendimento';
  if(!mine.length){const p=document.createElement('p');p.className='muted';p.textContent='Você ainda não iniciou um atendimento. Escolha uma mesa e toque em “Iniciar atendimento”.';root.append(p);return;}
  for(const m of mine){
@@ -469,7 +496,7 @@ function renderMyTables(){
   const charge=document.createElement('button');charge.className='secondary small';charge.textContent='Cobrar';charge.onclick=()=>openBillingForSession(m.sessaoId,m.numero);
   const transferLabel=document.createElement('label');transferLabel.className='small-copy';transferLabel.textContent='Transferir para';
   const select=document.createElement('select');select.className='secondary small';select.setAttribute('aria-label','Garçom de destino da mesa '+m.numero);
-  const options=activeWaiters.filter(g=>Number(g.id)!==currentWaiterId);
+  const options=activeWaiters.filter(g=>Number(g.id)!==Number(currentWaiterId));
   const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent=options.length?'Escolha o garçom':'Nenhum outro garçom ativo';select.append(placeholder);
   for(const g of options){const option=document.createElement('option');option.value=String(g.id);option.textContent=g.nome;select.append(option);}
   const transfer=document.createElement('button');transfer.className='secondary small';transfer.textContent='Transferir';transfer.disabled=!options.length;
@@ -478,15 +505,39 @@ function renderMyTables(){
   actions.append(detail,charge,transferLabel,select,transfer,leave);root.append(actions);
  }
 }
+/**
+ * Bloqueio de cobrança sempre visível.
+ *
+ * Antes o botão só ficava `disabled` sem dizer o motivo, e como o QR PIX é
+ * montado no navegador a partir do valor digitado, o garçom via o QR perfeito
+ * ao lado de um botão que parecia morto. Agora todo bloqueio escreve a causa.
+ */
+function bloquearCobranca(motivo){
+ const aviso=$('#billingBlocked');
+ $('#registerPayment').disabled=true;
+ if(aviso){aviso.textContent=motivo;aviso.hidden=false;}
+}
+function liberarCobranca(){
+ const aviso=$('#billingBlocked');
+ $('#registerPayment').disabled=false;
+ if(aviso){aviso.textContent='';aviso.hidden=true;}
+}
 function renderBillingSessions(){
  const select=$('#billingSession');if(!select)return;
  const previous=select.value;
- const mine=mesas.filter(m=>Number(m.garcomResponsavelId)===currentWaiterId&&m.sessaoId);
+ const mine=mesas.filter(m=>Number(m.garcomResponsavelId)===Number(currentWaiterId)&&m.sessaoId);
  select.replaceChildren();
  if(!mine.length){
   const option=document.createElement('option');option.value='';option.textContent='Nenhuma mesa sob sua responsabilidade';select.append(option);
   $('#billingSummary').textContent='Inicie ou receba uma transferência de mesa para registrar recebimentos.';
-  $('#registerPayment').disabled=true;
+  // distingue "perfil ainda não carregado" de "não sou o responsável".
+  // Number(null) é 0 e passaria num teste de inteiro seguro, por isso o guard
+  // explícito de nulidade e a exigência de id positivo.
+  const idGarcom=Number(currentWaiterId);
+  const semIdentidade=currentWaiterId===null||currentWaiterId===undefined||currentWaiterId===''||!Number.isSafeInteger(idGarcom)||idGarcom<1;
+  bloquearCobranca(semIdentidade
+   ?'Não foi possível identificar seu cadastro de garçom. Reconecte-se e toque em “Atualizar saldo”.'
+   :'Você não é o responsável atual de nenhuma mesa aberta. Somente o responsável registra recebimentos; peça a transferência da mesa ou use o Caixa.');
   if(pendingWaiterPayment)$('#billingMessage').textContent='Existe uma tentativa anterior pendente para a mesa '+pendingWaiterPayment.mesa+'. Confira o estado no Caixa antes de registrar outro pagamento.';
   return;
  }
@@ -494,7 +545,7 @@ function renderBillingSessions(){
  const pendingOption=pendingWaiterPayment&&mine.find(m=>Number(m.sessaoId)===Number(pendingWaiterPayment.sessaoId));
  select.value=pendingOption?String(pendingWaiterPayment.sessaoId):(mine.some(m=>String(m.sessaoId)===previous)?previous:String(mine[0].sessaoId));
  if(!pendingWaiterPayment&&select.value!==previous){$('#billingAmount').value='';$('#billingReceivedConfirm').checked=false;}
- $('#registerPayment').disabled=false;
+ liberarCobranca();
  if(pendingWaiterPayment){
   if(pendingOption){
    $('#billingAmount').value=String(pendingWaiterPayment.valor);
@@ -502,7 +553,7 @@ function renderBillingSessions(){
    $('#billingMessage').textContent='Há uma tentativa anterior que pode ter sido registrada. Reenvie exatamente os mesmos dados para reutilizar a mesma chave idempotente.';
   }else{
    $('#billingMessage').textContent='Existe uma tentativa pendente para a mesa '+pendingWaiterPayment.mesa+'. Ela não está mais sob sua responsabilidade; confira o Caixa antes de registrar outro pagamento.';
-   $('#registerPayment').disabled=true;
+   bloquearCobranca('Resolva a tentativa pendente da mesa '+pendingWaiterPayment.mesa+' antes de cobrar outra mesa. Confira o Caixa para saber se o valor entrou.');
   }
  }
  updateBillingConfirmation();
@@ -520,14 +571,28 @@ function openBillingForSession(sessaoId,mesaNumero){
 async function loadBillingSummary(){
  const sessionId=Number($('#billingSession')?.value);
  if(!Number.isSafeInteger(sessionId)||sessionId<1){$('#billingSummary').textContent='Selecione uma mesa sob sua responsabilidade.';return}
- if(!navigator.onLine){$('#billingSummary').textContent='Conecte-se para consultar o saldo no servidor.';return}
+ if(!navigator.onLine){$('#billingSummary').textContent='Conecte-se para consultar o saldo no servidor.';bloquearCobranca('Sem conexão: o saldo precisa ser confirmado no servidor antes de registrar recebimento.');return}
  try{
   const data=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/sessoes/'+sessionId+'/resumo-pagamento');
-  $('#billingSummary').textContent='Mesa '+data.mesa+' · Total entregue: '+money(Number(data.valorTotal))+' · Já recebido: '+money(Number(data.valorPago))+' · Saldo: '+money(Number(data.valorRestante));
-  $('#registerPayment').disabled=Number(data.valorRestante)<=0||!!(pendingWaiterPayment&&Number(pendingWaiterPayment.sessaoId)!==sessionId);
+  const total=Number(data.valorTotal),pago=Number(data.valorPago),restante=Number(data.valorRestante);
+  $('#billingSummary').textContent='Mesa '+data.mesa+' · Total entregue: '+money(total)+' · Já recebido: '+money(pago)+' · Saldo: '+money(restante);
+  if(pendingWaiterPayment&&Number(pendingWaiterPayment.sessaoId)!==sessionId){
+   bloquearCobranca('Resolva a tentativa pendente da mesa '+pendingWaiterPayment.mesa+' antes de cobrar outra mesa.');
+   return;
+  }
+  if(restante<=0){
+   // Saldo zero tem duas causas muito diferentes e o garçom precisa saber qual.
+   bloquearCobranca(total<=0
+     ?'Nenhum item desta mesa foi marcado como entregue, então ainda não há valor a cobrar. Confirme as entregas na aba Entregas e toque em “Atualizar saldo”.'
+     :'Esta conta já está quitada ('+money(pago)+' recebidos). O fechamento e a liberação da mesa são feitos no Caixa.');
+   return;
+  }
+  liberarCobranca();
  }catch(e){
   $('#billingSummary').textContent=e.message||'Não foi possível consultar o saldo.';
-  $('#registerPayment').disabled=true;
+  bloquearCobranca(e.status===403
+   ?'Você não é o responsável atual desta mesa. Peça a transferência ou registre o recebimento no Caixa.'
+   :(e.message||'Não foi possível consultar o saldo.')+' Toque em “Atualizar saldo” para tentar novamente.');
  }
 }
 function renderPixPaymentQr(){
@@ -578,7 +643,10 @@ async function submitWaiterPayment(){
   }
  }else{
   const mesa=mesas.find(m=>Number(m.sessaoId)===sessionId);
-  pendingWaiterPayment={sessaoId,mesa:mesa?.numero||'?',valor:valorArredondado,formaPagamento,key:uid()};
+  // A variável local é `sessionId`; o shorthand `sessaoId` lançava
+  // ReferenceError e matava o handler antes de qualquer requisição — era o
+  // "botão de confirmar pagamento que não faz nada".
+  pendingWaiterPayment={sessaoId:sessionId,mesa:mesa?.numero||'?',valor:valorArredondado,formaPagamento,key:uid()};
   localStorage.setItem(pendingPaymentStorageKey,JSON.stringify(pendingWaiterPayment));
  }
  const button=$('#registerPayment');button.disabled=true;
@@ -589,15 +657,23 @@ async function submitWaiterPayment(){
   });
   pendingWaiterPayment=null;localStorage.removeItem(pendingPaymentStorageKey);
   $('#billingAmount').value='';$('#billingReceivedConfirm').checked=false;
-  $('#billingMessage').textContent='Recebimento registrado: '+money(Number(out.pagamento.valor))+'. Saldo restante: '+money(Number(out.valorRestante))+(out.idempotentReplay?' (confirmação recuperada após repetição segura).':'');
+  // Quando o valor quita a conta e não há produção pendente, o servidor já
+  // encerra a sessão e libera a mesa. Sem este aviso a mesa simplesmente
+  // desaparecia da lista e o garçom não sabia se tinha dado certo.
+  $('#billingMessage').textContent=out.sessaoFechada
+   ?'Recebimento de '+money(Number(out.pagamento.valor))+' registrado. Conta quitada, atendimento encerrado e mesa liberada.'
+   :'Recebimento registrado: '+money(Number(out.pagamento.valor))+'. Saldo restante: '+money(Number(out.valorRestante))+(out.idempotentReplay?' (confirmação recuperada após repetição segura).':'');
   await loadBillingSummary();
   await loadMesas();
  }catch(e){
   if(e.status&&e.status<500){pendingWaiterPayment=null;localStorage.removeItem(pendingPaymentStorageKey);}
   $('#billingMessage').textContent=(e.message||'Não foi possível registrar o recebimento.')+(pendingWaiterPayment?' Se houve timeout, tente novamente sem alterar mesa, valor ou forma para reutilizar a mesma chave.':'');
- }finally{button.disabled=false;void loadBillingSummary();}
+ }
+ // Não reabilita no escuro: quem decide é o saldo do servidor, para o botão
+ // nunca voltar aceso numa conta quitada ou sem item entregue.
+ finally{button.disabled=false;await loadBillingSummary();}
 }
-$('#billingSession').addEventListener('change',()=>{if(pendingWaiterPayment&&Number($('#billingSession').value)!==Number(pendingWaiterPayment.sessaoId)){const mine=mesas.find(m=>Number(m.sessaoId)===Number(pendingWaiterPayment.sessaoId)&&Number(m.garcomResponsavelId)===currentWaiterId);if(mine)$('#billingSession').value=String(pendingWaiterPayment.sessaoId);$('#billingMessage').textContent='Resolva a tentativa pendente com os mesmos dados antes de selecionar outra mesa.';}else if(!pendingWaiterPayment){$('#billingAmount').value='';$('#billingReceivedConfirm').checked=false;}void loadBillingSummary()});
+$('#billingSession').addEventListener('change',()=>{if(pendingWaiterPayment&&Number($('#billingSession').value)!==Number(pendingWaiterPayment.sessaoId)){const mine=mesas.find(m=>Number(m.sessaoId)===Number(pendingWaiterPayment.sessaoId)&&Number(m.garcomResponsavelId)===Number(currentWaiterId));if(mine)$('#billingSession').value=String(pendingWaiterPayment.sessaoId);$('#billingMessage').textContent='Resolva a tentativa pendente com os mesmos dados antes de selecionar outra mesa.';}else if(!pendingWaiterPayment){$('#billingAmount').value='';$('#billingReceivedConfirm').checked=false;}void loadBillingSummary()});
 $('#refreshBilling').addEventListener('click',()=>loadBillingSummary());
 $('#billingMethod').addEventListener('change',updateBillingConfirmation);
 $('#registerPayment').addEventListener('click',submitWaiterPayment);
@@ -739,18 +815,31 @@ consentDialog.addEventListener('close',()=>localStorage.setItem(CONSENT_SEEN,'1'
 $('#dismissNotificationConsent').addEventListener('click',()=>{localStorage.setItem(CONSENT_SEEN,'1');consentDialog.close()});
 $('#requestNotificationPermission').addEventListener('click',async()=>{
  if(!('Notification'in window)){updateNotificationStatus();return}
+ // O diálogo só fecha quando houve decisão real do usuário. Se ele dispensar
+ // o prompt nativo sem escolher ('default'), mantemos a folha aberta para que
+ // possa tentar de novo — antes ela nunca fechava, nem depois de permitir.
+ let decidiu=false;
  try{
    const result=await Notification.requestPermission();
    if(result==='denied'){
      const confirmed=window.confirm('Você recusou as notificações e não receberá avisos por este navegador. Deseja confirmar essa escolha? Você poderá configurar novamente depois nas configurações do site e neste painel.');
-     if(confirmed){localStorage.setItem('garcom-notifications-declined-'+waiterToken,'1');$('#consentStatus').textContent='Escolha salva. Você não receberá notificações enquanto a permissão estiver negada. Para reativar, altere a permissão nas configurações do navegador.'}
+     if(confirmed){localStorage.setItem('garcom-notifications-declined-'+waiterToken,'1');$('#consentStatus').textContent='Escolha salva. Você não receberá notificações enquanto a permissão estiver negada. Para reativar, altere a permissão nas configurações do navegador.';decidiu=true}
      else $('#consentStatus').textContent='A permissão foi negada pelo navegador. Para tentar novamente, altere-a nas configurações do site.';
    }else if(result==='granted'){
      localStorage.setItem('garcom-ready-alerts-'+waiterToken,'1');readyAlertsEnabled=true;
      $('#consentStatus').textContent='Permissão concedida. Isso não ativa push em segundo plano: o servidor ainda não implementa subscrição nem envio Web Push.';
+     decidiu=true;
    }else $('#consentStatus').textContent='Você ainda não permitiu notificações. Pode decidir depois por este painel.';
  }catch(e){$('#consentStatus').textContent='Não foi possível solicitar permissão neste contexto. Verifique se o site usa HTTPS e tente por uma ação explícita.'}
  localStorage.setItem(CONSENT_SEEN,'1');updateNotificationStatus();
+ if(decidiu){
+   // Fecha a folha e leva o resultado para o painel, que continua acessível
+   // pelo botão de notificações do cabeçalho.
+   if(consentDialog.open)consentDialog.close();
+   $('#alertMessage').textContent=readyAlertsEnabled
+     ?'Avisos de item pronto ativados neste dispositivo. Com o app fechado não há envio em segundo plano.'
+     :'Preferência de notificações salva. Você pode alterá-la depois nas configurações do site.';
+ }
 });
 updateNotificationStatus();
 if(!localStorage.getItem(CONSENT_SEEN)){
