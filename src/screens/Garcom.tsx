@@ -85,7 +85,7 @@ export default function Garcom({ token }: { token: string }) {
               <div className="grid place-items-center rounded-md border border-dashed border-line-strong bg-surface-raised py-20 px-6 text-center">
                 <div>
                   <CallBell size={40} className="text-text-muted mx-auto" />
-                  <h3 className="font-display text-3xl font-extrabold uppercase tracking-tight text-text mt-3">
+                  <h3 className="font-display text-3xl font-bold tracking-tight text-text mt-3">
                     Nada na bancada
                   </h3>
                   <p className="text-xs text-text-muted mt-1">
@@ -107,9 +107,9 @@ export default function Garcom({ token }: { token: string }) {
           </AnimatePresence>
         </section>
 
-        <aside className="rounded-md border border-line-strong bg-surface-raised overflow-hidden">
+        <aside className="rounded-md border border-line bg-surface-raised overflow-hidden">
           <div className="px-4 py-3.5 border-b border-dashed border-line-strong flex items-center justify-between">
-            <h3 className="font-display text-xl font-extrabold uppercase tracking-tight text-text flex items-center gap-2">
+            <h3 className="font-display text-xl font-bold tracking-tight text-text flex items-center gap-2">
               <Checks size={18} className="text-status-success-ink" /> Últimas entregas
             </h3>
           </div>
@@ -182,7 +182,7 @@ function CardPronto({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.22, 1.18, 0.36, 1] }}
-      className="rounded-md border border-line-strong bg-surface-raised overflow-hidden"
+      className="rounded-md border border-line bg-surface-raised overflow-hidden"
     >
       <div className="px-4 py-3.5 bg-surface-sunken border-b border-dashed border-line-strong flex items-start justify-between gap-2">
         <div>

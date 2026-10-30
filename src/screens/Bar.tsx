@@ -115,7 +115,7 @@ export default function Bar() {
                 <div>
                   <h2
                     className={cn(
-                      "font-display text-2xl sm:text-3xl font-extrabold uppercase tracking-tight leading-none",
+                      "font-display text-2xl sm:text-3xl font-bold tracking-tight leading-tight",
                       col.acento,
                     )}
                   >

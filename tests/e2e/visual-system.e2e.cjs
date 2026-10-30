@@ -291,7 +291,7 @@ async function main() {
           });
 
           assert.ok(measured.scroll <= width, `${screen}/${scheme}/${width}: sem overflow horizontal`);
-          assert.ok(measured.font.includes("Archivo"), `${screen}: fonte Archivo ativa`);
+          assert.ok(measured.font.includes("Plus Jakarta Sans"), `${screen}: fonte Plus Jakarta Sans ativa`);
           assert.notEqual(measured.bodyBg, "rgb(255, 255, 255)", `${screen}: proibido #FFF puro`);
           assert.notEqual(measured.bodyBg, "rgb(0, 0, 0)", `${screen}: proibido #000 puro`);
 
@@ -421,7 +421,7 @@ async function main() {
       await context.close();
     }
 
-    // Shell offline real: Service Worker precacheia tokens, Archivo, Martian Mono e ícones
+    // Shell offline real: Service Worker precacheia tokens, Fraunces, Plus Jakarta Sans, JetBrains Mono e ícones
     const offline = await browser.newContext({ colorScheme: "dark" });
     const page = await offline.newPage();
     await page.goto(base + "/garcom-pwa/");
@@ -435,8 +435,9 @@ async function main() {
     await page.reload();
     await page.evaluate(() => document.fonts.ready);
     assert.equal(await page.locator("html").getAttribute("data-theme"), "escuro");
-    assert.ok(await page.evaluate(() => document.fonts.check('700 16px "Archivo"')));
-    assert.ok(await page.evaluate(() => document.fonts.check('600 13px "Martian Mono"')));
+    assert.ok(await page.evaluate(() => document.fonts.check('700 20px "Fraunces"')));
+    assert.ok(await page.evaluate(() => document.fonts.check('600 15px "Plus Jakarta Sans"')));
+    assert.ok(await page.evaluate(() => document.fonts.check('600 13px "JetBrains Mono"')));
     assert.equal(
       await page.locator(".brand-mark").evaluate((img) => img.complete && img.naturalWidth > 0),
       true,

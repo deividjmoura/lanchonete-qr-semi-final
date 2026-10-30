@@ -130,7 +130,7 @@ export default function Caixa() {
           {abertas.length === 0 ? (
             <div className="rounded-md border border-dashed border-line-strong bg-surface-raised py-14 px-5 text-center">
               <CashRegister size={32} className="text-text-muted mx-auto" />
-              <p className="mt-3 font-display text-lg font-bold uppercase tracking-tight text-text">
+              <p className="mt-3 font-display text-lg font-bold tracking-tight text-text">
                 Nenhuma comanda aberta
               </p>
               <p className="mt-1 text-xs text-text-muted">
@@ -160,7 +160,7 @@ export default function Caixa() {
                     )}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-display text-2xl font-extrabold uppercase tracking-tight text-text leading-none">
+                      <span className="font-display text-2xl font-bold tracking-tight text-text leading-tight">
                         {s.mesaNome}
                       </span>
                       <div className="flex items-center gap-1.5">
@@ -226,7 +226,7 @@ export default function Caixa() {
               <div className="grid place-items-center rounded-md border border-dashed border-line-strong bg-surface-raised py-20 px-6 text-center">
                 <div>
                   <CashRegister size={40} className="text-text-muted mx-auto" />
-                  <h3 className="font-display text-3xl font-extrabold uppercase tracking-tight text-text mt-3">
+                  <h3 className="font-display text-3xl font-bold tracking-tight text-text mt-3">
                     Caixa livre
                   </h3>
                   <p className="text-sm text-text-muted mt-1">
@@ -241,12 +241,12 @@ export default function Caixa() {
 
       {/* Comprovantes recentes em lista contínua sem cartões aninhados */}
       <section
-        className="mt-6 rounded-md border border-line-strong bg-surface-raised overflow-hidden"
+        className="mt-6 rounded-md border border-line bg-surface-raised overflow-hidden"
         aria-label="Comprovantes de contas fechadas"
       >
         <div className="px-5 py-4 flex items-center justify-between gap-3 border-b border-dashed border-line-strong">
           <div>
-            <h2 className="font-display text-xl font-extrabold uppercase tracking-tight text-text">
+            <h2 className="font-display text-xl font-bold tracking-tight text-text">
               Comprovantes recentes
             </h2>
             <p className="text-xs text-text-muted mt-0.5">
@@ -382,14 +382,14 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
   };
 
   return (
-    <div className="rounded-md border border-line-strong bg-surface-raised overflow-hidden">
+    <div className="rounded-md border border-line bg-surface-raised overflow-hidden">
       {/* Cabeçalho da comanda */}
       <div className="px-5 sm:px-6 py-4 border-b border-dashed border-line-strong bg-surface-sunken flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-ink">
             Comanda #{sessao.id}
           </p>
-          <h2 className="font-display text-4xl font-extrabold uppercase tracking-tight text-text leading-none mt-1">
+          <h2 className="font-display text-4xl font-bold tracking-tight text-text leading-tight mt-1">
             {sessao.mesaNome}
           </h2>
           {sessao.clienteNome && (
