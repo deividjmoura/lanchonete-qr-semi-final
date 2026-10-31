@@ -219,6 +219,38 @@ async function autenticar(login, senha) {
   return staffPublico(row);
 }
 
+let hashDummyGerente = null;
+
+/**
+ * Issue #48: reautenticação do gerente (admin) para autorizar desconto ou
+ * ajuste/remoção da taxa de serviço em dispositivo compartilhado. Retorna os
+ * dados públicos do gerente quando login+senha conferem e a conta é admin
+ * ativa; qualquer outro caso retorna null, sem distinguir o motivo (login
+ * inexistente, conta inativa, papel sem permissão ou senha errada). Para não
+ * vazar existência/papel por tempo de resposta, o caminho de rejeição também
+ * executa uma comparação scrypt contra um hash qualquer.
+ */
+async function autorizarGerente(login, senha) {
+  const user = String(login || '').trim().toLowerCase();
+  if (!user || !senha) return null;
+  const { rows } = await pool.query(
+    'SELECT id, nome, login, papel, ativo, senha_hash FROM staff WHERE lower(login) = $1 LIMIT 1',
+    [user]
+  );
+  const row = rows[0];
+  if (!row || !row.ativo || row.papel !== 'admin') {
+    if (!hashDummyGerente) {
+      hashDummyGerente = await hashSenha(
+        'gerente-dummy-' + crypto.randomBytes(8).toString('hex')
+      );
+    }
+    await verificarSenha(senha, hashDummyGerente);
+    return null;
+  }
+  const ok = await verificarSenha(senha, row.senha_hash);
+  return ok ? { id: row.id, nome: row.nome, login: row.login, papel: row.papel } : null;
+}
+
 async function criarSessao(staffId, db = pool) {
   const token = crypto.randomBytes(32).toString('hex');
   const expira = new Date(Date.now() + SESSION_TTL_MS);
@@ -664,6 +696,7 @@ module.exports = {
   hashSenha,
   verificarSenha,
   autenticar,
+  autorizarGerente,
   criarSessao,
   destruirSessao,
   getStaffDaRequisicao,
