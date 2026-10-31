@@ -96,4 +96,10 @@ test('linguagem visual do dashboard chega ao caixa e ao PWA sem perder contraste
   assert.match(pwa, /\.order \{[\s\S]*?var\(--shadow-card-hover\)/);
   assert.match(pwa, /scrollbar-width: thin/);
   assert.match(sw, /garcom-pwa-shell-v(3[3-9]|[4-9]\d)/, 'cache novo para os aparelhos pegarem o CSS');
+
+  // Cartões de vidro do panorama/mapa recebem o movimento por cartão.
+  assert.match(index, /\[data-glass-card\] \{/);
+  assert.match(index, /article\[data-glass-card\] \{\s*animation: glass-card-in/);
+  assert.match(index, /@media \(prefers-reduced-motion: reduce\)[\s\S]{0,120}article\[data-glass-card\]/);
+  assert.match(read('src/screens/admin/PanoramaMesas.tsx'), /data-glass-card/);
 });

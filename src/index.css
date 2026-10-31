@@ -395,6 +395,51 @@
     0 0 18px -12px var(--brand);
 }
 
+/* Cartões de vidro do panorama/mapa (Admin): a mesma superfície aparece em
+   todas as telas ativas. O movimento é por cartão, curto e opcional. */
+[data-glass-card] {
+  background:
+    linear-gradient(
+      152deg,
+      color-mix(in srgb, var(--surface-raised) 94%, var(--brand-surface)) 0%,
+      var(--surface-raised) 64%
+    );
+  box-shadow:
+    var(--shadow-card),
+    inset 0 1px 0 color-mix(in srgb, var(--surface-raised) 86%, transparent);
+  transition: box-shadow var(--dur-fast) var(--ease-snap),
+    border-color var(--dur-fast) var(--ease-snap);
+}
+
+@media (hover: hover) {
+  [data-glass-card]:hover {
+    box-shadow:
+      var(--shadow-card-hover, var(--shadow-card)),
+      inset 0 1px 0 color-mix(in srgb, var(--surface-raised) 86%, transparent);
+  }
+}
+
+article[data-glass-card] {
+  animation: glass-card-in var(--dur-page) var(--ease-ticket) both;
+}
+
+@keyframes glass-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  article[data-glass-card] {
+    animation: none !important;
+  }
+}
+
 @media (hover: none) {
   .ops-card-surface:hover {
     box-shadow:
