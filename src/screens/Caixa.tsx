@@ -258,6 +258,11 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
   const [motivoServico, setMotivoServico] = useState("");
   const servico = servicoTocado ? sessao.taxa : servicoSugerido;
   const servicoAjustado = servicoTocado && Math.abs(servico - servicoSugerido) > 0.005;
+  // #48: desconto ou ajuste de serviço exige gerente (admin) reautenticado
+  // neste aparelho; as credenciais só vivem até o envio do fechamento.
+  const [gerenteLogin, setGerenteLogin] = useState("");
+  const [gerenteSenha, setGerenteSenha] = useState("");
+  const precisaGerente = sessao.desconto > 0.004 || servicoAjustado;
   const total = Math.max(0, consumo - sessao.desconto + servico);
   const pago = sessao.valorPago != null ? Number(sessao.valorPago) : pagoSessao(sessao);
   const restante = Math.max(0, Math.round((total - pago) * 100) / 100);
@@ -278,6 +283,8 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
     setFechando(false);
     setServicoTocado(false);
     setMotivoServico("");
+    setGerenteLogin("");
+    setGerenteSenha("");
   }, [sessao.id]);
 
   const [pixCfg, setPixCfg] = useState<PixConfig | null>(null);
@@ -320,7 +327,18 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
       reportarErro("Informe o motivo para remover ou ajustar o serviço antes de fechar.");
       return;
     }
-    fecharSessao(sessao.id, forma, { taxaServicoMotivo: motivoServico.trim() || undefined });
+    if (precisaGerente && (!gerenteLogin.trim() || !gerenteSenha)) {
+      reportarErro("Informe o login e a senha do gerente para autorizar o desconto ou o ajuste do serviço.");
+      return;
+    }
+    fecharSessao(sessao.id, forma, {
+      taxaServicoMotivo: motivoServico.trim() || undefined,
+      ...(precisaGerente
+        ? { gerenteLogin: gerenteLogin.trim(), gerenteSenha }
+        : {}),
+    });
+    // A senha do gerente não fica retida na tela após o envio.
+    setGerenteSenha("");
     setFechando(false);
   };
 
@@ -460,6 +478,42 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                   className="mt-1.5 block h-10 w-full rounded-sm bg-surface-sunken border border-line-strong px-3 text-xs normal-case tracking-normal text-text focus:outline-none focus:border-brand"
                 />
               </label>
+            )}
+            {precisaGerente && (
+              <div className="mt-3 rounded-sm border border-line-strong bg-surface px-3 py-3">
+                <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-text">
+                  Autorização do gerente (obrigatória)
+                </p>
+                <p className="mt-1 text-[11px] leading-relaxed text-text-muted">
+                  Há desconto ou ajuste de serviço nesta conta. O gerente (conta
+                  admin) reautentica aqui neste aparelho; o fechamento e a
+                  autorização ficam auditados com quem operou e quem autorizou.
+                </p>
+                <div className="mt-2.5 grid grid-cols-2 gap-2">
+                  <label className="block font-mono text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                    Login do gerente
+                    <input
+                      type="text"
+                      value={gerenteLogin}
+                      onChange={(e) => setGerenteLogin(e.target.value)}
+                      placeholder="login do gerente"
+                      autoComplete="username"
+                      className="mt-1.5 block h-10 w-full rounded-sm bg-surface-sunken border border-line-strong px-3 text-xs normal-case tracking-normal text-text focus:outline-none focus:border-brand"
+                    />
+                  </label>
+                  <label className="block font-mono text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                    Senha do gerente
+                    <input
+                      type="password"
+                      value={gerenteSenha}
+                      onChange={(e) => setGerenteSenha(e.target.value)}
+                      placeholder="senha do gerente"
+                      autoComplete="current-password"
+                      className="mt-1.5 block h-10 w-full rounded-sm bg-surface-sunken border border-line-strong px-3 text-xs normal-case tracking-normal text-text focus:outline-none focus:border-brand"
+                    />
+                  </label>
+                </div>
+              </div>
             )}
           </div>
 
