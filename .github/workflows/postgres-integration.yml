@@ -117,4 +117,17 @@ jobs:
       - name: E2E in real Chromium (offline, batch/billing, CSRF tabs, admin password reset, visual system)
         env:
           LD_LIBRARY_PATH: /tmp/al2023/lib:/tmp/al2023/usr/lib
-        run: npm run test:e2e
+        run: |
+          set -o pipefail
+          if ! npm run test:e2e 2>&1 | tee /tmp/e2e.log; then
+            # Publica o contexto das suítes que falharam, mesmo quando os logs
+            # brutos do Actions não estão disponíveis no ambiente de revisão.
+            node -e '
+              const texto = require("fs").readFileSync("/tmp/e2e.log", "utf8");
+              const partes = texto.split(/(?=^▶ )/m).filter((s) => s.includes("✗ FALHOU "));
+              const detalhe = (partes.map((s) => s.slice(-4000)).join("\n") || texto.slice(-4000))
+                .slice(-12000).replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+              console.log(`::error title=E2E falhou::${detalhe}`);
+            '
+            exit 1
+          fi

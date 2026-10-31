@@ -139,7 +139,10 @@ async function main() {
         stdio: 'inherit',
         env,
       });
-      if (r.status !== 0) falhas++;
+      if (r.status !== 0) {
+        falhas++;
+        console.error(`✗ FALHOU ${teste.arquivo} (status ${r.status ?? r.signal ?? 'desconhecido'})`);
+      }
     }
   } finally {
     if (preview) preview.encerrar();
