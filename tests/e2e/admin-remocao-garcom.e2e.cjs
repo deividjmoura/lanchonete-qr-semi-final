@@ -121,13 +121,13 @@ async function main() {
 
     await secao.getByRole('button', { name: `Desativar ${livre.nome}` }).click();
     await secao.getByRole('status').getByText(/pode ser reativado/i).waitFor();
-    assert.equal(await secao.getByRole('button', { name: `Desativar ${livre.nome}` }).count(), 0);
+    await secao.getByRole('button', { name: `Desativar ${livre.nome}` }).waitFor({ state: 'hidden' });
     await secao.locator('summary').click();
     await secao.getByRole('button', { name: `Ativar ${livre.nome}` }).click();
     await secao.getByRole('button', { name: `Desativar ${livre.nome}` }).waitFor();
     await secao.getByRole('button', { name: `Remover ${livre.nome}` }).click();
     await secao.getByRole('status').getByText(/link foi invalidado/i).waitFor();
-    assert.equal(await secao.getByRole('button', { name: `Remover ${livre.nome}` }).count(), 0);
+    await secao.getByRole('button', { name: `Remover ${livre.nome}` }).waitFor({ state: 'hidden' });
     assert.match(confirmacoes.at(-1), /definitivamente.*histórico será preservado/i);
     // Sem cookie staff: com sessão admin o SSE é autorizado independentemente
     // do token do garçom, o que não exercitaria a revogação do link.
@@ -149,7 +149,7 @@ async function main() {
     assert.equal(transferida.status, 200, JSON.stringify(transferida.body));
     await secao.getByRole('button', { name: `Remover ${ocupado.nome}` }).click();
     await secao.getByRole('status').getByText(/histórico foi preservado/i).waitFor();
-    assert.equal(await secao.getByRole('button', { name: `Remover ${ocupado.nome}` }).count(), 0);
+    await secao.getByRole('button', { name: `Remover ${ocupado.nome}` }).waitFor({ state: 'hidden' });
     const auditoria = (await pool.query(
       "SELECT ator_tipo,ator_id,contexto FROM auditoria_eventos WHERE acao='garcom_removido' AND alvo_id=$1 ORDER BY id DESC LIMIT 1", [String(ocupado.id)]
     )).rows[0];
