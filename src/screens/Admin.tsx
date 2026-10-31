@@ -1803,11 +1803,11 @@ function Relatorio() {
   const [data, setData] = useState<any>(null);
   const [erro, setErro] = useState<string | null>(null);
 
-  const buscar = async () => {
+  const buscar = async (f: string = from, t: string = to) => {
     setLoading(true);
     setErro(null);
     try {
-      const out = await api.adminRelatorio(from, to);
+      const out = await api.adminRelatorio(f, t);
       setData(out);
     } catch (e: any) {
       setErro(e.message || "Falha ao carregar relatório");
@@ -1825,24 +1825,48 @@ function Relatorio() {
   const resumo = data?.resumo || {};
   const contas = Array.isArray(data?.contas) ? data.contas : [];
   const porDia = Array.isArray(data?.porDia) ? data.porDia : [];
+  const porGarcom = Array.isArray(data?.porGarcom) ? data.porGarcom : [];
   const porForma = resumo.porFormaPagamento || {};
   const top = Array.isArray(resumo.topProdutos) ? resumo.topProdutos : [];
   const faturamento = Number(resumo.faturamento ?? 0);
   const qtdContas = Number(resumo.contasFechadas ?? contas.length);
   const ticket = Number(resumo.ticketMedio ?? (qtdContas ? faturamento / qtdContas : 0));
+  // #154: vendas × serviço × descontos — total cobrado reconcilia com a soma.
+  const vendasBrutas = Number(resumo.vendasBrutas ?? 0);
+  const servicoTotal = Number(resumo.servicoTotal ?? 0);
+  const descontosTotal = Number(resumo.descontosTotal ?? 0);
+  const totalCobrado = Number(resumo.totalCobrado ?? faturamento);
+
+  const aplicarPreset = (preset: "dia" | "semana" | "mes") => {
+    const hoje = new Date();
+    const inicio = new Date(hoje);
+    if (preset === "semana") {
+      const dow = (hoje.getDay() + 6) % 7; // segunda-feira como início
+      inicio.setDate(hoje.getDate() - dow);
+    } else if (preset === "mes") {
+      inicio.setDate(1);
+    }
+    const f = dataLocal(inicio);
+    const t = dataLocal(hoje);
+    setFrom(f);
+    setTo(t);
+    void buscar(f, t);
+  };
 
   const baixarCSV = () => {
     if (!contas.length) {
       reportarErro("Sem contas fechadas neste período para exportar.");
       return;
     }
-    const header = "id,mesa,cliente,valor,desconto,taxa,valorCobrado,forma,fechadaEm";
+    const header =
+      "id,mesa,cliente,garcomResponsavel,valor,desconto,taxaServico,valorCobrado,forma,fechadaEm";
     const body = contas
       .map((c: any) =>
         [
           c.id,
           c.mesa,
           c.cliente ?? "",
+          c.garcomResponsavel ?? "",
           c.valor,
           c.desconto,
           c.taxaServico,
@@ -1883,6 +1907,17 @@ function Relatorio() {
             className="mt-1 block h-10 rounded-sm bg-surface-sunken border border-line-strong px-3 text-xs text-text"
           />
         </label>
+        <div className="flex gap-1.5" role="group" aria-label="Períodos rápidos">
+          <Btn size="sm" variant="outline" onClick={() => aplicarPreset("dia")} disabled={loading}>
+            Hoje
+          </Btn>
+          <Btn size="sm" variant="outline" onClick={() => aplicarPreset("semana")} disabled={loading}>
+            Semana
+          </Btn>
+          <Btn size="sm" variant="outline" onClick={() => aplicarPreset("mes")} disabled={loading}>
+            Mês
+          </Btn>
+        </div>
         <Btn size="sm" onClick={() => void buscar()} disabled={loading}>
           {loading ? "Carregando…" : "Buscar"}
         </Btn>
@@ -1900,6 +1935,7 @@ function Relatorio() {
               resumo,
               contas,
               porDia,
+              porGarcom,
               topProdutos: top,
             })
           }
@@ -1941,6 +1977,41 @@ function Relatorio() {
         </div>
       </div>
 
+      {/* #154: composição do total — vendas − descontos + serviço = cobrado */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        <div className="rounded-md border border-line bg-surface-raised shadow-card p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+            Vendas (consumo)
+          </p>
+          <p className="font-display text-xl text-text font-bold tnum mt-1">{BRL(vendasBrutas)}</p>
+        </div>
+        <div className="rounded-md border border-line bg-surface-raised shadow-card p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+            Serviço
+          </p>
+          <p className="font-display text-xl text-brand-ink font-bold tnum mt-1">{BRL(servicoTotal)}</p>
+        </div>
+        <div className="rounded-md border border-line bg-surface-raised shadow-card p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+            Descontos
+          </p>
+          <p className="font-display text-xl text-status-danger-ink font-bold tnum mt-1">
+            − {BRL(descontosTotal)}
+          </p>
+        </div>
+        <div className="rounded-md border border-line bg-surface-raised shadow-card p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+            Total cobrado
+          </p>
+          <p className="font-display text-xl text-status-success-ink font-bold tnum mt-1">
+            {BRL(totalCobrado)}
+          </p>
+          <p className="font-mono text-[10px] text-text-muted mt-1">
+            = vendas − descontos + serviço
+          </p>
+        </div>
+      </div>
+
       {Object.keys(porForma).length > 0 && (
         <section className="rounded-md border border-line bg-surface-raised p-5">
           <h3 className="font-display text-xl font-bold tracking-tight text-text mb-3">
@@ -1967,7 +2038,10 @@ function Relatorio() {
               <tr>
                 <th className="py-2 pr-3">Dia</th>
                 <th className="py-2 pr-3">Contas</th>
-                <th className="py-2">Faturamento</th>
+                <th className="py-2 pr-3">Vendas</th>
+                <th className="py-2 pr-3">Serviço</th>
+                <th className="py-2 pr-3">Descontos</th>
+                <th className="py-2">Total cobrado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -1975,8 +2049,60 @@ function Relatorio() {
                 <tr key={d.dia}>
                   <td className="py-2.5 pr-3 font-mono text-xs text-text">{d.dia}</td>
                   <td className="py-2.5 pr-3 font-mono text-xs text-text-muted">{d.contas}</td>
+                  <td className="py-2.5 pr-3 font-mono text-xs text-text">
+                    {BRL(Number(d.vendasBrutas ?? d.faturamento ?? 0))}
+                  </td>
+                  <td className="py-2.5 pr-3 font-mono text-xs text-brand-ink">
+                    {BRL(Number(d.servicoTotal ?? 0))}
+                  </td>
+                  <td className="py-2.5 pr-3 font-mono text-xs text-status-danger-ink">
+                    − {BRL(Number(d.descontosTotal ?? 0))}
+                  </td>
                   <td className="py-2.5 font-mono text-xs font-bold text-status-success-ink">
-                    {BRL(Number(d.faturamento || 0))}
+                    {BRL(Number(d.totalCobrado ?? d.faturamento ?? 0))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      {porGarcom.length > 0 && (
+        <section className="rounded-md border border-line bg-surface-raised p-5 overflow-x-auto">
+          <h3 className="font-display text-xl font-bold tracking-tight text-text mb-1">
+            Serviço por garçom responsável
+          </h3>
+          <p className="text-xs text-text-muted mb-3">
+            Comissão atribuída ao garçom responsável por cada sessão fechada no período.
+          </p>
+          <table className="w-full text-left text-sm">
+            <thead className="font-mono text-[10px] uppercase tracking-wider text-text-muted border-b border-line">
+              <tr>
+                <th className="py-2 pr-3">Garçom</th>
+                <th className="py-2 pr-3">Contas</th>
+                <th className="py-2 pr-3">Vendas</th>
+                <th className="py-2 pr-3">Serviço (comissão)</th>
+                <th className="py-2 pr-3">Descontos</th>
+                <th className="py-2">Total cobrado</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {porGarcom.map((g: any) => (
+                <tr key={String(g.garcomId ?? "sem-responsavel")}>
+                  <td className="py-2.5 pr-3 text-text">{g.garcomNome || "—"}</td>
+                  <td className="py-2.5 pr-3 font-mono text-xs text-text-muted">{g.contas}</td>
+                  <td className="py-2.5 pr-3 font-mono text-xs text-text">
+                    {BRL(Number(g.vendasBrutas ?? 0))}
+                  </td>
+                  <td className="py-2.5 pr-3 font-mono text-xs font-bold text-brand-ink">
+                    {BRL(Number(g.servicoTotal ?? 0))}
+                  </td>
+                  <td className="py-2.5 pr-3 font-mono text-xs text-status-danger-ink">
+                    − {BRL(Number(g.descontosTotal ?? 0))}
+                  </td>
+                  <td className="py-2.5 font-mono text-xs font-bold text-status-success-ink">
+                    {BRL(Number(g.totalCobrado ?? 0))}
                   </td>
                 </tr>
               ))}
