@@ -63,7 +63,7 @@ interface PubState {
   registrarPagamento: (sessaoId: number, valor: number, forma: FormaPagamento) => void;
   setDesconto: (sessaoId: number, valor: number) => void;
   setTaxa: (sessaoId: number, valor: number) => void;
-  fecharSessao: (sessaoId: number, forma: FormaPagamento) => void;
+  fecharSessao: (sessaoId: number, forma: FormaPagamento, opcoes?: { taxaServicoMotivo?: string }) => void;
 
   /* admin (local + best-effort API depois) */
   upsertProduto: (p: Produto) => Promise<void>;
@@ -154,8 +154,10 @@ function tokenByPedido(get: () => PubState, pedidoId: number): string | null {
   return mesaToken(get, p.mesaId);
 }
 
-/** desconto/taxa só existem no body do fechar — preservamos entre hydrates */
-const ajustesCaixaLocais = new Map<number, { desconto: number; taxa: number }>();
+/** desconto/taxa só existem no body do fechar — preservamos entre hydrates.
+ *  Campos são opcionais: `taxa` ausente significa "operador não mexeu no
+ *  serviço", e aí o backend aplica o padrão da issue #153 ao fechar. */
+const ajustesCaixaLocais = new Map<number, { desconto?: number; taxa?: number }>();
 
 /* primeiro hydrate não anuncia fila já existente */
 let anuncioCozinhaPronto = false;
@@ -447,7 +449,11 @@ if (typeof window !== "undefined") {
       const sessoes = raw.map((s) => {
         const aj = ajustesCaixaLocais.get(s.id);
         if (!aj) return s;
-        return { ...s, desconto: aj.desconto, taxa: aj.taxa };
+        return {
+          ...s,
+          ...(typeof aj.desconto === "number" ? { desconto: aj.desconto } : {}),
+          ...(typeof aj.taxa === "number" ? { taxa: aj.taxa } : {}),
+        };
       });
       /* Preserva filas de sessões abertas, mas remove cards órfãos após fechamento em outro painel. */
       const ativos = get().pedidos.filter((p) =>
@@ -744,7 +750,7 @@ if (typeof window !== "undefined") {
 
   setDesconto: (sessaoId, valor) => {
     const v = Math.max(0, Number(valor) || 0);
-    const prev = ajustesCaixaLocais.get(sessaoId) || { desconto: 0, taxa: 0 };
+    const prev = ajustesCaixaLocais.get(sessaoId) || {};
     ajustesCaixaLocais.set(sessaoId, { ...prev, desconto: v });
     set({
       sessoes: get().sessoes.map((s) => (s.id === sessaoId ? { ...s, desconto: v } : s)),
@@ -752,22 +758,32 @@ if (typeof window !== "undefined") {
   },
   setTaxa: (sessaoId, valor) => {
     const v = Math.max(0, Number(valor) || 0);
-    const prev = ajustesCaixaLocais.get(sessaoId) || { desconto: 0, taxa: 0 };
+    const prev = ajustesCaixaLocais.get(sessaoId) || {};
     ajustesCaixaLocais.set(sessaoId, { ...prev, taxa: v });
     set({
       sessoes: get().sessoes.map((s) => (s.id === sessaoId ? { ...s, taxa: v } : s)),
     });
   },
 
-  fecharSessao: (sessaoId, forma) => {
+  fecharSessao: (sessaoId, forma, opcoes) => {
     void (async () => {
       try {
         const s = get().sessoes.find((x) => x.id === sessaoId);
         const aj = ajustesCaixaLocais.get(sessaoId);
+        // #153: sem ajuste manual de taxa, OMITIMOS taxaServico para o
+        // backend aplicar o padrão (percentual sobre o consumo bruto).
+        // Com ajuste, enviamos o valor e o motivo (backend exige/audita).
         await api.fecharSessao(sessaoId, {
           formaPagamento: formaToApi(forma),
           desconto: aj?.desconto ?? s?.desconto ?? 0,
-          taxaServico: aj?.taxa ?? s?.taxa ?? 0,
+          ...(typeof aj?.taxa === "number"
+            ? {
+                taxaServico: aj.taxa,
+                ...(opcoes?.taxaServicoMotivo
+                  ? { taxaServicoMotivo: opcoes.taxaServicoMotivo }
+                  : {}),
+              }
+            : {}),
         });
         ajustesCaixaLocais.delete(sessaoId);
         emit(get, set, "sessao-fechada", `Sessão #${sessaoId} fechada`);

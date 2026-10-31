@@ -101,6 +101,9 @@ export interface Sessao {
   garcomNome?: string;
   desconto: number; // R$ (ajuste local até fechar — backend aplica no close)
   taxa: number; // R$
+  /** Serviço (#153): percentual vigente e valor sugerido pelo backend. */
+  taxaServicoPercentual?: number;
+  taxaServicoSugerida?: number;
   /** totais vindos de GET /api/caixa/sessoes */
   valorTotal?: number;
   valorPago?: number;

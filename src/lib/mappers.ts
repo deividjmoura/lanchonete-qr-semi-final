@@ -349,6 +349,8 @@ export function mapCaixaSessoes(rows: any[]): { sessoes: Sessao[]; pedidos: Pedi
       pixAvisos: Array.isArray(s.pixAvisos) ? s.pixAvisos.length : Number(s.pix_avisos || 0),
       desconto: Number(s.desconto || 0),
       taxa: Number(s.taxa ?? s.taxa_servico ?? 0),
+      taxaServicoPercentual: Number(s.taxaServicoPercentual ?? s.taxa_servico_percentual ?? 10),
+      taxaServicoSugerida: Number(s.taxaServicoSugerida ?? s.taxa_servico_sugerida ?? 0),
       valorTotal,
       valorPago: valorPagoApi,
       valorRestante: Number(
