@@ -50,16 +50,26 @@ function criarDashboard(opcoes = {}) {
 // media queries (inclusive a margem do shell); aguardar o layout real evita
 // inspecionar um estado transitório de desktop comprimido no viewport móvel.
 async function aguardarLayoutDashboard(page, width) {
-  await page.waitForFunction((largura) => {
-    const grid = document.querySelector('.dashboard-grid');
-    const valor = document.querySelector('.card-neon .metric-value');
-    const main = document.querySelector('.ops-main');
-    if (!grid || !valor || !main || window.innerWidth !== largura) return false;
-    const colunas = getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length;
-    const margem = parseFloat(getComputedStyle(main).marginLeft);
-    return colunas === (largura <= 1050 ? 2 : 4) &&
-      (largura > 420 || parseFloat(getComputedStyle(valor).fontSize) <= 18) &&
-      (largura >= 1024 ? margem >= 70 : margem === 0);
-  }, width);
+  let detalhe;
+  for (let tentativa = 0; tentativa < 150; tentativa++) {
+    // Avaliar por CDP também força o Chromium a aplicar as media queries após
+    // o resize; callbacks em requestAnimationFrame podem ficar suspensos.
+    detalhe = await page.evaluate((largura) => {
+      const grid = document.querySelector('.dashboard-grid');
+      const valor = document.querySelector('.card-neon .metric-value');
+      const main = document.querySelector('.ops-main');
+      const colunas = grid && getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length;
+      const fonte = valor && parseFloat(getComputedStyle(valor).fontSize);
+      const margem = main && parseFloat(getComputedStyle(main).marginLeft);
+      return { inner: innerWidth, colunas, fonte, margem,
+        pronto: innerWidth === largura && colunas === (largura <= 1050 ? 2 : 4) &&
+          (largura > 420 || (fonte != null && fonte <= 18)) &&
+          (largura >= 1024 ? margem != null && margem >= 70 : margem === 0) };
+    }, width);
+    if (detalhe.pronto) return;
+    await page.waitForTimeout(100);
+  }
+  throw new Error(`Layout de ${width}px não estabilizou: ${JSON.stringify(detalhe)}`);
 }
+
 module.exports = { criarDashboard, aguardarLayoutDashboard };

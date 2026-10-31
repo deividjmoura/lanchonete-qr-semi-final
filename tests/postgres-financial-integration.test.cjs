@@ -99,6 +99,7 @@ test('PostgreSQL real: pagamento parcial é idempotente e quitação registra o 
     };
     const fechado = await fecharSessao(ids.sessao, fechamentoBody, 'QA PostgreSQL', {
       atorTipo: 'staff', atorId: 778, requestId: 'ci-close-request-1',
+      autorizacaoGerente: { id: 778, nome: 'QA PostgreSQL' },
     });
     assert.equal(fechado.status, 'fechada');
     assert.equal(fechado.valorTotal, 20);
@@ -118,6 +119,7 @@ test('PostgreSQL real: pagamento parcial é idempotente e quitação registra o 
 
     const fechamentoReplay = await fecharSessao(ids.sessao, fechamentoBody, 'QA PostgreSQL', {
       atorTipo: 'staff', atorId: 778, requestId: 'ci-close-request-1',
+      autorizacaoGerente: { id: 778, nome: 'QA PostgreSQL' },
     });
     assert.equal(fechamentoReplay.status, 'fechada');
     assert.equal(fechamentoReplay.idempotentReplay, true);
@@ -293,7 +295,7 @@ test('PostgreSQL real: #153 fechamento sem taxa aplica 10% sobre o consumo bruto
       formaPagamento: 'pix', desconto: 0, taxaServico: 0,
       taxaServicoMotivo: 'Cliente pediu para remover o serviço',
       idempotencyKey: '00000000-0000-4000-8000-000000000203',
-    }, 'QA PostgreSQL', { atorTipo: 'staff', atorId: 782, requestId: 'ci-taxa-ajuste' });
+    }, 'QA PostgreSQL', { atorTipo: 'staff', atorId: 782, requestId: 'ci-taxa-ajuste', autorizacaoGerente: { id: 782, nome: 'QA PostgreSQL' } });
     assert.equal(fechadoSemServico.taxaServico, 0);
     assert.equal(fechadoSemServico.taxaServicoAjustada, true);
     assert.equal(fechadoSemServico.valorCobrado, 20);

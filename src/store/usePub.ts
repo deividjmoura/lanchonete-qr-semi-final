@@ -63,7 +63,7 @@ interface PubState {
   registrarPagamento: (sessaoId: number, valor: number, forma: FormaPagamento) => void;
   setDesconto: (sessaoId: number, valor: number) => void;
   setTaxa: (sessaoId: number, valor: number) => void;
-  fecharSessao: (sessaoId: number, forma: FormaPagamento, opcoes?: { taxaServicoMotivo?: string }) => void;
+  fecharSessao: (sessaoId: number, forma: FormaPagamento, opcoes?: { taxaServicoMotivo?: string; gerenteLogin?: string; gerenteSenha?: string }) => void;
 
   /* admin (local + best-effort API depois) */
   upsertProduto: (p: Produto) => Promise<void>;
@@ -785,6 +785,11 @@ if (typeof window !== "undefined") {
                   ? { taxaServicoMotivo: opcoes.taxaServicoMotivo }
                   : {}),
               }
+            : {}),
+          // #48: desconto/ajuste exige gerente (admin) reautenticado; as
+          // credenciais viajam só neste corpo e nunca ficam em estado.
+          ...(opcoes?.gerenteLogin
+            ? { gerenteLogin: opcoes.gerenteLogin, gerenteSenha: opcoes.gerenteSenha || "" }
             : {}),
         });
         ajustesCaixaLocais.delete(sessaoId);

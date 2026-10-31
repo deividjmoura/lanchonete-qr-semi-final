@@ -52,6 +52,7 @@ const {
   cookieDeSessao,
   cookieDeLogout,
   autenticar,
+  autorizarGerente,
   criarSessao,
   destruirSessao,
   getStaffDaRequisicao,
@@ -66,6 +67,7 @@ const {
   verificarProtecaoCSRF,
 } = require('./db/auth');
 const { golpePermitido } = require('./db/rateLimit');
+const { registrarEventoIndependente } = require('./db/auditoria');
 const { resolveClientIp, loginUserRateLimitKey } = require('./security/client-ip');
 const { ErroAtendimento, transferirMesaAdmin, listarMesasGarcom, iniciarAtendimentoGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
 const { normalizarChavePix, inspecionarChavePix } = require('./db/pix-normaliza');
@@ -826,8 +828,44 @@ const server = http.createServer(async (req, res) => {
     if ((m = p.match(/^\/api\/caixa\/sessoes\/(\d+)\/fechar$/)) && req.method === 'POST') {
       try {
         const operador = await getStaffDaRequisicao(req);
-        const out = await fecharSessao(Number(m[1]), await body(req), operador?.nome || null, {
+        const dados = await body(req);
+        // Issue #48: desconto ou ajuste/remoção da taxa de serviço exige
+        // gerente (admin) reautenticado neste aparelho. A credencial é
+        // validada aqui e a autorização é repassada; o banco mantém a
+        // trava final dentro da transação do fechamento.
+        const motivoTaxa = String(dados?.taxaServicoMotivo ?? dados?.motivoTaxaServico ?? '').trim();
+        let autorizacaoGerente = null;
+        if (Number(dados?.desconto) > 0 || motivoTaxa.length > 0) {
+          if (!golpePermitido(`gerente:${clientIp(req)}`, { janelaMs: 5 * 60 * 1000, max: 10 })) {
+            return json(res, 429, { error: 'Muitas tentativas de autorização do gerente. Aguarde alguns minutos.' });
+          }
+          const gerente = await autorizarGerente(dados?.gerenteLogin, dados?.gerenteSenha);
+          if (!gerente) {
+            try {
+              await registrarEventoIndependente({
+                atorTipo: 'staff',
+                atorId: Number.isInteger(operador?.id) ? operador.id : null,
+                atorNome: operador?.nome || null,
+                acao: 'gerente_autorizacao_negada',
+                alvoTipo: 'sessao',
+                alvoId: String(Number(m[1])),
+                resultado: 'negado',
+                contexto: { operacao: 'fechar_sessao' },
+                requestId: reqId,
+              });
+            } catch (_) {
+              // Auditoria não pode mascarar a negação da autorização.
+            }
+            return json(res, 403, {
+              error: 'Autorização do gerente inválida. Confira o login e a senha do gerente.',
+              code: 'GERENTE_NAO_AUTORIZADO',
+            });
+          }
+          autorizacaoGerente = { id: gerente.id, nome: gerente.nome };
+        }
+        const out = await fecharSessao(Number(m[1]), dados, operador?.nome || null, {
           atorTipo: 'staff', atorId: Number.isInteger(operador?.id) ? operador.id : null, requestId: reqId,
+          autorizacaoGerente,
         });
         broadcast('update', { type: 'sessao_fechada', sessaoId: Number(m[1]) });
         return json(res, 200, out);

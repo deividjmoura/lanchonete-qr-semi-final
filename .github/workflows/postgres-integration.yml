@@ -55,6 +55,8 @@ jobs:
         run: node --test tests/postgres-remocao-garcom.test.cjs
       - name: Run cursor pagination PostgreSQL tests
         run: node --test tests/postgres-paginacao.test.cjs
+      - name: Run manager authorization PostgreSQL tests
+        run: node --test tests/postgres-gerente-autorizacao.test.cjs
       - name: Run progressive delivery / offline replay PostgreSQL tests
         run: node --test tests/postgres-entregas-progressivas.test.cjs
       - name: Run QR/session lifecycle PostgreSQL integration tests
