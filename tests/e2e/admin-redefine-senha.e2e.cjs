@@ -131,8 +131,17 @@ async function main() {
       const r = await fetch('/api/me', { credentials: 'include' });
       return (await r.json()).csrfToken;
     });
+    const acessoComprovantes = await page.evaluate(async () => ({
+      lista: (await fetch('/api/caixa/comprovantes', { credentials: 'include' })).status,
+      detalhe: (await fetch('/api/admin/sessoes/999999/comprovante', { credentials: 'include' })).status,
+    }));
+    assert.equal(acessoComprovantes.lista, 200, 'admin pode listar comprovantes');
+    assert.equal(acessoComprovantes.detalhe, 404, 'admin passa pela autorização do detalhe');
 
-    // Abre o diálogo pelo botão do shell e escolhe a Cozinha.
+    // A gestão de senhas agora fica em Admin > Funções, não no cabeçalho.
+    assert.equal(await page.getByRole('button', { name: 'Redefinir senha de um setor' }).count(), 0);
+    await page.getByRole('button', { name: 'Funções', exact: true }).click();
+    await page.getByRole('button', { name: 'Senhas', exact: true }).click();
     await page.getByRole('button', { name: 'Redefinir senha de um setor' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.waitFor();
@@ -207,10 +216,14 @@ async function main() {
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': me.csrfToken },
         body: JSON.stringify({ login: 'bar', senhaNova: 'Tentativa-Indevida-E2E-2026' }),
       });
-      return { lista: lista.status, reset: reset.status };
+      const comprovantes = await fetch('/api/caixa/comprovantes', { credentials: 'include' });
+      const detalhe = await fetch('/api/admin/sessoes/999999/comprovante', { credentials: 'include' });
+      return { lista: lista.status, reset: reset.status, comprovantes: comprovantes.status, detalhe: detalhe.status };
     });
     assert.equal(negado.lista, 403);
     assert.equal(negado.reset, 403);
+    assert.equal(negado.comprovantes, 403);
+    assert.equal(negado.detalhe, 403);
     ok('setor não-admin continua sem permissão para redefinir senhas');
 
     await page.getByRole('button', { name: 'Alterar senha', exact: true }).click();

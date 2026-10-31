@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 /* Router hash minimalista — rotas: #/ · #/login · #/mesa/:token · #/cozinha · #/bar ·
-   #/garcom/:token · #/caixa · #/admin */
+   #/garcom/:token · #/caixa · #/admin/:secao */
 
 export interface Rota {
   path: string;
@@ -15,6 +15,9 @@ function parse(): Rota {
   const params: Record<string, string> = {};
   if (segs[0] === "mesa" && segs[1]) params.token = decodeURIComponent(segs[1]);
   if (segs[0] === "garcom" && segs[1]) params.token = decodeURIComponent(segs[1]);
+  if (segs[0] === "admin" && segs[1]) {
+    try { params.secao = decodeURIComponent(segs[1]); } catch { /* seção inválida abre o Dashboard */ }
+  }
   return { path: segs[0] || "home", params };
 }
 

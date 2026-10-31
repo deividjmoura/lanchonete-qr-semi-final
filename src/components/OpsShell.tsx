@@ -2,13 +2,19 @@ import { motion, useReducedMotion } from "framer-motion";
 import {
   BeerStein,
   CashRegister,
+  ChartBar,
   CookingPot,
+  ForkKnife,
   House,
   Key,
+  List,
+  QrCode,
   SignOut,
   SpeakerHigh,
   SpeakerSlash,
   SquaresFour,
+  Users,
+  X,
 } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePub } from "../store/usePub";
@@ -22,7 +28,11 @@ const NAV_ALL = [
   { id: "cozinha", label: "Cozinha", Icon: CookingPot, to: "/cozinha", roles: ["admin", "cozinha"] as const },
   { id: "bar", label: "Bar", Icon: BeerStein, to: "/bar", roles: ["admin", "bar"] as const },
   { id: "caixa", label: "Caixa", Icon: CashRegister, to: "/caixa", roles: ["admin", "caixa"] as const },
-  { id: "admin", label: "Admin", Icon: SquaresFour, to: "/admin", roles: ["admin"] as const },
+  { id: "admin-painel", label: "Dashboard", Icon: ChartBar, to: "/admin", roles: ["admin"] as const },
+  { id: "admin-cardapio", label: "Cardápio", Icon: ForkKnife, to: "/admin/cardapio", roles: ["admin"] as const },
+  { id: "admin-mesas", label: "Mesas", Icon: QrCode, to: "/admin/mesas", roles: ["admin"] as const },
+  { id: "admin-garcons", label: "Garçons", Icon: Users, to: "/admin/garcons", roles: ["admin"] as const },
+  { id: "admin-funcoes", label: "Funções", Icon: SquaresFour, to: "/admin/funcoes", roles: ["admin"] as const },
 ];
 
 /* Anúncios por papel — preserva 100% os alertas de voz e beeps do sistema */
@@ -90,6 +100,9 @@ export function OpsShell({
   const hydrateMe = usePub((s) => s.hydrateMe);
   const role = auth?.role || null;
   const [trocando, setTrocando] = useState(false);
+  const [menuAberto, setMenuAberto] = useState(false);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const trocaObrigatoria = Boolean(auth?.deveTrocar);
   const reduceMotion = useReducedMotion();
 
@@ -115,14 +128,73 @@ export function OpsShell({
 
   const temNav = nav.length > 0;
 
+  useEffect(() => {
+    // A troca obrigatória nunca deve ficar atrás de uma gaveta aberta.
+    if (trocaObrigatoria || !temNav) setMenuAberto(false);
+  }, [trocaObrigatoria, temNav]);
+
+  const fecharMenu = () => {
+    setMenuAberto(false);
+    requestAnimationFrame(() => menuTriggerRef.current?.focus());
+  };
+
+  useEffect(() => {
+    if (!menuAberto) return;
+    const sidebar = sidebarRef.current;
+    if (!sidebar) return;
+    const botoes = () => Array.from(sidebar.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"))
+      .filter((botao) => botao.getClientRects().length > 0);
+    botoes()[0]?.focus();
+    const aoTeclar = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMenuAberto(false);
+        requestAnimationFrame(() => menuTriggerRef.current?.focus());
+      } else if (event.key === "Tab") {
+        const itens = botoes();
+        if (!itens.length) return;
+        const primeiro = itens[0];
+        const ultimo = itens[itens.length - 1];
+        if (event.shiftKey && document.activeElement === primeiro) {
+          event.preventDefault();
+          ultimo.focus();
+        } else if (!event.shiftKey && document.activeElement === ultimo) {
+          event.preventDefault();
+          primeiro.focus();
+        }
+      }
+    };
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const aoRedimensionar = (event: MediaQueryListEvent) => {
+      if (event.matches) setMenuAberto(false);
+    };
+    document.addEventListener("keydown", aoTeclar);
+    desktop.addEventListener("change", aoRedimensionar);
+    return () => {
+      document.removeEventListener("keydown", aoTeclar);
+      desktop.removeEventListener("change", aoRedimensionar);
+    };
+  }, [menuAberto]);
+
   return (
     <div className="ops-shell" data-regime={regime}>
+      {temNav && menuAberto && (
+        <button type="button" className="ops-sidebar-backdrop" aria-label="Fechar menu" onClick={fecharMenu} />
+      )}
       {temNav && (
-        <aside className="ops-sidebar" aria-label="Postos de operação">
+        <aside
+          id="ops-navigation"
+          ref={sidebarRef}
+          className="ops-sidebar"
+          data-open={menuAberto ? "true" : "false"}
+          role={menuAberto ? "dialog" : undefined}
+          aria-modal={menuAberto ? true : undefined}
+          aria-label="Navegação principal"
+        >
           <div className="flex items-center gap-3 px-3.5 h-16 border-b border-sidebar-line overflow-hidden">
             <button
               type="button"
-              onClick={irInicio}
+              onClick={() => { irInicio(); if (menuAberto) fecharMenu(); }}
               aria-label="Início QR Admin"
               className="ops-brand flex items-center gap-3 text-left min-w-0 focus:outline-none"
             >
@@ -131,9 +203,12 @@ export function OpsShell({
                 QR Admin
               </span>
             </button>
+            <button type="button" className="ops-sidebar-close" aria-label="Fechar menu" onClick={fecharMenu}>
+              <X size={20} />
+            </button>
           </div>
 
-          <nav aria-label="Setores" className="ops-nav ops-nav-list flex-1">
+          <nav aria-label="Navegação principal" className="ops-nav ops-nav-list flex-1">
             {nav.map((n) => {
               const active = ativo === n.id;
               const Icon = n.Icon;
@@ -144,7 +219,7 @@ export function OpsShell({
                   data-active={active ? "true" : "false"}
                   aria-label={n.label}
                   aria-current={active ? "page" : undefined}
-                  onClick={() => ir(n.to)}
+                  onClick={() => { ir(n.to); if (menuAberto) fecharMenu(); }}
                   className="ops-nav-item text-left"
                 >
                   {active && (
@@ -172,14 +247,23 @@ export function OpsShell({
         <header className="ops-topbar sticky top-0 z-30 border-b border-line bg-surface">
           <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={irInicio}
-                aria-label="Início QR Admin"
-                className={temNav ? "lg:hidden shrink-0" : "shrink-0"}
-              >
-                <Logo size="sm" />
-              </button>
+              {temNav ? (
+                <button
+                  ref={menuTriggerRef}
+                  type="button"
+                  className="ops-menu-trigger"
+                  aria-label="Abrir menu"
+                  aria-controls="ops-navigation"
+                  aria-expanded={menuAberto}
+                  onClick={() => setMenuAberto(true)}
+                >
+                  <List size={22} />
+                </button>
+              ) : (
+                <button type="button" onClick={irInicio} aria-label="Início QR Admin" className="shrink-0">
+                  <Logo size="sm" />
+                </button>
+              )}
               <div className="min-w-0">
                 {kicker && (
                   <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-ink">
@@ -208,12 +292,11 @@ export function OpsShell({
                 </IconBtn>
                 {role && (
                   <>
-                    <IconBtn
-                      label={role === "admin" ? "Redefinir senha de um setor" : "Alterar senha"}
-                      onClick={() => setTrocando(true)}
-                    >
-                      <Key size={18} />
-                    </IconBtn>
+                    {role !== "admin" && (
+                      <IconBtn label="Alterar senha" onClick={() => setTrocando(true)}>
+                        <Key size={18} />
+                      </IconBtn>
+                    )}
                     <IconBtn
                       label="Sair"
                       onClick={() => {
@@ -237,32 +320,6 @@ export function OpsShell({
           {children}
         </main>
       </div>
-
-      {temNav && (
-        <nav
-          aria-label="Setores mobile"
-          className="ops-mobile-bar"
-          style={{ gridTemplateColumns: `repeat(${nav.length}, minmax(0, 1fr))` }}
-        >
-          {nav.map((n) => {
-            const active = ativo === n.id;
-            const Icon = n.Icon;
-            return (
-              <button
-                key={n.id}
-                type="button"
-                data-active={active ? "true" : "false"}
-                aria-current={active ? "page" : undefined}
-                onClick={() => ir(n.to)}
-                className="ops-mobile-link"
-              >
-                <Icon size={20} weight={active ? "fill" : "regular"} />
-                <span>{n.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-      )}
 
       {role && (trocaObrigatoria || trocando) && (
         <TrocarSenha obrigatorio={trocaObrigatoria} onClose={() => setTrocando(false)} />
