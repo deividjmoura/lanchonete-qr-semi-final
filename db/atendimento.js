@@ -12,6 +12,17 @@ async function validarGarcom(token) {
   if (!g || !g.ativo) throw new ErroAtendimento(401, 'Link do garçom inválido ou desativado');
   return g;
 }
+
+// A verificação anterior ao BEGIN não basta: uma remoção concorrente poderia
+// invalidar o garçom antes que a mesa seja atribuída. O lock é mantido até o
+// commit, serializando essa atribuição com remoção/desativação.
+async function travarGarcomAtivo(client, garcom, token) {
+  const { rows } = await client.query(
+    `SELECT id, ativo FROM garcons
+      WHERE id=$1 AND token=$2 AND removido_em IS NULL FOR SHARE`, [garcom.id, token]
+  );
+  if (!rows[0]?.ativo) throw new ErroAtendimento(401, 'Link do garçom inválido ou desativado');
+}
 async function listarMesasGarcom(token) {
   const garcom = await validarGarcom(token);
   const { rows } = await pool.query(`
@@ -49,6 +60,7 @@ async function iniciarAtendimentoGarcom(token, numeroBruto, body = {}, requestId
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await travarGarcomAtivo(client, garcom, token);
     const { rows: config } = await client.query('SELECT quantidade FROM configuracao_mesas WHERE id=1');
     if (numero > Number(config[0]?.quantidade || 20)) throw new ErroAtendimento(409, 'Mesa ainda não habilitada pelo administrador');
     const { rows: mesaRows } = await client.query(
@@ -115,6 +127,7 @@ async function assumirMesa(token, numeroBruto, body = {}, requestId = null) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await travarGarcomAtivo(client, garcom, token);
     const { rows: config } = await client.query('SELECT quantidade FROM configuracao_mesas WHERE id=1');
     if (numero > Number(config[0]?.quantidade || 20)) {
       throw new ErroAtendimento(409, 'Mesa ainda não habilitada pelo administrador');
@@ -461,7 +474,7 @@ async function metricasGarcons({ data } = {}) {
   // Receita: somente contas FECHADAS; atribuição ao responsável pela sessão.
   // Nunca somar pedidos e contas juntos, pois isso duplica receita.
   const { rows } = await pool.query(`
-    SELECT g.id, g.nome, g.ativo,
+    SELECT g.id, g.nome, g.ativo, (g.removido_em IS NOT NULL) AS removido,
       COUNT(s.id)::int AS atendimentos,
       COALESCE(SUM(COALESCE(s.valor_cobrado, s.valor_total)), 0)::numeric(12,2) AS vendas,
       COALESCE(ROUND(AVG(COALESCE(s.valor_cobrado, s.valor_total))::numeric, 2), 0)::numeric(12,2) AS ticket_medio
@@ -469,10 +482,11 @@ async function metricasGarcons({ data } = {}) {
     LEFT JOIN mesa_sessoes s
       ON s.garcom_responsavel_id=g.id AND s.status='fechada'
      AND (s.fechada_em AT TIME ZONE $2)::date = $1::date
-    GROUP BY g.id, g.nome, g.ativo
+    GROUP BY g.id, g.nome, g.ativo, g.removido_em
+    HAVING g.removido_em IS NULL OR COUNT(s.id) > 0
     ORDER BY vendas DESC, g.nome ASC`, [dia, process.env.APP_TIMEZONE || 'America/Sao_Paulo']);
   return { data: dia, criterio: 'contas fechadas atribuídas ao responsável pela sessão',
-    garcons: rows.map(x=>({ id:x.id, nome:x.nome, ativo:x.ativo, atendimentos:x.atendimentos,
+    garcons: rows.map(x=>({ id:x.id, nome:x.nome, ativo:x.ativo, removido:x.removido, atendimentos:x.atendimentos,
       vendas:Number(x.vendas), ticketMedio:Number(x.ticket_medio) })) };
 }
 async function transferirMesaAdmin(staff,numeroBruto,destinoBruto,requestId=null) {

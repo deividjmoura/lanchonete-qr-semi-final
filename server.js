@@ -955,7 +955,10 @@ const server = http.createServer(async (req, res) => {
     if ((m = p.match(/^\/api\/admin\/garcons\/(\d+)$/)) && req.method === 'PATCH') {
       try {
         const b = await body(req);
-        return json(res, 200, await setGarcomAtivo(Number(m[1]), b.ativo !== false));
+        const staff = await exigirAcesso(req, 'admin');
+        const out = await setGarcomAtivo(Number(m[1]), b.ativo !== false, staff, reqId);
+        broadcast('update', { type: 'garcom_atualizado', garcomId: out.id });
+        return json(res, 200, out);
       } catch (e) {
         if (e instanceof ErroGarcom) return json(res, e.status, { error: e.message });
         throw e;
@@ -963,7 +966,10 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/admin\/garcons\/(\d+)$/)) && req.method === 'DELETE') {
       try {
-        return json(res, 200, await removerGarcom(Number(m[1])));
+        const staff = await exigirAcesso(req, 'admin');
+        const out = await removerGarcom(Number(m[1]), staff, reqId);
+        broadcast('update', { type: 'garcom_removido', garcomId: out.id });
+        return json(res, 200, out);
       } catch (e) {
         if (e instanceof ErroGarcom) return json(res, e.status, { error: e.message });
         throw e;

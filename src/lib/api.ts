@@ -246,7 +246,7 @@ export const api = {
     apiSend(`/api/admin/produtos/${produtoId}/removiveis`, "PUT", { ingredientes }),
 
   metricasGarcons: (data?: string) =>
-    apiGet<{ data: string; criterio: string; garcons: Array<{ id: number; nome: string; ativo: boolean; atendimentos: number; vendas: number; ticketMedio: number }> }>(
+    apiGet<{ data: string; criterio: string; garcons: Array<{ id: number; nome: string; ativo: boolean; removido: boolean; atendimentos: number; vendas: number; ticketMedio: number }> }>(
       `/api/admin/garcons/metricas${data ? "?data=" + encodeURIComponent(data) : ""}`
     ),
     listGarcons: () =>

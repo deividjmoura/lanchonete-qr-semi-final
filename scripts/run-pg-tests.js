@@ -38,6 +38,7 @@ const suites = [
   'postgres-integration.test.cjs',
   'postgres-financial-integration.test.cjs',
   'postgres-waiter-integration.test.cjs',
+  'postgres-remocao-garcom.test.cjs',
   'postgres-entregas-progressivas.test.cjs',
   'postgres-qr-session.test.cjs',
   'postgres-financial-concurrency.test.cjs',

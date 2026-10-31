@@ -150,11 +150,12 @@ test('iniciar atendimento não permite tomar mesa já atribuída, mesmo com tran
   pool.connect = async () => ({
     async query(sql, params = []) {
       calls.push({ sql, params });
+      if (/SELECT id, ativo FROM garcons\s+WHERE id=\$1 AND token=\$2/i.test(sql)) return { rows: [{ id: params[0], ativo: true }] };
       if (/SELECT quantidade FROM configuracao_mesas/i.test(sql)) return { rows: [{ quantidade: 20 }] };
       if (/SELECT id, numero, token FROM mesas WHERE numero/i.test(sql)) return { rows: [{ id: 40, numero: 4, token: 'mesa-token' }] };
       if (/SELECT id FROM mesas WHERE id = \$1 FOR UPDATE/i.test(sql)) return { rows: [{ id: 40 }] };
-      if (/SELECT id FROM mesa_sessoes WHERE mesa_id = \$1 AND status = 'aberta'/i.test(sql)) return { rows: [{ id: 90 }] };
-      if (/SELECT garcom_responsavel_id, cliente_nome FROM mesa_sessoes/i.test(sql)) return { rows: [{ garcom_responsavel_id: 2, cliente_nome: 'Cliente' }] };
+      if (/SELECT id, garcom_responsavel_id, cliente_nome\s+FROM mesa_sessoes/i.test(sql)) return { rows: [{ id: 90, garcom_responsavel_id: 2, cliente_nome: 'Cliente' }] };
+      if (/SELECT id FROM pedidos/i.test(sql)) return { rows: [{ id: 501 }] };
       return { rows: [] };
     },
     release() {},
@@ -237,6 +238,7 @@ test('garçom consegue iniciar sessão de mesa vazia com atribuição e auditori
   pool.connect = async () => ({
     async query(sql, params = []) {
       calls.push({ sql, params });
+      if (/SELECT id, ativo FROM garcons\s+WHERE id=\$1 AND token=\$2/i.test(sql)) return { rows: [{ id: params[0], ativo: true }] };
       if (/SELECT quantidade FROM configuracao_mesas/i.test(sql)) return { rows: [{ quantidade: 20 }] };
       if (/SELECT id, numero FROM mesas WHERE numero/i.test(sql)) return { rows: [{ id: 40, numero: 4 }] };
       if (/SELECT id, garcom_responsavel_id, cliente_nome/i.test(sql)) return { rows: [] };
@@ -268,6 +270,7 @@ test('iniciar atendimento não toma sessão que já pertence a outro garçom', a
   pool.connect = async () => ({
     async query(sql, params = []) {
       calls.push({ sql, params });
+      if (/SELECT id, ativo FROM garcons\s+WHERE id=\$1 AND token=\$2/i.test(sql)) return { rows: [{ id: params[0], ativo: true }] };
       if (/SELECT quantidade FROM configuracao_mesas/i.test(sql)) return { rows: [{ quantidade: 20 }] };
       if (/SELECT id, numero FROM mesas WHERE numero/i.test(sql)) return { rows: [{ id: 40, numero: 4 }] };
       if (/SELECT id, garcom_responsavel_id, cliente_nome/i.test(sql)) return { rows: [{ id: 91, garcom_responsavel_id: 2, cliente_nome: 'Cliente' }] };
@@ -283,4 +286,25 @@ test('iniciar atendimento não toma sessão que já pertence a outro garçom', a
   assert.equal(calls.some(c => /INSERT INTO mesa_sessoes/i.test(c.sql)), false);
   assert.equal(calls.some(c => /INSERT INTO mesa_atendimento_historico/i.test(c.sql)), false);
   assert.ok(calls.some(c => /ROLLBACK/i.test(c.sql)));
+});
+
+
+test('atribuição recusa link desativado entre a autenticação e a transação', async () => {
+  stubTokenLookup();
+  const calls = [];
+  pool.connect = async () => ({
+    async query(sql) {
+      calls.push(sql);
+      if (/SELECT id, ativo FROM garcons\s+WHERE id=\$1 AND token=\$2/i.test(sql)) return { rows: [{ id: 1, ativo: false }] };
+      return { rows: [] };
+    },
+    release() {},
+  });
+  await assert.rejects(
+    () => iniciarAtendimentoGarcom('00000000-0000-4000-8000-000000000001', 4, {}),
+    (err) => err.status === 401
+  );
+  assert.ok(calls.some((sql) => /FOR SHARE/i.test(sql)));
+  assert.ok(calls.some((sql) => /ROLLBACK/i.test(sql)));
+  assert.equal(calls.some((sql) => /INSERT INTO mesa_sessoes/i.test(sql)), false);
 });

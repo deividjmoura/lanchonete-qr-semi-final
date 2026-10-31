@@ -49,6 +49,8 @@ jobs:
         run: node --test tests/postgres-financial-integration.test.cjs
       - name: Run waiter ownership PostgreSQL integration tests
         run: node --test tests/postgres-waiter-integration.test.cjs
+      - name: Run waiter removal and concurrency PostgreSQL tests
+        run: node --test tests/postgres-remocao-garcom.test.cjs
       - name: Run progressive delivery / offline replay PostgreSQL tests
         run: node --test tests/postgres-entregas-progressivas.test.cjs
       - name: Run QR/session lifecycle PostgreSQL integration tests
