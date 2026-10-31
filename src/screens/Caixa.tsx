@@ -18,6 +18,7 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useMemo, useState } from "react";
 import { OpsShell, useAnuncios } from "../components/OpsShell";
+import { ControlesPaginacao, ListaLimitada, useLimiteLocal } from "../components/Paginacao";
 import { Badge, Btn } from "../components/ui";
 import { ir, useAgora } from "../router";
 import type { FormaPagamento, PixConfig, Sessao } from "../lib/types";
@@ -57,6 +58,7 @@ export default function Caixa() {
   const pedidos = usePub((s) => s.pedidos);
   const [selId, setSelId] = useState<number | null>(null);
   const abertas = sessoes.filter((s) => s.status === "aberta");
+  const abertasVisiveis = useLimiteLocal(abertas, 10);
   const selecionada = abertas.find((s) => s.id === selId) || abertas[0] || null;
 
   const totalSalao = abertas.reduce((a, s) => {
@@ -94,7 +96,7 @@ export default function Caixa() {
     >
       <div className="grid gap-5 lg:grid-cols-12">
         {/* Lista de comandas abertas */}
-        <section className="lg:col-span-5 xl:col-span-4">
+        <section aria-label="Comandas abertas" className="lg:col-span-5 xl:col-span-4">
           <div className="flex items-center justify-between mb-3 pb-2 border-b border-line">
             <h2 className="flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted">
               <Receipt size={15} className="text-brand-ink" /> Comandas abertas
@@ -114,7 +116,7 @@ export default function Caixa() {
             </div>
           ) : (
             <div className="space-y-2">
-              {abertas.map((s) => {
+              {abertasVisiveis.itens.map((s) => {
                 const consumoBruto = consumoSessao(s, pedidos);
                 const servicoLista = s.taxa > 0 ? s.taxa : (s.taxaServicoSugerida ?? 0);
                 const consumo = consumoBruto - s.desconto + servicoLista;
@@ -181,6 +183,7 @@ export default function Caixa() {
                   </button>
                 );
               })}
+              <ControlesPaginacao {...abertasVisiveis} className="pt-2" />
             </div>
           )}
         </section>
@@ -237,6 +240,8 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
   };
 
   const pedidos = usePub((s) => s.pedidos).filter((p) => p.sessaoId === sessao.id);
+  const pedidosVisiveis = useLimiteLocal(pedidos, 10, sessao.id);
+  const pagamentosVisiveis = useLimiteLocal(sessao.pagamentos, 10, sessao.id);
   const registrar = usePub((s) => s.registrarPagamento);
   const setDesconto = usePub((s) => s.setDesconto);
   const setTaxa = usePub((s) => s.setTaxa);
@@ -355,69 +360,77 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
       <div className="grid lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-line">
         {/* Coluna 1: Itens + Ajustes + Resumo em lista contínua */}
         <div className="p-5 sm:p-6 flex flex-col justify-between">
-          <div>
+          <div role="region" aria-label="Consumo lançado">
             <h3 className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted mb-3">
               Consumo lançado
             </h3>
             <div className="divide-y divide-dashed divide-line max-h-72 overflow-y-auto pr-1 no-scrollbar border-y border-dashed border-line">
-              {pedidos.map((p) => (
-                <div key={p.id} className="py-3">
+              {pedidosVisiveis.itens.map((p) => (
+                <div key={p.id} role="group" aria-label={`Pedido ${p.id}`} className="py-3">
                   <p className="font-mono text-[11px] font-semibold text-text-muted mb-1.5">
                     #{p.id} {p.clienteNome ? `· ${p.clienteNome}` : ""}
                   </p>
-                  {p.itens.map((i) => (
-                    <div
-                      key={i.id}
-                      className="flex justify-between gap-3 text-xs text-text py-1"
-                    >
-                      <span
-                        className={cn(
-                          "leading-snug",
-                          i.status === "cancelado" && "line-through opacity-50",
-                        )}
-                      >
-                        <strong className="font-mono text-brand-ink">{i.qtd}×</strong> {i.nome}
-                        {i.escolha && (
-                          <span className="text-text-muted text-[11px]"> · {i.escolha.nome}</span>
-                        )}
-                        {i.status && (
-                          <span className="ml-1.5 font-mono text-[10px] uppercase tracking-wider text-text-muted">
-                            {i.status === "concluido"
-                              ? "pronto"
-                              : i.status === "em_producao"
-                                ? "preparando"
-                                : i.status === "aceito"
-                                  ? "aceito"
-                                  : i.status === "retirado"
-                                    ? "retirado"
-                                    : i.status === "entregue"
-                                      ? "entregue"
-                                      : i.status === "cancelado"
-                                        ? "cancelado"
-                                        : "na fila"}
-                          </span>
-                        )}
-                        {i.status && i.status !== "entregue" && i.status !== "cancelado" && (
-                          <button
-                            type="button"
-                            className="ml-2 font-mono text-[10px] font-bold text-status-danger-ink hover:underline"
-                            onClick={() => void cancelarItem(Number(i.id))}
+                  <ListaLimitada itens={p.itens}>
+                    {({ itens, temMais, expandida, carregarMais, recolher }) => (
+                      <>
+                        {itens.map((i) => (
+                          <div
+                            key={i.id}
+                            className="flex justify-between gap-3 text-xs text-text py-1"
                           >
-                            Cancelar item
-                          </button>
-                        )}
-                      </span>
-                      <span className="font-mono text-xs text-text shrink-0">
-                        {BRL(i.totalUnit * i.qtd)}
-                      </span>
-                    </div>
-                  ))}
+                            <span
+                              className={cn(
+                                "leading-snug",
+                                i.status === "cancelado" && "line-through opacity-50",
+                              )}
+                            >
+                              <strong className="font-mono text-brand-ink">{i.qtd}×</strong> {i.nome}
+                              {i.escolha && (
+                                <span className="text-text-muted text-[11px]"> · {i.escolha.nome}</span>
+                              )}
+                              {i.status && (
+                                <span className="ml-1.5 font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                                  {i.status === "concluido"
+                                    ? "pronto"
+                                    : i.status === "em_producao"
+                                      ? "preparando"
+                                      : i.status === "aceito"
+                                        ? "aceito"
+                                        : i.status === "retirado"
+                                          ? "retirado"
+                                          : i.status === "entregue"
+                                            ? "entregue"
+                                            : i.status === "cancelado"
+                                              ? "cancelado"
+                                              : "na fila"}
+                                </span>
+                              )}
+                              {i.status && i.status !== "entregue" && i.status !== "cancelado" && (
+                                <button
+                                  type="button"
+                                  className="ml-2 font-mono text-[10px] font-bold text-status-danger-ink hover:underline"
+                                  onClick={() => void cancelarItem(Number(i.id))}
+                                >
+                                  Cancelar item
+                                </button>
+                              )}
+                            </span>
+                            <span className="font-mono text-xs text-text shrink-0">
+                              {BRL(i.totalUnit * i.qtd)}
+                            </span>
+                          </div>
+                        ))}
+                        <ControlesPaginacao temMais={temMais} expandida={expandida} carregarMais={carregarMais} recolher={recolher} className="pt-2" />
+                      </>
+                    )}
+                  </ListaLimitada>
                 </div>
               ))}
               {pedidos.length === 0 && (
                 <p className="py-6 text-xs text-text-muted text-center">Sem pedidos registrados</p>
               )}
             </div>
+            <ControlesPaginacao {...pedidosVisiveis} className="pt-3" />
 
             <div className="mt-4 grid grid-cols-2 gap-3">
               <Ajuste
@@ -573,7 +586,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
           </div>
 
           {/* Pagamentos já lançados */}
-          <div>
+          <div role="region" aria-label="Pagamentos lançados">
             <p className="flex items-center justify-between font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-text-muted mb-2">
               <span>Pagamentos lançados</span>
               <span className="text-text font-bold">Resta {BRL(restante)}</span>
@@ -582,7 +595,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
               {sessao.pagamentos.length === 0 && (
                 <p className="py-3 text-center text-xs text-text-muted">Nenhum pagamento registrado</p>
               )}
-              {sessao.pagamentos.map((pg) => (
+              {pagamentosVisiveis.itens.map((pg) => (
                 <div key={pg.id} className="flex items-center justify-between py-2">
                   <span className="flex min-w-0 flex-col gap-0.5 text-xs font-semibold text-status-success-ink">
                     <span className="flex items-center gap-1.5 font-mono uppercase">
@@ -601,6 +614,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                 </div>
               ))}
             </div>
+            <ControlesPaginacao {...pagamentosVisiveis} className="pt-3" />
           </div>
 
           {/* Instrução da forma escolhida; PIX mostra QR dinâmico */}
