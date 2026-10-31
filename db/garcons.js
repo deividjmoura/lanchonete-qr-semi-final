@@ -1,6 +1,5 @@
 const pool = require('./pool');
 const { numeroInteiroPositivo } = require('./validacao');
-const { sincronizarValorTotalSessao } = require('./conta');
 const { comRetryConcorrencia } = require('./retry');
 const { registrarEvento } = require('./auditoria');
 
@@ -17,21 +16,104 @@ async function listGarcons() {
             COUNT(p.id) FILTER (WHERE p.status = 'entregue')::int AS entregas
      FROM garcons g
      LEFT JOIN pedidos p ON p.garcom_id = g.id
+     WHERE g.removido_em IS NULL
      GROUP BY g.id
      ORDER BY g.ativo DESC, g.nome ASC`
   );
   return rows;
 }
 
-async function removerGarcom(id) {
-  // Exclusão lógica: as métricas e a autoria financeira históricas devem permanecer.
-  const gid = numeroInteiroPositivo(id, 'id do garçom');
-  const { rows } = await pool.query(
-    'UPDATE garcons SET ativo = FALSE WHERE id = $1 RETURNING id, nome',
-    [gid]
+// O lock exclusivo do cadastro serializa remoção/desativação com as ações que
+// atribuem mesas ou entregas: elas mantêm FOR SHARE no garçom até o commit.
+// Não travar mesas aqui evita inverter a ordem dos locks de transferência.
+async function verificarResponsabilidades(client, gid, verbo) {
+  const { rows: mesas } = await client.query(
+    `SELECT m.numero FROM mesa_sessoes s JOIN mesas m ON m.id=s.mesa_id
+     WHERE s.status='aberta' AND s.garcom_responsavel_id=$1
+     ORDER BY m.numero LIMIT 10`, [gid]
   );
-  if (!rows[0]) throw new ErroGarcom(404, 'Garçom não encontrado');
-  return { ...rows[0], desativado: true };
+  const { rows: pendentes } = await client.query(
+    `SELECT COUNT(*)::int AS total
+       FROM itens_pedido ip
+       JOIN pedidos p ON p.id=ip.pedido_id
+       JOIN mesa_sessoes s ON s.id=p.sessao_id
+      WHERE s.status='aberta'
+        AND ((ip.status='aceito' AND ip.aceito_por_id=$1)
+          OR (ip.status='retirado' AND ip.retirado_por_id=$1))`, [gid]
+  );
+  const motivos = [];
+  if (mesas.length) {
+    motivos.push(`há atendimento aberto nas mesas ${mesas.map((m) => m.numero).join(', ')}. Transfira ou encerre esses atendimentos`);
+  }
+  if (pendentes[0].total) {
+    motivos.push(`há ${pendentes[0].total} item(ns) aceito(s) ou retirado(s). Conclua as entregas ou libere os aceites não retirados`);
+  }
+  if (motivos.length) {
+    throw new ErroGarcom(409, `Não é possível ${verbo}: ${motivos.join('; ')}. Se necessário, reative o garçom para concluir as entregas.`);
+  }
+}
+
+async function alterarCadastroGarcom(id, { ativo, remover = false, ator = null, requestId = null }) {
+  const gid = numeroInteiroPositivo(id, 'id do garçom');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    let admin = null;
+    if (ator) {
+      const result = await client.query('SELECT id, nome, papel, ativo FROM staff WHERE id=$1 FOR SHARE', [ator.id]);
+      admin = result.rows[0];
+      if (!admin?.ativo || admin.papel !== 'admin') {
+        throw new ErroGarcom(403, 'Apenas um administrador ativo pode alterar o cadastro de garçons.');
+      }
+    }
+    const { rows } = await client.query(
+      'SELECT id, nome, ativo, removido_em FROM garcons WHERE id=$1 FOR UPDATE', [gid]
+    );
+    const garcom = rows[0];
+    if (!garcom || garcom.removido_em) throw new ErroGarcom(404, 'Garçom não encontrado ou já removido');
+    if (remover || (!ativo && garcom.ativo)) {
+      await verificarResponsabilidades(client, gid, remover ? 'remover' : 'desativar');
+    }
+    let atualizado;
+    if (remover) {
+      // Trocar o token invalida o link antigo definitivamente; nenhuma FK muda.
+      const result = await client.query(
+        `UPDATE garcons SET ativo=FALSE, removido_em=now(), token=gen_random_uuid()
+         WHERE id=$1 RETURNING id, nome`, [gid]
+      );
+      atualizado = { ...result.rows[0], removido: true };
+    } else {
+      const result = await client.query(
+        `UPDATE garcons SET ativo=$2 WHERE id=$1
+         RETURNING id, nome, token, ativo, criado_em`, [gid, !!ativo]
+      );
+      atualizado = result.rows[0];
+    }
+    if (remover || Boolean(garcom.ativo) !== Boolean(ativo)) {
+      await registrarEvento(client, {
+        atorTipo: admin ? 'staff' : 'sistema',
+        atorId: admin ? Number(admin.id) : null,
+        atorNome: admin?.nome || null,
+        acao: remover ? 'garcom_removido' : (ativo ? 'garcom_ativado' : 'garcom_desativado'),
+        alvoTipo: 'garcom', alvoId: gid, requestId,
+        contexto: { garcomId: gid, garcomNome: garcom.nome },
+      });
+    }
+    await client.query('COMMIT');
+    return atualizado;
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+async function removerGarcom(id, ator = null, requestId = null) {
+  return comRetryConcorrencia(
+    () => alterarCadastroGarcom(id, { ativo: false, remover: true, ator, requestId }),
+    { rotulo: 'removerGarcom' }
+  );
 }
 
 async function criarGarcom(body) {
@@ -45,15 +127,11 @@ async function criarGarcom(body) {
   return rows[0];
 }
 
-async function setGarcomAtivo(id, ativo) {
-  const gid = numeroInteiroPositivo(id, 'id do garçom');
-  const { rows } = await pool.query(
-    `UPDATE garcons SET ativo = $2 WHERE id = $1
-     RETURNING id, nome, token, ativo, criado_em`,
-    [gid, !!ativo]
+async function setGarcomAtivo(id, ativo, ator = null, requestId = null) {
+  return comRetryConcorrencia(
+    () => alterarCadastroGarcom(id, { ativo: !!ativo, ator, requestId }),
+    { rotulo: 'setGarcomAtivo' }
   );
-  if (!rows[0]) throw new ErroGarcom(404, 'Garçom não encontrado');
-  return rows[0];
 }
 
 async function getGarcomPorToken(token) {
@@ -64,7 +142,7 @@ async function getGarcomPorToken(token) {
     return null;
   }
   const { rows } = await pool.query(
-    `SELECT id, nome, token, ativo FROM garcons WHERE token = $1`,
+    `SELECT id, nome, token, ativo FROM garcons WHERE token = $1 AND removido_em IS NULL`,
     [t]
   );
   return rows[0] || null;

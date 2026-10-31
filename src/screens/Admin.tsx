@@ -996,9 +996,10 @@ function Garcons() {
   const [busy, setBusy] = useState(false);
   const [copiado, setCopiado] = useState<number | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [mensagem, setMensagem] = useState<string | null>(null);
   const [dataMetricas, setDataMetricas] = useState(() => dataLocal());
   const [metricas, setMetricas] = useState<
-    Array<{ id: number; nome: string; atendimentos: number; vendas: number; ticketMedio: number }>
+    Array<{ id: number; nome: string; removido: boolean; atendimentos: number; vendas: number; ticketMedio: number }>
   >([]);
   const [erroMetricas, setErroMetricas] = useState<string | null>(null);
 
@@ -1068,8 +1069,11 @@ function Garcons() {
 
   const toggle = async (g: GarcomRow) => {
     setBusy(true);
+    setErro(null);
+    setMensagem(null);
     try {
       await api.setGarcomAtivo(g.id, !g.ativo);
+      setMensagem(`${g.nome} ${g.ativo ? "desativado; pode ser reativado" : "reativado"}.`);
       await carregar();
     } catch (e: any) {
       setErro(e.message || "Erro ao atualizar");
@@ -1080,10 +1084,15 @@ function Garcons() {
   };
 
   const remover = async (g: GarcomRow) => {
-    if (!confirm(`Remover o garçom "${g.nome}"? O link dele deixa de funcionar.`)) return;
+    if (!confirm(`Remover "${g.nome}" definitivamente da lista? O link será invalidado e não poderá ser reativado. O histórico será preservado.`)) return;
     setBusy(true);
+    setErro(null);
+    setMensagem(null);
     try {
       await api.removerGarcom(g.id);
+      setLista((atual) => atual.filter((item) => item.id !== g.id));
+      setMetricas((atual) => atual.flatMap((item) => item.id !== g.id ? [item] : item.atendimentos ? [{ ...item, removido: true }] : []));
+      setMensagem(`${g.nome} foi removido. O link foi invalidado e o histórico foi preservado.`);
       await carregar();
     } catch (e: any) {
       setErro(e.message || "Erro ao remover");
@@ -1102,6 +1111,79 @@ function Garcons() {
       prompt("Copie o link do garçom:", linkGarcom(g.token));
     }
   };
+
+  const ativos = lista.filter((g) => g.ativo);
+  const inativos = lista.filter((g) => !g.ativo);
+  const renderGarcom = (g: GarcomRow) => (
+    <li
+      key={g.id}
+      className={cn(
+        "flex flex-wrap items-center gap-2.5 px-5 py-3.5",
+        !g.ativo && "opacity-65",
+      )}
+    >
+      <div className="flex-1 min-w-[10rem]">
+        <p className="font-semibold text-text text-sm">{g.nome}</p>
+        <p className="font-mono text-[11px] text-text-muted truncate max-w-[15rem] sm:max-w-md">
+          {g.token}
+        </p>
+        <p className="font-mono text-[10px] text-text-subtle mt-0.5">
+          {g.entregas ?? 0} entrega{(g.entregas ?? 0) === 1 ? "" : "s"}
+          {!g.ativo && " · inativo"}
+        </p>
+      </div>
+      <Badge tone={g.ativo ? "sage" : "neutral"}>{g.ativo ? "ativo" : "inativo"}</Badge>
+      <button
+        type="button"
+        title="Copiar link"
+        aria-label={`Copiar link de ${g.nome}`}
+        disabled={!g.ativo || busy}
+        onClick={() => void copiar(g)}
+        className="inline-flex size-9 items-center justify-center rounded-sm border border-line bg-surface-sunken text-text-muted hover:text-text"
+      >
+        {copiado === g.id ? (
+          <span className="font-mono text-[10px] font-bold text-status-success-ink">OK</span>
+        ) : (
+          <Copy size={15} />
+        )}
+      </button>
+      <button
+        type="button"
+        title="Abrir fila"
+        aria-label={`Abrir fila de ${g.nome}`}
+        disabled={!g.ativo || busy}
+        onClick={() => ir(`/garcom/${g.token}`)}
+        className="inline-flex size-9 items-center justify-center rounded-sm border border-line bg-surface-sunken text-text-muted hover:text-text"
+      >
+        <LinkSimple size={15} />
+      </button>
+      <button
+        type="button"
+        title={g.ativo ? "Desativar" : "Ativar"}
+        aria-label={g.ativo ? `Desativar ${g.nome}` : `Ativar ${g.nome}`}
+        disabled={busy}
+        onClick={() => void toggle(g)}
+        className={cn(
+          "inline-flex size-9 items-center justify-center rounded-sm border",
+          g.ativo
+            ? "bg-status-success-surface border-status-success-border text-status-success-ink"
+            : "bg-surface-sunken border-line text-text-muted",
+        )}
+      >
+        {g.ativo ? <Eye size={15} /> : <EyeSlash size={15} />}
+      </button>
+      <button
+        type="button"
+        title="Remover"
+        aria-label={`Remover ${g.nome}`}
+        disabled={busy}
+        onClick={() => void remover(g)}
+        className="inline-flex size-9 items-center justify-center rounded-sm border border-line bg-surface-sunken text-text-muted hover:text-status-danger-ink hover:border-status-danger-border"
+      >
+        <Trash size={15} />
+      </button>
+    </li>
+  );
 
   return (
     <div className="space-y-5">
@@ -1144,7 +1226,9 @@ function Garcons() {
             <tbody className="divide-y divide-line">
               {metricas.map((g) => (
                 <tr key={g.id}>
-                  <td className="py-3 pr-2 font-semibold text-text">{g.nome}</td>
+                  <td className="py-3 pr-2 font-semibold text-text">
+                    {g.nome}{g.removido && <span className="ml-1 text-xs font-normal text-text-muted">(removido)</span>}
+                  </td>
                   <td className="py-3 px-2 text-right font-mono">{g.atendimentos}</td>
                   <td className="py-3 px-2 text-right font-mono">{BRL(g.ticketMedio)}</td>
                   <td className="py-3 pl-2 text-right font-mono font-bold text-brand-ink">
@@ -1171,7 +1255,7 @@ function Garcons() {
               Credenciais de garçom
             </h3>
             <p className="mt-1 text-xs text-text-muted">
-              Link individual por operador para acesso ao salão no celular.
+              Inativos podem ser reativados. A remoção invalida o link definitivamente, mas preserva o histórico.
             </p>
           </div>
           <form
@@ -1194,10 +1278,11 @@ function Garcons() {
         </div>
 
         {erro && (
-          <p className="m-4 rounded-sm border border-status-danger-border bg-status-danger-surface px-3 py-2 text-xs text-status-danger-ink">
+          <p role="alert" className="m-4 rounded-sm border border-status-danger-border bg-status-danger-surface px-3 py-2 text-xs text-status-danger-ink">
             {erro}
           </p>
         )}
+        {mensagem && <p role="status" className="m-4 text-sm text-status-success-ink">{mensagem}</p>}
 
         {loading ? (
           <p className="text-sm text-text-muted py-8 text-center">Carregando…</p>
@@ -1206,76 +1291,21 @@ function Garcons() {
             Nenhum garçom cadastrado. Cadastre o nome acima para gerar o link de acesso.
           </p>
         ) : (
-          <ul className="divide-y divide-line">
-            {lista.map((g) => (
-              <li
-                key={g.id}
-                className={cn(
-                  "flex flex-wrap items-center gap-2.5 px-5 py-3.5",
-                  !g.ativo && "opacity-65",
-                )}
-              >
-                <div className="flex-1 min-w-[10rem]">
-                  <p className="font-semibold text-text text-sm">{g.nome}</p>
-                  <p className="font-mono text-[11px] text-text-muted truncate max-w-[15rem] sm:max-w-md">
-                    {g.token}
-                  </p>
-                  <p className="font-mono text-[10px] text-text-subtle mt-0.5">
-                    {g.entregas ?? 0} entrega{(g.entregas ?? 0) === 1 ? "" : "s"}
-                    {!g.ativo && " · inativo"}
-                  </p>
-                </div>
-                <Badge tone={g.ativo ? "sage" : "neutral"}>{g.ativo ? "ativo" : "inativo"}</Badge>
-                <button
-                  type="button"
-                  title="Copiar link"
-                  aria-label={`Copiar link de ${g.nome}`}
-                  onClick={() => void copiar(g)}
-                  className="inline-flex size-9 items-center justify-center rounded-sm border border-line bg-surface-sunken text-text-muted hover:text-text"
-                >
-                  {copiado === g.id ? (
-                    <span className="font-mono text-[10px] font-bold text-status-success-ink">OK</span>
-                  ) : (
-                    <Copy size={15} />
-                  )}
-                </button>
-                <button
-                  type="button"
-                  title="Abrir fila"
-                  aria-label={`Abrir fila de ${g.nome}`}
-                  onClick={() => ir(`/garcom/${g.token}`)}
-                  className="inline-flex size-9 items-center justify-center rounded-sm border border-line bg-surface-sunken text-text-muted hover:text-text"
-                >
-                  <LinkSimple size={15} />
-                </button>
-                <button
-                  type="button"
-                  title={g.ativo ? "Desativar" : "Ativar"}
-                  aria-label={g.ativo ? `Desativar ${g.nome}` : `Ativar ${g.nome}`}
-                  disabled={busy}
-                  onClick={() => void toggle(g)}
-                  className={cn(
-                    "inline-flex size-9 items-center justify-center rounded-sm border",
-                    g.ativo
-                      ? "bg-status-success-surface border-status-success-border text-status-success-ink"
-                      : "bg-surface-sunken border-line text-text-muted",
-                  )}
-                >
-                  {g.ativo ? <Eye size={15} /> : <EyeSlash size={15} />}
-                </button>
-                <button
-                  type="button"
-                  title="Remover"
-                  aria-label={`Remover ${g.nome}`}
-                  disabled={busy}
-                  onClick={() => void remover(g)}
-                  className="inline-flex size-9 items-center justify-center rounded-sm border border-line bg-surface-sunken text-text-muted hover:text-status-danger-ink hover:border-status-danger-border"
-                >
-                  <Trash size={15} />
-                </button>
-              </li>
-            ))}
-          </ul>
+          <>
+            {ativos.length ? (
+              <ul aria-label="Garçons ativos" className="divide-y divide-line">{ativos.map(renderGarcom)}</ul>
+            ) : (
+              <p className="text-sm text-text-muted py-6 px-4 text-center">Nenhum garçom ativo.</p>
+            )}
+            {inativos.length > 0 && (
+              <details className="border-t border-line">
+                <summary className="cursor-pointer px-5 py-4 text-sm font-semibold text-text">
+                  Inativos ({inativos.length}) — podem ser reativados
+                </summary>
+                <ul aria-label="Garçons inativos" className="divide-y divide-line">{inativos.map(renderGarcom)}</ul>
+              </details>
+            )}
+          </>
         )}
       </section>
     </div>
