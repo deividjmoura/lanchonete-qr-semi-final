@@ -75,7 +75,9 @@ async function desktop(browser) {
     assert.equal(new URL(page.url()).hash, '#' + rota, `refresh preserva ${nome}`);
   }
 
-  await page.getByRole('button', { name: 'Comprovantes', exact: true }).click();
+  // Comprovantes agora é uma visão interna de Relatório (sem aba própria).
+  await page.getByRole('button', { name: 'Relatório', exact: true }).click();
+  await page.getByRole('button', { name: 'Comprovantes recentes', exact: true }).click();
   const section = page.getByRole('region', { name: 'Comprovantes de contas fechadas' });
   await section.getByText('Conta #1001').waitFor();
   assert.equal(await section.getByRole('button', { name: 'Imprimir' }).count(), 5, 'primeira página pequena');
