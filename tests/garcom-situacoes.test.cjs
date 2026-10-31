@@ -48,7 +48,10 @@ test('Fila de retirada é compartilhada; posse da mesa e do item são separadas'
 });
 test('Caixa fecha quitação simples só quando não há pedidos ou avisos PIX pendentes',()=>{
  const caixa=read('db/caixa.js');
- assert.match(caixa,/Math\.abs\(total - valorPago\) <= 0\.009/);
+ // O teto/quitação é o valor devido da conta: consumo + serviço quando o
+ // pagamento veio da PWA do garçom (incluirServico), senão só o consumo.
+ assert.match(caixa,/const valorDevido = Number\(\(total \+ taxaServico\)\.toFixed\(2\)\)/);
+ assert.match(caixa,/Math\.abs\(valorDevido - valorPago\) <= 0\.009/);
  assert.match(caixa,/pedidosPendentes\[0\].*=== 0/);
  assert.match(caixa,/avisosPixPendentes\[0\].*=== 0/);
  assert.match(caixa,/SET status='fechada', fechada_em=now\(\)/);

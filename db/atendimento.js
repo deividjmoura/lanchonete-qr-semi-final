@@ -1,6 +1,7 @@
 const pool = require('./pool');
 const { getGarcomPorToken } = require('./garcons');
 const { totalEntregueDaSessao, totalPagoDaSessao } = require('./conta');
+const { percentualServicoPadrao, taxaServicoPadraoPara } = require('./caixa');
 const { registrarEvento } = require('./auditoria');
 const { comRetryConcorrencia } = require('./retry');
 
@@ -312,12 +313,26 @@ async function resumoPagamentoSessao(token, sessaoIdBruto) {
     const valorTotal = await totalEntregueDaSessao(client, sessaoId);
     const valorPago = await totalPagoDaSessao(client, sessaoId);
     await client.query('COMMIT');
+    // O garçom cobra o mesmo valor que o caixa fecharia: consumo entregue +
+    // serviço padrão (TAXA_SERVICO_PERCENTUAL, 10% por padrão). Antes o resumo
+    // trazia só o consumo e a conta "quitava" sem a taxa — o cliente pagava
+    // menos do que a casa cobra, e o fechamento ficava sem serviço registrado.
+    const taxaServicoPercentual = percentualServicoPadrao();
+    const taxaServico = taxaServicoPadraoPara(valorTotal);
+    const valorTotalComServico = Number((valorTotal + taxaServico).toFixed(2));
     return {
       sessaoId,
       mesa: sessao.mesa,
+      // Consumo bruto entregue (sem serviço) — mantido para consumidores antigos.
       valorTotal,
       valorPago,
       valorRestante: Number(Math.max(0, valorTotal - valorPago).toFixed(2)),
+      taxaServicoPercentual,
+      taxaServico,
+      valorTotalComServico,
+      valorRestanteComServico: Number(
+        Math.max(0, valorTotalComServico - valorPago).toFixed(2)
+      ),
     };
   } catch (e) {
     try { await client.query('ROLLBACK'); } catch (_) {}

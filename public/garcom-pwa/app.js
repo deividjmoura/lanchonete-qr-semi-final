@@ -752,8 +752,26 @@ async function loadBillingSummary(){
  if(!navigator.onLine){$('#billingSummary').textContent='Conecte-se para consultar o saldo no servidor.';bloquearCobranca('Sem conexão: o saldo precisa ser confirmado no servidor antes de registrar recebimento.');return}
  try{
   const data=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/sessoes/'+sessionId+'/resumo-pagamento');
-  const total=Number(data.valorTotal),pago=Number(data.valorPago),restante=Number(data.valorRestante);
-  $('#billingSummary').textContent='Mesa '+data.mesa+' · Total entregue: '+money(total)+' · Já recebido: '+money(pago)+' · Saldo: '+money(restante);
+  // Mesmo valor que o caixa fecha: consumo entregue + serviço padrão da casa.
+  // Servidores antigos não enviam os campos de serviço: nesse caso mostramos
+  // apenas o consumo, sem inventar taxa.
+  const total=Number(data.valorTotal),pago=Number(data.valorPago);
+  const comServico=data.taxaServico!=null&&data.valorTotalComServico!=null;
+  const percentual=comServico?Number(data.taxaServicoPercentual??0):0;
+  const servico=comServico?Number(data.taxaServico):0;
+  const totalComServico=comServico?Number(data.valorTotalComServico):total;
+  const restante=Number(comServico
+   ?(data.valorRestanteComServico??Math.max(0,Number((totalComServico-pago).toFixed(2))))
+   :(data.valorRestante??Math.max(0,Number((total-pago).toFixed(2)))));
+  $('#billingSummary').textContent='Mesa '+data.mesa
+   +(comServico?' · Consumo: '+money(total)+' · Serviço ('+percentual+'%): '+money(servico)+' · Total: '+money(totalComServico)
+              :' · Total entregue: '+money(total))
+   +' · Já recebido: '+money(pago)
+   +' · Saldo: '+money(restante);
+  const nota=$('#billingServiceNote');
+  if(nota)nota.textContent=comServico
+   ?'O saldo já inclui o serviço de '+percentual+'% ('+money(servico)+'), igual ao fechamento no Caixa. Ajustes de serviço ou desconto são feitos no Caixa.'
+   :'';
   if(pendingWaiterPayment&&Number(pendingWaiterPayment.sessaoId)!==sessionId){
    bloquearCobranca('Resolva a tentativa pendente da mesa '+pendingWaiterPayment.mesa+' antes de cobrar outra mesa.');
    return;
@@ -764,6 +782,10 @@ async function loadBillingSummary(){
      :'Esta conta já está quitada ('+money(pago)+' recebidos). O fechamento e a liberação da mesa são feitos no Caixa.');
    return;
   }
+  // Pré-preenche com o saldo do fechamento (já com serviço), sem sobrescrever
+  // uma tentativa pendente nem um valor digitado pelo garçom.
+  const campo=$('#billingAmount');
+  if(!pendingWaiterPayment&&campo&&!campo.value)$('#billingAmount').value=String(restante.toFixed(2));
   liberarCobranca();
  }catch(e){
   $('#billingSummary').textContent=e.message||'Não foi possível consultar o saldo.';
@@ -827,13 +849,14 @@ async function submitWaiterPayment(){
  try{
   const out=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/sessoes/'+sessionId+'/pagamentos',{
    method:'POST',headers:{'content-type':'application/json'},
-   body:JSON.stringify({valor:valorArredondado,formaPagamento,idempotencyKey:pendingWaiterPayment.key})
+   body:JSON.stringify({valor:valorArredondado,formaPagamento,idempotencyKey:pendingWaiterPayment.key,incluirServico:true})
   });
   pendingWaiterPayment=null;localStorage.removeItem(pendingPaymentStorageKey);
   $('#billingAmount').value='';$('#billingReceivedConfirm').checked=false;
+  const servicoRegistrado=Number(out.taxaServico)>0?' (inclui '+money(Number(out.taxaServico))+' de serviço)':'';
   $('#billingMessage').textContent=out.sessaoFechada
-   ?'Recebimento de '+money(Number(out.pagamento.valor))+' registrado. Conta quitada, atendimento encerrado e mesa liberada.'
-   :'Recebimento registrado: '+money(Number(out.pagamento.valor))+'. Saldo restante: '+money(Number(out.valorRestante))+(out.idempotentReplay?' (confirmação recuperada após repetição segura).':'');
+   ?'Recebimento de '+money(Number(out.pagamento.valor))+servicoRegistrado+' registrado. Conta quitada, atendimento encerrado e mesa liberada.'
+   :'Recebimento registrado: '+money(Number(out.pagamento.valor))+servicoRegistrado+'. Saldo restante: '+money(Number(out.valorRestante))+(out.idempotentReplay?' (confirmação recuperada após repetição segura).':'');
   await loadBillingSummary();
   await loadMesas();
  }catch(e){

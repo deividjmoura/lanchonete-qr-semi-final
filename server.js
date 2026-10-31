@@ -536,6 +536,8 @@ const server = http.createServer(async (req, res) => {
         const payload = await body(req);
         const out = await registrarPagamento(Number(m[2]), payload, garcom.nome, garcom.id, {
           atorTipo: 'garcom', atorId: garcom.id, requestId: reqId,
+          // A PWA cobra o mesmo total do caixa: consumo + serviço padrão.
+          incluirServico: payload?.incluirServico === true,
         });
         if (!out.idempotentReplay) broadcast('update', { type: 'pagamento_parcial', sessaoId: Number(m[2]) });
         return json(res, out.idempotentReplay ? 200 : 201, out);
