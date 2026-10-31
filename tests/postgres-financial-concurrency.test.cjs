@@ -160,7 +160,7 @@ test('valores centavos são preservados em 0,01 + 0,10 + 10,25 e no fechamento',
       desconto: 0,
       taxaServico: 0, taxaServicoMotivo: 'Isenção de serviço no cenário de teste',
       idempotencyKey: 'fecha-' + randomUUID(),
-    }, 'QA Moeda');
+    }, 'QA Moeda', { autorizacaoGerente: { id: 900001, nome: 'Gerente QA (fixture)' } });
     assert.equal(fechado.valorCobrado, 10.36);
     assert.equal(fechado.status, 'fechada');
   } finally {

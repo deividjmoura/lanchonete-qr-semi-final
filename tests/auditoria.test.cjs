@@ -124,7 +124,7 @@ test('cancelamento, PIX e fechamento estão ligados à trilha no código de prod
 
   // rotas passam a identidade do staff e o request id
   assert.match(server, /confirmarPixAviso\(\s*Number\(m\[1\]\), Number\(m\[2\]\), operador\?\.nome \|\| null, \{[\s\S]*?requestId: reqId/);
-  assert.match(server, /fecharSessao\(Number\(m\[1\]\), await body\(req\), operador\?\.nome \|\| null, \{[\s\S]*?requestId: reqId/);
+  assert.match(server, /fecharSessao\(Number\(m\[1\]\), dados, operador\?\.nome \|\| null, \{[\s\S]*?requestId: reqId/);
   assert.match(server, /registrarPagamento\(Number\(m\[1\]\), await body\(req\), operador\?\.nome \|\| null, null, \{[\s\S]*?requestId: reqId/);
   assert.match(server, /cancelarPedidoCliente\(m\[1\], Number\(m\[2\]\), null, \{ requestId: reqId \}\)/);
 });
