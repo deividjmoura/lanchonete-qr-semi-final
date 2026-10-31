@@ -52,3 +52,11 @@ declarado operante.
 - Opcional: um *readiness* que teste conectividade do PostgreSQL sem consulta
   pesada (ex.: `SELECT 1`), separado do *liveness* atual, para o provedor não
   matar instâncias durante falhas transitórias de banco.
+
+## Decisão registrada — 2026-10-30 (issue #43)
+
+O responsável definiu: **alertas operacionais por e-mail**. O canal está
+decidido; a implementação (destinatário, provedor de envio, limiares e teste
+de alerta em ambiente de teste) entra numa frente própria.
+
+A issue #43 **segue aberta** até o alerta estar implementado e demonstrado.

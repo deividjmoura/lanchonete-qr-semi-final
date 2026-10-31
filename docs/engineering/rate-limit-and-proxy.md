@@ -62,3 +62,15 @@ contas distintas têm orçamentos próprios.
 Nenhuma das variáveis deve ser ativada sem os passos 1–2. A aplicação nunca
 executa testes de rate limit contra produção; a validação funcional fica nos
 testes herméticos (`tests/client-ip.test.cjs`, `tests/rate-limit-keys.test.cjs`).
+
+## Decisão registrada — 2026-10-30 (issue #50)
+
+O responsável confirmou: **a produção roda só no Railway, sem nenhum proxy
+na frente** (sem Cloudflare nem outro intermediário). Com isso, o caminho de
+confiança é o edge do próprio Railway: a ativação futura deve usar
+`TRUSTED_PROXY_HOPS=1` **ou** `CLIENT_IP_HEADER=x-real-ip` (nunca os dois sem
+revalidar), conforme os passos 1–2 deste documento.
+
+A issue #50 **segue aberta**: falta aplicar a variável no serviço e validar
+em produção (sem testes de rate limit contra produção). Nada foi alterado no
+ambiente até aqui.
