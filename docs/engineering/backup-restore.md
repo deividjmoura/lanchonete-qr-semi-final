@@ -70,8 +70,9 @@ Nada abaixo foi verificado. Preencher **sem credenciais** e anexar o `restore.js
 
 | Item (critério de aceite da #41) | Valor | Evidência |
 |---|---|---|
-| Provedor, plano e tipo de backup (lógico/PITR/snapshot) | _pendente_ | |
-| Frequência e retenção configuradas | _pendente_ | |
+| Provedor, plano e tipo de backup (lógico/PITR/snapshot) | Railway, plano Hobby — projeto `exquisite-nurturing`, ambiente `production`, serviço `Postgres` (PostgreSQL 18, volume `postgres-volume` 500 MB); snapshot de volume + PITR disponíveis | Consulta Railway CLI em 2026-10-30 (ver 4.2) |
+| Frequência e retenção configuradas | **Nenhum backup configurado** em 2026-10-30: sem agendamentos e sem backups existentes; PITR desativado. Decisão: ativar diário (meta RPO 24h) + semanal + mensal (retenção Railway: 6/27/89 dias) | `pitr schedule list` → `[]`; `pitr backup list` → `[]`; `pitr status` → `enabled:false, bucketWired:false` |
+| Metas aprovadas pelo responsável | RPO 24h, RTO 4h; restore isolado autorizado | Registro nesta seção em 2026-10-30 |
 | Data/identificador do backup usado no teste | _pendente_ | |
 | Destino isolado usado (nome, não URL) | _pendente_ | |
 | Resultado do drill (`resultado`, divergências) | _pendente_ | `restore.json` |
@@ -110,6 +111,29 @@ preencher a tabela da seção 4. Passos exatos, sem necessidade de expor segredo
 
 Enquanto esse exercício não for executado com um backup real do provedor, a
 issue permanece aberta mesmo com o drill automatizado do CI verde.
+
+### 4.2 Diagnóstico de 2026-10-30 e sequência de ativação
+
+Consultas somente leitura via Railway CLI no projeto `exquisite-nurturing`:
+
+- `pitr status` → `enabled: false`, `bucketWired: false`, `isHaCluster: false`.
+- `pitr schedule list` → `[]` (nenhum agendamento).
+- `pitr backup list` → `[]` (nenhum backup existente).
+
+Ou seja, até essa data **não havia cópia de recuperação**: em caso de perda do
+volume, o RPO era ilimitado. Sequência aprovada para fechar a evidência:
+
+1. Ativar agendamento **diário** (+ semanal e mensal) no painel do serviço
+   `Postgres` (Backups). Isso não derruba o serviço e cobre o RPO de 24h.
+2. Com o primeiro backup disponível, executar o **restore isolado** pela
+   restauração nativa do Railway para um serviço/banco novo (nunca sobre o
+   serviço de produção), cronometrar até a aplicação responder e validar
+   contagens + `schema_migrations`. Apagar o ambiente restaurado ao final.
+3. Ativar o **PITR** em janela combinada de baixo movimento: a ativação
+   provoca nova implantação do serviço Postgres (indisponibilidade curta).
+   Com o PITR ligado, o RPO cai de até 24h para minutos, com folga sobre a meta.
+4. Atualizar a tabela da seção 4 com os valores reais (datas, tempos, destino
+   isolado) e fechar a #41 pela PR que referencia esta evidência.
 
 ## 5. Limites conhecidos
 
