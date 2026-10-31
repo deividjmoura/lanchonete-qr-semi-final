@@ -1790,6 +1790,11 @@ function Relatorio() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any>(null);
   const [erro, setErro] = useState<string | null>(null);
+  // Organização (auditoria de duplicação): a antiga aba "Comprovantes" vira
+  // uma visão interna do Relatório. Resumo = totais e contas do período
+  // (PDF/CSV); Comprovantes recentes = últimas contas encerradas, com
+  // atualização automática. O documento impresso é o mesmo nas duas visões.
+  const [vista, setVista] = useState<"resumo" | "comprovantes">("resumo");
 
   const buscar = async (f: string = from, t: string = to) => {
     setLoading(true);
@@ -1876,6 +1881,32 @@ function Relatorio() {
 
   return (
     <div className="space-y-4">
+      <div>
+        <div className="flex gap-1.5" role="group" aria-label="Visões do relatório">
+          <Btn
+            size="sm"
+            variant={vista === "resumo" ? undefined : "outline"}
+            onClick={() => setVista("resumo")}
+          >
+            Resumo do período
+          </Btn>
+          <Btn
+            size="sm"
+            variant={vista === "comprovantes" ? undefined : "outline"}
+            onClick={() => setVista("comprovantes")}
+          >
+            Comprovantes recentes
+          </Btn>
+        </div>
+        <p className="mt-2 text-xs text-text-muted">
+          Resumo traz totais e contas do período (PDF/CSV). Comprovantes recentes lista as últimas
+          contas encerradas e atualiza sozinho — o comprovante impresso é o mesmo nas duas visões.
+        </p>
+      </div>
+      {vista === "comprovantes" ? (
+        <ComprovantesRecentes />
+      ) : (
+        <>
       <div className="rounded-md border border-line bg-surface-raised p-4 flex flex-wrap items-end gap-3">
         <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
           De
@@ -2181,6 +2212,8 @@ function Relatorio() {
           </table>
         )}
       </section>
+      </>
+      )}
     </div>
   );
 }
@@ -2285,7 +2318,9 @@ function HistoricoPedidos({
             Histórico de pedidos
           </h3>
           <p className="text-xs text-text-muted mt-0.5">
-            Toque no registro para inspecionar itens e reimprimir cupom.
+            Toque no registro para inspecionar itens e reimprimir o cupom do pedido (documento de
+            produção/consumo). O comprovante financeiro da conta fica em Relatório → Comprovantes
+            recentes.
           </p>
         </div>
         <div className="flex flex-wrap gap-2.5 items-end">
@@ -2548,7 +2583,7 @@ function Funcoes() {
   const lastError = usePub((s) => s.lastError);
   const reportarErro = usePub((s) => s.reportarErro);
   const reduceMotion = useReducedMotion();
-  const [sub, setSub] = useState<"estoque" | "relatorio" | "historico" | "comprovantes" | "senhas" | "purge">("estoque");
+  const [sub, setSub] = useState<"estoque" | "relatorio" | "historico" | "senhas" | "purge">("estoque");
   const [trocandoSenha, setTrocandoSenha] = useState(false);
   const [histFrom, setHistFrom] = useState(() => {
     const d = new Date();
@@ -2566,7 +2601,6 @@ function Funcoes() {
     { id: "estoque" as const, label: "Estoque", Icon: Package },
     { id: "relatorio" as const, label: "Relatório", Icon: FileText },
     { id: "historico" as const, label: "Histórico", Icon: Receipt },
-    { id: "comprovantes" as const, label: "Comprovantes", Icon: Printer },
     { id: "senhas" as const, label: "Senhas", Icon: Key },
     { id: "purge" as const, label: "Limpar", Icon: Trash },
   ];
@@ -2673,7 +2707,6 @@ function Funcoes() {
 
       {sub === "estoque" && <Estoque />}
       {sub === "relatorio" && <Relatorio />}
-      {sub === "comprovantes" && <ComprovantesRecentes />}
       {sub === "senhas" && (
         <section className="rounded-md border border-line bg-surface-raised p-5">
           <h3 className="font-display text-2xl font-bold tracking-tight text-text">Senhas dos setores</h3>
@@ -2704,7 +2737,9 @@ function Funcoes() {
             Limpar histórico antigo
           </h3>
           <p className="text-xs text-text-muted mb-4">
-            Remove definitivamente sessões já encerradas antes da data escolhida. Mesas abertas não são afetadas.
+            Remove definitivamente sessões já encerradas antes da data escolhida. Mesas abertas não
+            são afetadas. As contas removidas somem também de Relatório, Comprovantes recentes e
+            Histórico — confira a prévia antes de apagar.
           </p>
           <div className="flex flex-wrap gap-3 items-end">
             <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
