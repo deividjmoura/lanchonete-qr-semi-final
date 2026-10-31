@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const { chromium } = require('playwright-core');
 const binary = require('@sparticuz/chromium').default;
 const { criarDashboard } = require('./fixtures/dashboard.cjs');
+const { criarPanorama, criarMesaDetalhe } = require('./fixtures/panorama-mesas.cjs');
 
 const base = process.env.VISUAL_BASE_URL || 'http://localhost:4173';
 const resumo = Array.from({ length: 12 }, (_, i) => ({
@@ -32,6 +33,9 @@ async function contexto(browser, papel = 'admin', obrigatorio = false) {
     if (p === '/api/me') data = { staff: { id: 1, login: papel, papel, nome: papel, deveTrocarSenha: obrigatorio }, csrfToken: 'csrf-test' };
     else if (p === '/api/admin/dashboard') data = criarDashboard({ faturamento: 0, pedidosTotal: 0, contasFechadas: 0, ticketMedio: 0 });
     else if (p === '/api/admin/mesas/config') data = { quantidade: 0, limite: 70 };
+    else if (p === '/api/admin/mesas/panorama') data = criarPanorama();
+    else if (p === '/api/admin/pracas') data = criarPanorama().pracas;
+    else if (/^\/api\/admin\/mesas\/\d+$/.test(p)) data = criarMesaDetalhe(Number(p.split('/').pop()));
     else if (p === '/api/admin/garcons/metricas') data = { garcons: [] };
     else if (p === '/api/admin/contas') data = [{ id: 1, nome: 'Admin', login: 'admin', papel: 'admin' }];
     else if (p === '/api/caixa/comprovantes') {

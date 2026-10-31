@@ -39,6 +39,11 @@ export default function MesasAdmin() {
     if (!silencioso) setCarregando(true);
     try {
       const resposta = await api.adminMesasPanorama(periodoAtual);
+      // Um payload sem `mesas` (servidor antigo ou resposta intermediária) não
+      // pode virar tela branca: cai no estado de erro e mantém o que já havia.
+      if (!resposta || !Array.isArray(resposta.mesas)) {
+        throw new Error("Resposta inesperada do servidor ao carregar o panorama de mesas.");
+      }
       setDados(resposta);
       setErro(null);
     } catch (e) {
