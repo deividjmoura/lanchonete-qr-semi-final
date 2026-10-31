@@ -1310,6 +1310,103 @@ dialog.sheet[open] {
   border-bottom: 1px dashed var(--line);
 }
 
+
+/* ==========================================================================
+   CAMADA VISUAL OPERACIONAL (mesma linguagem do dashboard)
+   Vidro discreto, bordas de acento e sombras suaves — sempre a partir dos
+   tokens, para funcionar igual nos temas claro e escuro. Nada aqui muda
+   layout, alvos de toque ou contraste do texto.
+   ========================================================================== */
+.app-header {
+  background: color-mix(in srgb, var(--surface-raised) 90%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  box-shadow: 0 10px 24px -20px color-mix(in srgb, var(--text) 70%, transparent);
+}
+
+.ledger-block {
+  background:
+    linear-gradient(
+      152deg,
+      color-mix(in srgb, var(--surface-raised) 92%, var(--brand-surface)) 0%,
+      var(--surface-raised) 58%
+    );
+  border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
+  box-shadow:
+    var(--shadow-card),
+    inset 0 1px 0 color-mix(in srgb, var(--surface-raised) 88%, transparent);
+}
+
+.ledger-head {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-sunken) 88%, var(--brand-surface)),
+      var(--surface-sunken)
+    );
+}
+
+.order {
+  background:
+    linear-gradient(
+      148deg,
+      color-mix(in srgb, var(--surface-raised) 93%, var(--brand-surface)) 0%,
+      var(--surface-raised) 60%
+    );
+  transition: box-shadow 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+@media (hover: hover) {
+  .order:hover {
+    border-color: color-mix(in srgb, var(--brand-border) 65%, var(--line));
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-1px);
+  }
+}
+
+.order.expanded {
+  box-shadow:
+    var(--shadow-card),
+    inset 0 0 0 1px color-mix(in srgb, var(--brand) 18%, transparent);
+}
+
+.table-tile.mine {
+  box-shadow:
+    var(--shadow-card),
+    inset 0 0 0 1px color-mix(in srgb, var(--brand) 32%, transparent);
+}
+
+.bottom-nav {
+  background: color-mix(in srgb, var(--surface-sidebar) 92%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: 0 -10px 26px -22px color-mix(in srgb, var(--sidebar-text) 70%, transparent);
+}
+
+/* Rolagem discreta em qualquer faixa horizontal/vertical do app. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-muted) 45%, transparent) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-muted) 38%, transparent);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--text-muted) 58%, transparent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1317,5 +1414,9 @@ dialog.sheet[open] {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  .order:hover,
+  .table-tile.mine:hover {
+    transform: none !important;
   }
 }

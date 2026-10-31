@@ -1,4 +1,11 @@
 import type { DashboardGeral, PeriodoDashboard } from "./dashboard";
+import type {
+  MesaDetalhe,
+  PanoramaMesas,
+  PracaSalva,
+  PeriodoPanorama,
+  Praca,
+} from "./panorama";
 
 /** Cliente HTTP para a API Node (server.js). credentials: include para cookie de staff. */
 
@@ -236,6 +243,21 @@ export const api = {
   adminMesasConfig: () => apiGet<{ quantidade: number; limite: number }>("/api/admin/mesas/config"),
   ativarMesas: (quantidade: number) =>
     apiSend<{ quantidade: number }>("/api/admin/mesas/ativar", "POST", { quantidade }),
+  /** Painel operacional: uma entrada por mesa habilitada, inclusive livres. */
+  adminMesasPanorama: (periodo: PeriodoPanorama = "hoje") =>
+    apiGet<PanoramaMesas>(`/api/admin/mesas/panorama?periodo=${encodeURIComponent(periodo)}`),
+  adminMesaDetalhe: (numero: number) => apiGet<MesaDetalhe>(`/api/admin/mesas/${numero}`),
+  adminPracas: () => apiGet<Praca[]>("/api/admin/pracas"),
+  adminCriarPraca: (nome: string) => apiSend<PracaSalva>("/api/admin/pracas", "POST", { nome }),
+  adminAtualizarPraca: (id: number, body: { nome?: string; ordem?: number }) =>
+    apiSend<PracaSalva>(`/api/admin/pracas/${id}`, "PATCH", body),
+  /** pracaId null devolve a mesa para "Sem praça". */
+  adminDefinirPracaMesa: (numero: number, pracaId: number | null) =>
+    apiSend<{ mesa: number; pracaId: number | null; pracaNome: string | null; alterada: boolean }>(
+      `/api/admin/mesas/${numero}/praca`,
+      "PUT",
+      { pracaId }
+    ),
   adminCardapio: () => apiGet<any[]>("/api/admin/cardapio"),
   // (duplicata removida — ver adminDashboard(params) mais abaixo, que substituía
   // esta silenciosamente em runtime; TS só acusa o conflito com checagem estrita)

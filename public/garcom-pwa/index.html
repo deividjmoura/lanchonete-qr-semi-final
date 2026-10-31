@@ -181,13 +181,14 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
 
     <div class="ledger-block compact">
       <div class="ledger-body-pad">
-        <p class="muted small-copy">Registre apenas valores efetivamente recebidos. O encerramento final e a liberação da mesa permanecem no Caixa.</p>
+        <p class="muted small-copy">Registre apenas valores efetivamente recebidos. O saldo já inclui o serviço padrão da casa; descontos e ajustes de serviço permanecem no Caixa.</p>
 
         <label class="field">Minha mesa
           <select id="billingSession" aria-label="Mesa para registrar pagamento"></select>
         </label>
 
         <div id="billingSummary" class="billing-summary" aria-live="polite">Selecione uma mesa sob sua responsabilidade para consultar o saldo.</div>
+        <p id="billingServiceNote" class="muted small-copy" aria-live="polite"></p>
 
         <div class="modal-fields">
           <label class="field">Valor recebido (R$)

@@ -331,6 +331,11 @@ async function registrarPagamento(sessaoIdBruto, body, operadorNome = null, garc
     throw new ErroCaixa(400, 'Informe um valor de pagamento maior que zero');
   }
 
+  // Pagamento feito pela PWA do garçom inclui o serviço padrão da casa, igual ao
+  // fechamento do caixa. Sem isso o garçom conseguia quitar só o consumo e a
+  // taxa de 10% nunca era cobrada nem registrada na conta.
+  const incluirServicoPadrao = opcoes.incluirServico === true;
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -366,6 +371,8 @@ async function registrarPagamento(sessaoIdBruto, body, operadorNome = null, garc
       if (existentes[0]) {
         const total = await sincronizarValorTotalSessao(client, sessaoId);
         const valorPago = await totalPagoDaSessao(client, sessaoId);
+        const taxaServico = incluirServicoPadrao ? taxaServicoPadraoPara(total) : 0;
+        const valorDevido = Number((total + taxaServico).toFixed(2));
         await client.query('COMMIT');
         return {
           ok: true,
@@ -378,7 +385,10 @@ async function registrarPagamento(sessaoIdBruto, body, operadorNome = null, garc
           },
           valorTotal: total,
           valorPago,
-          valorRestante: Number(Math.max(0, total - valorPago).toFixed(2)),
+          valorRestante: Number(Math.max(0, valorDevido - valorPago).toFixed(2)),
+          taxaServico,
+          taxaServicoPercentual: percentualServicoPadrao(),
+          valorCobrado: valorDevido,
           status: sessao.status,
           sessaoFechada: sessao.status === 'fechada',
           idempotentReplay: true,
@@ -391,7 +401,9 @@ async function registrarPagamento(sessaoIdBruto, body, operadorNome = null, garc
     // entregues agora), não do acumulador histórico da sessão.
     const total = await sincronizarValorTotalSessao(client, sessaoId);
     const jaPago = await totalPagoDaSessao(client, sessaoId);
-    const restante = Number(Math.max(0, total - jaPago).toFixed(2));
+    const taxaServico = incluirServicoPadrao ? taxaServicoPadraoPara(total) : 0;
+    const valorDevido = Number((total + taxaServico).toFixed(2));
+    const restante = Number(Math.max(0, valorDevido - jaPago).toFixed(2));
     if (valor > restante + 0.009) {
       throw new ErroCaixa(400, `Valor maior que o restante (R$ ${restante.toFixed(2).replace('.', ',')})`);
     }
@@ -416,7 +428,7 @@ async function registrarPagamento(sessaoIdBruto, body, operadorNome = null, garc
     }
     const valorPago = Number((jaPago + valor).toFixed(2));
     let sessaoFechada = false;
-    if (Math.abs(total - valorPago) <= 0.009) {
+    if (Math.abs(valorDevido - valorPago) <= 0.009) {
       const { rows: pedidosPendentes } = await client.query(
         `SELECT COUNT(*)::int AS n FROM pedidos WHERE sessao_id=$1 AND status NOT IN ('entregue','cancelado')`,
         [sessaoId]
@@ -431,9 +443,9 @@ async function registrarPagamento(sessaoIdBruto, body, operadorNome = null, garc
         await client.query(
           `UPDATE mesa_sessoes
               SET status='fechada', fechada_em=now(), forma_pagamento=$2,
-                  desconto=0, taxa_servico=0, valor_cobrado=$3, valor_total=$3
+                  desconto=0, taxa_servico=$4, valor_cobrado=$3, valor_total=$5
             WHERE id=$1 AND status='aberta'`,
-          [sessaoId, forma, total]
+          [sessaoId, forma, valorDevido, taxaServico, total]
         );
         await client.query(`UPDATE mesas SET status='livre' WHERE id=$1`, [sessao.mesa_id]);
         sessaoFechada = true;
@@ -457,7 +469,9 @@ async function registrarPagamento(sessaoIdBruto, body, operadorNome = null, garc
         valor,
         formaPagamento: forma,
         valorPago,
-        valorRestante: Number(Math.max(0, total - valorPago).toFixed(2)),
+        valorRestante: Number(Math.max(0, valorDevido - valorPago).toFixed(2)),
+        taxaServico,
+        valorCobrado: valorDevido,
         sessaoFechada,
       },
       requestId: opcoes.requestId || null,
@@ -473,9 +487,10 @@ async function registrarPagamento(sessaoIdBruto, body, operadorNome = null, garc
         contexto: {
           mesaNumero: sessao.mesa,
           valorTotal: total,
-          valorCobrado: total,
+          valorCobrado: valorDevido,
           desconto: 0,
-          taxaServico: 0,
+          taxaServico,
+          taxaServicoPercentual: percentualServicoPadrao(),
           formaPagamento: forma,
           origem: 'pagamento_integral',
         },
@@ -497,7 +512,10 @@ async function registrarPagamento(sessaoIdBruto, body, operadorNome = null, garc
       },
       valorTotal: total,
       valorPago,
-      valorRestante: Number(Math.max(0, total - valorPago).toFixed(2)),
+      valorRestante: Number(Math.max(0, valorDevido - valorPago).toFixed(2)),
+      taxaServico,
+      taxaServicoPercentual: percentualServicoPadrao(),
+      valorCobrado: valorDevido,
       idempotentReplay: false,
     };
   } catch (err) {

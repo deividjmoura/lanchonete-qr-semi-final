@@ -196,8 +196,13 @@ async function main() {
     );
     assert.equal(await page.locator('#billingBlocked').isVisible(), false, 'com saldo não deve haver bloqueio');
     const resumo = await page.textContent('#billingSummary');
-    assert.match(resumo, /Saldo: R\$\s*90,00/);
-    ok('com saldo de R$ 90 o botão de recebimento fica habilitado');
+    /* O garçom cobra o mesmo valor do Caixa: consumo de R$ 90 mais os 10% de
+       serviço da casa (R$ 9), o que fecha em R$ 99. */
+    assert.match(resumo, /Consumo: R\$\s*90,00/);
+    assert.match(resumo, /Serviço \(10%\): R\$\s*9,00/);
+    assert.match(resumo, /Total: R\$\s*99,00/);
+    assert.match(resumo, /Saldo: R\$\s*99,00/);
+    ok('o saldo de R$ 99,00 já inclui os 10% de serviço e habilita o recebimento');
 
     /* ---- 3a) sem item entregue explica a causa ------------------------ */
     await pool.query("UPDATE itens_pedido SET status='retirado', entregue_por_id=NULL, entregue_em=NULL WHERE pedido_id=$1", [ids.pedido]);
@@ -213,13 +218,13 @@ async function main() {
     await page.click('#refreshBilling');
     await page.waitForFunction(() => document.querySelector('#registerPayment')?.disabled === false, null, { timeout: 20000 });
 
-    await page.fill('#billingAmount', '90');
+    await page.fill('#billingAmount', '99');
     await page.selectOption('#billingMethod', 'pix');
     await page.check('#billingReceivedConfirm');
     await page.click('#registerPayment');
     await esperarBanco(async () => {
       const r = await pool.query('SELECT COALESCE(SUM(valor),0)::float AS pago FROM sessao_pagamentos WHERE sessao_id=$1', [ids.sessao]);
-      return Number(r.rows[0].pago) === 90;
+      return Number(r.rows[0].pago) === 99;
     }, 'pagamento registrado').catch(async (e) => {
       console.error('  billingMessage:', await page.textContent('#billingMessage'));
       console.error('  billingBlocked:', await page.textContent('#billingBlocked'));
@@ -232,7 +237,7 @@ async function main() {
     });
     const confirmacao = await page.textContent('#billingMessage');
     assert.match(confirmacao, /registrado/i);
-    ok('confirmar pagamento pelo PWA gravou R$ 90 no servidor');
+    ok('confirmar pagamento pelo PWA gravou R$ 99 no servidor');
 
     /* ---- 3b) conta quitada explica o bloqueio ------------------------- */
     // O pagamento integral quita a conta: o servidor encerra a sessão e

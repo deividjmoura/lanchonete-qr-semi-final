@@ -190,11 +190,20 @@ test('CSRF é validado antes de qualquer escrita, o que torna o retry seguro', (
 });
 
 test('Cozinha e Bar mostram o erro na tela em vez de alert nativo', () => {
+  // A fila de produção é compartilhada pelas duas telas: o erro é publicado no
+  // componente e desenhado como alerta inline, sem alert nativo bloqueante.
+  const fila = fs.readFileSync(
+    path.join(__dirname, '..', 'src', 'components', 'FilaProducao.tsx'),
+    'utf8'
+  );
+  assert.match(fila, /const lastError = usePub\(\(s\) => s\.lastError\)/, 'fila exibe lastError');
+  assert.match(fila, /reportarErro\(/, 'fila publica o erro na faixa da tela');
+  assert.match(fila, /className="ops-erro" role="alert"/, 'erro vira faixa visível');
+  assert.doesNotMatch(fila, /alert\(/);
   for (const tela of ['Cozinha', 'Bar']) {
     const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'screens', `${tela}.tsx`), 'utf8');
     assert.doesNotMatch(src, /alert\(/, `${tela} não bloqueia a operação com alert`);
-    assert.match(src, /reportarErro\(/, `${tela} publica o erro na faixa da tela`);
-    assert.match(src, /const lastError = usePub\(\(s\) => s\.lastError\)/, `${tela} exibe lastError`);
+    assert.match(src, /<FilaProducao/, `${tela} delega a exibição à fila compartilhada`);
   }
 });
 

@@ -133,11 +133,23 @@ responsabilidade, sempre online. O PIX gera QR/copia-e-cola com o valor
 informado; o operador confere o crédito no banco e confirma manualmente. Não há
 gateway nem confirmação automática de liquidação.
 
-O valor cobrável é a soma dos itens **entregues**. Quando o recebimento quita a
-conta e não há produção pendente nem aviso PIX em aberto, o próprio servidor
-encerra a sessão e libera a mesa — o PWA avisa "conta quitada, atendimento
-encerrado e mesa liberada". Havendo pendência, o lançamento é parcial e o
-fechamento continua no Caixa.
+O valor cobrável é a soma dos itens **entregues** mais o **serviço padrão da
+casa** (`TAXA_SERVICO_PERCENTUAL`, 10% quando não configurado). O resumo do
+garçom mostra consumo, serviço, total e saldo, e o campo de valor já vem
+preenchido com o saldo do fechamento — o mesmo número que o Caixa cobraria.
+Sem isso o garçom quitava só o consumo e a conta fechava sem a taxa.
+
+O PWA envia `incluirServico: true` ao registrar o recebimento. O servidor
+recalcula a taxa a partir do consumo autoritativo dentro da transação e aceita
+o valor até esse teto; a sessão fechada grava `taxa_servico` e
+`valor_cobrado = valor_total + taxa_servico`. PWA antigo em cache (sem o
+parâmetro) mantém o comportamento anterior — teto igual ao consumo — para não
+quebrar em aparelhos que ainda não atualizaram.
+
+Quando o recebimento quita a conta e não há produção pendente nem aviso PIX em
+aberto, o próprio servidor encerra a sessão e libera a mesa — o PWA avisa
+"conta quitada, atendimento encerrado e mesa liberada". Havendo pendência, o
+lançamento é parcial e o fechamento continua no Caixa.
 
 Todo bloqueio do botão de recebimento escreve o motivo na tela, em vez de apenas
 desabilitar:

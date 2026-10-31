@@ -21,10 +21,10 @@ import {
   UserPlus,
   WarningCircle,
 } from "@phosphor-icons/react";
-import { QRCodeSVG } from "qrcode.react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { OpsShell } from "../components/OpsShell";
 import Dashboard from "./Dashboard";
+import MesasAdmin from "./admin/MesasAdmin";
 import { ControlesPaginacao, ListaLimitada, useLimiteLocal } from "../components/Paginacao";
 import { Badge, Btn, Input, Modal } from "../components/ui";
 import { usePaginacaoCursor } from "../hooks/usePaginacaoCursor";
@@ -38,10 +38,9 @@ import {
   imprimirComprovanteConsumo,
   imprimirRelatorioPdf,
 } from "../lib/print";
-import { QR_SVG_COLORS } from "../lib/tema";
 import type { ItemPedido, Pedido, Produto, TipoProduto } from "../lib/types";
 import { CATEGORIAS } from "../lib/data";
-import { totalSessao, usePub } from "../store/usePub";
+import { usePub } from "../store/usePub";
 import { BRL } from "../lib/utils";
 import { cn } from "../utils/cn";
 
@@ -112,7 +111,7 @@ export default function Admin({ secao }: { secao?: string }) {
         >
           {aba === "painel" && <Dashboard />}
           {aba === "cardapio" && <Cardapio />}
-          {aba === "mesas" && <Mesas />}
+          {aba === "mesas" && <MesasAdmin />}
           {aba === "garcons" && <Garcons />}
           {aba === "funcoes" && <Funcoes />}
         </motion.div>
@@ -1061,285 +1060,8 @@ function Garcons() {
 }
 
 /* ================= MESAS ================= */
-function mesaClienteUrl(token: string) {
-  if (typeof window === "undefined") return `#/mesa/${token}`;
-  const base = `${window.location.origin}${window.location.pathname || "/"}`.replace(/\/$/, "");
-  return `${base}#/mesa/${token}`;
-}
-
-function Mesas() {
-  const mesas = usePub((s) => s.mesas);
-  const sessoes = usePub((s) => s.sessoes);
-  const pedidos = usePub((s) => s.pedidos);
-  const hydrateMesas = usePub((s) => s.hydrateMesas);
-  const fecharSessao = usePub((s) => s.fecharSessao);
-  const reportarErro = usePub((s) => s.reportarErro);
-  const [copiado, setCopiado] = useState<number | null>(null);
-  const [quantidade, setQuantidade] = useState(20);
-  const [limite, setLimite] = useState(70);
-  const [carregando, setCarregando] = useState(true);
-  const [adicionando, setAdicionando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-  const [qrPendente, setQrPendente] = useState<{ token: string; numero: number } | null>(null);
-  const [garcons, setGarcons] = useState<Array<{ id: number; nome: string; ativo: boolean }>>([]);
-  const [transferindo, setTransferindo] = useState<number | null>(null);
-  const qrRef = useRef<SVGSVGElement | null>(null);
-
-  useEffect(() => {
-    let montado = true;
-    api
-      .listGarcons()
-      .then((rows) => {
-        if (montado) setGarcons(rows.filter((g) => g.ativo));
-      })
-      .catch(() => {});
-    api
-      .adminMesasConfig()
-      .then((config) => {
-        if (!montado) return;
-        setQuantidade(config.quantidade);
-        setLimite(config.limite);
-      })
-      .catch((e) => {
-        if (montado) setErro(e.message || "Não foi possível carregar as mesas habilitadas");
-      })
-      .finally(() => {
-        if (montado) setCarregando(false);
-      });
-    return () => {
-      montado = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!qrPendente || !qrRef.current) return;
-    const svg = qrRef.current.cloneNode(true) as SVGSVGElement;
-    svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-    const arquivo = new Blob([new XMLSerializer().serializeToString(svg)], {
-      type: "image/svg+xml;charset=utf-8",
-    });
-    const endereco = URL.createObjectURL(arquivo);
-    const link = document.createElement("a");
-    link.href = endereco;
-    link.download = `mesa-${String(qrPendente.numero).padStart(2, "0")}-qr.svg`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(endereco);
-    setQrPendente(null);
-  }, [qrPendente]);
-
-  const copiarLink = async (token: string, id: number) => {
-    const url = mesaClienteUrl(token);
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopiado(id);
-      setTimeout(() => setCopiado((c) => (c === id ? null : c)), 2000);
-    } catch {
-      prompt("Copie o link da mesa:", url);
-    }
-  };
-
-  const adicionarMesas = async () => {
-    const restante = limite - quantidade;
-    if (restante <= 0) return;
-    const resposta = prompt(
-      `Quantas mesas deseja adicionar? (1 a ${restante})`,
-      String(Math.min(10, restante)),
-    );
-    if (resposta === null) return;
-    const extra = Number(resposta);
-    if (!Number.isSafeInteger(extra) || extra < 1 || extra > restante) {
-      setErro(`Informe uma quantidade inteira entre 1 e ${restante}.`);
-      return;
-    }
-    setAdicionando(true);
-    setErro(null);
-    try {
-      const config = await api.ativarMesas(quantidade + extra);
-      setQuantidade(config.quantidade);
-      await hydrateMesas();
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : "Falha ao ativar mesas");
-    } finally {
-      setAdicionando(false);
-    }
-  };
-
-  const visiveis = [...mesas]
-    .filter((m) => m.numero <= quantidade)
-    .sort((a, b) => a.numero - b.numero);
-
-  return (
-    <section className="space-y-4">
-      <div className="rounded-md border border-line bg-surface-raised p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h3 className="font-display text-xl font-bold tracking-tight text-text">
-            Mapa de mesas e QR Codes
-          </h3>
-          <p className="text-xs text-text-muted mt-0.5 font-mono">
-            {carregando ? "Carregando…" : `${quantidade} ativas · teto ${limite}`}
-          </p>
-        </div>
-        <Btn
-          size="sm"
-          onClick={() => void adicionarMesas()}
-          disabled={carregando || adicionando || quantidade >= limite}
-        >
-          <Plus size={15} weight="bold" />{" "}
-          {adicionando ? "Adicionando…" : quantidade >= limite ? "Limite atingido" : "Adicionar mesas"}
-        </Btn>
-      </div>
-
-      {erro && (
-        <p role="alert" className="text-xs text-status-danger-ink">
-          {erro}
-        </p>
-      )}
-
-      <div className="rounded-md border border-line bg-surface-raised overflow-hidden divide-y divide-line">
-        {visiveis.map((m) => {
-          const sessao = sessoes.find((x) => x.mesaId === m.id && x.status === "aberta");
-          const consumo = sessao ? totalSessao(pedidos, sessao.id) : 0;
-          return (
-            <div
-              key={m.id}
-              className="flex flex-wrap items-center gap-3 sm:gap-4 px-4 py-3.5 hover:bg-surface-hover transition-colors"
-            >
-              <div
-                className={cn(
-                  "flex items-center justify-center size-11 shrink-0 rounded-sm border font-mono text-base font-bold",
-                  sessao
-                    ? "bg-brand-surface border-brand-border text-brand-ink"
-                    : "bg-surface-sunken border-line text-text-muted",
-                )}
-              >
-                {String(m.numero).padStart(2, "0")}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-semibold text-text text-sm">
-                    Mesa {String(m.numero).padStart(2, "0")}
-                  </p>
-                  <Badge tone={sessao ? "brass" : "sage"}>{sessao ? "Ocupada" : "Livre"}</Badge>
-                  {sessao && (
-                    <span className="font-mono text-xs font-bold text-text">{BRL(consumo)}</span>
-                  )}
-                  {sessao && (
-                    <span className="font-mono text-xs text-text-muted">
-                      Garçom: {m.garcomResponsavelNome || "a definir"}
-                    </span>
-                  )}
-                </div>
-
-                {sessao && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <select
-                      aria-label={`Transferir mesa ${m.numero} para garçom`}
-                      className="h-9 rounded-sm border border-line-strong bg-surface-sunken px-2.5 text-xs text-text"
-                      value={transferindo === m.numero ? undefined : ""}
-                      defaultValue=""
-                      onChange={async (e) => {
-                        const destino = Number(e.target.value);
-                        if (!destino) return;
-                        const nome = garcons.find((g) => g.id === destino)?.nome || "garçom";
-                        if (
-                          !confirm(
-                            `Transferir a responsabilidade da mesa ${m.numero} para ${nome}? Retiradas já assumidas continuam com seus garçons.`,
-                          )
-                        ) {
-                          e.target.value = "";
-                          return;
-                        }
-                        setTransferindo(m.numero);
-                        try {
-                          await api.transferirMesaAdmin(m.numero, destino);
-                          await hydrateMesas();
-                        } catch (err) {
-                          reportarErro(
-                            err instanceof Error ? err.message : "Falha ao transferir mesa",
-                          );
-                        } finally {
-                          setTransferindo(null);
-                          e.target.value = "";
-                        }
-                      }}
-                    >
-                      <option value="">Transferir responsabilidade…</option>
-                      {garcons
-                        .filter((g) => g.id !== m.garcomResponsavelId)
-                        .map((g) => (
-                          <option key={g.id} value={g.id}>
-                            {g.nome}
-                          </option>
-                        ))}
-                    </select>
-                    {transferindo === m.numero && (
-                      <span className="font-mono text-[11px] text-text-muted">Transferindo…</span>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-                <button
-                  type="button"
-                  title={copiado === m.id ? "Link copiado" : "Copiar link da mesa"}
-                  aria-label={`Copiar link da mesa ${m.numero}`}
-                  onClick={() => void copiarLink(m.token, m.id)}
-                  className="size-10 inline-flex items-center justify-center rounded-sm border border-line bg-surface-sunken text-text-muted hover:text-text hover:border-line-strong"
-                >
-                  {copiado === m.id ? (
-                    <span className="font-mono text-[10px] font-bold text-status-success-ink">OK</span>
-                  ) : (
-                    <Copy size={16} />
-                  )}
-                </button>
-                <button
-                  type="button"
-                  title="Baixar QR em SVG"
-                  aria-label={`Baixar QR da mesa ${m.numero}`}
-                  onClick={() => setQrPendente({ token: m.token, numero: m.numero })}
-                  className="size-10 inline-flex items-center justify-center rounded-sm border border-line bg-surface-sunken text-text-muted hover:text-text hover:border-line-strong"
-                >
-                  <DownloadSimple size={16} />
-                </button>
-                {sessao && (
-                  <button
-                    type="button"
-                    onClick={() => fecharSessao(sessao.id, "dinheiro")}
-                    title="Liberar mesa"
-                    aria-label={`Liberar mesa ${m.numero}`}
-                    className="min-h-10 rounded-sm border border-status-danger-border bg-status-danger-surface px-2.5 text-xs font-semibold text-status-danger-ink hover:bg-status-danger hover:text-status-danger-contrast"
-                  >
-                    Liberar
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-        {!carregando && visiveis.length === 0 && (
-          <p className="p-6 text-sm text-text-muted text-center">Nenhuma mesa habilitada.</p>
-        )}
-      </div>
-
-      {qrPendente && (
-        <div aria-hidden="true" className="absolute -left-[9999px] top-0 pointer-events-none">
-          <QRCodeSVG
-            ref={qrRef}
-            value={mesaClienteUrl(qrPendente.token)}
-            size={320}
-            includeMargin
-            level="H"
-            fgColor={QR_SVG_COLORS.fg}
-            bgColor={QR_SVG_COLORS.bg}
-          />
-        </div>
-      )}
-    </section>
-  );
-}
+/* Panorama, mapa/QR Codes e modal vivem em src/screens/admin/MesasAdmin.
+   A aba continua restrita ao administrador pelo gate de papel acima. */
 
 /* ================= ESTOQUE ================= */
 function Estoque() {
