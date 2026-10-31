@@ -34,7 +34,7 @@ export default function App() {
       {rota.path === "bar" && <Bar />}
       {rota.path === "garcom" && <Garcom key={rota.params.token} token={rota.params.token || ""} />}
       {rota.path === "caixa" && <Caixa />}
-      {rota.path === "admin" && <Admin />}
+      {rota.path === "admin" && <Admin secao={rota.params.secao} />}
       {!["home", "login", "mesa", "cozinha", "bar", "garcom", "caixa", "admin"].includes(rota.path) && <Landing />}
     </>
   );

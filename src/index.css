@@ -230,146 +230,128 @@
   color: var(--text);
 }
 
+/* No celular, a mesma navegação vira uma gaveta lateral acessível. */
 .ops-sidebar {
-  display: none;
-}
-
-.ops-mobile-bar {
   position: fixed;
-  inset: auto 0 0 0;
-  z-index: 45;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 2px;
-  padding: 4px 8px calc(4px + env(safe-area-inset-bottom));
-  background: var(--surface-sidebar);
-  color: var(--sidebar-text);
-  border-top: 1px solid var(--sidebar-line);
-}
-
-.ops-mobile-link {
+  inset: 0 auto 0 0;
+  z-index: 50;
   display: flex;
   flex-direction: column;
+  width: min(280px, 86vw);
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--surface-sidebar);
+  color: var(--sidebar-text);
+  border-right: 1px solid var(--sidebar-line);
+  transform: translateX(-100%);
+  visibility: hidden;
+  transition: transform var(--dur-page) var(--ease-snap), visibility var(--dur-page);
+}
+.ops-sidebar[data-open="true"] {
+  transform: translateX(0);
+  visibility: visible;
+}
+.ops-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: rgb(0 0 0 / 55%);
+}
+.ops-menu-trigger, .ops-sidebar-close {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  min-height: 52px;
-  padding: 6px 4px;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+}
+.ops-menu-trigger {
+  border: 1px solid var(--qr-border);
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.ops-sidebar-close {
+  margin-left: auto;
+  color: var(--sidebar-text);
+}
+.ops-menu-trigger:focus-visible, .ops-sidebar-close:focus-visible, .ops-nav-item:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -3px;
+}
+.ops-main { min-height: 100dvh; }
+.ops-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  padding: 12px 0 12px 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+.ops-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 14px;
+  min-height: 48px;
+  padding: 0 14px;
+  margin-right: 8px;
   border-radius: var(--radius-sm);
   color: var(--sidebar-muted);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0.02em;
   transition: color var(--dur-fast) var(--ease-snap), background-color var(--dur-fast) var(--ease-snap);
 }
-
-.ops-mobile-link[data-active="true"] {
-  color: var(--text);
+.ops-nav-item:hover {
+  color: var(--sidebar-text);
+  background: color-mix(in srgb, var(--sidebar-text) 8%, transparent);
+}
+.ops-nav-item[data-active="true"] {
+  margin-right: -1px;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
   background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
 }
-
-.ops-main {
-  min-height: 100dvh;
-  padding-bottom: calc(68px + env(safe-area-inset-bottom));
-}
+.ops-sidebar-label { white-space: nowrap; }
 
 @media (min-width: 1024px) {
-  .ops-mobile-bar {
-    display: none;
-  }
-
-  .ops-main {
-    margin-left: var(--sidebar-collapsed);
-    padding-bottom: 0;
-  }
-
+  .ops-menu-trigger, .ops-sidebar-close, .ops-sidebar-backdrop { display: none; }
+  .ops-main { margin-left: var(--sidebar-collapsed); }
   .ops-sidebar {
-    position: fixed;
-    inset: 0 auto 0 0;
-    z-index: 45;
-    display: flex;
-    flex-direction: column;
     width: var(--sidebar-collapsed);
-    background: var(--surface-sidebar);
-    color: var(--sidebar-text);
-    border-right: 1px solid var(--sidebar-line);
+    transform: none;
+    visibility: visible;
     transition: width var(--dur-page) var(--ease-snap);
     will-change: width;
   }
-
-  .ops-sidebar:hover,
-  .ops-sidebar:focus-within {
-    width: var(--sidebar-expanded);
-  }
-
+  .ops-sidebar:hover, .ops-sidebar:focus-within { width: var(--sidebar-expanded); }
   .ops-sidebar-label {
     opacity: 0;
     transform: translateX(-4px);
-    white-space: nowrap;
     pointer-events: none;
     transition: opacity var(--dur-fast) var(--ease-snap), transform var(--dur-fast) var(--ease-snap);
   }
-
-  .ops-sidebar:hover .ops-sidebar-label,
-  .ops-sidebar:focus-within .ops-sidebar-label {
+  .ops-sidebar:hover .ops-sidebar-label, .ops-sidebar:focus-within .ops-sidebar-label {
     opacity: 1;
     transform: translateX(0);
     pointer-events: auto;
   }
-
-  .ops-nav-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 12px 0 12px 10px;
-  }
-
-  .ops-nav-item {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    min-height: 48px;
-    padding: 0 14px;
-    margin-right: 8px;
-    border-radius: var(--radius-sm);
-    color: var(--sidebar-muted);
-    font-size: 14px;
-    font-weight: 600;
-    overflow: visible;
-    transition: color var(--dur-fast) var(--ease-snap), background-color var(--dur-fast) var(--ease-snap);
-  }
-
-  .ops-nav-item:hover {
-    color: var(--sidebar-text);
-    background: color-mix(in srgb, var(--sidebar-text) 8%, transparent);
-  }
-
-  /* Item ativo conectado fisicamente à página como aba contínua + cantos côncavos de 20px */
-  .ops-nav-item[data-active="true"] {
-    margin-right: -1px;
-    border-radius: var(--radius-md) 0 0 var(--radius-md);
-    background: var(--surface);
-    color: var(--text);
-    font-weight: 700;
-  }
-
-  .ops-nav-item[data-active="true"]::before,
-  .ops-nav-item[data-active="true"]::after {
+  /* O item ativo se conecta à página como uma aba contínua. */
+  .ops-nav-item[data-active="true"]::before, .ops-nav-item[data-active="true"]::after {
     content: "";
     position: absolute;
     right: 0;
     width: var(--sidebar-notch);
     height: var(--sidebar-notch);
     pointer-events: none;
-    transition: opacity 90ms linear;
   }
-
   .ops-nav-item[data-active="true"]::before {
     top: calc(-1 * var(--sidebar-notch));
     background: radial-gradient(circle at 0 0, transparent var(--sidebar-notch), var(--surface) calc(var(--sidebar-notch) + 0.5px));
   }
-
   .ops-nav-item[data-active="true"]::after {
     bottom: calc(-1 * var(--sidebar-notch));
     background: radial-gradient(circle at 0 100%, transparent var(--sidebar-notch), var(--surface) calc(var(--sidebar-notch) + 0.5px));

@@ -23,7 +23,6 @@ import { ir, useAgora } from "../router";
 import type { FormaPagamento, PixConfig, Sessao } from "../lib/types";
 import { FORMAS, consumoSessao, pagoSessao, usePub } from "../store/usePub";
 import { api } from "../lib/api";
-import { imprimirComprovanteConsumo } from "../lib/print";
 import { QR_SVG_COLORS } from "../lib/tema";
 import { BRL, elapsed, montarPixEMV } from "../lib/utils";
 import { cn } from "../utils/cn";
@@ -47,7 +46,6 @@ export default function Caixa() {
 
   const sessoes = usePub((s) => s.sessoes);
   const lastError = usePub((s) => s.lastError);
-  const reportarErro = usePub((s) => s.reportarErro);
   const hydrateCaixa = usePub((s) => s.hydrateCaixa);
 
   useEffect(() => {
@@ -58,31 +56,6 @@ export default function Caixa() {
 
   const pedidos = usePub((s) => s.pedidos);
   const [selId, setSelId] = useState<number | null>(null);
-  const [comprovantes, setComprovantes] = useState<
-    Array<{ id: number; mesa: number; clienteNome: string | null; total: number; fechadaEm: string }>
-  >([]);
-
-  const atualizarComprovantes = () => {
-    void api
-      .comprovantesRecentes()
-      .then(setComprovantes)
-      .catch(() => null);
-  };
-
-  useEffect(() => {
-    atualizarComprovantes();
-    const t = setInterval(atualizarComprovantes, 20000);
-    return () => clearInterval(t);
-  }, []);
-
-  const imprimirConta = async (id: number) => {
-    try {
-      imprimirComprovanteConsumo(await api.comprovanteSessao(id));
-    } catch (e) {
-      reportarErro(e instanceof Error ? e.message : "Falha ao imprimir comprovante");
-    }
-  };
-
   const abertas = sessoes.filter((s) => s.status === "aberta");
   const selecionada = abertas.find((s) => s.id === selId) || abertas[0] || null;
 
@@ -242,49 +215,6 @@ export default function Caixa() {
         </section>
       </div>
 
-      {/* Comprovantes recentes em lista contínua sem cartões aninhados */}
-      <section
-        className="mt-6 rounded-md border border-line bg-surface-raised overflow-hidden"
-        aria-label="Comprovantes de contas fechadas"
-      >
-        <div className="px-5 py-4 flex items-center justify-between gap-3 border-b border-dashed border-line-strong">
-          <div>
-            <h2 className="font-display text-xl font-bold tracking-tight text-text">
-              Comprovantes recentes
-            </h2>
-            <p className="text-xs text-text-muted mt-0.5">
-              Reimpressão de consumo e pagamentos das últimas contas encerradas
-            </p>
-          </div>
-          <Btn size="sm" variant="secondary" onClick={atualizarComprovantes}>
-            Atualizar
-          </Btn>
-        </div>
-
-        <div className="divide-y divide-line">
-          {comprovantes.map((c) => (
-            <div key={c.id} className="flex items-center gap-3 justify-between px-5 py-3">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-text">
-                  Mesa {String(c.mesa).padStart(2, "0")} ·{" "}
-                  <span className="font-mono text-xs text-brand-ink">Conta #{c.id}</span>
-                </p>
-                <p className="text-xs text-text-muted font-mono">
-                  {c.clienteNome || "Cliente não informado"} · {BRL(c.total)}
-                </p>
-              </div>
-              <Btn size="sm" variant="outline" onClick={() => void imprimirConta(c.id)}>
-                <Receipt size={15} /> Imprimir
-              </Btn>
-            </div>
-          ))}
-          {!comprovantes.length && (
-            <p className="text-xs text-text-muted px-5 py-6 text-center">
-              Nenhuma conta encerrada recentemente.
-            </p>
-          )}
-        </div>
-      </section>
     </OpsShell>
   );
 }

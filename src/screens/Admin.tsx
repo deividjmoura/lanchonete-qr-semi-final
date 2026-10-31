@@ -5,22 +5,19 @@ import {
   Camera,
   CaretDown,
   CaretRight,
-  ChartBar,
   Copy,
   CurrencyCircleDollar,
   DownloadSimple,
   Eye,
   EyeSlash,
   FileText,
-  ForkKnife,
+  Key,
   LinkSimple,
   Package,
   PencilSimple,
   Plus,
   Printer,
-  QrCode,
   Receipt,
-  SquaresFour,
   Trash,
   TrendUp,
   Trophy,
@@ -29,9 +26,10 @@ import {
   WarningCircle,
 } from "@phosphor-icons/react";
 import { QRCodeSVG } from "qrcode.react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { OpsShell } from "../components/OpsShell";
 import { Badge, Btn, Input, Modal } from "../components/ui";
+import { TrocarSenha } from "../components/TrocarSenha";
 import { ir } from "../router";
 import { api } from "../lib/api";
 import { descricaoPadrao } from "../lib/descricao";
@@ -49,14 +47,12 @@ import { BRL } from "../lib/utils";
 import { cn } from "../utils/cn";
 
 const ABAS = [
-  { id: "painel", label: "Dashboard", Icon: ChartBar },
-  { id: "cardapio", label: "Cardápio", Icon: ForkKnife },
-  { id: "mesas", label: "Mesas", Icon: QrCode },
-  { id: "garcons", label: "Garçons", Icon: Users },
-  { id: "funcoes", label: "Funções", Icon: SquaresFour },
+  { id: "painel", label: "Dashboard" },
+  { id: "cardapio", label: "Cardápio" },
+  { id: "mesas", label: "Mesas" },
+  { id: "garcons", label: "Garçons" },
+  { id: "funcoes", label: "Funções" },
 ] as const;
-
-type AbaId = (typeof ABAS)[number]["id"];
 
 function dataLocal(d = new Date()) {
   const y = d.getFullYear();
@@ -65,7 +61,7 @@ function dataLocal(d = new Date()) {
   return `${y}-${m}-${day}`;
 }
 
-export default function Admin() {
+export default function Admin({ secao }: { secao?: string }) {
   const auth = usePub((s) => s.auth);
   const hydrateCardapio = usePub((s) => s.hydrateCardapio);
   const hydrateMesas = usePub((s) => s.hydrateMesas);
@@ -94,56 +90,18 @@ export default function Admin() {
     }
   }, [auth]);
 
-  const [aba, setAba] = useState<AbaId>("painel");
+  const abaAtual = ABAS.find((a) => a.id === secao) || ABAS[0];
+  const aba = abaAtual.id;
 
-  const extras = (
-    <nav
-      aria-label="Seções administrativas"
-      className="flex flex-wrap items-center gap-1 rounded-full bg-surface-sunken border border-line p-1"
-    >
-      {ABAS.map((a) => {
-        const ativa = aba === a.id;
-        const Icon = a.Icon;
-        return (
-          <button
-            key={a.id}
-            type="button"
-            aria-label={a.label}
-            aria-pressed={ativa}
-            onClick={() => setAba(a.id)}
-            className={cn(
-              "relative flex items-center gap-1.5 rounded-full px-3.5 min-h-9 text-xs font-semibold transition-colors",
-              ativa ? "text-brand-contrast" : "text-text-muted hover:text-text",
-            )}
-          >
-            {ativa && (
-              <motion.span
-                layoutId="adm-aba"
-                className="absolute inset-0 rounded-full bg-brand"
-                transition={
-                  reduceMotion
-                    ? { duration: 0 }
-                    : { type: "spring", stiffness: 500, damping: 36, mass: 0.7 }
-                }
-              />
-            )}
-            <Icon size={15} weight={ativa ? "fill" : "regular"} className="relative z-10" />
-            <span className="relative z-10 hidden sm:inline">{a.label}</span>
-          </button>
-        );
-      })}
-    </nav>
-  );
-
-  const abaAtual = ABAS.find((a) => a.id === aba);
+  // Não renderiza ferramentas administrativas durante o redirecionamento de outro papel.
+  if (!auth || auth.role !== "admin") return null;
 
   return (
     <OpsShell
-      ativo="admin"
+      ativo={`admin-${aba}`}
       regime="expressive"
       kicker="Gestão"
-      titulo={abaAtual?.label || "Admin"}
-      extra={extras}
+      titulo={abaAtual.label}
     >
       <AnimatePresence mode="wait">
         <motion.div
@@ -2461,11 +2419,107 @@ function HistoricoPedidos({
   );
 }
 
+type ComprovanteResumo = {
+  id: number;
+  mesa: number;
+  clienteNome: string | null;
+  total: number;
+  fechadaEm: string;
+};
+
+function ComprovantesRecentes() {
+  const [comprovantes, setComprovantes] = useState<ComprovanteResumo[]>([]);
+  const [visiveis, setVisiveis] = useState(5);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
+  const [imprimindo, setImprimindo] = useState<number | null>(null);
+  const montado = useRef(false);
+  const sequencia = useRef(0);
+
+  const atualizar = useCallback(async (silencioso = false) => {
+    const pedido = ++sequencia.current;
+    if (!silencioso) setCarregando(true);
+    try {
+      const rows = await api.comprovantesRecentes();
+      if (!montado.current || pedido !== sequencia.current) return;
+      setComprovantes(rows);
+      setErro(null);
+    } catch (e) {
+      if (!montado.current || pedido !== sequencia.current) return;
+      setErro(e instanceof Error ? e.message : "Falha ao carregar comprovantes.");
+    } finally {
+      if (montado.current && pedido === sequencia.current) setCarregando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    montado.current = true;
+    void atualizar();
+    const timer = window.setInterval(() => void atualizar(true), 20000);
+    return () => {
+      montado.current = false;
+      sequencia.current++;
+      window.clearInterval(timer);
+    };
+  }, [atualizar]);
+
+  const imprimir = async (id: number) => {
+    setImprimindo(id);
+    setErro(null);
+    try {
+      imprimirComprovanteConsumo(await api.comprovanteSessaoAdmin(id));
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Falha ao imprimir comprovante.");
+    } finally {
+      setImprimindo(null);
+    }
+  };
+
+  return (
+    <section className="rounded-md border border-line bg-surface-raised overflow-hidden" aria-label="Comprovantes de contas fechadas">
+      <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-3 border-b border-dashed border-line-strong">
+        <div>
+          <h3 className="font-display text-xl font-bold tracking-tight text-text">Comprovantes recentes</h3>
+          <p className="text-xs text-text-muted mt-0.5">Reimpressão de consumo e pagamentos das últimas contas encerradas</p>
+        </div>
+        <Btn size="sm" variant="secondary" disabled={carregando} onClick={() => void atualizar()}>
+          {carregando ? "Atualizando…" : "Atualizar"}
+        </Btn>
+      </div>
+      {erro && <p role="alert" className="px-5 py-3 text-sm text-status-danger-ink">{erro}</p>}
+      <div className="divide-y divide-line" aria-busy={carregando}>
+        {comprovantes.slice(0, visiveis).map((c) => (
+          <div key={c.id} className="flex flex-wrap items-center gap-3 justify-between px-5 py-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-text">
+                Mesa {String(c.mesa).padStart(2, "0")} · <span className="font-mono text-xs text-brand-ink">Conta #{c.id}</span>
+              </p>
+              <p className="text-xs text-text-muted font-mono">{c.clienteNome || "Cliente não informado"} · {BRL(c.total)}</p>
+            </div>
+            <Btn size="sm" variant="outline" disabled={imprimindo !== null} onClick={() => void imprimir(c.id)}>
+              <Printer size={15} /> {imprimindo === c.id ? "Preparando…" : "Imprimir"}
+            </Btn>
+          </div>
+        ))}
+        {!carregando && !erro && !comprovantes.length && (
+          <p className="text-xs text-text-muted px-5 py-6 text-center">Nenhuma conta encerrada recentemente.</p>
+        )}
+      </div>
+      {visiveis < comprovantes.length && (
+        <div className="px-5 py-4 border-t border-line">
+          <Btn size="sm" variant="secondary" onClick={() => setVisiveis((n) => n + 5)}>Carregar mais</Btn>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function Funcoes() {
   const lastError = usePub((s) => s.lastError);
   const reportarErro = usePub((s) => s.reportarErro);
   const reduceMotion = useReducedMotion();
-  const [sub, setSub] = useState<"estoque" | "relatorio" | "historico" | "purge">("estoque");
+  const [sub, setSub] = useState<"estoque" | "relatorio" | "historico" | "comprovantes" | "senhas" | "purge">("estoque");
+  const [trocandoSenha, setTrocandoSenha] = useState(false);
   const [histFrom, setHistFrom] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
@@ -2482,6 +2536,8 @@ function Funcoes() {
     { id: "estoque" as const, label: "Estoque", Icon: Package },
     { id: "relatorio" as const, label: "Relatório", Icon: FileText },
     { id: "historico" as const, label: "Histórico", Icon: Receipt },
+    { id: "comprovantes" as const, label: "Comprovantes", Icon: Printer },
+    { id: "senhas" as const, label: "Senhas", Icon: Key },
     { id: "purge" as const, label: "Limpar", Icon: Trash },
   ];
 
@@ -2587,6 +2643,19 @@ function Funcoes() {
 
       {sub === "estoque" && <Estoque />}
       {sub === "relatorio" && <Relatorio />}
+      {sub === "comprovantes" && <ComprovantesRecentes />}
+      {sub === "senhas" && (
+        <section className="rounded-md border border-line bg-surface-raised p-5">
+          <h3 className="font-display text-2xl font-bold tracking-tight text-text">Senhas dos setores</h3>
+          <p className="mt-1 mb-4 text-sm text-text-muted">
+            Redefina a senha de uma conta de acesso. As sessões anteriores dessa conta serão encerradas.
+          </p>
+          <Btn variant="secondary" onClick={() => setTrocandoSenha(true)}>
+            <Key size={16} /> Redefinir senha de um setor
+          </Btn>
+          {trocandoSenha && <TrocarSenha obrigatorio={false} onClose={() => setTrocandoSenha(false)} />}
+        </section>
+      )}
       {sub === "historico" && (
         <HistoricoPedidos
           histFrom={histFrom}
