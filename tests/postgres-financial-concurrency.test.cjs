@@ -158,7 +158,7 @@ test('valores centavos são preservados em 0,01 + 0,10 + 10,25 e no fechamento',
     const fechado = await caixa.fecharSessao(pedido.sessaoId, {
       formaPagamento: 'dinheiro',
       desconto: 0,
-      taxaServico: 0,
+      taxaServico: 0, taxaServicoMotivo: 'Isenção de serviço no cenário de teste',
       idempotencyKey: 'fecha-' + randomUUID(),
     }, 'QA Moeda');
     assert.equal(fechado.valorCobrado, 10.36);

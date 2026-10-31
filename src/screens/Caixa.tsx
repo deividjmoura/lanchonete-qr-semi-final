@@ -60,7 +60,9 @@ export default function Caixa() {
   const selecionada = abertas.find((s) => s.id === selId) || abertas[0] || null;
 
   const totalSalao = abertas.reduce((a, s) => {
-    const bruto = consumoSessao(s, pedidos) - s.desconto + s.taxa;
+    // #153: sem ajuste manual (taxa 0), vale o serviço sugerido pelo backend.
+    const servicoLista = s.taxa > 0 ? s.taxa : (s.taxaServicoSugerida ?? 0);
+    const bruto = consumoSessao(s, pedidos) - s.desconto + servicoLista;
     const pago = s.valorPago != null ? s.valorPago : pagoSessao(s);
     return a + Math.max(0, bruto - pago);
   }, 0);
@@ -114,7 +116,8 @@ export default function Caixa() {
             <div className="space-y-2">
               {abertas.map((s) => {
                 const consumoBruto = consumoSessao(s, pedidos);
-                const consumo = consumoBruto - s.desconto + s.taxa;
+                const servicoLista = s.taxa > 0 ? s.taxa : (s.taxaServicoSugerida ?? 0);
+                const consumo = consumoBruto - s.desconto + servicoLista;
                 const pago = s.valorPago != null ? s.valorPago : pagoSessao(s);
                 const falta = Math.max(0, consumo - pago);
                 const pct = consumo > 0 ? Math.min(100, (pago / consumo) * 100) : 0;
@@ -241,7 +244,16 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
 
   const allPedidos = usePub((s) => s.pedidos);
   const consumo = consumoSessao(sessao, allPedidos);
-  const total = Math.max(0, consumo - sessao.desconto + sessao.taxa);
+  // Serviço (#153): padrão do backend sobre o consumo bruto. Enquanto o
+  // operador não mexer no campo, exibimos o sugerido e o fechamento omite
+  // a taxa (backend aplica o padrão); se mexer, vira ajuste com motivo.
+  const percentualServico = sessao.taxaServicoPercentual ?? 10;
+  const servicoSugerido = Math.round(((consumo * percentualServico) / 100) * 100) / 100;
+  const [servicoTocado, setServicoTocado] = useState(false);
+  const [motivoServico, setMotivoServico] = useState("");
+  const servico = servicoTocado ? sessao.taxa : servicoSugerido;
+  const servicoAjustado = servicoTocado && Math.abs(servico - servicoSugerido) > 0.005;
+  const total = Math.max(0, consumo - sessao.desconto + servico);
   const pago = sessao.valorPago != null ? Number(sessao.valorPago) : pagoSessao(sessao);
   const restante = Math.max(0, Math.round((total - pago) * 100) / 100);
 
@@ -259,6 +271,8 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
   useEffect(() => {
     setValor("");
     setFechando(false);
+    setServicoTocado(false);
+    setMotivoServico("");
   }, [sessao.id]);
 
   const [pixCfg, setPixCfg] = useState<PixConfig | null>(null);
@@ -297,7 +311,11 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
   const podeRegistrar = Number(valor) > 0.004 && Number(valor) <= restante + 0.01;
 
   const fechar = () => {
-    fecharSessao(sessao.id, forma);
+    if (servicoAjustado && motivoServico.trim().length < 3) {
+      reportarErro("Informe o motivo para remover ou ajustar o serviço antes de fechar.");
+      return;
+    }
+    fecharSessao(sessao.id, forma, { taxaServicoMotivo: motivoServico.trim() || undefined });
     setFechando(false);
   };
 
@@ -409,12 +427,27 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                 tom="text-status-success-ink"
               />
               <Ajuste
-                label="Taxa / Couvert"
-                valor={sessao.taxa}
-                onChange={(v) => setTaxa(sessao.id, v)}
+                label={`Serviço (${percentualServico}%)`}
+                valor={servico}
+                onChange={(v) => {
+                  setServicoTocado(true);
+                  setTaxa(sessao.id, v);
+                }}
                 tom="text-accent-ink"
               />
             </div>
+            {servicoAjustado && (
+              <label className="mt-3 block font-mono text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                Motivo do ajuste do serviço (obrigatório)
+                <input
+                  type="text"
+                  value={motivoServico}
+                  onChange={(e) => setMotivoServico(e.target.value)}
+                  placeholder="Ex.: cliente pediu para remover o serviço"
+                  className="mt-1.5 block h-10 w-full rounded-sm bg-surface-sunken border border-line-strong px-3 text-xs normal-case tracking-normal text-text focus:outline-none focus:border-brand"
+                />
+              </label>
+            )}
           </div>
 
           <div className="mt-5 pt-4 border-t border-dashed border-line-strong space-y-1.5 font-mono text-xs">
@@ -424,7 +457,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
               valor={`− ${BRL(sessao.desconto)}`}
               tom="text-status-success-ink"
             />
-            <Linha label="Taxa" valor={`+ ${BRL(sessao.taxa)}`} tom="text-accent-ink" />
+            <Linha label={`Serviço (${percentualServico}%)`} valor={`+ ${BRL(servico)}`} tom="text-accent-ink" />
             <div className="border-t border-line pt-2.5 mt-2 flex justify-between items-baseline">
               <span className="text-text-muted text-xs uppercase tracking-wider font-sans font-bold">
                 Total da comanda

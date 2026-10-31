@@ -85,6 +85,27 @@ function parseMoney(v) {
   return Number(n.toFixed(2));
 }
 
+/**
+ * Percentual de serviço (issue #153): configurável por
+ * TAXA_SERVICO_PERCENTUAL (0–100); qualquer valor ausente/inválido cai
+ * no padrão de 10%. Lido a cada chamada para o ambiente poder ajustar
+ * sem edição de código (mudança de .env continua exigindo restart).
+ */
+function percentualServicoPadrao() {
+  const bruto = process.env.TAXA_SERVICO_PERCENTUAL;
+  if (bruto === undefined || String(bruto).trim() === '') return 10;
+  const n = Number(String(bruto).replace(',', '.'));
+  if (!Number.isFinite(n) || n < 0 || n > 100) return 10;
+  return Number(n.toFixed(2));
+}
+
+/** Serviço padrão sobre o CONSUMO BRUTO entregue (antes do desconto). */
+function taxaServicoPadraoPara(valorTotal) {
+  const base = Number(valorTotal);
+  if (!Number.isFinite(base) || base <= 0) return 0;
+  return Number(((base * percentualServicoPadrao()) / 100).toFixed(2));
+}
+
 // Listagem do caixa num snapshot único e com a MESMA definição de "devido"
 // da tela do cliente: soma de itens com status='entregue', recomputada
 // (db/conta.js) — inclui entrega parcial, que antes entrava no valorTotal
@@ -261,6 +282,8 @@ async function lerSessoesAbertas(client) {
       valorTotal,
       valorPago,
       valorRestante,
+      taxaServicoPercentual: percentualServicoPadrao(),
+      taxaServicoSugerida: taxaServicoPadraoPara(valorTotal),
       pagamentos,
       pixInformadoEm: s.pix_informado_em || null,
       pixAvisos: avisosBySessao.get(s.id) || [],
@@ -506,9 +529,17 @@ async function fecharSessao(sessaoIdBruto, body, operadorNome = null, opcoes = {
   }
 
   const desconto = parseMoney(body.desconto);
-  const taxaServico = parseMoney(body.taxaServico ?? body.taxa_servico);
   if (desconto === null) throw new ErroCaixa(400, 'Desconto inválido');
-  if (taxaServico === null) throw new ErroCaixa(400, 'Taxa de serviço inválida');
+  // Issue #153: taxa omitida (undefined/null) significa "aplicar o padrão
+  // de TAXA_SERVICO_PERCENTUAL sobre o consumo bruto". Taxa informada
+  // diferente do padrão é ajuste/remoção e exige motivo auditável.
+  const taxaInformadaBruta = body.taxaServico ?? body.taxa_servico;
+  const taxaInformada = taxaInformadaBruta === undefined || taxaInformadaBruta === null
+    ? null
+    : parseMoney(taxaInformadaBruta);
+  if (taxaInformadaBruta !== undefined && taxaInformadaBruta !== null && taxaInformada === null) {
+    throw new ErroCaixa(400, 'Taxa de serviço inválida');
+  }
 
   const client = await pool.connect();
   try {
@@ -561,6 +592,28 @@ async function fecharSessao(sessaoIdBruto, body, operadorNome = null, opcoes = {
     const valorTotal = await totalEntregueDaSessao(client, sessaoId);
     if (desconto > valorTotal + 0.001) {
       throw new ErroCaixa(400, 'Desconto não pode ser maior que o total da conta');
+    }
+    // Serviço (#153): base é o consumo bruto entregue, antes do desconto.
+    const taxaServicoPadrao = taxaServicoPadraoPara(valorTotal);
+    let taxaServico;
+    let taxaServicoAjustada = false;
+    let taxaServicoMotivo = null;
+    if (taxaInformada === null) {
+      taxaServico = taxaServicoPadrao;
+    } else {
+      taxaServico = taxaInformada;
+      taxaServicoAjustada = Math.abs(taxaServico - taxaServicoPadrao) > 0.005;
+      if (taxaServicoAjustada) {
+        taxaServicoMotivo = String(
+          body.taxaServicoMotivo ?? body.motivoTaxaServico ?? ''
+        ).trim().slice(0, 200);
+        if (taxaServicoMotivo.length < 3) {
+          throw new ErroCaixa(
+            400,
+            'Informe o motivo para remover ou ajustar a taxa de serviço'
+          );
+        }
+      }
     }
     const valorCobrado = Number((valorTotal - desconto + taxaServico).toFixed(2));
     if (valorCobrado < 0) throw new ErroCaixa(400, 'Valor cobrado inválido');
@@ -640,6 +693,10 @@ async function fecharSessao(sessaoIdBruto, body, operadorNome = null, opcoes = {
         valorCobrado,
         desconto,
         taxaServico,
+        taxaServicoPercentual: percentualServicoPadrao(),
+        taxaServicoPadrao,
+        taxaServicoAjustada,
+        taxaServicoMotivo,
         formaPagamento: forma,
       },
       requestId: opcoes.requestId || null,
@@ -655,6 +712,10 @@ async function fecharSessao(sessaoIdBruto, body, operadorNome = null, opcoes = {
       valorTotal: Number(row.valor_total),
       desconto: Number(row.desconto),
       taxaServico: Number(row.taxa_servico),
+      taxaServicoPadrao,
+      taxaServicoPercentual: percentualServicoPadrao(),
+      taxaServicoAjustada,
+      taxaServicoMotivo,
       valorCobrado: Number(row.valor_cobrado),
       valorPago,
       formaPagamento: row.forma_pagamento,
@@ -827,6 +888,8 @@ module.exports = {
   registrarPagamento: comRetry('registrarPagamento', registrarPagamento),
   confirmarPixAviso: comRetry('confirmarPixAviso', confirmarPixAviso),
   fecharSessao: comRetry('fecharSessao', fecharSessao),
+  percentualServicoPadrao,
+  taxaServicoPadraoPara,
   ErroCaixa,
   FORMAS,
 };

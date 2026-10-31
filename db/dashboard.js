@@ -42,6 +42,18 @@ async function resumoDia(opts = {}) {
       ? Number(r.valor_cobrado)
       : Number(r.valor_total || 0);
   const faturamento = sessoes.reduce((s, r) => s + valorSessao(r), 0);
+  // #154: breakdown que reconcilia — total cobrado = vendas brutas
+  // − descontos + serviço. Linhas legadas sem valor_total derivam a base
+  // do valor cobrado para a soma continuar fechando.
+  const round2 = (n) => Number(n.toFixed(2));
+  const baseSessao = (r) =>
+    r.valor_total != null && r.valor_total !== ''
+      ? Number(r.valor_total)
+      : round2(valorSessao(r) + Number(r.desconto || 0) - Number(r.taxa_servico || 0));
+  const vendasBrutas = round2(sessoes.reduce((s, r) => s + baseSessao(r), 0));
+  const servicoTotal = round2(sessoes.reduce((s, r) => s + Number(r.taxa_servico || 0), 0));
+  const descontosTotal = round2(sessoes.reduce((s, r) => s + Number(r.desconto || 0), 0));
+  const totalCobrado = round2(faturamento);
   const contasFechadas = sessoes.length;
   const ticketMedio = contasFechadas ? faturamento / contasFechadas : 0;
 
@@ -197,6 +209,11 @@ async function resumoDia(opts = {}) {
       ? { from: rangeSql.start, to: rangeSql.end }
       : { from: null, to: null, label: 'hoje', timezone: TZ },
     faturamento: Number(faturamento.toFixed(2)),
+    // #154: breakdown reconciliável (vendas − descontos + serviço = total)
+    vendasBrutas,
+    servicoTotal,
+    descontosTotal,
+    totalCobrado,
     contasFechadas,
     ticketMedio: Number(ticketMedio.toFixed(2)),
     porFormaPagamento: porForma,
