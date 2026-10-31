@@ -99,7 +99,8 @@ async function main() {
     });
     await page.goto(base + '/#/admin/funcoes', { waitUntil: 'load' });
     await page.getByRole('heading', { name: 'Funções', level: 1 }).waitFor();
-    await page.getByRole('button', { name: 'Comprovantes', exact: true }).click();
+    await page.getByRole('button', { name: 'Relatório', exact: true }).click();
+    await page.getByRole('button', { name: 'Comprovantes recentes', exact: true }).click();
     const comprovantes = page.getByRole('region', { name: 'Comprovantes de contas fechadas' });
     await comprovantes.getByRole('button', { name: 'Imprimir' }).nth(4).waitFor();
     assert.equal(await comprovantes.getByRole('button', { name: 'Imprimir' }).count(), 5);
