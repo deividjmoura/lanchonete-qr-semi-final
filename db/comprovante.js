@@ -1,5 +1,6 @@
 const pool = require('./pool');
 const { colunaExiste } = require('./conta');
+const { limitePagina, criarCursor, lerCursor } = require('./paginacao');
 const pagamentosTemOperadorNome = colunaExiste('sessao_pagamentos', 'operador_nome');
 class ErroComprovante extends Error { constructor(status,message){super(message);this.status=status;} }
 async function comprovanteSessao(idBruto) {
@@ -66,4 +67,34 @@ async function listarComprovantesRecentes() {
   return rows.map(r=>({id:r.id,mesa:r.mesa,fechadaEm:r.fechada_em,
     clienteNome:r.cliente_nome,total:Number(r.total)}));
 }
-module.exports={comprovanteSessao,listarComprovantesRecentes,ErroComprovante};
+// Versão paginada opt-in; a rota legada continua retornando um array de 25.
+async function paginaComprovantes({ limite = null, cursor = null } = {}) {
+  const tamanho = limitePagina(limite, 5);
+  const anterior = lerCursor(cursor, 'comprovantes', [], { permiteDataNula: true });
+  const params = [];
+  let condicao = '';
+  if (anterior?.data === null) {
+    params.push(anterior.id);
+    condicao = `AND s.fechada_em IS NULL AND s.id < $${params.length}`;
+  } else if (anterior) {
+    params.push(anterior.data, anterior.id);
+    condicao = `AND (s.fechada_em IS NULL OR (s.fechada_em, s.id) < ($1::timestamptz, $2::int))`;
+  }
+  params.push(tamanho + 1);
+  const { rows } = await pool.query(`
+    SELECT s.id,m.numero AS mesa,s.fechada_em,s.cliente_nome,
+      COALESCE(s.valor_cobrado,s.valor_total)::numeric(12,2) AS total,
+      to_char(s.fechada_em AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_data
+    FROM mesa_sessoes s JOIN mesas m ON m.id=s.mesa_id
+    WHERE s.status='fechada' ${condicao}
+    ORDER BY s.fechada_em DESC NULLS LAST, s.id DESC LIMIT $${params.length}`, params);
+  const temMais = rows.length > tamanho;
+  const pagina = rows.slice(0, tamanho);
+  const ultimo = pagina[pagina.length - 1];
+  return {
+    itens: pagina.map((r) => ({ id: r.id, mesa: r.mesa, fechadaEm: r.fechada_em,
+      clienteNome: r.cliente_nome, total: Number(r.total) })),
+    proximoCursor: temMais ? criarCursor('comprovantes', ultimo.cursor_data, ultimo.id) : null,
+  };
+}
+module.exports={comprovanteSessao,listarComprovantesRecentes,paginaComprovantes,ErroComprovante};

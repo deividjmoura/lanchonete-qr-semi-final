@@ -1,5 +1,14 @@
 /** Cliente HTTP para a API Node (server.js). credentials: include para cookie de staff. */
 
+export type Pagina<T> = { itens: T[]; proximoCursor: string | null };
+export type ComprovanteResumo = {
+  id: number;
+  mesa: number;
+  fechadaEm: string | null;
+  clienteNome: string | null;
+  total: number;
+};
+
 let csrfToken: string | null = null;
 
 /**
@@ -206,7 +215,13 @@ export const api = {
     apiSend(`/api/garcom/${token}/pedidos/${pedidoId}/entregar`, "POST", { ...(itemIds?.length ? { itemIds } : {}), ...(etapa ? { etapa } : {}) }),
 
   caixaSessoes: () => apiGet<any[]>("/api/caixa/sessoes"),
-  comprovantesRecentes: () => apiGet<Array<{id:number;mesa:number;fechadaEm:string;clienteNome:string|null;total:number}>>("/api/caixa/comprovantes"),
+  // A versão legada segue retornando array; a UI do Admin usa cursores reais.
+  comprovantesRecentes: () => apiGet<ComprovanteResumo[]>("/api/caixa/comprovantes"),
+  comprovantesPagina: (cursor: string | null = null) => {
+    const q = new URLSearchParams({ paginado: "1", limit: "5" });
+    if (cursor) q.set("cursor", cursor);
+    return apiGet<Pagina<ComprovanteResumo>>(`/api/caixa/comprovantes?${q}`);
+  },
   comprovanteSessao: (id: number) => apiGet<any>(`/api/caixa/sessoes/${id}/comprovante`),
   comprovanteSessaoAdmin: (id: number) => apiGet<any>(`/api/admin/sessoes/${id}/comprovante`),
   registrarPagamento: (sessaoId: number, valor: number, formaPagamento: string, idempotencyKey: string) =>
@@ -275,6 +290,13 @@ export const api = {
     if (ativos) q.set("ativos", "1");
     const s = q.toString();
     return apiGet<any[]>(`/api/admin/pedidos${s ? `?${s}` : ""}`);
+  },
+  adminPedidosPagina: (from: string, to: string, cursor: string | null = null) => {
+    const q = new URLSearchParams({ paginado: "1", limit: "10" });
+    if (from) q.set("from", from);
+    if (to) q.set("to", to);
+    if (cursor) q.set("cursor", cursor);
+    return apiGet<Pagina<any>>(`/api/admin/pedidos?${q}`);
   },
   purgeHistorico: (body: { before: string; confirm?: boolean; dryRun?: boolean }) =>
     apiSend<any>("/api/admin/historico/purge", "POST", body),

@@ -334,6 +334,84 @@ test('PostgreSQL real: dois garçons disputando o mesmo item — exatamente um v
   }
 });
 
+test('PostgreSQL real: retirada direta concorrente registra autor e não cobra antes da entrega', async () => {
+  const c = await montarCenario();
+  const { ids } = c;
+  try {
+    const criado = await pedidos.criarPedido(ids.mesa.token, {
+      idempotencyKey: 'qr-' + UUID(), items: [{ productId: c.bebida, qty: 1 }],
+    });
+    ids.pedidos.push(criado.id);
+    ids.sessoes.push(criado.sessaoId);
+    const [item] = await itensDo(criado.id);
+    await pedidos.setStatusItem(item.id, 'concluido', 'bar', { tipo: 'staff', id: ids.staff.id, nome: ids.staff.nome }, REQ('ready-direto'));
+    for (const garcom of ids.garcons) {
+      const fila = (await getFilaGarcom(garcom.id)).find((p) => p.id === criado.id);
+      assert.equal(fila.itens.find((i) => i.id === item.id).podeRetirar, true);
+    }
+    const disputas = await Promise.allSettled(ids.garcons.map((g) => retirarComoGarcom(criado.id, g.token, REQ('retirada-direta'), [item.id])));
+    const vencedores = disputas.filter((r) => r.status === 'fulfilled');
+    const perdedores = disputas.filter((r) => r.status === 'rejected');
+    assert.equal(vencedores.length, 1);
+    assert.equal(perdedores.length, ids.garcons.length - 1);
+    for (const perdedor of perdedores) assert.equal(perdedor.reason.status, 409);
+    const vencedor = vencedores[0].value.garcom;
+    const row = (await itensDo(criado.id))[0];
+    assert.equal(row.status, 'retirado');
+    assert.equal(Number(row.aceito_por_id), Number(vencedor.id));
+    assert.equal(Number(row.retirado_por_id), Number(vencedor.id));
+    assert.ok(row.aceito_em && row.retirado_em);
+    const historico = await pool.query(`SELECT status_anterior,status,garcom_id,motivo FROM itens_pedido_historico
+      WHERE item_pedido_id=$1 AND status IN ('aceito','retirado') ORDER BY id`, [item.id]);
+    assert.deepEqual(historico.rows.map((h) => [h.status_anterior, h.status, Number(h.garcom_id)]), [
+      ['concluido', 'aceito', Number(vencedor.id)], ['aceito', 'retirado', Number(vencedor.id)],
+    ]);
+    assert.match(historico.rows[0].motivo, /implícito/);
+    assert.equal(await totalEntregueDaSessao(pool, criado.sessaoId), 0);
+    const sessao = await pool.query('SELECT garcom_responsavel_id FROM mesa_sessoes WHERE id=$1', [criado.sessaoId]);
+    assert.equal(Number(sessao.rows[0].garcom_responsavel_id), Number(vencedor.id));
+    const outro = ids.garcons.find((g) => Number(g.id) !== Number(vencedor.id));
+    await assert.rejects(() => entregarComoGarcom(criado.id, outro.token, [item.id], REQ('entrega-indevida'), 'entregar'), (e) => e.status === 403);
+    const tokenVencedor = ids.garcons.find((g) => Number(g.id) === Number(vencedor.id)).token;
+    await entregarComoGarcom(criado.id, tokenVencedor, [item.id], REQ('entrega-direta'), 'entregar');
+    assert.equal(await totalEntregueDaSessao(pool, criado.sessaoId), 9.5);
+  } finally { await c.limpar(); }
+});
+
+test('PostgreSQL real: lote misto respeita aceites antigos e rejeita o lote inteiro se houver outro dono', async () => {
+  const c = await montarCenario();
+  const { ids } = c;
+  const [ana, bruno] = ids.garcons;
+  try {
+    const criado = await pedidos.criarPedido(ids.mesa.token, {
+      idempotencyKey: 'qr-' + UUID(), items: [{ productId: c.prato, qty: 1 }, { productId: c.bebida, qty: 1 }],
+    });
+    ids.pedidos.push(criado.id);
+    ids.sessoes.push(criado.sessaoId);
+    const itens = await itensDo(criado.id);
+    const prato = itens.find((i) => Number(i.produto_id) === Number(c.prato));
+    const bebida = itens.find((i) => Number(i.produto_id) === Number(c.bebida));
+    const staff = { tipo: 'staff', id: ids.staff.id, nome: ids.staff.nome };
+    await pedidos.setStatusItem(prato.id, 'concluido', 'cozinha', staff, REQ('prato-pronto'));
+    await pedidos.setStatusItem(bebida.id, 'concluido', 'bar', staff, REQ('bebida-pronta'));
+    await assumirEntregaComoGarcom(criado.id, ana.token, REQ('aceite-legado'), [bebida.id]);
+    await assert.rejects(() => retirarComoGarcom(criado.id, bruno.token, REQ('lote-indevido'), [prato.id, bebida.id]), (e) => e.status === 403);
+    const antes = await itensDo(criado.id);
+    assert.equal(antes.find((i) => i.id === prato.id).status, 'concluido', 'erro não retira parte do lote');
+    assert.equal(antes.find((i) => i.id === bebida.id).status, 'aceito');
+    const saida = await retirarComoGarcom(criado.id, ana.token, REQ('lote-misto'), null);
+    assert.deepEqual(new Set(saida.itensAfetados), new Set([prato.id, bebida.id]));
+    for (const item of await itensDo(criado.id)) {
+      assert.equal(item.status, 'retirado');
+      assert.equal(Number(item.aceito_por_id), Number(ana.id));
+      assert.equal(Number(item.retirado_por_id), Number(ana.id));
+    }
+    assert.equal(await totalEntregueDaSessao(pool, criado.sessaoId), 0);
+    const sessao = await pool.query('SELECT garcom_responsavel_id FROM mesa_sessoes WHERE id=$1', [criado.sessaoId]);
+    assert.equal(Number(sessao.rows[0].garcom_responsavel_id), Number(ana.id));
+  } finally { await c.limpar(); }
+});
+
 test('PostgreSQL real: cancelamento por item devolve estoque uma vez e não bloqueia o fechamento', async () => {
   const c = await montarCenario();
   const { ids } = c;

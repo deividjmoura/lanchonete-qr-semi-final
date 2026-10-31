@@ -23,9 +23,10 @@ async function contexto(browser, papel = 'admin', obrigatorio = false) {
       window.setInterval = (fn, tempo, ...args) => intervalo(fn, tempo === 20000 ? 1500 : tempo, ...args);
     }
   }, { papel, obrigatorio });
-  const requests = { lista: 0, detalhe: [], falhar: false };
+  const requests = { lista: 0, paginas: [], detalhe: [], falhar: false };
   await context.route('**/api/**', async (route) => {
-    const p = new URL(route.request().url()).pathname;
+    const url = new URL(route.request().url());
+    const p = url.pathname;
     let data = [];
     if (p === '/api/me') data = { staff: { id: 1, login: papel, papel, nome: papel, deveTrocarSenha: obrigatorio }, csrfToken: 'csrf-test' };
     else if (p === '/api/admin/dashboard') data = { faturamento: 0, pedidosTotal: 0, contasFechadas: 0, ticketMedio: 0, porDia: [], topProdutos: [] };
@@ -35,7 +36,13 @@ async function contexto(browser, papel = 'admin', obrigatorio = false) {
     else if (p === '/api/caixa/comprovantes') {
       requests.lista++;
       if (requests.falhar) return route.fulfill({ status: 503, json: { error: 'Comprovantes indisponíveis' } });
-      data = resumo;
+      const inicio = Number(url.searchParams.get('cursor') || 0);
+      const limite = Number(url.searchParams.get('limit') || 5);
+      requests.paginas.push({ paginado: url.searchParams.get('paginado'), inicio, limite });
+      data = {
+        itens: resumo.slice(inicio, inicio + limite),
+        proximoCursor: inicio + limite < resumo.length ? String(inicio + limite) : null,
+      };
     } else if (/^\/api\/admin\/sessoes\/\d+\/comprovante$/.test(p)) {
       const id = Number(p.split('/')[4]);
       requests.detalhe.push(id);
@@ -81,11 +88,30 @@ async function desktop(browser) {
   const section = page.getByRole('region', { name: 'Comprovantes de contas fechadas' });
   await section.getByText('Conta #1001').waitFor();
   assert.equal(await section.getByRole('button', { name: 'Imprimir' }).count(), 5, 'primeira página pequena');
+  // Garante que o teste cobre um polling entre a primeira carga e o primeiro clique.
+  const pollInicial = await page.waitForRequest((r) => {
+    const url = new URL(r.url());
+    return url.pathname === '/api/caixa/comprovantes' && !url.searchParams.has('cursor');
+  }, { timeout: 5000 });
+  await pollInicial.response();
   await section.getByRole('button', { name: 'Carregar mais' }).click();
+  await section.getByText('Conta #1010').waitFor();
   assert.equal(await section.getByRole('button', { name: 'Imprimir' }).count(), 10);
   await section.getByRole('button', { name: 'Carregar mais' }).click();
+  await section.getByText('Conta #1012').waitFor();
   assert.equal(await section.getByRole('button', { name: 'Imprimir' }).count(), 12);
   assert.equal(await section.getByRole('button', { name: 'Carregar mais' }).count(), 0);
+  // O polling pode consultar a primeira página entre cliques, especialmente em
+  // runners lentos; só os cliques pedem cursores diferentes de zero.
+  assert.deepEqual(requests.paginas[0], { paginado: '1', inicio: 0, limite: 5 });
+  assert.deepEqual(requests.paginas.filter((p) => p.inicio !== 0), [
+    { paginado: '1', inicio: 5, limite: 5 },
+    { paginado: '1', inicio: 10, limite: 5 },
+  ], 'cada clique buscou apenas a próxima página');
+  assert.ok(requests.paginas.every((p) => p.paginado === '1' && p.limite === 5));
+  await section.getByRole('button', { name: 'Mostrar menos' }).click();
+  await section.getByText('Conta #1010').waitFor({ state: 'hidden' });
+  assert.equal(await section.getByRole('button', { name: 'Imprimir' }).count(), 5);
 
   const antes = requests.lista;
   const respostaManual = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/caixa/comprovantes');
@@ -93,13 +119,14 @@ async function desktop(browser) {
   await respostaManual;
   assert.ok(requests.lista > antes, 'atualização manual consulta a API');
   const aposManual = requests.lista;
-  await page.waitForResponse((r) => new URL(r.url()).pathname === '/api/caixa/comprovantes', { timeout: 5000 });
+  const requisicaoPoll = await page.waitForRequest((r) => new URL(r.url()).pathname === '/api/caixa/comprovantes', { timeout: 5000 });
+  await requisicaoPoll.response();
   assert.ok(requests.lista > aposManual, 'polling consulta a API');
 
   requests.falhar = true;
   await section.getByRole('button', { name: 'Atualizar', exact: true }).click();
   await section.getByRole('alert').getByText('Comprovantes indisponíveis').waitFor();
-  assert.equal(await section.getByRole('button', { name: 'Imprimir' }).count(), 12, 'erro não apaga a lista anterior');
+  assert.equal(await section.getByRole('button', { name: 'Imprimir' }).count(), 5, 'erro não apaga a lista anterior');
   requests.falhar = false;
   await section.getByRole('button', { name: 'Atualizar', exact: true }).click();
   await section.getByRole('alert').waitFor({ state: 'hidden' });

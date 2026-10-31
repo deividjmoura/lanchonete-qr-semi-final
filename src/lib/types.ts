@@ -59,6 +59,9 @@ export interface ItemPedido {
   totalUnit: number; // (base + adicionais + escolha)
   /** Status de produção/entrega do item (parcial) */
   status?: ItemStatus;
+  /** Permissões calculadas pelo servidor para o garçom autenticado. */
+  podeRetirar?: boolean;
+  podeEntregar?: boolean;
   setor?: "cozinha" | "bar";
 }
 

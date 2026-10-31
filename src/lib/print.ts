@@ -583,6 +583,9 @@ export function imprimirRelatorioPdf(opts: {
     <div class="kpi"><span>Total cobrado</span><b>${esc(BRL(totalCobrado))}</b></div>
   </div>
   <p class="muted">Total cobrado = vendas (consumo) − descontos + serviço.</p>
+  ${qtd > contas.length
+    ? `<p class="muted">As contas detalhadas e o serviço por garçom abrangem apenas ${esc(contas.length)} de ${esc(qtd)} contas do período.</p>`
+    : ""}
 
   <h2>Formas de pagamento</h2>
   ${

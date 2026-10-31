@@ -4,8 +4,8 @@
  * Regressão de três defeitos relatados em produção pelo operador:
  *
  *  1. O diálogo de notificações não fechava depois de conceder a permissão.
- *  2. O garçom precisava aceitar/retirar/entregar item por item, pedido por
- *     pedido — o lote só existia para o aceite e só com 2+ itens prontos.
+ *  2. A retirada e a entrega precisavam de ações em lote por pedido; a
+ *     retirada agora assume os itens prontos sem uma etapa de aceite separada.
  *  3. O botão "Registrar recebimento" ficava desabilitado em silêncio. Como o
  *     QR PIX é gerado no navegador a partir do valor digitado, o garçom via o
  *     QR correto ao lado de um botão que parecia morto.
@@ -89,7 +89,7 @@ test('dispensar o prompt nativo mantém o diálogo aberto para nova tentativa', 
 });
 
 /* ------------------------------------------------------------------ */
-/* 2. Lote por pedido nas três etapas                                  */
+/* 2. Retirada direta e entrega por pedido                             */
 /* ------------------------------------------------------------------ */
 
 function item(id, status, extras = {}) {
@@ -121,51 +121,51 @@ async function montarEntregas(itens, meuId = 7) {
   return { root, chamadas, ctx };
 }
 
-test('lote de aceite aparece mesmo com um único item pronto', async () => {
-  const { root, chamadas } = await montarEntregas([item(1, 'concluido')]);
-  const botao = root.botoes().find((b) => /Aceitar todos os prontos \(1\)/.test(b.textContent));
-  assert.ok(botao, 'o botão de lote precisa existir com um item só');
-  await botao.onclick();
+test('item pronto pode ser retirado diretamente, sem perguntar aceite ou confirmação', async () => {
+  const { root, chamadas, ctx } = await montarEntregas([item(1, 'concluido')]);
+  ctx.confirm = () => { throw new Error('retirada não deve abrir confirmação'); };
+  const individual = root.botoes().find((b) => b.textContent === 'Retirar item');
+  assert.ok(individual);
+  assert.equal(root.botoes().some((b) => /Aceitar/.test(b.textContent)), false);
+  await individual.onclick();
   assert.equal(chamadas.length, 1);
   assert.deepEqual(chamadas[0].body.itemIds, [1]);
-  assert.equal(chamadas[0].body.etapa, 'aceitar');
+  assert.equal(chamadas[0].body.etapa, 'retirar');
+  assert.match(chamadas[0].url, /\/retirar$/);
 });
 
-test('lote de retirada e de entrega existem e só incluem itens do próprio garçom', async () => {
-  const { root, chamadas } = await montarEntregas([
-    item(1, 'aceito', { garcomAceitoId: 7 }),
+test('lotes combinam prontos e aceites próprios, sem incluir itens de outros garçons', async () => {
+  const { root, chamadas, ctx } = await montarEntregas([
+    item(1, 'concluido'),
     item(2, 'aceito', { garcomAceitoId: 7 }),
-    item(3, 'aceito', { garcomAceitoId: 99 }), // de outro garçom
+    item(3, 'aceito', { garcomAceitoId: 99 }),
     item(4, 'retirado', { garcomRetirouId: 7 }),
-    item(5, 'retirado', { garcomRetirouId: 99 }), // de outro garçom
+    item(5, 'retirado', { garcomRetirouId: 99 }),
   ]);
-  const retirar = root.botoes().find((b) => /Confirmar retirada de todos \(2\)/.test(b.textContent));
+  let confirmacoes = 0;
+  ctx.confirm = () => { confirmacoes++; return true; };
+  const retirar = root.botoes().find((b) => /Retirar todos \(2\)/.test(b.textContent));
   const entregar = root.botoes().find((b) => /Confirmar entrega de todos \(1\)/.test(b.textContent));
   assert.ok(retirar, 'lote de retirada ausente');
   assert.ok(entregar, 'lote de entrega ausente');
-
   await retirar.onclick();
-  assert.deepEqual(chamadas[0].body.itemIds, [1, 2], 'não pode levar item de outro garçom');
+  assert.deepEqual(chamadas[0].body.itemIds, [1, 2]);
   assert.equal(chamadas[0].body.etapa, 'retirar');
-  assert.match(chamadas[0].url, /\/retirar$/);
-
+  assert.equal(confirmacoes, 0, 'retirada é direta');
   await entregar.onclick();
   assert.deepEqual(chamadas[1].body.itemIds, [4]);
   assert.equal(chamadas[1].body.etapa, 'entregar');
+  assert.equal(confirmacoes, 1, 'a confirmação de entrega permanece');
 });
 
-test('lote nunca mistura etapas numa mesma chamada', async () => {
-  const { root, chamadas } = await montarEntregas([
-    item(1, 'concluido'),
-    item(2, 'aceito', { garcomAceitoId: 7 }),
-    item(3, 'retirado', { garcomRetirouId: 7 }),
-  ]);
-  const lotes = root.botoes().filter((b) => /todos/.test(b.textContent));
-  assert.equal(lotes.length, 3, 'uma ação de lote por etapa disponível');
-  for (const b of lotes) await b.onclick();
-  assert.equal(chamadas.length, 3);
-  assert.deepEqual(chamadas.map((c) => c.body.etapa), ['aceitar', 'retirar', 'entregar']);
-  for (const c of chamadas) assert.equal(c.body.itemIds.length, 1);
+test('lote de retirada existe também para um único item pronto', async () => {
+  const { root, chamadas, ctx } = await montarEntregas([item(1, 'concluido')]);
+  ctx.confirm = () => { throw new Error('retirada não deve abrir confirmação'); };
+  const botao = root.botoes().find((b) => /Retirar todos \(1\)/.test(b.textContent));
+  assert.ok(botao);
+  await botao.onclick();
+  assert.deepEqual(chamadas[0].body.itemIds, [1]);
+  assert.equal(chamadas[0].body.etapa, 'retirar');
 });
 
 test('falha no lote avisa inline e reabilita os botões, sem alert bloqueante', async () => {
@@ -174,48 +174,30 @@ test('falha no lote avisa inline e reabilita os botões, sem alert bloqueante', 
   const ctx = contexto({
     ids: { readyOrders: root, alertMessage: aviso },
     globais: {
-      waiterToken: 'tok',
-      currentWaiterId: 7,
+      waiterToken: 'tok', currentWaiterId: 7,
       getJson: async (url, opts) => {
         if (opts && opts.method === 'POST') throw new Error('Conflito: item já foi retirado');
         return [{ id: 42, mesa: 13, itens: [item(1, 'concluido'), item(2, 'concluido')] }];
       },
-      refreshLiveData: async () => {},
-      itemStateText: (i) => i.status,
-      showOrderHistory: () => {},
+      refreshLiveData: async () => {}, itemStateText: (i) => i.status, showOrderHistory: () => {},
     },
   });
   carregar(ctx, ['avisarEntrega', 'deliveryAction', 'loadDeliveries']);
   await ctx.loadDeliveries();
-  const botao = root.botoes().find((b) => /Aceitar todos os prontos/.test(b.textContent));
+  const botao = root.botoes().find((b) => /Retirar todos/.test(b.textContent));
   await botao.onclick();
   assert.match(aviso.textContent, /Conflito/);
   assert.deepEqual(ctx.__alerts, [], 'não deve usar alert() bloqueante');
   assert.equal(botao.disabled, false, 'botão precisa voltar a funcionar após o erro');
 });
 
-test('cancelar a confirmação não envia nada ao servidor', async () => {
-  const root = new Elemento('div');
-  const chamadas = [];
-  const ctx = contexto({
-    ids: { readyOrders: root, alertMessage: new Elemento('p') },
-    globais: {
-      waiterToken: 'tok',
-      currentWaiterId: 7,
-      confirm: () => false,
-      getJson: async (url, opts) => {
-        if (opts && opts.method === 'POST') { chamadas.push(url); return {}; }
-        return [{ id: 42, mesa: 13, itens: [item(1, 'concluido')] }];
-      },
-      refreshLiveData: async () => {},
-      itemStateText: (i) => i.status,
-      showOrderHistory: () => {},
-    },
-  });
-  carregar(ctx, ['avisarEntrega', 'deliveryAction', 'loadDeliveries']);
-  await ctx.loadDeliveries();
-  await root.botoes().find((b) => /Aceitar todos/.test(b.textContent)).onclick();
+test('cancelar confirmação de entrega não envia dados e reabilita o botão', async () => {
+  const { root, chamadas, ctx } = await montarEntregas([item(1, 'retirado', { garcomRetirouId: 7 })]);
+  ctx.confirm = () => false;
+  const botao = root.botoes().find((b) => /Confirmar entrega de todos/.test(b.textContent));
+  await botao.onclick();
   assert.equal(chamadas.length, 0);
+  assert.equal(botao.disabled, false);
 });
 
 /* ------------------------------------------------------------------ */

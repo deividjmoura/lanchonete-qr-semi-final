@@ -656,10 +656,10 @@ if (typeof window !== "undefined") {
         if (p.id !== pedidoId) return p;
         const itens = p.itens.map((it) => {
           const idNum = Number(it.id);
-          const from = etapa === "aceitar" ? "concluido" : etapa === "retirar" ? "aceito" : etapa === "entregar" ? "retirado" : "concluido";
+          const from = etapa === "aceitar" ? ["concluido"] : etapa === "retirar" ? ["concluido", "aceito"] : etapa === "entregar" ? ["retirado"] : ["concluido"];
           const to = etapa === "aceitar" ? "aceito" : etapa === "retirar" ? "retirado" : "entregue";
-          const target = it.status === from && (idsSet == null || idsSet.has(idNum));
-          return target ? { ...it, status: to as any } : it;
+          const target = from.includes(it.status || "") && (idsSet == null || idsSet.has(idNum));
+          return target ? { ...it, status: to as any, podeRetirar: false, podeEntregar: to === "retirado" } : it;
         });
         const aindaPronto = itens.some((it) => it.status === "concluido");
         const tudoEntregue = itens.every((it) => it.status === "entregue");
@@ -687,13 +687,15 @@ if (typeof window !== "undefined") {
           endOpsMutation();
           await get().hydrateCozinha();
         }
-        emit(
-          get,
-          set,
-          "pedido-entregue",
-          `Pedido #${pedidoId} entregue`,
-          antes?.mesaNome
-        );
+        if (!etapa || etapa === "entregar") {
+          emit(
+            get,
+            set,
+            "pedido-entregue",
+            `Pedido #${pedidoId} entregue`,
+            antes?.mesaNome
+          );
+        }
         await get().hydrateCaixa().catch(() => null);
       } catch (e: any) {
         endOpsMutation();
