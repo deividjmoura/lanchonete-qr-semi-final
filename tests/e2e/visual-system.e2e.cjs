@@ -373,17 +373,32 @@ async function main() {
           await page.locator('[data-tab="deliveries"]').click();
           await page.locator("#readyOrders .order").first().waitFor();
           assert.equal(await page.locator("#readyOrders .order").count(), 2);
+          /* O acordeão é exclusivo: abrir um cartão fecha o outro. A leitura do
+             atributo espera o evento de clique ser processado pelo renderer —
+             ler logo depois do click() pode pegar o estado anterior. */
+          const esperarAria = async (indice, valor) => {
+            await page.waitForFunction(
+              ([i, v]) =>
+                document.querySelectorAll("#readyOrders .order-summary")[i]?.getAttribute("aria-expanded") === v,
+              [indice, valor],
+            );
+            const estado = await page
+              .locator("#readyOrders .order-summary")
+              .nth(indice)
+              .getAttribute("aria-expanded");
+            assert.equal(estado, valor);
+          };
           const firstSummary = page.locator("#readyOrders .order-summary").nth(0);
           const secondSummary = page.locator("#readyOrders .order-summary").nth(1);
           assert.equal(await firstSummary.getAttribute("aria-expanded"), "false");
           assert.equal(await secondSummary.getAttribute("aria-expanded"), "false");
           await firstSummary.click();
-          assert.equal(await firstSummary.getAttribute("aria-expanded"), "true");
+          await esperarAria(0, "true");
           await secondSummary.click();
-          assert.equal(await firstSummary.getAttribute("aria-expanded"), "false");
-          assert.equal(await secondSummary.getAttribute("aria-expanded"), "true");
+          await esperarAria(1, "true");
+          await esperarAria(0, "false");
           await secondSummary.click();
-          assert.equal(await secondSummary.getAttribute("aria-expanded"), "false");
+          await esperarAria(1, "false");
 
           for (const tab of ["orders", "deliveries", "billing", "tables"]) {
             await page.locator(`[data-tab="${tab}"]`).click();
