@@ -14,6 +14,7 @@ assert.strictEqual(process.env.NODE_ENV, 'test', 'NODE_ENV=test obrigatório');
 const pool = require('../db/pool');
 const { listGarcons, setGarcomAtivo, removerGarcom, getGarcomPorToken, assumirEntregaComoGarcom } = require('../db/garcons');
 const { iniciarAtendimentoGarcom, transferirMesaAdmin, metricasGarcons } = require('../db/atendimento');
+const { relatorioVendas } = require('../db/relatorio');
 
 const uid = () => randomUUID().slice(0, 8);
 const req = (tag) => `remocao-${tag}-${randomUUID()}`;
@@ -110,6 +111,11 @@ test('remover difere de desativar, invalida o link, audita e preserva autoria e 
     assert.equal(antes.vendas, 110);
     assert.equal(antes.atendimentos, 1);
     assert.equal(antes.ticketMedio, 110);
+    const relatorioAntes = await relatorioVendas({ from: '2026-10-30', to: '2026-10-30' });
+    const contaAntes = relatorioAntes.contas.find((conta) => conta.id === sessao.id);
+    const servicoAntes = relatorioAntes.porGarcom.find((linha) => linha.garcomId === g.id);
+    assert.deepEqual([contaAntes.garcomResponsavelId, contaAntes.garcomResponsavel, contaAntes.taxaServico], [g.id, g.nome, 10]);
+    assert.deepEqual([servicoAntes.contas, servicoAntes.vendasBrutas, servicoAntes.servicoTotal, servicoAntes.totalCobrado], [1, 100, 10, 110]);
     await assert.rejects(() => removerGarcom(g.id, caixa, f.request('negado')), (e) => e.status === 403);
     const desativar = f.request('desativar');
     await setGarcomAtivo(g.id, false, admin, desativar);
@@ -136,6 +142,11 @@ test('remover difere de desativar, invalida o link, audita e preserva autoria e 
     assert.deepEqual([depois.atendimentos, depois.vendas, depois.ticketMedio], [1, 110, 110]);
     assert.equal((await metricasGarcons({ data: '2026-10-29' })).garcons.some((x) => x.id === g.id), false,
       'removidos sem vendas na data não poluem o desempenho');
+    const relatorioDepois = await relatorioVendas({ from: '2026-10-30', to: '2026-10-30' });
+    assert.deepEqual(relatorioDepois.contas.find((conta) => conta.id === sessao.id), contaAntes,
+      'conta e responsável permanecem idênticos no relatório integrado');
+    assert.deepEqual(relatorioDepois.porGarcom.find((linha) => linha.garcomId === g.id), servicoAntes,
+      'vendas e taxa de serviço por garçom continuam atribuídas');
     const historico = (await pool.query(
       `SELECT s.garcom_responsavel_id,p.garcom_id,p.garcom_registrou_id,p.garcom_entregou_id,ip.entregue_por_id
        FROM mesa_sessoes s JOIN pedidos p ON p.sessao_id=s.id JOIN itens_pedido ip ON ip.pedido_id=p.id
