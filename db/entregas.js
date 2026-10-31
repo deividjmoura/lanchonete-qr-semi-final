@@ -32,14 +32,17 @@ async function movimentarEntrega(pedidoId,token,{itemIds=null,etapa='aceitar'}={
     if(!ctx)throw new ErroGarcom(404,'Pedido não encontrado');
     const {pedido,sessao,itens}=ctx;
     if(sessao.status!=='aberta')throw new ErroGarcom(409,'A sessão desta entrega não está mais aberta');
-    const candidatos=itens.filter(i=>ids?ids.includes(Number(i.id)):(etapa==='entrega_direta'?['concluido','aceito','retirado'].includes(i.status):i.status===origem));
+    const candidatos=itens.filter(i=>ids?ids.includes(Number(i.id)):
+      etapa==='entrega_direta'?['concluido','aceito','retirado'].includes(i.status):
+      etapa==='retirar'?(i.status==='concluido'||(i.status==='aceito'&&Number(i.aceito_por_id)===Number(garcom.id))):
+      i.status===origem);
     if(ids&&candidatos.length!==ids.length)throw new ErroGarcom(404,'Um ou mais itens não pertencem a este pedido');
     if(!candidatos.length)throw new ErroGarcom(409,'Nenhum item disponível para esta etapa; atualize a fila');
     for(const item of candidatos) {
       if(etapa==='aceitar'&&item.status!=='concluido')throw new ErroGarcom(409,'Outro garçom já assumiu estes itens ou eles não estão prontos');
       if(etapa==='retirar') {
-        if(item.status!=='aceito')throw new ErroGarcom(409,'O item precisa estar aceito antes da retirada');
-        if(Number(item.aceito_por_id)!==Number(garcom.id))throw new ErroGarcom(403,'Estes itens foram aceitos por outro garçom');
+        if(!['concluido','aceito'].includes(item.status))throw new ErroGarcom(409,'O item precisa estar pronto para retirada');
+        if(item.status==='aceito'&&Number(item.aceito_por_id)!==Number(garcom.id))throw new ErroGarcom(403,'Estes itens foram aceitos por outro garçom');
       }
       if(etapa==='entregar') {
         if(item.status!=='retirado')throw new ErroGarcom(409,'Retire os itens antes de confirmar a entrega');
@@ -66,7 +69,7 @@ async function movimentarEntrega(pedidoId,token,{itemIds=null,etapa='aceitar'}={
           (sessao_id,garcom_anterior_id,garcom_novo_id,alterado_por_id) VALUES ($1,NULL,$2,$2)`,[sessao.id,garcom.id]);
         await registrarEvento(client,{atorTipo:'garcom',atorId:garcom.id,atorNome:garcom.nome,
           acao:'mesa_assumida',alvoTipo:'mesa_sessao',alvoId:sessao.id,requestId,
-          contexto:{pedidoId:pid,origem:'aceite_itens',sessaoId:sessao.id}});
+          contexto:{pedidoId:pid,origem:etapa==='retirar'?'retirada_itens':'aceite_itens',sessaoId:sessao.id}});
       }
     }
     if(!atribuida) {
@@ -74,7 +77,16 @@ async function movimentarEntrega(pedidoId,token,{itemIds=null,etapa='aceitar'}={
       responsavelId=rows[0]?.id||null;responsavelNome=rows[0]?.nome||null;
     }
     const ator={tipo:'garcom',id:garcom.id,nome:garcom.nome};
-    for(const item of candidatos)await gravarStatusItem(client,item,destino,ator,requestId);
+    for(const item of candidatos) {
+      if(etapa==='retirar'&&item.status==='concluido') {
+        // O clique de retirada também assume o item. Os dois registros ficam
+        // na mesma transação/lock: nenhuma reserva intermediária é exposta.
+        await gravarStatusItem(client,item,'aceito',ator,requestId,'Aceite implícito na retirada');
+        await gravarStatusItem(client,{...item,status:'aceito'},'retirado',ator,requestId);
+      } else {
+        await gravarStatusItem(client,item,destino,ator,requestId);
+      }
+    }
     await client.query(`UPDATE pedidos SET garcom_id=COALESCE(garcom_id,$2),garcom_nome=COALESCE(garcom_nome,$3),
       claimed_at=COALESCE(claimed_at,now()) WHERE id=$1`,[pid,garcom.id,garcom.nome]);
     let valorEntregue=0;

@@ -2,6 +2,7 @@ const pool = require('./pool');
 const { numeroInteiroPositivo } = require('./validacao');
 const { comRetryConcorrencia } = require('./retry');
 const { registrarEvento } = require('./auditoria');
+const { limitePagina, validarPeriodo, criarCursor, lerCursor } = require('./paginacao');
 
 class ErroGarcom extends Error {
   constructor(status, message) {
@@ -148,11 +149,13 @@ async function getGarcomPorToken(token) {
   return rows[0] || null;
 }
 
-async function listPedidosRecentes({ limit = 50, offset = 0, ativos = false, from = null, to = null } = {}) {
-  const rawLimit = Number(limit);
-  const lim = Number.isFinite(rawLimit) ? Math.min(200, Math.max(1, Math.trunc(rawLimit))) : 50;
-  const rawOffset = Number(offset);
-  const off = Number.isFinite(rawOffset) ? Math.max(0, Math.trunc(rawOffset)) : 0;
+async function listPedidosRecentes({ limit = null, ativos = false, from = null, to = null, paginado = false, cursor = null } = {}) {
+  const rawLimit = limit == null ? 50 : Number(limit);
+  const lim = paginado ? limitePagina(limit, 10) :
+    (Number.isFinite(rawLimit) ? Math.min(200, Math.max(1, Math.trunc(rawLimit))) : 50);
+  if (paginado) ({ from, to } = validarPeriodo(from, to));
+  const filtros = [from, to, Boolean(ativos)];
+  const anterior = paginado ? lerCursor(cursor, 'pedidos', filtros) : null;
   const where = [];
   const params = [];
   let idx = 1;
@@ -172,23 +175,32 @@ async function listPedidosRecentes({ limit = 50, offset = 0, ativos = false, fro
     params.push(to);
     idx += 1;
   }
+  if (anterior) {
+    where.push(`(p.criado_em, p.id) < ($${idx}::timestamptz, $${idx + 1}::int)`);
+    params.push(anterior.data, anterior.id);
+    idx += 2;
+  }
 
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
-  params.push(lim, off);
+  params.push(paginado ? lim + 1 : lim);
 
-  const { rows: pedidos } = await pool.query(
+  const { rows: consultados } = await pool.query(
     `SELECT p.id, p.status, p.criado_em, p.cliente_nome, p.garcom_nome, p.claimed_at,
-            p.observacao_geral,
-            m.numero AS mesa
+            p.observacao_geral, m.numero AS mesa,
+            to_char(p.criado_em AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_data
      FROM pedidos p
      JOIN mesa_sessoes s ON s.id = p.sessao_id
      JOIN mesas m ON m.id = s.mesa_id
      ${whereSql}
-     ORDER BY p.criado_em DESC
-     LIMIT $${idx} OFFSET $${idx + 1}`,
+     ORDER BY p.criado_em DESC, p.id DESC
+     LIMIT $${idx}`,
     params
   );
-  if (!pedidos.length) return [];
+  const temMais = paginado && consultados.length > lim;
+  const pedidos = paginado ? consultados.slice(0, lim) : consultados;
+  const ultimo = pedidos[pedidos.length - 1];
+  const proximoCursor = temMais ? criarCursor('pedidos', ultimo.cursor_data, ultimo.id, filtros) : null;
+  if (!pedidos.length) return paginado ? { itens: [], proximoCursor: null } : [];
 
   const ids = pedidos.map((p) => p.id);
   const { rows: itensRows } = await pool.query(
@@ -257,7 +269,7 @@ async function listPedidosRecentes({ limit = 50, offset = 0, ativos = false, fro
     itensByPedido.get(item.pedido_id).push(packed);
   }
 
-  return pedidos.map((p) => {
+  const resultado = pedidos.map(({ cursor_data: _cursorData, ...p }) => {
     const itens = itensByPedido.get(p.id) || [];
     const totalPedido = itens.reduce((s, i) => s + i.totalLinha, 0);
     return {
@@ -266,6 +278,7 @@ async function listPedidosRecentes({ limit = 50, offset = 0, ativos = false, fro
       totalPedido: Number(totalPedido.toFixed(2)),
     };
   });
+  return paginado ? { itens: resultado, proximoCursor } : resultado;
 }
 
 module.exports = {

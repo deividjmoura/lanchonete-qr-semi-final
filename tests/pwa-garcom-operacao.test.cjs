@@ -71,7 +71,8 @@ test('pedidos diretos prontos ficam visíveis para todos e são assumidos uma ú
  const entregas=fs.readFileSync(path.join(root,'db/entregas.js'),'utf8');
  assert.match(entregas,/Outro garçom já assumiu estes itens/);
  assert.match(server,/assumir-entrega/);
- assert.match(app,/Aceitar item/);
+ assert.match(app,/Retirar item/);
+ assert.doesNotMatch(app,/Aceitar item/);
  assert.match(app,/Confirmar entrega/);
 });
 test('Service Worker não reaproveita shell anterior às correções',()=>{

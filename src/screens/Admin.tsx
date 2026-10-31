@@ -28,7 +28,9 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { OpsShell } from "../components/OpsShell";
+import { ControlesPaginacao, ListaLimitada, useLimiteLocal } from "../components/Paginacao";
 import { Badge, Btn, Input, Modal } from "../components/ui";
+import { usePaginacaoCursor } from "../hooks/usePaginacaoCursor";
 import { TrocarSenha } from "../components/TrocarSenha";
 import { ir } from "../router";
 import { api } from "../lib/api";
@@ -175,9 +177,9 @@ function Painel() {
   )
     ? dash.topProdutos
     : [];
-  const top =
+  const top: Array<Pick<Produto, "id" | "nome" | "vendidos" | "foto" | "setor">> =
     topApi.length > 0
-      ? topApi.slice(0, 5).map((t, i) => {
+      ? topApi.map((t, i) => {
           const prod = produtos.find((p) => p.nome === t.nome);
           return {
             id: prod?.id ?? i,
@@ -188,6 +190,7 @@ function Painel() {
           };
         })
       : [...produtos].sort((a, b) => (b.vendidos || 0) - (a.vendidos || 0)).slice(0, 5);
+  const topVisiveis = useLimiteLocal(top, 5);
   const maxTop = Math.max(1, ...top.map((p) => p.vendidos || 0));
 
   const semanaApi: { dia: string; label: string; faturamento: number; contas: number }[] =
@@ -320,12 +323,12 @@ function Painel() {
         </section>
 
         {/* Mais pedidos */}
-        <section className="rounded-md border border-line bg-surface-raised p-5 sm:p-6">
+        <section aria-label="Mais pedidos" className="rounded-md border border-line bg-surface-raised p-5 sm:p-6">
           <div className="flex items-center justify-between gap-2 pb-4 border-b border-dashed border-line-strong mb-4">
             <h2 className="font-display text-2xl font-bold tracking-tight text-text flex items-center gap-2">
               <Trophy size={20} weight="regular" className="text-accent-ink" /> Mais pedidos
             </h2>
-            <Badge tone="brass">Top 5</Badge>
+            <Badge tone="brass">Top {topVisiveis.itens.length}</Badge>
           </div>
 
           {top.length === 0 ? (
@@ -334,7 +337,7 @@ function Painel() {
             </p>
           ) : (
             <ul className="divide-y divide-line">
-              {top.map((p, i) => (
+              {topVisiveis.itens.map((p, i) => (
                 <li key={p.id ?? p.nome} className="py-3 first:pt-0 last:pb-0 flex items-center gap-3">
                   <img
                     src={p.foto || "/assets/demo/placeholder.webp"}
@@ -367,6 +370,7 @@ function Painel() {
               ))}
             </ul>
           )}
+          <ControlesPaginacao {...topVisiveis} />
         </section>
       </div>
     </div>
@@ -1655,22 +1659,29 @@ function Estoque() {
 
   const controlados = produtos.filter((p) => p.estoque !== null);
   const baixos = controlados.filter((p) => (p.estoque ?? 0) <= (p.estoqueMinimo ?? 0));
+  const gruposVisiveis = useLimiteLocal(grupos);
 
   return (
-    <div className="space-y-4">
+    <div role="region" aria-label="Estoque" className="space-y-4">
       {baixos.length > 0 && (
-        <div className="flex items-center gap-3 rounded-sm border border-status-danger-border bg-status-danger-surface px-4 py-3">
-          <WarningCircle size={18} weight="fill" className="text-status-danger-ink shrink-0" />
-          <p className="text-xs text-status-danger-ink">
-            <strong>
-              {baixos.length} {baixos.length === 1 ? "item" : "itens"} com estoque baixo:
-            </strong>{" "}
-            {baixos.map((x) => `${x.nome} (${x.estoque})`).join(" · ")}
-          </p>
-        </div>
+        <ListaLimitada itens={baixos} tamanho={5}>
+          {({ itens, temMais, expandida, carregarMais, recolher }) => (
+            <div className="rounded-sm border border-status-danger-border bg-status-danger-surface px-4 py-3">
+              <div className="flex items-center gap-3">
+                <WarningCircle size={18} weight="fill" className="text-status-danger-ink shrink-0" />
+                <p className="text-xs text-status-danger-ink">
+                  <strong>{baixos.length} {baixos.length === 1 ? "item" : "itens"} com estoque baixo:</strong>{" "}
+                  {itens.map((x) => `${x.nome} (${x.estoque})`).join(" · ")}
+                </p>
+              </div>
+              <ControlesPaginacao temMais={temMais} expandida={expandida} carregarMais={carregarMais} recolher={recolher} className="pt-2" />
+            </div>
+          )}
+        </ListaLimitada>
       )}
 
-      {grupos.map((g) => {
+      {grupos.length === 0 && <p className="text-sm text-text-muted py-6 text-center">Nenhum produto cadastrado no estoque.</p>}
+      {gruposVisiveis.itens.map((g) => {
         const open = abertas.has(g.id);
         const nCtrl = g.itens.filter((x) => x.estoque !== null).length;
         return (
@@ -1697,83 +1708,91 @@ function Estoque() {
               </Badge>
             </button>
             {open && (
-              <div className="border-t border-dashed border-line-strong divide-y divide-line">
-                {g.itens.map((p) => {
-                  const controla = p.estoque !== null;
-                  const q = p.estoque ?? 0;
-                  return (
-                    <div key={p.id} className="flex items-center gap-3 px-4 py-3">
-                      <img
-                        src={p.foto}
-                        alt=""
-                        className="size-11 rounded-sm border border-line object-cover shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-text truncate">{p.nome}</p>
-                        <p className="font-mono text-[11px] text-text-muted">
-                          {controla ? (
-                            <span
-                              className={
-                                q <= (p.estoqueMinimo ?? 0) ? "text-status-danger-ink font-bold" : "text-status-success-ink"
-                              }
-                            >
-                              {q} un.
-                            </span>
-                          ) : (
-                            "sem controle"
-                          )}
-                        </p>
-                      </div>
-                      {controla ? (
-                        <div className="flex flex-wrap gap-1.5 justify-end">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const n = pedirQtd(`Quantas unidades ENTRARAM?\n(atual: ${q})`, 10);
-                              if (n != null) setEstoque(p.id, q + n);
-                            }}
-                            className="min-h-9 px-2.5 rounded-sm bg-status-success-surface border border-status-success-border text-status-success-ink font-mono text-xs font-bold"
-                          >
-                            + entrada
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const n = pedirQtd("Definir estoque absoluto:", q);
-                              if (n != null) setEstoque(p.id, n);
-                            }}
-                            className="min-h-9 px-2.5 rounded-sm bg-surface-sunken border border-line text-text font-mono text-xs font-semibold"
-                          >
-                            definir
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEstoque(p.id, Math.max(0, q - 1))}
-                            className="min-h-9 px-2.5 rounded-sm bg-surface-sunken border border-line text-text-muted font-mono text-xs font-semibold"
-                          >
-                            −1
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const n = pedirQtd("Ativar estoque. Quantas unidades tem agora?", 20);
-                            if (n != null) ativar(p.id, n);
-                          }}
-                          className="min-h-9 px-3 rounded-sm border border-brand-border bg-brand-surface text-brand-ink font-mono text-xs font-bold"
-                        >
-                          Ativar + qtd
-                        </button>
-                      )}
+              <ListaLimitada itens={g.itens}>
+                {({ itens, temMais, expandida, carregarMais, recolher }) => (
+                  <>
+                    <div className="border-t border-dashed border-line-strong divide-y divide-line">
+                      {itens.map((p) => {
+                        const controla = p.estoque !== null;
+                        const q = p.estoque ?? 0;
+                        return (
+                          <div key={p.id} className="flex items-center gap-3 px-4 py-3">
+                            <img
+                              src={p.foto}
+                              alt=""
+                              className="size-11 rounded-sm border border-line object-cover shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-text truncate">{p.nome}</p>
+                              <p className="font-mono text-[11px] text-text-muted">
+                                {controla ? (
+                                  <span
+                                    className={
+                                      q <= (p.estoqueMinimo ?? 0) ? "text-status-danger-ink font-bold" : "text-status-success-ink"
+                                    }
+                                  >
+                                    {q} un.
+                                  </span>
+                                ) : (
+                                  "sem controle"
+                                )}
+                              </p>
+                            </div>
+                            {controla ? (
+                              <div className="flex flex-wrap gap-1.5 justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const n = pedirQtd(`Quantas unidades ENTRARAM?\n(atual: ${q})`, 10);
+                                    if (n != null) setEstoque(p.id, q + n);
+                                  }}
+                                  className="min-h-9 px-2.5 rounded-sm bg-status-success-surface border border-status-success-border text-status-success-ink font-mono text-xs font-bold"
+                                >
+                                  + entrada
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const n = pedirQtd("Definir estoque absoluto:", q);
+                                    if (n != null) setEstoque(p.id, n);
+                                  }}
+                                  className="min-h-9 px-2.5 rounded-sm bg-surface-sunken border border-line text-text font-mono text-xs font-semibold"
+                                >
+                                  definir
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEstoque(p.id, Math.max(0, q - 1))}
+                                  className="min-h-9 px-2.5 rounded-sm bg-surface-sunken border border-line text-text-muted font-mono text-xs font-semibold"
+                                >
+                                  −1
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const n = pedirQtd("Ativar estoque. Quantas unidades tem agora?", 20);
+                                  if (n != null) ativar(p.id, n);
+                                }}
+                                className="min-h-9 px-3 rounded-sm border border-brand-border bg-brand-surface text-brand-ink font-mono text-xs font-bold"
+                              >
+                                Ativar + qtd
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
+                    <ControlesPaginacao temMais={temMais} expandida={expandida} carregarMais={carregarMais} recolher={recolher} className="px-4 py-3 border-t border-line" />
+                  </>
+                )}
+              </ListaLimitada>
             )}
           </section>
         );
       })}
+      <ControlesPaginacao {...gruposVisiveis} />
     </div>
   );
 }
@@ -1795,7 +1814,6 @@ function Relatorio() {
   // (PDF/CSV); Comprovantes recentes = últimas contas encerradas, com
   // atualização automática. O documento impresso é o mesmo nas duas visões.
   const [vista, setVista] = useState<"resumo" | "comprovantes">("resumo");
-  const [contasVisiveis, setContasVisiveis] = useState(10);
 
   const buscar = async (f: string = from, t: string = to) => {
     setLoading(true);
@@ -1816,16 +1834,17 @@ function Relatorio() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    setContasVisiveis(10);
-  }, [data]);
-
   const resumo = data?.resumo || {};
   const contas = Array.isArray(data?.contas) ? data.contas : [];
   const porDia = Array.isArray(data?.porDia) ? data.porDia : [];
   const porGarcom = Array.isArray(data?.porGarcom) ? data.porGarcom : [];
   const porForma = resumo.porFormaPagamento || {};
   const top = Array.isArray(resumo.topProdutos) ? resumo.topProdutos : [];
+  // Apenas a renderização é limitada; CSV/PDF continuam usando o relatório recebido inteiro.
+  const diasVisiveis = useLimiteLocal(porDia, 10, data);
+  const garconsVisiveis = useLimiteLocal(porGarcom, 10, data);
+  const topVisiveis = useLimiteLocal(top, 5, data);
+  const contasVisiveis = useLimiteLocal(contas, 10, data);
   const faturamento = Number(resumo.faturamento ?? 0);
   const qtdContas = Number(resumo.contasFechadas ?? contas.length);
   const ticket = Number(resumo.ticketMedio ?? (qtdContas ? faturamento / qtdContas : 0));
@@ -2053,7 +2072,7 @@ function Relatorio() {
       )}
 
       {porDia.length > 0 && (
-        <section className="rounded-md border border-line bg-surface-raised p-5 overflow-x-auto">
+        <section aria-label="Relatório por dia" className="rounded-md border border-line bg-surface-raised p-5 overflow-x-auto">
           <h3 className="font-display text-xl font-bold tracking-tight text-text mb-3">
             Por dia
           </h3>
@@ -2069,7 +2088,7 @@ function Relatorio() {
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {porDia.map((d: any) => (
+              {diasVisiveis.itens.map((d: any) => (
                 <tr key={d.dia}>
                   <td className="py-2.5 pr-3 font-mono text-xs text-text">{d.dia}</td>
                   <td className="py-2.5 pr-3 font-mono text-xs text-text-muted">{d.contas}</td>
@@ -2089,11 +2108,12 @@ function Relatorio() {
               ))}
             </tbody>
           </table>
+          <ControlesPaginacao {...diasVisiveis} />
         </section>
       )}
 
       {porGarcom.length > 0 && (
-        <section className="rounded-md border border-line bg-surface-raised p-5 overflow-x-auto">
+        <section aria-label="Serviço por garçom" className="rounded-md border border-line bg-surface-raised p-5 overflow-x-auto">
           <h3 className="font-display text-xl font-bold tracking-tight text-text mb-1">
             Serviço por garçom responsável
           </h3>
@@ -2112,7 +2132,7 @@ function Relatorio() {
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {porGarcom.map((g: any) => (
+              {garconsVisiveis.itens.map((g: any) => (
                 <tr key={String(g.garcomId ?? "sem-responsavel")}>
                   <td className="py-2.5 pr-3 text-text">{g.garcomNome || "—"}</td>
                   <td className="py-2.5 pr-3 font-mono text-xs text-text-muted">{g.contas}</td>
@@ -2132,16 +2152,17 @@ function Relatorio() {
               ))}
             </tbody>
           </table>
+          <ControlesPaginacao {...garconsVisiveis} />
         </section>
       )}
 
       {top.length > 0 && (
-        <section className="rounded-md border border-line bg-surface-raised p-5">
+        <section aria-label="Top produtos do relatório" className="rounded-md border border-line bg-surface-raised p-5">
           <h3 className="font-display text-xl font-bold tracking-tight text-text mb-3">
             Top produtos
           </h3>
           <ul className="divide-y divide-line">
-            {top.slice(0, 10).map((p: any, i: number) => (
+            {topVisiveis.itens.map((p: any, i: number) => (
               <li key={p.id || i} className="flex justify-between text-sm py-2">
                 <span className="text-text truncate pr-2">
                   <span className="font-mono text-xs text-brand-ink mr-1.5">#{i + 1}</span>
@@ -2153,10 +2174,11 @@ function Relatorio() {
               </li>
             ))}
           </ul>
+          <ControlesPaginacao {...topVisiveis} />
         </section>
       )}
 
-      <section className="rounded-md border border-line bg-surface-raised p-5 overflow-x-auto">
+      <section aria-label="Contas fechadas do relatório" className="rounded-md border border-line bg-surface-raised p-5 overflow-x-auto">
         <h3 className="font-display text-xl font-bold tracking-tight text-text mb-3">
           Contas fechadas
         </h3>
@@ -2178,7 +2200,7 @@ function Relatorio() {
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {contas.slice(0, contasVisiveis).map((c: any) => (
+              {contasVisiveis.itens.map((c: any) => (
                 <tr key={c.id}>
                   <td className="py-2.5 pr-2 font-mono text-xs text-text-muted">{c.id}</td>
                   <td className="py-2.5 pr-2 font-mono text-xs text-text">{c.mesa}</td>
@@ -2216,20 +2238,11 @@ function Relatorio() {
             </tbody>
           </table>
         )}
-        {contas.length > 0 && (
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <span className="text-xs text-text-muted">
-              Mostrando {Math.min(contasVisiveis, contas.length)} de {contas.length}{" "}
-              {contas.length === 1 ? "conta" : "contas"}
-            </span>
-            {contasVisiveis < contas.length ? (
-              <Btn size="sm" variant="secondary" onClick={() => setContasVisiveis((v) => v + 10)}>
-                Carregar mais
-              </Btn>
-            ) : contas.length > 10 ? (
-              <span className="text-xs text-text-muted">Fim da lista — {contas.length} contas</span>
-            ) : null}
-          </div>
+        <ControlesPaginacao {...contasVisiveis} />
+        {qtdContas > contas.length && (
+          <p role="status" className="pt-3 text-xs text-text-muted">
+            O relatório detalha as {contas.length} contas mais recentes de {qtdContas} no período. As linhas do CSV/PDF e a divisão por garçom cobrem apenas essas contas.
+          </p>
         )}
       </section>
       </>
@@ -2308,38 +2321,22 @@ function pedidoFromHistorico(p: any): Pedido {
   };
 }
 
-const HIST_POR_PAGINA = 15;
-
-function HistoricoPedidos({
-  histFrom,
-  setHistFrom,
-  histTo,
-  setHistTo,
-  hist,
-  histMsg,
-  busy,
-  onBuscar,
-  temMais,
-  carregandoMais,
-  onCarregarMais,
-}: {
+function HistoricoPedidos({ histFrom, setHistFrom, histTo, setHistTo }: {
   histFrom: string;
   setHistFrom: (v: string) => void;
   histTo: string;
   setHistTo: (v: string) => void;
-  hist: any[];
-  histMsg: string | null;
-  busy: boolean;
-  onBuscar: () => void;
-  temMais: boolean;
-  carregandoMais: boolean;
-  onCarregarMais: () => void;
 }) {
   const [aberto, setAberto] = useState<number | null>(null);
+  const [filtros, setFiltros] = useState(() => ({ from: histFrom, to: histTo }));
+  const buscar = useCallback((cursor: string | null) =>
+    api.adminPedidosPagina(filtros.from, filtros.to, cursor), [filtros]);
+  const pagina = usePaginacaoCursor(buscar);
   const toggle = (id: number) => setAberto((cur) => (cur === id ? null : id));
+  const ocupada = pagina.carregando || pagina.carregandoMais;
 
   return (
-    <section className="rounded-md border border-line bg-surface-raised p-5">
+    <section aria-label="Histórico de pedidos" className="rounded-md border border-line bg-surface-raised p-5">
       <div className="flex flex-wrap items-end justify-between gap-3 pb-4 border-b border-dashed border-line-strong">
         <div>
           <h3 className="font-display text-2xl font-bold tracking-tight text-text">
@@ -2370,19 +2367,28 @@ function HistoricoPedidos({
               className="mt-1 block h-10 rounded-sm bg-surface-sunken border border-line-strong px-3 text-xs text-text"
             />
           </label>
-          <Btn size="sm" disabled={busy} onClick={onBuscar}>
+          <Btn size="sm" disabled={ocupada} onClick={() => {
+            setAberto(null);
+            setFiltros({ from: histFrom, to: histTo });
+          }}>
             Buscar
           </Btn>
         </div>
       </div>
 
-      {histMsg && <p className="mt-3 font-mono text-xs text-text-muted">{histMsg}</p>}
+      {pagina.erro && <p role="alert" className="mt-3 text-xs text-status-danger-ink">{pagina.erro}</p>}
+      {!pagina.erro && !pagina.carregando && pagina.itens.length > 0 && (
+        <p role="status" className="mt-3 font-mono text-xs text-text-muted">
+          {pagina.itens.length} pedido(s) carregado(s){pagina.temMais ? " · há mais registros" : " · fim da lista"}
+        </p>
+      )}
 
-      <div className="mt-4 max-h-[28rem] overflow-y-auto divide-y divide-line border-t border-line">
-        {hist.length === 0 && !busy && (
+      <div aria-busy={ocupada} className="mt-4 max-h-[28rem] overflow-y-auto divide-y divide-line border-t border-line">
+        {pagina.carregando && <p role="status" className="text-sm text-text-muted py-6 text-center">Carregando pedidos…</p>}
+        {pagina.itens.length === 0 && !ocupada && !pagina.erro && (
           <p className="text-sm text-text-muted py-6 text-center">Nenhum pedido neste período.</p>
         )}
-        {hist.map((p: any) => {
+        {pagina.itens.map((p: any) => {
           const id = Number(p.id);
           const isOpen = aberto === id;
           const itens = Array.isArray(p.itens) ? p.itens : [];
@@ -2440,47 +2446,54 @@ function HistoricoPedidos({
                   {itens.length === 0 ? (
                     <p className="text-xs text-text-muted">Sem itens neste registro.</p>
                   ) : (
-                    <ul className="space-y-1.5">
-                      {itens.map((it: any, idx: number) => (
-                        <li
-                          key={it.id ?? idx}
-                          className="flex items-start justify-between gap-2 text-xs"
-                        >
-                          <div className="min-w-0">
-                            <span className="font-semibold text-text">
-                              <span className="font-mono text-brand-ink">
-                                {it.quantidade || 1}×
-                              </span>{" "}
-                              {it.nome}
-                            </span>
-                            {Array.isArray(it.adicionais) && it.adicionais.length > 0 && (
-                              <p className="text-[11px] text-status-success-ink">
-                                + {it.adicionais.map((a: any) => a.nome || a).join(", ")}
-                              </p>
-                            )}
-                            {Array.isArray(it.remocoes) && it.remocoes.length > 0 && (
-                              <p className="text-[11px] text-status-danger-ink">
-                                sem {it.remocoes.join(", ")}
-                              </p>
-                            )}
-                            {it.ponto_carne && (
-                              <p className="text-[11px] text-text-muted">ponto: {it.ponto_carne}</p>
-                            )}
-                            {it.observacao && (
-                              <p className="text-[11px] text-text-muted">obs: {it.observacao}</p>
-                            )}
-                          </div>
-                          <span className="font-mono text-xs text-text shrink-0">
-                            {BRL(
-                              Number(
-                                it.totalLinha ??
-                                  Number(it.preco_unitario || 0) * (it.quantidade || 1),
-                              ),
-                            )}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+                    <ListaLimitada itens={itens}>
+                      {({ itens: visiveis, temMais, expandida, carregarMais, recolher }) => (
+                        <>
+                          <ul className="space-y-1.5">
+                            {visiveis.map((it: any, idx: number) => (
+                              <li
+                                key={it.id ?? idx}
+                                className="flex items-start justify-between gap-2 text-xs"
+                              >
+                                <div className="min-w-0">
+                                  <span className="font-semibold text-text">
+                                    <span className="font-mono text-brand-ink">
+                                      {it.quantidade || 1}×
+                                    </span>{" "}
+                                    {it.nome}
+                                  </span>
+                                  {Array.isArray(it.adicionais) && it.adicionais.length > 0 && (
+                                    <p className="text-[11px] text-status-success-ink">
+                                      + {it.adicionais.map((a: any) => a.nome || a).join(", ")}
+                                    </p>
+                                  )}
+                                  {Array.isArray(it.remocoes) && it.remocoes.length > 0 && (
+                                    <p className="text-[11px] text-status-danger-ink">
+                                      sem {it.remocoes.join(", ")}
+                                    </p>
+                                  )}
+                                  {it.ponto_carne && (
+                                    <p className="text-[11px] text-text-muted">ponto: {it.ponto_carne}</p>
+                                  )}
+                                  {it.observacao && (
+                                    <p className="text-[11px] text-text-muted">obs: {it.observacao}</p>
+                                  )}
+                                </div>
+                                <span className="font-mono text-xs text-text shrink-0">
+                                  {BRL(
+                                    Number(
+                                      it.totalLinha ??
+                                        Number(it.preco_unitario || 0) * (it.quantidade || 1),
+                                    ),
+                                  )}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                          <ControlesPaginacao temMais={temMais} expandida={expandida} carregarMais={carregarMais} recolher={recolher} className="pt-2" />
+                        </>
+                      )}
+                    </ListaLimitada>
                   )}
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-dashed border-line">
                     <Btn
@@ -2508,110 +2521,27 @@ function HistoricoPedidos({
           );
         })}
       </div>
-      {temMais && (
-        <div className="mt-4">
-          <Btn size="sm" variant="secondary" disabled={carregandoMais} onClick={onCarregarMais}>
-            {carregandoMais ? "Carregando…" : "Carregar mais"}
-          </Btn>
-        </div>
-      )}
-      {!temMais && hist.length >= HIST_POR_PAGINA && (
-        <p className="mt-4 text-xs text-text-muted">Fim da lista</p>
-      )}
+      <ControlesPaginacao temMais={pagina.temMais} expandida={pagina.expandida}
+        carregarMais={() => void pagina.carregarMais()} recolher={pagina.recolher}
+        carregando={pagina.carregandoMais} disabled={pagina.carregando} />
     </section>
   );
 }
 
-type ComprovanteResumo = {
-  id: number;
-  mesa: number;
-  clienteNome: string | null;
-  total: number;
-  fechadaEm: string;
-};
-
 function ComprovantesRecentes() {
-  const POR_PAGINA = 5;
-  const [comprovantes, setComprovantes] = useState<ComprovanteResumo[]>([]);
-  const [temMais, setTemMais] = useState(false);
-  const [carregandoMais, setCarregandoMais] = useState(false);
-  const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState<string | null>(null);
+  const buscar = useCallback((cursor: string | null) => api.comprovantesPagina(cursor), []);
+  const pagina = usePaginacaoCursor(buscar, 20000);
+  const [erroImpressao, setErroImpressao] = useState<string | null>(null);
   const [imprimindo, setImprimindo] = useState<number | null>(null);
-  const montado = useRef(false);
-  const sequencia = useRef(0);
-  const carregadosRef = useRef(0);
-  // Geração da lista: o "Carregar mais" incrementa ao concluir o append para
-  // invalidar um `atualizar` em voo (que traria só a janela antiga e perderia a
-  // página nova). O inverso não vale: o polling NÃO pode cancelar o append do
-  // usuário — por isso `carregarMais` não toca em `sequencia`.
-  const geracao = useRef(0);
-  const carregandoMaisRef = useRef(false);
-
-  const atualizar = useCallback(async (silencioso = false) => {
-    const pedido = ++sequencia.current;
-    const ger = geracao.current;
-    if (!silencioso) setCarregando(true);
-    // Recarrega a janela já aberta (mínimo uma página) para o polling/atualização
-    // manual não perder o progresso do "Carregar mais" nem duplicar itens.
-    const janela = Math.max(carregadosRef.current, POR_PAGINA);
-    try {
-      const rows = await api.comprovantesRecentes({ limit: janela, offset: 0 });
-      if (!montado.current || pedido !== sequencia.current || ger !== geracao.current) return;
-      carregadosRef.current = rows.length;
-      setComprovantes(rows);
-      setTemMais(rows.length >= janela);
-      setErro(null);
-    } catch (e) {
-      if (!montado.current || pedido !== sequencia.current || ger !== geracao.current) return;
-      setErro(e instanceof Error ? e.message : "Falha ao carregar comprovantes.");
-    } finally {
-      if (montado.current && pedido === sequencia.current) setCarregando(false);
-    }
-  }, []);
-
-  const carregarMais = useCallback(async () => {
-    if (carregandoMaisRef.current) return;
-    carregandoMaisRef.current = true;
-    setCarregandoMais(true);
-    try {
-      const rows = await api.comprovantesRecentes({
-        limit: POR_PAGINA,
-        offset: carregadosRef.current,
-      });
-      if (!montado.current) return;
-      geracao.current++;
-      carregadosRef.current += rows.length;
-      setComprovantes((prev) => [...prev, ...rows]);
-      setTemMais(rows.length === POR_PAGINA);
-      setErro(null);
-    } catch (e) {
-      if (!montado.current) return;
-      setErro(e instanceof Error ? e.message : "Falha ao carregar comprovantes.");
-    } finally {
-      carregandoMaisRef.current = false;
-      if (montado.current) setCarregandoMais(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    montado.current = true;
-    void atualizar();
-    const timer = window.setInterval(() => void atualizar(true), 20000);
-    return () => {
-      montado.current = false;
-      sequencia.current++;
-      window.clearInterval(timer);
-    };
-  }, [atualizar]);
+  const ocupada = pagina.carregando || pagina.carregandoMais || pagina.verificando;
 
   const imprimir = async (id: number) => {
     setImprimindo(id);
-    setErro(null);
+    setErroImpressao(null);
     try {
       imprimirComprovanteConsumo(await api.comprovanteSessaoAdmin(id));
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Falha ao imprimir comprovante.");
+      setErroImpressao(e instanceof Error ? e.message : "Falha ao imprimir comprovante.");
     } finally {
       setImprimindo(null);
     }
@@ -2624,13 +2554,18 @@ function ComprovantesRecentes() {
           <h3 className="font-display text-xl font-bold tracking-tight text-text">Comprovantes recentes</h3>
           <p className="text-xs text-text-muted mt-0.5">Reimpressão de consumo e pagamentos das últimas contas encerradas</p>
         </div>
-        <Btn size="sm" variant="secondary" disabled={carregando} onClick={() => void atualizar()}>
-          {carregando ? "Atualizando…" : "Atualizar"}
+        <Btn size="sm" variant="secondary" disabled={ocupada} onClick={() => void pagina.atualizar()}>
+          {pagina.carregando ? "Atualizando…" : "Atualizar"}
         </Btn>
       </div>
-      {erro && <p role="alert" className="px-5 py-3 text-sm text-status-danger-ink">{erro}</p>}
-      <div className="divide-y divide-line" aria-busy={carregando}>
-        {comprovantes.map((c) => (
+      {(pagina.erro || erroImpressao) && <p role="alert" className="px-5 py-3 text-sm text-status-danger-ink">{pagina.erro || erroImpressao}</p>}
+      {pagina.alterado && (
+        <p role="status" className="px-5 py-3 text-sm text-brand-ink">
+          Há alterações nos comprovantes recentes. Atualize para voltar ao início da lista.
+        </p>
+      )}
+      <div className="divide-y divide-line" aria-busy={ocupada}>
+        {pagina.itens.map((c) => (
           <div key={c.id} className="flex flex-wrap items-center gap-3 justify-between px-5 py-3">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-text">
@@ -2643,19 +2578,17 @@ function ComprovantesRecentes() {
             </Btn>
           </div>
         ))}
-        {!carregando && !erro && !comprovantes.length && (
+        {pagina.carregando && !pagina.itens.length && <p role="status" className="text-xs text-text-muted px-5 py-6 text-center">Carregando comprovantes…</p>}
+        {!ocupada && !pagina.erro && !pagina.itens.length && (
           <p className="text-xs text-text-muted px-5 py-6 text-center">Nenhuma conta encerrada recentemente.</p>
         )}
       </div>
-      {temMais && (
-        <div className="px-5 py-4 border-t border-line">
-          <Btn size="sm" variant="secondary" disabled={carregandoMais} onClick={() => void carregarMais()}>
-            {carregandoMais ? "Carregando…" : "Carregar mais"}
-          </Btn>
-        </div>
-      )}
-      {!temMais && comprovantes.length >= POR_PAGINA && (
-        <p className="px-5 py-3 border-t border-line text-xs text-text-muted">Fim da lista</p>
+      <ControlesPaginacao temMais={pagina.temMais} expandida={pagina.expandida}
+        carregarMais={() => void pagina.carregarMais()} recolher={pagina.recolher}
+        carregando={pagina.carregandoMais} disabled={pagina.carregando || pagina.verificando}
+        className="px-5 py-4 border-t border-line" />
+      {!pagina.temMais && !ocupada && !pagina.erro && pagina.itens.length > 0 && (
+        <p role="status" className="px-5 py-3 text-xs text-text-muted">Fim da lista de comprovantes.</p>
       )}
     </section>
   );
@@ -2673,10 +2606,6 @@ function Funcoes() {
     return dataLocal(d);
   });
   const [histTo, setHistTo] = useState(() => dataLocal());
-  const [hist, setHist] = useState<any[]>([]);
-  const [histMsg, setHistMsg] = useState<string | null>(null);
-  const [histTemMais, setHistTemMais] = useState(false);
-  const [histCarregandoMais, setHistCarregandoMais] = useState(false);
   const [purgeBefore, setPurgeBefore] = useState("");
   const [purgeMsg, setPurgeMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -2688,47 +2617,6 @@ function Funcoes() {
     { id: "senhas" as const, label: "Senhas", Icon: Key },
     { id: "purge" as const, label: "Limpar", Icon: Trash },
   ];
-
-  const buscarHist = async () => {
-    setBusy(true);
-    setHistMsg(null);
-    try {
-      const rows = await api.adminPedidos(histFrom, histTo, undefined, {
-        limit: HIST_POR_PAGINA,
-        offset: 0,
-      });
-      const lista = Array.isArray(rows) ? rows : [];
-      setHist(lista);
-      setHistTemMais(lista.length === HIST_POR_PAGINA);
-      setHistMsg(`Mostrando ${lista.length} pedido(s)`);
-    } catch (e: any) {
-      setHist([]);
-      setHistTemMais(false);
-      setHistMsg(e.message || "Erro ao buscar histórico");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const carregarMaisHist = async () => {
-    if (histCarregandoMais) return;
-    setHistCarregandoMais(true);
-    try {
-      const rows = await api.adminPedidos(histFrom, histTo, undefined, {
-        limit: HIST_POR_PAGINA,
-        offset: hist.length,
-      });
-      const lista = Array.isArray(rows) ? rows : [];
-      const total = hist.length + lista.length;
-      setHist((prev) => [...prev, ...lista]);
-      setHistTemMais(lista.length === HIST_POR_PAGINA);
-      setHistMsg(`Mostrando ${total} pedido(s)`);
-    } catch (e: any) {
-      setHistMsg(e.message || "Erro ao carregar mais pedidos");
-    } finally {
-      setHistCarregandoMais(false);
-    }
-  };
 
   const previewPurge = async () => {
     if (!purgeBefore) {
@@ -2835,13 +2723,6 @@ function Funcoes() {
           setHistFrom={setHistFrom}
           histTo={histTo}
           setHistTo={setHistTo}
-          hist={hist}
-          histMsg={histMsg}
-          busy={busy}
-          onBuscar={() => void buscarHist()}
-          temMais={histTemMais}
-          carregandoMais={histCarregandoMais}
-          onCarregarMais={() => void carregarMaisHist()}
         />
       )}
       {sub === "purge" && (

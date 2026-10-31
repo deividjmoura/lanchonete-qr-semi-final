@@ -168,12 +168,15 @@ function CardPronto({
   const reduceMotion = useReducedMotion();
   const esfriando = Date.now() - pedido.criadoEm > 1000 * 60 * 25;
   const prontos = pedido.itens.filter((i) => i.status === "concluido");
-  const aceitos = pedido.itens.filter((i) => i.status === "aceito");
-  const retirados = pedido.itens.filter((i) => i.status === "retirado");
+  const podeRetirar = (i: Pedido["itens"][number]) =>
+    i.status === "concluido" ? i.podeRetirar !== false : i.status === "aceito" && i.podeRetirar === true;
+  const podeEntregar = (i: Pedido["itens"][number]) => i.status === "retirado" && i.podeEntregar === true;
+  const retiraveis = pedido.itens.filter(podeRetirar);
+  const retirados = pedido.itens.filter(podeEntregar);
   const aindaProducao = pedido.itens.filter(
     (i) => i.status === "recebido" || i.status === "em_producao",
   );
-  const idsProntos = prontos.map((i) => Number(i.id)).filter((n) => Number.isFinite(n) && n > 0);
+  const idsRetiraveis = retiraveis.map((i) => Number(i.id)).filter((n) => Number.isFinite(n) && n > 0);
 
   return (
     <motion.article
@@ -226,23 +229,15 @@ function CardPronto({
                 )}
               </span>
               <span className={"shrink-0 font-mono text-[11px] font-bold uppercase " + st.tone}>
-                {i.status === "concluido" ? (
-                  <button
-                    type="button"
-                    className="underline"
-                    onClick={() => onEntregar([Number(i.id)], "aceitar")}
-                  >
-                    Aceitar item
-                  </button>
-                ) : i.status === "aceito" ? (
+                {podeRetirar(i) ? (
                   <button
                     type="button"
                     className="underline"
                     onClick={() => onEntregar([Number(i.id)], "retirar")}
                   >
-                    Retirei
+                    Retirar item
                   </button>
-                ) : i.status === "retirado" ? (
+                ) : podeEntregar(i) ? (
                   <button
                     type="button"
                     className="underline"
@@ -266,19 +261,9 @@ function CardPronto({
       )}
 
       <div className="px-4 pb-4 pt-2 border-t border-line space-y-2">
-        {idsProntos.length > 0 && (
-          <Btn full size="md" variant="sage" onClick={() => onEntregar(idsProntos, "aceitar")}>
-            {`Aceitar prontos (${idsProntos.length})`}
-          </Btn>
-        )}
-        {aceitos.length > 0 && (
-          <Btn
-            full
-            size="md"
-            variant="outline"
-            onClick={() => onEntregar(aceitos.map((i) => Number(i.id)), "retirar")}
-          >
-            Retirei aceitos ({aceitos.length})
+        {idsRetiraveis.length > 0 && (
+          <Btn full size="md" variant="sage" onClick={() => onEntregar(idsRetiraveis, "retirar")}>
+            {`Retirar todos (${idsRetiraveis.length})`}
           </Btn>
         )}
         {retirados.length > 0 && (

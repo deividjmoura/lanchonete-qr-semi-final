@@ -1,5 +1,14 @@
 /** Cliente HTTP para a API Node (server.js). credentials: include para cookie de staff. */
 
+export type Pagina<T> = { itens: T[]; proximoCursor: string | null };
+export type ComprovanteResumo = {
+  id: number;
+  mesa: number;
+  fechadaEm: string | null;
+  clienteNome: string | null;
+  total: number;
+};
+
 let csrfToken: string | null = null;
 
 /**
@@ -206,12 +215,12 @@ export const api = {
     apiSend(`/api/garcom/${token}/pedidos/${pedidoId}/entregar`, "POST", { ...(itemIds?.length ? { itemIds } : {}), ...(etapa ? { etapa } : {}) }),
 
   caixaSessoes: () => apiGet<any[]>("/api/caixa/sessoes"),
-  comprovantesRecentes: (pagina?: { limit?: number; offset?: number }) => {
-    const q = new URLSearchParams();
-    if (pagina?.limit != null) q.set("limit", String(pagina.limit));
-    if (pagina?.offset != null) q.set("offset", String(pagina.offset));
-    const s = q.toString();
-    return apiGet<Array<{id:number;mesa:number;fechadaEm:string;clienteNome:string|null;total:number}>>(`/api/caixa/comprovantes${s ? `?${s}` : ""}`);
+  // A versão legada segue retornando array; a UI do Admin usa cursores reais.
+  comprovantesRecentes: () => apiGet<ComprovanteResumo[]>("/api/caixa/comprovantes"),
+  comprovantesPagina: (cursor: string | null = null) => {
+    const q = new URLSearchParams({ paginado: "1", limit: "5" });
+    if (cursor) q.set("cursor", cursor);
+    return apiGet<Pagina<ComprovanteResumo>>(`/api/caixa/comprovantes?${q}`);
   },
   comprovanteSessao: (id: number) => apiGet<any>(`/api/caixa/sessoes/${id}/comprovante`),
   comprovanteSessaoAdmin: (id: number) => apiGet<any>(`/api/admin/sessoes/${id}/comprovante`),
@@ -274,15 +283,20 @@ export const api = {
   },
   adminRelatorio: (from: string, to: string) =>
     apiGet<any>(`/api/admin/relatorio?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
-  adminPedidos: (from?: string, to?: string, ativos?: boolean, pagina?: { limit?: number; offset?: number }) => {
+  adminPedidos: (from?: string, to?: string, ativos?: boolean) => {
     const q = new URLSearchParams();
     if (from) q.set("from", from);
     if (to) q.set("to", to);
     if (ativos) q.set("ativos", "1");
-    if (pagina?.limit != null) q.set("limit", String(pagina.limit));
-    if (pagina?.offset != null) q.set("offset", String(pagina.offset));
     const s = q.toString();
     return apiGet<any[]>(`/api/admin/pedidos${s ? `?${s}` : ""}`);
+  },
+  adminPedidosPagina: (from: string, to: string, cursor: string | null = null) => {
+    const q = new URLSearchParams({ paginado: "1", limit: "10" });
+    if (from) q.set("from", from);
+    if (to) q.set("to", to);
+    if (cursor) q.set("cursor", cursor);
+    return apiGet<Pagina<any>>(`/api/admin/pedidos?${q}`);
   },
   purgeHistorico: (body: { before: string; confirm?: boolean; dryRun?: boolean }) =>
     apiSend<any>("/api/admin/historico/purge", "POST", body),

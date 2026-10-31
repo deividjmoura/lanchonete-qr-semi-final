@@ -293,6 +293,8 @@ export function mapCozinhaPedidos(rows: any[]): Pedido[] {
         escolha: null,
         obs: String(it.observacao || ""),
         totalUnit: precoBase + adds.reduce((s: number, a: any) => s + a.preco, 0),
+        podeRetirar: typeof it.podeRetirar === "boolean" ? it.podeRetirar : undefined,
+        podeEntregar: typeof it.podeEntregar === "boolean" ? it.podeEntregar : undefined,
         status: (["recebido","em_producao","concluido","aceito","retirado","entregue","cancelado"].includes(String(it.status || ""))
           ? (String(it.status) as any)
           : "recebido"),

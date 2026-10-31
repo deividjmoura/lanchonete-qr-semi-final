@@ -358,7 +358,7 @@ describe('4. Status, Entrega Parcial e Fechamento', () => {
     } finally { restore(); }
   });
 
-  test('etapas fora de ordem são recusadas: não entrega sem retirar, não retira sem aceitar', async () => {
+  test('retirar assume o item automaticamente, mas entregar antes de retirar é recusado', async () => {
     const { criarEstado, install } = require('./helpers/fake-pool-itens.cjs');
     const token = '44444444-4444-4000-8000-444444444444';
     const estado = criarEstado({
@@ -369,14 +369,16 @@ describe('4. Status, Entrega Parcial e Fechamento', () => {
     });
     const restore = install(pool, estado);
     try {
-      await assert.rejects(() => entregarComoGarcom(20, token, [201], null, 'retirar'), e => e.status === 409);
       await assert.rejects(() => entregarComoGarcom(20, token, [201], null, 'entregar'), e => e.status === 409);
       assert.equal(estado.itens[0].status, 'concluido');
       const { retirarComoGarcom } = require('../db/garcons');
-      await entregarComoGarcom(20, token, [201], null, 'aceitar');
-      assert.equal(estado.itens[0].status, 'aceito');
       await retirarComoGarcom(20, token, null, [201]);
       assert.equal(estado.itens[0].status, 'retirado');
+      assert.equal(estado.itens[0].aceito_por_id, 2);
+      assert.equal(estado.itens[0].retirado_por_id, 2);
+      assert.deepEqual(estado.historico.filter((h) => h.tipo === 'item').map((h) => [h.de, h.para]), [
+        ['concluido', 'aceito'], ['aceito', 'retirado'],
+      ]);
       assert.equal(estado.sessao.valor_total, 0, 'retirado ainda não é cobrável');
       await entregarComoGarcom(20, token, [201], null, 'entregar');
       assert.equal(estado.itens[0].status, 'entregue');

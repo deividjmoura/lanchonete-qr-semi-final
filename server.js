@@ -71,7 +71,7 @@ const { ErroAtendimento, transferirMesaAdmin, listarMesasGarcom, iniciarAtendime
 const { normalizarChavePix, inspecionarChavePix } = require('./db/pix-normaliza');
 const { subscribe, broadcast } = require('./db/events');
 const pool = require('./db/pool');
-const { comprovanteSessao, listarComprovantesRecentes, ErroComprovante } = require('./db/comprovante');
+const { comprovanteSessao, listarComprovantesRecentes, paginaComprovantes, ErroComprovante } = require('./db/comprovante');
 const { getMesaPorToken } = require('./db/queries');
 const { eventAccess } = require('./db/event-access');
 const {
@@ -781,11 +781,11 @@ const server = http.createServer(async (req, res) => {
       catch(e) { if(e instanceof ErroComprovante) return json(res,e.status,{error:e.message}); throw e; }
     }
     if (p === '/api/caixa/comprovantes' && req.method === 'GET') {
-      const q = new URL(req.url, 'http://localhost').searchParams;
-      return json(res, 200, await listarComprovantesRecentes({
-        limit: Number(q.get('limit')) || 25,
-        offset: Number(q.get('offset')) || 0,
-      }));
+      const q = u.searchParams;
+      if (q.get('paginado') === '1') {
+        return json(res, 200, await paginaComprovantes({ limite: q.get('limit'), cursor: q.get('cursor') }));
+      }
+      return json(res, 200, await listarComprovantesRecentes());
     }
     if (p === '/api/caixa/sessoes' && req.method === 'GET') {
       return json(res, 200, await listSessoesAbertas());
@@ -1009,12 +1009,14 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/admin/pedidos' && req.method === 'GET') {
       const q = new URL(req.url, 'http://localhost').searchParams;
       const ativos = q.get('ativos') === '1' || q.get('ativos') === 'true';
+      const paginado = q.get('paginado') === '1';
       return json(res, 200, await listPedidosRecentes({
-        limit: Number(q.get('limit')) || (ativos ? 100 : 80),
-        offset: Number(q.get('offset')) || 0,
+        limit: paginado ? q.get('limit') : (Number(q.get('limit')) || (ativos ? 100 : 80)),
         ativos,
         from: q.get('from') || null,
         to: q.get('to') || null,
+        paginado,
+        cursor: paginado ? q.get('cursor') : null,
       }));
     }
     if (p === '/api/admin/cardapio' && req.method === 'GET') {
