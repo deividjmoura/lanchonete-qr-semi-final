@@ -86,6 +86,12 @@ async function desktop(browser) {
   const section = page.getByRole('region', { name: 'Comprovantes de contas fechadas' });
   await section.getByText('Conta #1001').waitFor();
   assert.equal(await section.getByRole('button', { name: 'Imprimir' }).count(), 5, 'primeira página pequena');
+  // Garante que o teste cobre um polling entre a primeira carga e o primeiro clique.
+  const pollInicial = await page.waitForRequest((r) => {
+    const url = new URL(r.url());
+    return url.pathname === '/api/caixa/comprovantes' && !url.searchParams.has('cursor');
+  }, { timeout: 5000 });
+  await pollInicial.response();
   await section.getByRole('button', { name: 'Carregar mais' }).click();
   await section.getByText('Conta #1010').waitFor();
   assert.equal(await section.getByRole('button', { name: 'Imprimir' }).count(), 10);
@@ -93,10 +99,14 @@ async function desktop(browser) {
   await section.getByText('Conta #1012').waitFor();
   assert.equal(await section.getByRole('button', { name: 'Imprimir' }).count(), 12);
   assert.equal(await section.getByRole('button', { name: 'Carregar mais' }).count(), 0);
-  assert.deepEqual(requests.paginas.slice(0, 3), [
-    { paginado: '1', inicio: 0, limite: 5 }, { paginado: '1', inicio: 5, limite: 5 },
+  // O polling pode consultar a primeira página entre cliques, especialmente em
+  // runners lentos; só os cliques pedem cursores diferentes de zero.
+  assert.deepEqual(requests.paginas[0], { paginado: '1', inicio: 0, limite: 5 });
+  assert.deepEqual(requests.paginas.filter((p) => p.inicio !== 0), [
+    { paginado: '1', inicio: 5, limite: 5 },
     { paginado: '1', inicio: 10, limite: 5 },
   ], 'cada clique buscou apenas a próxima página');
+  assert.ok(requests.paginas.every((p) => p.paginado === '1' && p.limite === 5));
   await section.getByRole('button', { name: 'Mostrar menos' }).click();
   await section.getByText('Conta #1010').waitFor({ state: 'hidden' });
   assert.equal(await section.getByRole('button', { name: 'Imprimir' }).count(), 5);
