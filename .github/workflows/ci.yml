@@ -66,6 +66,14 @@ jobs:
         if: ${{ hashFiles('tests/postgres-mesas-panorama.test.cjs') != '' }}
         run: node --test tests/postgres-mesas-panorama.test.cjs
 
+      - name: Waiter billing with service fee on clean PostgreSQL
+        if: ${{ hashFiles('tests/postgres-garcom-servico.test.cjs') != '' }}
+        run: node --test tests/postgres-garcom-servico.test.cjs
+
+      - name: Produção parcial por item (cozinha/bar)
+        if: ${{ hashFiles('tests/postgres-producao-parcial.test.cjs') != '' }}
+        run: node --test tests/postgres-producao-parcial.test.cjs
+
       - name: Waiter ownership integration on clean PostgreSQL
         if: ${{ hashFiles('tests/postgres-waiter-integration.test.cjs') != '' }}
         run: node --test tests/postgres-waiter-integration.test.cjs

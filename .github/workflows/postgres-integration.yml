@@ -67,6 +67,12 @@ jobs:
         run: node --test tests/postgres-password-change.test.cjs
       - name: Tables panorama and praças PostgreSQL integration tests
         run: node --test tests/postgres-mesas-panorama.test.cjs
+      - name: Waiter billing with service fee PostgreSQL integration tests
+        run: node --test tests/postgres-garcom-servico.test.cjs
+
+      - name: Produção parcial por item (cozinha/bar)
+        if: ${{ hashFiles('tests/postgres-producao-parcial.test.cjs') != '' }}
+        run: node --test tests/postgres-producao-parcial.test.cjs
       # O cliente pg_dump precisa ser da MESMA versão maior do servidor.
       # A imagem do runner traz pg_dump 17+, que emite "SET transaction_timeout"
       # no cabeçalho do dump — parâmetro que o PostgreSQL 16 não reconhece, e o

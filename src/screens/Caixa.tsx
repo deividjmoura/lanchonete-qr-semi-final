@@ -131,10 +131,10 @@ export default function Caixa() {
                     aria-pressed={ativo}
                     onClick={() => setSelId(s.id)}
                     className={cn(
-                      "w-full text-left rounded-md p-4 border transition-colors duration-150",
+                      "ops-card-surface w-full text-left rounded-md p-4 border transition-colors duration-150",
                       ativo
-                        ? "bg-surface-raised border-brand"
-                        : "bg-surface-raised border-line hover:border-line-strong hover:bg-surface-hover",
+                        ? "border-brand"
+                        : "border-line hover:border-line-strong hover:bg-surface-hover",
                     )}
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -353,7 +353,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
   };
 
   return (
-    <div className="rounded-md border border-line bg-surface-raised overflow-hidden">
+    <div className="ops-card-surface rounded-md border border-line overflow-hidden">
       {/* Cabeçalho da comanda */}
       <div className="px-5 sm:px-6 py-4 border-b border-dashed border-line-strong bg-surface-sunken flex flex-wrap items-center justify-between gap-3">
         <div>

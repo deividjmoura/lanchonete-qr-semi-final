@@ -101,7 +101,15 @@ Servida localmente em `public/garcom-pwa/fonts/` sob CSP `'self'`, totalizando *
 
 ### 6.2 Regime Operacional (`data-regime="operational"`)
 - **Telas:** Cozinha, Bar, Caixa e PWA do Garçom.
-- **Características:** zero textura de papel, superfícies secas e limpas, leitura instantânea a ~1,5 m nas filas de preparo, alvos de toque mínimos de `48 px` (`min-h-12`), indicadores objetivos de tempo/setor/garçom e ações em lote diretas.
+- **Características:** zero textura de papel, leitura instantânea a ~1,5 m nas filas de preparo, alvos de toque mínimos de `48 px` (`min-h-12`), indicadores objetivos de tempo/setor/garçom e ações em lote diretas.
+- **Camada "vidro de operação" (`src/screens/operacional.css`):** cozinha e bar usam a mesma família visual do dashboard — gradiente escuro translúcido, grade discreta, acentos neon por etapa (ciano = em produção, âmbar = na fila), sombras em camadas e brilho interno de `1px`. A paleta é local ao palco operacional, como em `dashboard.css`; cartões de caixa e PWA reaproveitam a mesma ideia via `--surface-raised`, `color-mix` e `--shadow-card-hover`, sem sair dos tokens nem do contraste AA.
+
+### 6.3 Fila de Produção por Item (Cozinha e Bar)
+- **Duas sessões recolhíveis:** "Em produção" e "Na fila". Ambas nascem **recolhidas** para manter a tela limpa; cada uma abre de forma independente (`aria-expanded` + `aria-controls`) e a preferência do operador é lembrada por setor em `localStorage`. O corpo recolhido não renderiza cartões.
+- **Rolagem lateral:** `.fila-trilho` usa `grid-auto-flow: column` com 2 linhas até `767px` e 3 linhas a partir de `1280px`; os cartões rolam na horizontal (`.fila-rolagem`) com `scroll-snap`, barra fina e `overscroll-behavior-x: contain`. A página nunca ganha rolagem horizontal própria.
+- **Unidade é o item:** cada cartão mostra apenas os itens daquela etapa. Iniciar/liberar um item grava `PATCH /api/(cozinha|bar)/itens/:id/status` e afeta só ele; a ação de comanda é secundária, nomeada ("Iniciar/Liberar os N itens desta comanda") e atinge apenas os itens da seção aberta.
+- **Sem coluna de prontos:** o item concluído sai da fila do setor e aparece imediatamente na fila do garçom (`concluido`), mantendo retirada direta, aceite, entregas parciais e notificações.
+- **Feedback imediato:** um `role="status"` anuncia "iniciado/liberado — já aparece para o garçom" porque o cartão troca de seção (que pode estar recolhida).
 
 ---
 

@@ -47,6 +47,8 @@ const suites = [
   'postgres-financial-concurrency.test.cjs',
   'postgres-password-change.test.cjs',
   'postgres-mesas-panorama.test.cjs',
+  'postgres-garcom-servico.test.cjs',
+  'postgres-producao-parcial.test.cjs',
 ];
 
 // O drill de backup precisa de pg_dump/psql no PATH. Em ambiente local com

@@ -194,6 +194,11 @@ async function main() {
        e aparecia um alert. Agora o cliente renova o token e repete sozinho. */
     await abaCozinha.bringToFront();
     await abaCozinha.goto(base + '/#/cozinha', { waitUntil: 'load' });
+    /* As sessões "Em produção" e "Na fila" nascem recolhidas (fila limpa).
+       Abre só a fila para alcançar o botão por item. */
+    const sessaoFila = abaCozinha.locator('button[aria-controls="fila-cozinha-na_fila"]');
+    await sessaoFila.waitFor({ timeout: 20000 });
+    if ((await sessaoFila.getAttribute('aria-expanded')) !== 'true') await sessaoFila.click();
     await abaCozinha.waitForSelector('text=Iniciar este item', { timeout: 20000 });
     const antes403 = respostas403.length;
     await abaCozinha.locator('button:has-text("Iniciar este item")').first().click();
