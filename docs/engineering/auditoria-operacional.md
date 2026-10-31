@@ -55,3 +55,13 @@ As respostas 4xx de negação (401/403/409) passam pelo log estruturado com
 `X-Request-Id` e caminho sanitizado. A persistência de negações relevantes
 (ex.: tentativa de entrega por garçom não responsável) pode ser expandida na
 etapa 4 sem mudar o schema, usando `resultado='negado'`.
+
+## Decisão registrada — 2026-10-30 (issue #48)
+
+O responsável definiu: **desconto/ajuste financeiro exige gerente com
+PIN/reautenticação** (além do motivo obrigatório já auditado). Logins
+individuais e a retenção da trilha seguem o desenho das etapas deste
+documento; a implementação entra numa frente própria.
+
+A issue #48 **segue aberta** até a regra estar implementada e testada com
+dois funcionários em dispositivo compartilhado.
