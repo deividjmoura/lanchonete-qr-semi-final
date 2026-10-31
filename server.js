@@ -23,6 +23,10 @@ const { informarPixPago, ErroPixCliente } = require('./db/pix-cliente');
 const {
   ErroAdmin,
   listMesas,
+  listarPracas,
+  criarPraca,
+  atualizarPraca,
+  definirPracaMesa,
   quantidadeMesasAtivas,
   ativarMesas,
   getCardapioAdmin,
@@ -70,6 +74,7 @@ const { golpePermitido } = require('./db/rateLimit');
 const { registrarEventoIndependente } = require('./db/auditoria');
 const { resolveClientIp, loginUserRateLimitKey } = require('./security/client-ip');
 const { ErroAtendimento, transferirMesaAdmin, listarMesasGarcom, iniciarAtendimentoGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
+const { panoramaMesas, mesaDetalhe } = require('./db/mesas-panorama');
 const { normalizarChavePix, inspecionarChavePix } = require('./db/pix-normaliza');
 const { subscribe, broadcast } = require('./db/events');
 const pool = require('./db/pool');
@@ -979,6 +984,61 @@ const server = http.createServer(async (req, res) => {
         const out = await ativarMesas(payload.quantidade);
         broadcast('update', { type: 'mesas_ativadas' });
         return json(res, 200, out);
+      } catch (e) {
+        if (e instanceof ErroAdmin) return json(res, e.status, { error: e.message });
+        throw e;
+      }
+    }
+    /* Panorama operacional: uma entrada por mesa habilitada, inclusive livres,
+       com tempos reais do fluxo. Só o admin chega aqui (gate /api/admin). */
+    if (p === '/api/admin/mesas/panorama' && req.method === 'GET') {
+      try {
+        const q = new URL(req.url, 'http://localhost').searchParams;
+        return json(res, 200, await panoramaMesas({ periodo: q.get('periodo') || 'hoje' }));
+      } catch (e) {
+        if (e instanceof ErroAdmin) return json(res, e.status, { error: e.message });
+        throw e;
+      }
+    }
+    if (p === '/api/admin/pracas' && req.method === 'GET') {
+      return json(res, 200, await listarPracas());
+    }
+    if (p === '/api/admin/pracas' && req.method === 'POST') {
+      try {
+        const payload = await body(req);
+        const out = await criarPraca(payload || {});
+        broadcast('update', { type: 'praca_criada', pracaId: out.id });
+        return json(res, 201, out);
+      } catch (e) {
+        if (e instanceof ErroAdmin) return json(res, e.status, { error: e.message });
+        throw e;
+      }
+    }
+    if ((m = p.match(/^\/api\/admin\/pracas\/(\d+)$/)) && req.method === 'PATCH') {
+      try {
+        const out = await atualizarPraca(Number(m[1]), (await body(req)) || {});
+        broadcast('update', { type: 'praca_atualizada', pracaId: out.id });
+        return json(res, 200, out);
+      } catch (e) {
+        if (e instanceof ErroAdmin) return json(res, e.status, { error: e.message });
+        throw e;
+      }
+    }
+    if ((m = p.match(/^\/api\/admin\/mesas\/(\d+)\/praca$/)) && req.method === 'PUT') {
+      try {
+        const payload = await body(req);
+        const staff = await getStaffDaRequisicao(req);
+        const out = await definirPracaMesa(Number(m[1]), payload?.pracaId, staff, reqId);
+        if (out.alterada) broadcast('update', { type: 'mesa_praca_alterada', mesa: out.mesa });
+        return json(res, 200, out);
+      } catch (e) {
+        if (e instanceof ErroAdmin) return json(res, e.status, { error: e.message });
+        throw e;
+      }
+    }
+    if ((m = p.match(/^\/api\/admin\/mesas\/(\d+)$/)) && req.method === 'GET') {
+      try {
+        return json(res, 200, await mesaDetalhe(Number(m[1])));
       } catch (e) {
         if (e instanceof ErroAdmin) return json(res, e.status, { error: e.message });
         throw e;

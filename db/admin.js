@@ -31,9 +31,10 @@ class ErroAdmin extends Error {
 
 async function listMesas() {
   const { rows } = await pool.query(
-    `SELECT m.id, m.numero, m.token, m.status,
+    `SELECT m.id, m.numero, m.token, m.status, m.praca_id, pr.nome AS praca_nome,
             s.id AS sessao_id, s.valor_total, s.aberta_em, s.cliente_nome, s.garcom_responsavel_id, g.nome AS garcom_responsavel_nome
      FROM mesas m
+     LEFT JOIN mesa_pracas pr ON pr.id = m.praca_id
      LEFT JOIN mesa_sessoes s ON s.mesa_id = m.id AND s.status = 'aberta'
      LEFT JOIN garcons g ON g.id=s.garcom_responsavel_id
      ORDER BY m.numero`
@@ -50,7 +51,150 @@ async function listMesas() {
     clienteNome: r.cliente_nome || null,
     garcomResponsavelId: r.garcom_responsavel_id || null,
     garcomResponsavelNome: r.garcom_responsavel_nome || null,
+    pracaId: r.praca_id != null ? Number(r.praca_id) : null,
+    pracaNome: r.praca_nome || null,
   }));
+}
+
+/* ---------- Praças internas (Praia, Guarda-sol, Salão…) ----------
+ * Os nomes são dados editáveis no banco, nunca constantes na UI. "Sem praça"
+ * é a ausência de vínculo (praca_id NULL), não uma linha fictícia.
+ */
+const PRACA_NOME_MAX = 40;
+
+async function listarPracas() {
+  const { rows } = await pool.query(
+    `SELECT p.id, p.nome, p.ordem,
+            COUNT(m.id)::int AS mesas
+       FROM mesa_pracas p
+       LEFT JOIN mesas m ON m.praca_id = p.id
+      GROUP BY p.id, p.nome, p.ordem
+      ORDER BY p.ordem, lower(p.nome), p.id`
+  );
+  return rows.map((r) => ({
+    id: Number(r.id),
+    nome: r.nome,
+    ordem: Number(r.ordem),
+    mesas: Number(r.mesas),
+  }));
+}
+
+function nomePraca(nomeBruto) {
+  const nome = String(nomeBruto == null ? '' : nomeBruto).trim();
+  if (!nome) throw new ErroAdmin(400, 'Informe o nome da praça');
+  if (nome.length > PRACA_NOME_MAX) {
+    throw new ErroAdmin(400, `O nome da praça deve ter até ${PRACA_NOME_MAX} caracteres`);
+  }
+  return nome;
+}
+
+async function criarPraca({ nome, ordem } = {}) {
+  const limpo = nomePraca(nome);
+  const ordemNumero = ordem == null
+    ? Number((await pool.query('SELECT COALESCE(MAX(ordem), 0) + 1 AS proxima FROM mesa_pracas')).rows[0].proxima)
+    : numeroFinito(ordem, 'ordem', { inteiro: true, minimo: 0 });
+  try {
+    const { rows } = await pool.query(
+      'INSERT INTO mesa_pracas (nome, ordem) VALUES ($1, $2) RETURNING id, nome, ordem',
+      [limpo, ordemNumero]
+    );
+    return { id: Number(rows[0].id), nome: rows[0].nome, ordem: Number(rows[0].ordem), mesas: 0 };
+  } catch (e) {
+    // Nome único sem diferenciar caixa/espaços: o operador vê a causa, não 500.
+    if (e && e.code === '23505') throw new ErroAdmin(409, 'Já existe uma praça com esse nome');
+    throw e;
+  }
+}
+
+async function atualizarPraca(id, { nome, ordem } = {}) {
+  const pracaId = numeroInteiroPositivo(id, 'praça');
+  const campos = [];
+  const vals = [];
+  let i = 1;
+  if (nome !== undefined) {
+    campos.push(`nome = $${i++}`);
+    vals.push(nomePraca(nome));
+  }
+  if (ordem !== undefined) {
+    campos.push(`ordem = $${i++}`);
+    vals.push(numeroFinito(ordem, 'ordem', { inteiro: true, minimo: 0 }));
+  }
+  if (!campos.length) throw new ErroAdmin(400, 'Nada para atualizar');
+  campos.push('atualizado_em = now()');
+  vals.push(pracaId);
+  try {
+    const { rows } = await pool.query(
+      `UPDATE mesa_pracas SET ${campos.join(', ')} WHERE id = $${i} RETURNING id, nome, ordem`,
+      vals
+    );
+    if (!rows[0]) throw new ErroAdmin(404, 'Praça não encontrada');
+    return { id: Number(rows[0].id), nome: rows[0].nome, ordem: Number(rows[0].ordem) };
+  } catch (e) {
+    if (e instanceof ErroAdmin) throw e;
+    if (e && e.code === '23505') throw new ErroAdmin(409, 'Já existe uma praça com esse nome');
+    throw e;
+  }
+}
+
+/** Atribui (ou remove, com pracaId null) a praça de uma mesa habilitada. */
+async function definirPracaMesa(numeroBruto, pracaBruto, ator = null, requestId = null) {
+  const numero = Number(numeroBruto);
+  if (!Number.isSafeInteger(numero) || numero < 1 || numero > 70) {
+    throw new ErroAdmin(400, 'Informe o número de uma mesa entre 1 e 70');
+  }
+  const pracaId = pracaBruto === null || pracaBruto === undefined || pracaBruto === ''
+    ? null
+    : Number(pracaBruto);
+  if (pracaId !== null && (!Number.isSafeInteger(pracaId) || pracaId < 1)) {
+    throw new ErroAdmin(400, 'Praça inválida');
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows: config } = await client.query('SELECT quantidade FROM configuracao_mesas WHERE id = 1');
+    if (numero > Number(config[0]?.quantidade ?? 20)) {
+      throw new ErroAdmin(409, 'Mesa ainda não habilitada pelo administrador');
+    }
+    const { rows: mesas } = await client.query(
+      'SELECT id, praca_id FROM mesas WHERE numero = $1 FOR UPDATE',
+      [numero]
+    );
+    if (!mesas[0]) throw new ErroAdmin(404, 'Mesa não encontrada');
+
+    let nome = null;
+    if (pracaId !== null) {
+      const { rows: pracas } = await client.query('SELECT id, nome FROM mesa_pracas WHERE id = $1', [pracaId]);
+      if (!pracas[0]) throw new ErroAdmin(404, 'Praça não encontrada');
+      nome = pracas[0].nome;
+    }
+
+    const anterior = mesas[0].praca_id != null ? Number(mesas[0].praca_id) : null;
+    const alterou = anterior !== pracaId;
+    if (alterou) {
+      await client.query('UPDATE mesas SET praca_id = $2 WHERE id = $1', [mesas[0].id, pracaId]);
+      if (ator && Number.isInteger(ator.id)) {
+        const { registrarEvento } = require('./auditoria');
+        await registrarEvento(client, {
+          atorTipo: 'staff',
+          atorId: ator.id,
+          atorNome: ator.nome || null,
+          acao: 'mesa_praca_definida',
+          alvoTipo: 'mesa',
+          alvoId: String(numero),
+          requestId,
+          contexto: { mesa: numero, pracaAnteriorId: anterior, pracaNovaId: pracaId },
+        });
+      }
+    }
+    await client.query('COMMIT');
+    return { mesa: numero, pracaId, pracaNome: nome, alterada: alterou };
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
 // Configuração operacional: a lista começa com 20 mesas, cresce até 70.
@@ -556,6 +700,10 @@ async function removerCategoria(id) {
 module.exports = {
   ErroAdmin,
   listMesas,
+  listarPracas,
+  criarPraca,
+  atualizarPraca,
+  definirPracaMesa,
   quantidadeMesasAtivas,
   ativarMesas,
   getCardapioAdmin,

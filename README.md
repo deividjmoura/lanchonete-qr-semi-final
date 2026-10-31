@@ -96,6 +96,9 @@ A comanda da mesa é acumulativa: a mesa pode receber vários pedidos durante a 
 ### Administração
 - Categorias, produtos, preços, disponibilidade, setor de produção, estoque e adicionais.
 - Configuração de mesas e geração de QR fixo por mesa (até 70 mesas habilitadas pela interface atual).
+- Panorama operacional com uma entrada por mesa (inclusive livres), praças internas
+  editáveis (Praia, Guarda-sol, Salão e “Sem praça”), consumo em aberto separado das
+  vendas do período e tempos reais do fluxo por setor (cozinha, bar e garçom).
 - Cadastro e ativação/desativação de garçons.
 - Transferência administrativa do responsável da mesa e devolução de aceite à fila.
 - Indicadores diários, relatórios por período, histórico e ferramenta de limpeza de histórico.
@@ -228,6 +231,8 @@ ambiente de operação.**
 - [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md) — sistema visual vigente.
 - [`docs/REDEFINICAO-SENHA-ADMIN.md`](docs/REDEFINICAO-SENHA-ADMIN.md) —
   redefinição de senha de staff pelo Admin.
+- [`docs/engineering/panorama-mesas.md`](docs/engineering/panorama-mesas.md) —
+  panorama de mesas, praças, faixas de tempo e tempos do fluxo.
 - [`docs/engineering/PRODUCTION_OPERATIONS_RUNBOOK.md`](docs/engineering/PRODUCTION_OPERATIONS_RUNBOOK.md) —
   operação, incidentes, deploy e rollback.
 
