@@ -56,7 +56,7 @@ function mockApi(menu) {
       id: 301, mesa: 1, responsavelMesaNome: 'Ana',
       itens: [{ id: 401, nome: 'Produto 1', quantidade: 1, setor: 'cozinha', status: 'concluido', adicionais: [] }],
     }];
-    else if (p.includes('/api/garcom/') && p.endsWith('/assumir-entrega')) data = { aviso: 'Entrega atualizada com sucesso.' };
+    else if (p.includes('/api/garcom/') && p.endsWith('/retirar')) data = { aviso: 'Entrega atualizada com sucesso.' };
     else if (p.includes('event')) return route.fulfill({ status: 200, contentType: 'text/event-stream', body: ': teste\n\n' });
     return route.fulfill({ json: data });
   };
@@ -246,7 +246,7 @@ async function notificationFlows(browser) {
   await page.locator('#readyOrders .order').first().waitFor();
   assert.equal(await page.locator('#alertMessage').isVisible(), false, 'confirmação não deixa aviso permanente na fila');
   await page.waitForFunction(() => document.querySelector('#notificationFeedback').hidden, null, { timeout: 8000 });
-  await page.getByRole('button', { name: 'Aceitar item', exact: true }).click();
+  await page.getByRole('button', { name: 'Retirar item', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('#alertMessage').textContent.includes('Entrega atualizada'));
   assert.equal(await page.locator('#alertMessage').isVisible(), true, 'feedback de entrega continua visível fora do modal');
   assert.deepEqual(errors, []);

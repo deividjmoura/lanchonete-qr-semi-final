@@ -4,7 +4,7 @@
  * E2E em Chromium real das três correções pedidas pelo operador:
  *
  *  1. o diálogo de notificações FECHA depois de conceder a permissão;
- *  2. o lote por pedido cobre aceite, retirada e entrega (não item por item);
+ *  2. a retirada assume os itens de uma vez, sem aceite separado;
  *  3. o botão de registrar recebimento funciona quando há saldo, e quando
  *     está bloqueado mostra o motivo em vez de ficar mudo.
  *
@@ -134,9 +134,9 @@ async function main() {
         Notification.requestPermission = async () => 'granted';
       } catch (_) {}
     });
-    const errosPagina = [];
+    const errosPagina = [], dialogos = [];
     page.on('pageerror', (e) => errosPagina.push(String(e)));
-    page.on('dialog', (d) => d.accept());
+    page.on('dialog', (d) => { dialogos.push(d.message()); void d.accept(); });
 
     await page.goto(`${base}/garcom-pwa/?token=${token}`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => document.querySelectorAll('#modalTable option').length > 0, null, { timeout: 20000 });
@@ -153,34 +153,27 @@ async function main() {
     assert.equal(await page.locator('#notificationFeedback').isVisible(), true);
     ok('diálogo de notificações fecha após conceder e mostra confirmação temporária');
 
-    /* ---- 2) lote nas três etapas -------------------------------------- */
+    /* ---- 2) retirada direta em lote e entrega ------------------------- */
     await page.click('[data-tab="deliveries"]');
     await page.click('#refreshDeliveries');
     await page.waitForFunction(
-      () => /Aceitar todos os prontos \(3\)/.test(document.querySelector('#readyOrders')?.textContent || ''),
+      () => /Retirar todos \(3\)/.test(document.querySelector('#readyOrders')?.textContent || ''),
       null, { timeout: 20000 }
     );
-    ok('lote de aceite oferecido para os 3 itens prontos do pedido');
+    assert.equal(await page.locator('#readyOrders button:has-text("Aceitar")').count(), 0);
+    ok('os três itens prontos oferecem retirada sem etapa de aceite');
 
-    await page.click('#readyOrders button:has-text("Aceitar todos os prontos")');
-    await page.waitForFunction(async () => true, null, { timeout: 1000 }).catch(() => {});
+    const antesDialogos = dialogos.length;
+    await page.click('#readyOrders button:has-text("Retirar todos")');
     await esperarBanco(async () => {
-      const r = await pool.query('SELECT status,aceito_por_id FROM itens_pedido WHERE pedido_id=$1', [ids.pedido]);
-      return r.rows.length === 3 && r.rows.every((x) => x.status === 'aceito' && Number(x.aceito_por_id) === Number(ids.garcom));
-    }, 'aceite em lote dos 3 itens');
-    ok('um clique aceitou os 3 itens e gravou o garçom como ator');
-
-    await page.click('#refreshDeliveries');
-    await page.waitForFunction(
-      () => /Confirmar retirada de todos \(3\)/.test(document.querySelector('#readyOrders')?.textContent || ''),
-      null, { timeout: 20000 }
-    );
-    await page.click('#readyOrders button:has-text("Confirmar retirada de todos")');
-    await esperarBanco(async () => {
-      const r = await pool.query('SELECT status FROM itens_pedido WHERE pedido_id=$1', [ids.pedido]);
-      return r.rows.every((x) => x.status === 'retirado');
-    }, 'retirada em lote');
-    ok('lote de retirada avançou os 3 itens de uma vez');
+      const r = await pool.query('SELECT status,aceito_por_id,retirado_por_id,aceito_em,retirado_em FROM itens_pedido WHERE pedido_id=$1', [ids.pedido]);
+      return r.rows.length === 3 && r.rows.every((x) => x.status === 'retirado' &&
+        Number(x.aceito_por_id) === Number(ids.garcom) && Number(x.retirado_por_id) === Number(ids.garcom) && x.aceito_em && x.retirado_em);
+    }, 'retirada direta em lote dos 3 itens');
+    assert.equal(dialogos.length, antesDialogos, 'retirar não abre diálogo de confirmação');
+    const aindaNaoCobrado = await pool.query('SELECT valor_total FROM mesa_sessoes WHERE id=$1', [ids.sessao]);
+    assert.equal(Number(aindaNaoCobrado.rows[0].valor_total), 0, 'retirada não cobra itens ainda não entregues');
+    ok('um clique retirou os três itens e registrou autoria, sem confirmação');
 
     await page.click('#refreshDeliveries');
     await page.waitForFunction(

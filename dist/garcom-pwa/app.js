@@ -447,16 +447,13 @@ function avisarEntrega(msg){const alvo=$('#alertMessage');if(alvo)alvo.textConte
 async function deliveryAction(orderId,action,itemIds){
  const qtd=Array.isArray(itemIds)?itemIds.length:0;
  const plural=qtd>1;
- const labels={
-  assumir:plural?'Aceitar estes '+qtd+' itens para retirada?':'Aceitar este item para retirada?',
-  retirar:plural?'Confirmar que retirou estes '+qtd+' itens no setor?':'Confirmar que retirou este item no setor?',
-  entregar:plural?'Confirmar que entregou estes '+qtd+' itens ao cliente?':'Confirmar que entregou este item ao cliente?'
- };
- if(!confirm(labels[action]))return;
- const suffix=action==='assumir'?'assumir-entrega':action;
- const out=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/pedidos/'+orderId+'/'+suffix,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({itemIds,etapa:action==='assumir'?'aceitar':action})});
+ // Retirar já expressa a intenção de assumir o item; não pedir aceite nem
+ // confirmação extra. A entrega ao cliente continua exigindo confirmação.
+ if(action==='entregar'&&!confirm(plural?'Confirmar que entregou estes '+qtd+' itens ao cliente?':'Confirmar que entregou este item ao cliente?'))return false;
+ const out=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/pedidos/'+orderId+'/'+action,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({itemIds,etapa:action})});
  if(out.aviso)$('#alertMessage').textContent=out.aviso;
  await refreshLiveData();
+ return true;
 }
 
 /* Cards compactos expansíveis — Entregas (#readyOrders), autossuficiente p/ pwa-harness */
@@ -521,7 +518,7 @@ async function loadDeliveries(){
 
    if(order.observacao_geral){const note=document.createElement('p');note.className='muted small-copy';note.textContent='Observação: '+order.observacao_geral;body.append(note);}
    const list=document.createElement('div');list.className='order-items';
-   const lotes={assumir:[],retirar:[],entregar:[]};
+   const lotes={retirar:[],entregar:[]};
    for(const item of order.itens||[]){
     const line=document.createElement('div');line.className='order-item-line';line.dataset.itemId=item.id;
     const desc=document.createElement('span');desc.textContent=(item.quantidade||1)+'× '+item.nome+' · '+(item.setor==='bar'?'Bar':'Cozinha');
@@ -532,24 +529,23 @@ async function loadDeliveries(){
     const actor=item.garcomEntregouId?item.entregue_por_nome:item.garcomRetirouId?item.retirado_por_nome:item.garcomAceitoId?item.aceito_por_nome:null;
     if(actor){const who=document.createElement('small');who.className='muted';who.textContent='Garçom: '+actor;line.append(who);}
     let action=null,label='';
-    if(item.status==='concluido'){action='assumir';label='Aceitar item';}
-    else if(item.status==='aceito'&&Number(item.garcomAceitoId)===Number(currentWaiterId)){action='retirar';label='Confirmar retirada';}
+    if(item.status==='concluido'||(item.status==='aceito'&&Number(item.garcomAceitoId)===Number(currentWaiterId))){action='retirar';label='Retirar item';}
     else if(item.status==='retirado'&&Number(item.garcomRetirouId)===Number(currentWaiterId)){action='entregar';label='Confirmar entrega';}
-    if(action){lotes[action].push(Number(item.id));const btn=document.createElement('button');btn.type='button';btn.className='secondary small';btn.textContent=label;btn.onclick=async()=>{btn.disabled=true;try{await deliveryAction(order.id,action,[Number(item.id)]);}catch(e){avisarEntrega(e.message||'Não foi possível atualizar a entrega.');btn.disabled=false;void loadDeliveries();}};line.append(btn);}
+    if(action){lotes[action].push(Number(item.id));const btn=document.createElement('button');btn.type='button';btn.className='secondary small';btn.textContent=label;btn.onclick=async()=>{btn.disabled=true;try{if(!await deliveryAction(order.id,action,[Number(item.id)]))btn.disabled=false;}catch(e){avisarEntrega(e.message||'Não foi possível atualizar a entrega.');btn.disabled=false;void loadDeliveries();}};line.append(btn);}
     else if(['aceito','retirado'].includes(item.status)){const locked=document.createElement('small');locked.className='muted';locked.textContent='Em andamento por outro garçom';line.append(locked);}
     list.append(line);
    }
    body.append(list);
-   const rotulos={assumir:'Aceitar todos os prontos',retirar:'Confirmar retirada de todos',entregar:'Confirmar entrega de todos'};
+   const rotulos={retirar:'Retirar todos',entregar:'Confirmar entrega de todos'};
    const barra=document.createElement('div');barra.className='action-row';
-   for(const etapa of ['assumir','retirar','entregar']){
+   for(const etapa of ['retirar','entregar']){
     const ids=lotes[etapa];
     if(!ids.length)continue;
-    const all=document.createElement('button');all.type='button';all.className=etapa==='assumir'?'primary':'secondary';
+    const all=document.createElement('button');all.type='button';all.className=etapa==='retirar'?'primary':'secondary';
     all.textContent=rotulos[etapa]+' ('+ids.length+')';
     all.onclick=async()=>{
      const botoes=[...barra.querySelectorAll('button')];botoes.forEach(b=>{b.disabled=true});
-     try{await deliveryAction(order.id,etapa,ids);}
+     try{if(!await deliveryAction(order.id,etapa,ids))botoes.forEach(b=>{b.disabled=false});}
      catch(e){avisarEntrega(e.message||'Não foi possível atualizar as entregas.');botoes.forEach(b=>{b.disabled=false});void loadDeliveries();}
     };
     barra.append(all);

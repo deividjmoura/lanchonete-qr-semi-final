@@ -71,7 +71,8 @@ test('fila de retirada é compartilhada e as permissões são por item, não por
   for (const fila of [ana, bruno]) {
     const pronto = fila[0].itens.find(i => i.id === 1501);
     const aceito = fila[0].itens.find(i => i.id === 1502);
-    assert.equal(pronto.podeAceitar, true, 'item pronto pode ser aceito por qualquer garçom ativo');
+    assert.equal(pronto.podeAceitar, true, 'endpoint legado de aceite segue disponível');
+    assert.equal(pronto.podeRetirar, true, 'qualquer garçom ativo pode retirar um item pronto');
     assert.equal(aceito.podeAceitar, false, 'item já aceito não pode ser tomado de novo');
     assert.equal(aceito.garcomAceitoNome, 'Ana');
   }

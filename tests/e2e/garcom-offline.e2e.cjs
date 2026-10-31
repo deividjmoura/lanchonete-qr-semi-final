@@ -197,19 +197,20 @@ async function main() {
     await pool.query("UPDATE itens_pedido SET status='concluido', pronto_em=now() WHERE id=$1", [itemId]);
     await page.click('[data-tab="deliveries"]');
     await page.click('#refreshDeliveries');
-    await page.waitForFunction(() => /Aceitar item/i.test(document.querySelector('#readyOrders')?.textContent || ''), null, { timeout: 20000 });
-    ok('item pronto aparece para o garçom com ação de aceite individual');
+    await page.waitForFunction(() => /Retirar item/i.test(document.querySelector('#readyOrders')?.textContent || ''), null, { timeout: 20000 });
+    ok('item pronto aparece para retirada direta');
 
-    await page.click('#readyOrders button:has-text("Aceitar item")');
-    await page.waitForTimeout(1500);
-    const aceito = await pool.query('SELECT status,aceito_por_id FROM itens_pedido WHERE id=$1', [itemId]);
-    assert.equal(aceito.rows[0].status, 'aceito');
-    assert.equal(Number(aceito.rows[0].aceito_por_id), Number(ids.garcom));
+    await page.click('#readyOrders button:has-text("Retirar item")');
+    await page.waitForFunction(() => /Confirmar entrega/i.test(document.querySelector('#readyOrders')?.textContent || ''), null, { timeout: 20000 });
+    const retirado = await pool.query('SELECT status,aceito_por_id,retirado_por_id FROM itens_pedido WHERE id=$1', [itemId]);
+    assert.equal(retirado.rows[0].status, 'retirado');
+    assert.equal(Number(retirado.rows[0].aceito_por_id), Number(ids.garcom));
+    assert.equal(Number(retirado.rows[0].retirado_por_id), Number(ids.garcom));
     const dono = await pool.query(
       'SELECT garcom_responsavel_id FROM mesa_sessoes WHERE mesa_id=$1 AND status=$2', [ids.mesa, 'aberta']
     );
-    assert.equal(Number(dono.rows[0].garcom_responsavel_id), Number(ids.garcom), 'primeiro aceite assume a mesa no servidor');
-    ok('aceite pelo navegador grava ator real e assume a mesa no servidor');
+    assert.equal(Number(dono.rows[0].garcom_responsavel_id), Number(ids.garcom), 'primeira retirada assume a mesa no servidor');
+    ok('retirada pelo navegador grava ator real e assume a mesa no servidor');
 
     /* ---- 5) Envio interrompido: pedido preso em "SINCRONIZANDO" ---------
        Reproduz o app morto no meio do POST. O pedido fica em `sync` e o lease
