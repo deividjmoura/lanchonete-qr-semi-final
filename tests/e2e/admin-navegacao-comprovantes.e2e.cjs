@@ -84,9 +84,12 @@ async function desktop(browser) {
   const section = page.getByRole('region', { name: 'Comprovantes de contas fechadas' });
   await section.getByText('Conta #1001').waitFor();
   assert.equal(await section.getByRole('button', { name: 'Imprimir' }).count(), 5, 'primeira página pequena');
+  // Paginação é no servidor: o append é assíncrono, então espera a página chegar.
   await section.getByRole('button', { name: 'Carregar mais' }).click();
+  await section.getByRole('button', { name: 'Imprimir' }).nth(9).waitFor();
   assert.equal(await section.getByRole('button', { name: 'Imprimir' }).count(), 10);
   await section.getByRole('button', { name: 'Carregar mais' }).click();
+  await section.getByRole('button', { name: 'Imprimir' }).nth(11).waitFor();
   assert.equal(await section.getByRole('button', { name: 'Imprimir' }).count(), 12);
   assert.equal(await section.getByRole('button', { name: 'Carregar mais' }).count(), 0);
 

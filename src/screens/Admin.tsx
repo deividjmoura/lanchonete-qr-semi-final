@@ -2541,22 +2541,29 @@ function ComprovantesRecentes() {
   const montado = useRef(false);
   const sequencia = useRef(0);
   const carregadosRef = useRef(0);
+  // Geração da lista: o "Carregar mais" incrementa ao concluir o append para
+  // invalidar um `atualizar` em voo (que traria só a janela antiga e perderia a
+  // página nova). O inverso não vale: o polling NÃO pode cancelar o append do
+  // usuário — por isso `carregarMais` não toca em `sequencia`.
+  const geracao = useRef(0);
+  const carregandoMaisRef = useRef(false);
 
   const atualizar = useCallback(async (silencioso = false) => {
     const pedido = ++sequencia.current;
+    const ger = geracao.current;
     if (!silencioso) setCarregando(true);
     // Recarrega a janela já aberta (mínimo uma página) para o polling/atualização
     // manual não perder o progresso do "Carregar mais" nem duplicar itens.
     const janela = Math.max(carregadosRef.current, POR_PAGINA);
     try {
       const rows = await api.comprovantesRecentes({ limit: janela, offset: 0 });
-      if (!montado.current || pedido !== sequencia.current) return;
+      if (!montado.current || pedido !== sequencia.current || ger !== geracao.current) return;
       carregadosRef.current = rows.length;
       setComprovantes(rows);
       setTemMais(rows.length >= janela);
       setErro(null);
     } catch (e) {
-      if (!montado.current || pedido !== sequencia.current) return;
+      if (!montado.current || pedido !== sequencia.current || ger !== geracao.current) return;
       setErro(e instanceof Error ? e.message : "Falha ao carregar comprovantes.");
     } finally {
       if (montado.current && pedido === sequencia.current) setCarregando(false);
@@ -2564,26 +2571,28 @@ function ComprovantesRecentes() {
   }, []);
 
   const carregarMais = useCallback(async () => {
-    if (carregandoMais) return;
-    const pedido = ++sequencia.current;
+    if (carregandoMaisRef.current) return;
+    carregandoMaisRef.current = true;
     setCarregandoMais(true);
     try {
       const rows = await api.comprovantesRecentes({
         limit: POR_PAGINA,
         offset: carregadosRef.current,
       });
-      if (!montado.current || pedido !== sequencia.current) return;
+      if (!montado.current) return;
+      geracao.current++;
       carregadosRef.current += rows.length;
       setComprovantes((prev) => [...prev, ...rows]);
       setTemMais(rows.length === POR_PAGINA);
       setErro(null);
     } catch (e) {
-      if (!montado.current || pedido !== sequencia.current) return;
+      if (!montado.current) return;
       setErro(e instanceof Error ? e.message : "Falha ao carregar comprovantes.");
     } finally {
-      if (montado.current && pedido === sequencia.current) setCarregandoMais(false);
+      carregandoMaisRef.current = false;
+      if (montado.current) setCarregandoMais(false);
     }
-  }, [carregandoMais]);
+  }, []);
 
   useEffect(() => {
     montado.current = true;
