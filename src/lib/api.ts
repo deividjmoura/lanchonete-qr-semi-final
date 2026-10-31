@@ -1,3 +1,5 @@
+import type { DashboardGeral, PeriodoDashboard } from "./dashboard";
+
 /** Cliente HTTP para a API Node (server.js). credentials: include para cookie de staff. */
 
 export type Pagina<T> = { itens: T[]; proximoCursor: string | null };
@@ -274,6 +276,8 @@ export const api = {
     apiSend(`/api/admin/garcons/${id}`, "PATCH", { ativo }),
   removerGarcom: (id: number) => apiSend(`/api/admin/garcons/${id}`, "DELETE"),
 
+  adminDashboardGeral: (periodo: PeriodoDashboard) =>
+    apiGet<DashboardGeral>(`/api/admin/dashboard?periodo=${encodeURIComponent(periodo)}`),
   adminDashboard: (params?: { from?: string; to?: string }) => {
     const q = new URLSearchParams();
     if (params?.from) q.set("from", params.from);

@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { chromium } = require('playwright-core');
 const binary = require('@sparticuz/chromium').default;
+const { criarDashboard } = require('./fixtures/dashboard.cjs');
 const base = process.env.VISUAL_BASE_URL || 'http://localhost:4173';
 
 const contas = Array.from({ length: 31 }, (_, i) => ({
@@ -48,7 +49,7 @@ async function main() {
       let body = [];
       if (p === '/api/me') body = { staff: { id: 1, papel: 'admin', nome: 'Admin', deveTrocarSenha: false }, csrfToken: 'teste' };
       else if (p === '/api/admin/cardapio' || p === '/api/cardapio') body = menu;
-      else if (p === '/api/admin/dashboard') body = { topProdutos: Array.from({ length: 8 }, (_, i) => ({ nome: `Mais vendido ${i + 1}`, quantidade: 8 - i })) };
+      else if (p === '/api/admin/dashboard') body = criarDashboard({ topProdutos: Array.from({ length: 8 }, (_, i) => ({ nome: `Mais vendido ${i + 1}`, quantidade: 8 - i })) });
       else if (p === '/api/admin/relatorio') body = relatorio;
       else if (p === '/api/caixa/sessoes') body = sessoes;
       else if (p === '/api/config/pix') body = { chave: '', nome: 'QR Admin', cidade: 'Itajaí' };

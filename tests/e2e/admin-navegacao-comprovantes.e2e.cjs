@@ -4,6 +4,7 @@
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright-core');
 const binary = require('@sparticuz/chromium').default;
+const { criarDashboard } = require('./fixtures/dashboard.cjs');
 
 const base = process.env.VISUAL_BASE_URL || 'http://localhost:4173';
 const resumo = Array.from({ length: 12 }, (_, i) => ({
@@ -29,7 +30,7 @@ async function contexto(browser, papel = 'admin', obrigatorio = false) {
     const p = url.pathname;
     let data = [];
     if (p === '/api/me') data = { staff: { id: 1, login: papel, papel, nome: papel, deveTrocarSenha: obrigatorio }, csrfToken: 'csrf-test' };
-    else if (p === '/api/admin/dashboard') data = { faturamento: 0, pedidosTotal: 0, contasFechadas: 0, ticketMedio: 0, porDia: [], topProdutos: [] };
+    else if (p === '/api/admin/dashboard') data = criarDashboard({ faturamento: 0, pedidosTotal: 0, contasFechadas: 0, ticketMedio: 0 });
     else if (p === '/api/admin/mesas/config') data = { quantidade: 0, limite: 70 };
     else if (p === '/api/admin/garcons/metricas') data = { garcons: [] };
     else if (p === '/api/admin/contas') data = [{ id: 1, nome: 'Admin', login: 'admin', papel: 'admin' }];

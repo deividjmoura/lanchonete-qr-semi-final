@@ -6,7 +6,6 @@ import {
   CaretDown,
   CaretRight,
   Copy,
-  CurrencyCircleDollar,
   DownloadSimple,
   Eye,
   EyeSlash,
@@ -19,15 +18,13 @@ import {
   Printer,
   Receipt,
   Trash,
-  TrendUp,
-  Trophy,
   UserPlus,
-  Users,
   WarningCircle,
 } from "@phosphor-icons/react";
 import { QRCodeSVG } from "qrcode.react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { OpsShell } from "../components/OpsShell";
+import Dashboard from "./Dashboard";
 import { ControlesPaginacao, ListaLimitada, useLimiteLocal } from "../components/Paginacao";
 import { Badge, Btn, Input, Modal } from "../components/ui";
 import { usePaginacaoCursor } from "../hooks/usePaginacaoCursor";
@@ -113,7 +110,7 @@ export default function Admin({ secao }: { secao?: string }) {
           exit={{ opacity: 0 }}
           transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.22, 1, 0.36, 1] }}
         >
-          {aba === "painel" && <Painel />}
+          {aba === "painel" && <Dashboard />}
           {aba === "cardapio" && <Cardapio />}
           {aba === "mesas" && <Mesas />}
           {aba === "garcons" && <Garcons />}
@@ -121,259 +118,6 @@ export default function Admin({ secao }: { secao?: string }) {
         </motion.div>
       </AnimatePresence>
     </OpsShell>
-  );
-}
-
-/* ================= DASHBOARD ================= */
-function Painel() {
-  const sessoes = usePub((s) => s.sessoes);
-  const pedidos = usePub((s) => s.pedidos);
-  const produtos = usePub((s) => s.produtos);
-
-  const [dash, setDash] = useState<any>(null);
-  const [loadingDash, setLoadingDash] = useState(true);
-
-  useEffect(() => {
-    let alive = true;
-    const load = () => {
-      api
-        .adminDashboard()
-        .then((d) => {
-          if (alive) {
-            setDash(d);
-            setLoadingDash(false);
-          }
-        })
-        .catch(() => {
-          if (alive) setLoadingDash(false);
-        });
-    };
-    load();
-    const t = setInterval(load, 30_000);
-    return () => {
-      alive = false;
-      clearInterval(t);
-    };
-  }, []);
-
-  const fatHoje = Number(dash?.faturamento ?? 0);
-  const qtdPedidos = Number(dash?.pedidosTotal ?? 0);
-  const ticketApi = Number(dash?.ticketMedio ?? 0);
-  const emAberto =
-    Number(dash?.emAberto?.valorEntregue ?? 0) ||
-    sessoes
-      .filter((s) => s.status === "aberta")
-      .reduce((a, s) => a + (s.valorTotal != null ? Number(s.valorTotal) : totalSessao(pedidos, s.id)), 0);
-
-  const ticket =
-    ticketApi > 0
-      ? ticketApi
-      : qtdPedidos
-        ? fatHoje / Math.max(1, Number(dash?.contasFechadas || 1))
-        : 0;
-
-  const topApi: { nome: string; quantidade: number; receita?: number }[] = Array.isArray(
-    dash?.topProdutos,
-  )
-    ? dash.topProdutos
-    : [];
-  const top: Array<Pick<Produto, "id" | "nome" | "vendidos" | "foto" | "setor">> =
-    topApi.length > 0
-      ? topApi.map((t, i) => {
-          const prod = produtos.find((p) => p.nome === t.nome);
-          return {
-            id: prod?.id ?? i,
-            nome: t.nome,
-            vendidos: Number(t.quantidade || 0),
-            foto: prod?.foto || "/assets/demo/placeholder.webp",
-            setor: prod?.setor,
-          };
-        })
-      : [...produtos].sort((a, b) => (b.vendidos || 0) - (a.vendidos || 0)).slice(0, 5);
-  const topVisiveis = useLimiteLocal(top, 5);
-  const maxTop = Math.max(1, ...top.map((p) => p.vendidos || 0));
-
-  const semanaApi: { dia: string; label: string; faturamento: number; contas: number }[] =
-    Array.isArray(dash?.porDia) ? dash.porDia : [];
-  // Os valores do gráfico são de contas fechadas. Não misturar consumo em
-  // aberto nem inventar zeros para dias sem dados quando a API não responde.
-  const semana = semanaApi.map((d) => ({
-    dia: d.label || d.dia,
-    valor: Number(d.faturamento || 0),
-  }));
-  const maxSemana = Math.max(1, ...semana.map((d) => d.valor));
-
-  const cards = [
-    {
-      Icon: CurrencyCircleDollar,
-      label: "Faturamento hoje",
-      valor: loadingDash ? "…" : BRL(fatHoje),
-      sub: "Sessões fechadas no caixa",
-      destaque: true,
-    },
-    {
-      Icon: Users,
-      label: "Consumo em aberto",
-      valor: loadingDash ? "…" : BRL(emAberto),
-      sub: "Comandas ativas no salão",
-      destaque: false,
-    },
-    {
-      Icon: Receipt,
-      label: "Pedidos no dia",
-      valor: loadingDash ? "…" : String(qtdPedidos),
-      sub: "Registrados hoje",
-      destaque: false,
-    },
-    {
-      Icon: TrendUp,
-      label: "Ticket médio",
-      valor: loadingDash ? "…" : BRL(ticket),
-      sub: "Por conta encerrada",
-      destaque: false,
-    },
-  ];
-
-  return (
-    <div className="space-y-5">
-      {/* Cartões individuais arredondados de indicadores */}
-      <section
-        aria-label="Indicadores do dia"
-        className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"
-      >
-        {cards.map((c) => {
-          const Icon = c.Icon;
-          return (
-            <div
-              key={c.label}
-              className="metric-card rounded-lg border border-line bg-surface-raised shadow-card p-5 flex flex-col justify-between"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted">
-                  {c.label}
-                </span>
-                <Icon
-                  size={18}
-                  weight="regular"
-                  className={c.destaque ? "text-brand-ink" : "text-text-muted"}
-                />
-              </div>
-              <p
-                className={cn(
-                  "metric-value mt-3 font-display text-2xl sm:text-[1.7rem] font-bold tnum leading-tight truncate",
-                  c.destaque ? "text-brand-ink" : "text-text",
-                )}
-              >
-                {c.valor}
-              </p>
-              <p className="mt-2 text-xs text-text-muted">{c.sub}</p>
-            </div>
-          );
-        })}
-      </section>
-
-      <div className="grid lg:grid-cols-2 gap-5">
-        {/* Gráfico de faturamento semanal */}
-        <section className="rounded-lg border border-line bg-surface-raised shadow-card p-5 sm:p-6">
-          <div className="flex items-center justify-between gap-2 pb-4 border-b border-line mb-5">
-            <h2 className="font-display text-2xl font-bold tracking-tight text-text">
-              Semana da casa
-            </h2>
-            <Badge tone="neutral">Faturamento / dia</Badge>
-          </div>
-          {semana.length ? (
-            <div className="flex items-end gap-2.5 sm:gap-3.5 h-44">
-              {semana.map((d) => {
-                const hoje = d.dia === "Hoje";
-                const valor = BRL(d.valor);
-                return (
-                  <div key={d.dia} className="flex-1 h-full min-w-0 flex flex-col items-center gap-2">
-                    <div
-                      className="relative flex-1 w-full rounded-xs bg-surface-sunken border border-line overflow-hidden"
-                      role="img"
-                      aria-label={`${d.dia}: ${valor}`}
-                      title={`${d.dia}: ${valor}`}
-                    >
-                      <div
-                        className={cn(
-                          "absolute inset-0 origin-bottom transition-transform duration-150",
-                          hoje ? "bg-brand" : "bg-status-success",
-                        )}
-                        style={{ transform: `scaleY(${Math.max(0.04, d.valor / maxSemana)})` }}
-                      />
-                      <span className="week-bar-value" aria-hidden="true">{valor}</span>
-                    </div>
-                    <span
-                      className={cn(
-                        "font-mono text-[10px] font-semibold uppercase tracking-wider",
-                        hoje ? "text-brand-ink" : "text-text-muted",
-                      )}
-                    >
-                      {d.dia}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="h-44 flex items-center justify-center text-sm text-text-muted text-center" role="status">
-              {loadingDash ? "Carregando vendas da semana…" : "Dados de vendas da semana indisponíveis."}
-            </p>
-          )}
-        </section>
-
-        {/* Mais pedidos */}
-        <section aria-label="Mais pedidos" className="rounded-md border border-line bg-surface-raised p-5 sm:p-6">
-          <div className="flex items-center justify-between gap-2 pb-4 border-b border-dashed border-line-strong mb-4">
-            <h2 className="font-display text-2xl font-bold tracking-tight text-text flex items-center gap-2">
-              <Trophy size={20} weight="regular" className="text-accent-ink" /> Mais pedidos
-            </h2>
-            <Badge tone="brass">Top {topVisiveis.itens.length}</Badge>
-          </div>
-
-          {top.length === 0 ? (
-            <p className="text-sm text-text-muted py-8 text-center">
-              Nenhuma venda registrada hoje.
-            </p>
-          ) : (
-            <ul className="divide-y divide-line">
-              {topVisiveis.itens.map((p, i) => (
-                <li key={p.id ?? p.nome} className="py-3 first:pt-0 last:pb-0 flex items-center gap-3">
-                  <img
-                    src={p.foto || "/assets/demo/placeholder.webp"}
-                    alt=""
-                    className="size-11 rounded-sm border border-line object-cover shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-text truncate">
-                        <span className="font-mono text-xs text-brand-ink mr-1.5">#{i + 1}</span>
-                        {p.nome}
-                        {p.setor === "bar" && (
-                          <Badge tone="violet" className="ml-2">
-                            Bar
-                          </Badge>
-                        )}
-                      </p>
-                      <span className="font-mono text-xs font-semibold text-text-muted shrink-0">
-                        {p.vendidos} un.
-                      </span>
-                    </div>
-                    <div className="mt-1.5 h-1.5 rounded-xs bg-surface-sunken overflow-hidden">
-                      <div
-                        className="h-full bg-brand"
-                        style={{ width: `${((p.vendidos || 0) / maxTop) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-          <ControlesPaginacao {...topVisiveis} />
-        </section>
-      </div>
-    </div>
   );
 }
 

@@ -88,6 +88,7 @@ const {
   listPedidosRecentes,
 } = require('./db/garcons');
 const { resumoDia, topProdutosHoje } = require('./db/dashboard');
+const { dashboardGeral } = require('./db/dashboard-geral');
 const { relatorioVendas } = require('./db/relatorio');
 const { purgeHistorico, ErroPurge } = require('./db/purge');
 const { processarUploadFoto, ErroFoto } = require('./db/foto');
@@ -981,6 +982,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (p === '/api/admin/dashboard' && req.method === 'GET') {
       const q = new URL(req.url, 'http://localhost').searchParams;
+      if (q.has('periodo')) return json(res, 200, await dashboardGeral({ periodo: q.get('periodo') }));
       return json(res, 200, await resumoDia({ from: q.get('from') || null, to: q.get('to') || null }));
     }
     if (p === '/api/admin/relatorio' && req.method === 'GET') {
