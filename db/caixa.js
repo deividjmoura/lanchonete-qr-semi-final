@@ -618,6 +618,15 @@ async function fecharSessao(sessaoIdBruto, body, operadorNome = null, opcoes = {
     const valorCobrado = Number((valorTotal - desconto + taxaServico).toFixed(2));
     if (valorCobrado < 0) throw new ErroCaixa(400, 'Valor cobrado inválido');
 
+    // Issue #48: desconto ou ajuste/remoção da taxa de serviço exige gerente
+    // (admin) reautenticado. A rota valida a credencial e repassa a
+    // autorização; esta é a trava final, dentro da mesma transação.
+    const exigeGerente = desconto > 0.009 || taxaServicoAjustada;
+    const gerenteAutorizador = opcoes.autorizacaoGerente;
+    if (exigeGerente && !(gerenteAutorizador && Number.isInteger(gerenteAutorizador.id))) {
+      throw new ErroCaixa(403, 'Desconto ou ajuste de serviço exige autorização do gerente');
+    }
+
     let valorPago = await totalPagoDaSessao(client, sessaoId);
     if (valorPago > valorCobrado + 0.009) {
       // Pagamentos parciais já superam o que seria cobrado com esse desconto:
@@ -697,6 +706,8 @@ async function fecharSessao(sessaoIdBruto, body, operadorNome = null, opcoes = {
         taxaServicoPadrao,
         taxaServicoAjustada,
         taxaServicoMotivo,
+        autorizadoPorId: gerenteAutorizador && Number.isInteger(gerenteAutorizador.id) ? gerenteAutorizador.id : null,
+        autorizadoPorNome: gerenteAutorizador?.nome ? String(gerenteAutorizador.nome).slice(0, 120) : null,
         formaPagamento: forma,
       },
       requestId: opcoes.requestId || null,

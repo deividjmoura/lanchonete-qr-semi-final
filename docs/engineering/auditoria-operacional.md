@@ -65,3 +65,34 @@ documento; a implementação entra numa frente própria.
 
 A issue #48 **segue aberta** até a regra estar implementada e testada com
 dois funcionários em dispositivo compartilhado.
+
+## Implementação registrada — 2026-10-30 (issue #48, etapa gerente)
+
+A regra está ativa nesta PR:
+
+- Fechar a conta com **desconto > 0** ou **taxa de serviço ajustada** (valor
+  informado diferente do percentual padrão, com motivo) exige que um
+  **gerente (staff `admin`) reautentique com login + senha** no mesmo
+  aparelho em que o caixa opera. Sem desconto e com a taxa padrão, o
+  fechamento não muda.
+- A rota `POST /api/caixa/sessoes/:id/fechar` valida a credencial antes de
+  fechar: no máximo **10 tentativas por IP+sessão a cada 5 min** (429
+  `GERENTE_BLOQUEADO`). Credencial inválida ou ausente responde 403
+  (`GERENTE_NAO_AUTORIZADO`) e grava em `auditoria_eventos` o evento
+  `gerente_autorizacao_negada` com `resultado='negado'` (operador, sessão,
+  request id e se havia desconto/taxa — nunca a senha).
+- Com a autorização válida, o evento `sessao_fechada` passa a registrar no
+  contexto `autorizadoPorId` e `autorizadoPorNome` (quem autorizou), ao lado
+  do ator que operou o fechamento — os dois funcionários do dispositivo
+  compartilhado ficam identificados na mesma transação do fechamento.
+- Trava final no banco: `db/caixa.js` (`fecharSessao`) rejeita com 403
+  qualquer desconto/ajuste que chegue sem a autorização validada, mesmo fora
+  da rota HTTP.
+- Testes com dois funcionários em PostgreSQL descartável:
+  `tests/postgres-gerente-autorizacao.test.cjs` (caixa não autoriza, só
+  admin; fechamento com desconto sem gerente → 403; com gerente → fecha e o
+  evento guarda operador + autorizador; taxa padrão dispensa gerente).
+
+A issue #48 **segue aberta**: a retenção da trilha depende da #44
+(jurídico/LGPD). Contas individuais, PIN dedicado nos tablets e auditoria
+das mutações de admin seguem como etapas futuras deste documento.

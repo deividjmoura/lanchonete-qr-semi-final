@@ -270,7 +270,7 @@ test('PostgreSQL real: entrega progressiva por setor, disputa de itens e respons
     // 12) Fechamento financeiro continua funcionando com o total entregue.
     const fechamento = await fecharSessao(criado.sessaoId, {
       formaPagamento: 'pix', desconto: 0, taxaServico: 0, taxaServicoMotivo: 'Isenção de serviço no cenário de teste', idempotencyKey: UUID(),
-    }, ids.staff.nome, { atorTipo: 'staff', atorId: ids.staff.id, requestId: REQ('close') });
+    }, ids.staff.nome, { atorTipo: 'staff', atorId: ids.staff.id, requestId: REQ('close'), autorizacaoGerente: { id: ids.staff.id, nome: ids.staff.nome } });
     assert.equal(fechamento.status, 'fechada');
     assert.equal(Number(fechamento.valorCobrado), 59.5);
     const mesaLivre = await pool.query('SELECT status FROM mesas WHERE id=$1', [ids.mesa.id]);
@@ -471,7 +471,7 @@ test('PostgreSQL real: cancelamento por item devolve estoque uma vez e não bloq
 
     const fechamento = await fecharSessao(criado.sessaoId, {
       formaPagamento: 'dinheiro', desconto: 0, taxaServico: 0, taxaServicoMotivo: 'Isenção de serviço no cenário de teste', idempotencyKey: UUID(),
-    }, ids.staff.nome, { atorTipo: 'staff', atorId: ids.staff.id });
+    }, ids.staff.nome, { atorTipo: 'staff', atorId: ids.staff.id, autorizacaoGerente: { id: ids.staff.id, nome: ids.staff.nome } });
     assert.equal(Number(fechamento.valorCobrado), 9.5);
   } finally {
     await c.limpar();
@@ -500,7 +500,7 @@ test('PostgreSQL real: comanda totalmente cancelada fecha com total zero e liber
 
     const fechamento = await fecharSessao(criado.sessaoId, {
       formaPagamento: 'dinheiro', desconto: 0, taxaServico: 0, taxaServicoMotivo: 'Isenção de serviço no cenário de teste', idempotencyKey: UUID(),
-    }, ids.staff.nome, { atorTipo: 'staff', atorId: ids.staff.id });
+    }, ids.staff.nome, { atorTipo: 'staff', atorId: ids.staff.id, autorizacaoGerente: { id: ids.staff.id, nome: ids.staff.nome } });
     assert.equal(fechamento.status, 'fechada');
     assert.equal(Number(fechamento.valorCobrado), 0);
     const mesa = await pool.query('SELECT status FROM mesas WHERE id=$1', [ids.mesa.id]);
@@ -579,7 +579,7 @@ test('PostgreSQL real: replay offline do garçom é idempotente e conteúdo dive
     await assumirEntregaComoGarcom(primeiro.id, g.token, REQ('claim-off'), [itemOffline.id]);
     await retirarComoGarcom(primeiro.id, g.token, REQ('pick-off'), [itemOffline.id]);
     await entregarComoGarcom(primeiro.id, g.token, [itemOffline.id], REQ('deliver-off'), 'entregar');
-    await fecharSessao(base.sessaoId, { formaPagamento: 'pix', desconto: 0, taxaServico: 0, taxaServicoMotivo: 'Isenção de serviço no cenário de teste', idempotencyKey: UUID() }, ids.staff.nome, { atorTipo: 'staff', atorId: ids.staff.id });
+    await fecharSessao(base.sessaoId, { formaPagamento: 'pix', desconto: 0, taxaServico: 0, taxaServicoMotivo: 'Isenção de serviço no cenário de teste', idempotencyKey: UUID() }, ids.staff.nome, { atorTipo: 'staff', atorId: ids.staff.id, autorizacaoGerente: { id: ids.staff.id, nome: ids.staff.nome } });
 
     const replayTardio = await criarPedidoGarcom(g.token, ids.mesa.numero, corpo, REQ('offline-late'));
     assert.equal(replayTardio.id, primeiro.id);
@@ -619,7 +619,7 @@ test('PostgreSQL real: caixa não fecha com item em produção e a listagem cobr
     await entregarComoGarcom(criado.id, g.token, [itemBebida.id], REQ('deliver'), 'entregar');
 
     await assert.rejects(
-      () => fecharSessao(criado.sessaoId, { formaPagamento: 'pix', desconto: 0, taxaServico: 0, taxaServicoMotivo: 'Isenção de serviço no cenário de teste', idempotencyKey: UUID() }, ids.staff.nome, { atorTipo: 'staff', atorId: ids.staff.id }),
+      () => fecharSessao(criado.sessaoId, { formaPagamento: 'pix', desconto: 0, taxaServico: 0, taxaServicoMotivo: 'Isenção de serviço no cenário de teste', idempotencyKey: UUID() }, ids.staff.nome, { atorTipo: 'staff', atorId: ids.staff.id, autorizacaoGerente: { id: ids.staff.id, nome: ids.staff.nome } }),
       (e) => e.status === 409,
       'item ainda na cozinha bloqueia o fechamento'
     );
