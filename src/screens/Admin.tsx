@@ -1795,6 +1795,7 @@ function Relatorio() {
   // (PDF/CSV); Comprovantes recentes = últimas contas encerradas, com
   // atualização automática. O documento impresso é o mesmo nas duas visões.
   const [vista, setVista] = useState<"resumo" | "comprovantes">("resumo");
+  const [contasVisiveis, setContasVisiveis] = useState(10);
 
   const buscar = async (f: string = from, t: string = to) => {
     setLoading(true);
@@ -1814,6 +1815,10 @@ function Relatorio() {
     void buscar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    setContasVisiveis(10);
+  }, [data]);
 
   const resumo = data?.resumo || {};
   const contas = Array.isArray(data?.contas) ? data.contas : [];
@@ -2173,7 +2178,7 @@ function Relatorio() {
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {contas.slice(0, 200).map((c: any) => (
+              {contas.slice(0, contasVisiveis).map((c: any) => (
                 <tr key={c.id}>
                   <td className="py-2.5 pr-2 font-mono text-xs text-text-muted">{c.id}</td>
                   <td className="py-2.5 pr-2 font-mono text-xs text-text">{c.mesa}</td>
@@ -2210,6 +2215,21 @@ function Relatorio() {
               ))}
             </tbody>
           </table>
+        )}
+        {contas.length > 0 && (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <span className="text-xs text-text-muted">
+              Mostrando {Math.min(contasVisiveis, contas.length)} de {contas.length}{" "}
+              {contas.length === 1 ? "conta" : "contas"}
+            </span>
+            {contasVisiveis < contas.length ? (
+              <Btn size="sm" variant="secondary" onClick={() => setContasVisiveis((v) => v + 10)}>
+                Carregar mais
+              </Btn>
+            ) : contas.length > 10 ? (
+              <span className="text-xs text-text-muted">Fim da lista — {contas.length} contas</span>
+            ) : null}
+          </div>
         )}
       </section>
       </>
@@ -2288,6 +2308,8 @@ function pedidoFromHistorico(p: any): Pedido {
   };
 }
 
+const HIST_POR_PAGINA = 15;
+
 function HistoricoPedidos({
   histFrom,
   setHistFrom,
@@ -2297,6 +2319,9 @@ function HistoricoPedidos({
   histMsg,
   busy,
   onBuscar,
+  temMais,
+  carregandoMais,
+  onCarregarMais,
 }: {
   histFrom: string;
   setHistFrom: (v: string) => void;
@@ -2306,6 +2331,9 @@ function HistoricoPedidos({
   histMsg: string | null;
   busy: boolean;
   onBuscar: () => void;
+  temMais: boolean;
+  carregandoMais: boolean;
+  onCarregarMais: () => void;
 }) {
   const [aberto, setAberto] = useState<number | null>(null);
   const toggle = (id: number) => setAberto((cur) => (cur === id ? null : id));
@@ -2354,7 +2382,7 @@ function HistoricoPedidos({
         {hist.length === 0 && !busy && (
           <p className="text-sm text-text-muted py-6 text-center">Nenhum pedido neste período.</p>
         )}
-        {hist.slice(0, 100).map((p: any) => {
+        {hist.map((p: any) => {
           const id = Number(p.id);
           const isOpen = aberto === id;
           const itens = Array.isArray(p.itens) ? p.itens : [];
@@ -2480,6 +2508,16 @@ function HistoricoPedidos({
           );
         })}
       </div>
+      {temMais && (
+        <div className="mt-4">
+          <Btn size="sm" variant="secondary" disabled={carregandoMais} onClick={onCarregarMais}>
+            {carregandoMais ? "Carregando…" : "Carregar mais"}
+          </Btn>
+        </div>
+      )}
+      {!temMais && hist.length >= HIST_POR_PAGINA && (
+        <p className="mt-4 text-xs text-text-muted">Fim da lista</p>
+      )}
     </section>
   );
 }
@@ -2493,21 +2531,29 @@ type ComprovanteResumo = {
 };
 
 function ComprovantesRecentes() {
+  const POR_PAGINA = 5;
   const [comprovantes, setComprovantes] = useState<ComprovanteResumo[]>([]);
-  const [visiveis, setVisiveis] = useState(5);
+  const [temMais, setTemMais] = useState(false);
+  const [carregandoMais, setCarregandoMais] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [imprimindo, setImprimindo] = useState<number | null>(null);
   const montado = useRef(false);
   const sequencia = useRef(0);
+  const carregadosRef = useRef(0);
 
   const atualizar = useCallback(async (silencioso = false) => {
     const pedido = ++sequencia.current;
     if (!silencioso) setCarregando(true);
+    // Recarrega a janela já aberta (mínimo uma página) para o polling/atualização
+    // manual não perder o progresso do "Carregar mais" nem duplicar itens.
+    const janela = Math.max(carregadosRef.current, POR_PAGINA);
     try {
-      const rows = await api.comprovantesRecentes();
+      const rows = await api.comprovantesRecentes({ limit: janela, offset: 0 });
       if (!montado.current || pedido !== sequencia.current) return;
+      carregadosRef.current = rows.length;
       setComprovantes(rows);
+      setTemMais(rows.length >= janela);
       setErro(null);
     } catch (e) {
       if (!montado.current || pedido !== sequencia.current) return;
@@ -2516,6 +2562,28 @@ function ComprovantesRecentes() {
       if (montado.current && pedido === sequencia.current) setCarregando(false);
     }
   }, []);
+
+  const carregarMais = useCallback(async () => {
+    if (carregandoMais) return;
+    const pedido = ++sequencia.current;
+    setCarregandoMais(true);
+    try {
+      const rows = await api.comprovantesRecentes({
+        limit: POR_PAGINA,
+        offset: carregadosRef.current,
+      });
+      if (!montado.current || pedido !== sequencia.current) return;
+      carregadosRef.current += rows.length;
+      setComprovantes((prev) => [...prev, ...rows]);
+      setTemMais(rows.length === POR_PAGINA);
+      setErro(null);
+    } catch (e) {
+      if (!montado.current || pedido !== sequencia.current) return;
+      setErro(e instanceof Error ? e.message : "Falha ao carregar comprovantes.");
+    } finally {
+      if (montado.current && pedido === sequencia.current) setCarregandoMais(false);
+    }
+  }, [carregandoMais]);
 
   useEffect(() => {
     montado.current = true;
@@ -2553,7 +2621,7 @@ function ComprovantesRecentes() {
       </div>
       {erro && <p role="alert" className="px-5 py-3 text-sm text-status-danger-ink">{erro}</p>}
       <div className="divide-y divide-line" aria-busy={carregando}>
-        {comprovantes.slice(0, visiveis).map((c) => (
+        {comprovantes.map((c) => (
           <div key={c.id} className="flex flex-wrap items-center gap-3 justify-between px-5 py-3">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-text">
@@ -2570,10 +2638,15 @@ function ComprovantesRecentes() {
           <p className="text-xs text-text-muted px-5 py-6 text-center">Nenhuma conta encerrada recentemente.</p>
         )}
       </div>
-      {visiveis < comprovantes.length && (
+      {temMais && (
         <div className="px-5 py-4 border-t border-line">
-          <Btn size="sm" variant="secondary" onClick={() => setVisiveis((n) => n + 5)}>Carregar mais</Btn>
+          <Btn size="sm" variant="secondary" disabled={carregandoMais} onClick={() => void carregarMais()}>
+            {carregandoMais ? "Carregando…" : "Carregar mais"}
+          </Btn>
         </div>
+      )}
+      {!temMais && comprovantes.length >= POR_PAGINA && (
+        <p className="px-5 py-3 border-t border-line text-xs text-text-muted">Fim da lista</p>
       )}
     </section>
   );
@@ -2593,6 +2666,8 @@ function Funcoes() {
   const [histTo, setHistTo] = useState(() => dataLocal());
   const [hist, setHist] = useState<any[]>([]);
   const [histMsg, setHistMsg] = useState<string | null>(null);
+  const [histTemMais, setHistTemMais] = useState(false);
+  const [histCarregandoMais, setHistCarregandoMais] = useState(false);
   const [purgeBefore, setPurgeBefore] = useState("");
   const [purgeMsg, setPurgeMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -2609,14 +2684,40 @@ function Funcoes() {
     setBusy(true);
     setHistMsg(null);
     try {
-      const rows = await api.adminPedidos(histFrom, histTo);
-      setHist(Array.isArray(rows) ? rows : []);
-      setHistMsg(`${Array.isArray(rows) ? rows.length : 0} pedido(s)`);
+      const rows = await api.adminPedidos(histFrom, histTo, undefined, {
+        limit: HIST_POR_PAGINA,
+        offset: 0,
+      });
+      const lista = Array.isArray(rows) ? rows : [];
+      setHist(lista);
+      setHistTemMais(lista.length === HIST_POR_PAGINA);
+      setHistMsg(`Mostrando ${lista.length} pedido(s)`);
     } catch (e: any) {
       setHist([]);
+      setHistTemMais(false);
       setHistMsg(e.message || "Erro ao buscar histórico");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const carregarMaisHist = async () => {
+    if (histCarregandoMais) return;
+    setHistCarregandoMais(true);
+    try {
+      const rows = await api.adminPedidos(histFrom, histTo, undefined, {
+        limit: HIST_POR_PAGINA,
+        offset: hist.length,
+      });
+      const lista = Array.isArray(rows) ? rows : [];
+      const total = hist.length + lista.length;
+      setHist((prev) => [...prev, ...lista]);
+      setHistTemMais(lista.length === HIST_POR_PAGINA);
+      setHistMsg(`Mostrando ${total} pedido(s)`);
+    } catch (e: any) {
+      setHistMsg(e.message || "Erro ao carregar mais pedidos");
+    } finally {
+      setHistCarregandoMais(false);
     }
   };
 
@@ -2729,6 +2830,9 @@ function Funcoes() {
           histMsg={histMsg}
           busy={busy}
           onBuscar={() => void buscarHist()}
+          temMais={histTemMais}
+          carregandoMais={histCarregandoMais}
+          onCarregarMais={() => void carregarMaisHist()}
         />
       )}
       {sub === "purge" && (

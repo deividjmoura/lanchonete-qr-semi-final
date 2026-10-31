@@ -781,7 +781,11 @@ const server = http.createServer(async (req, res) => {
       catch(e) { if(e instanceof ErroComprovante) return json(res,e.status,{error:e.message}); throw e; }
     }
     if (p === '/api/caixa/comprovantes' && req.method === 'GET') {
-      return json(res, 200, await listarComprovantesRecentes());
+      const q = new URL(req.url, 'http://localhost').searchParams;
+      return json(res, 200, await listarComprovantesRecentes({
+        limit: Number(q.get('limit')) || 25,
+        offset: Number(q.get('offset')) || 0,
+      }));
     }
     if (p === '/api/caixa/sessoes' && req.method === 'GET') {
       return json(res, 200, await listSessoesAbertas());
@@ -1007,6 +1011,7 @@ const server = http.createServer(async (req, res) => {
       const ativos = q.get('ativos') === '1' || q.get('ativos') === 'true';
       return json(res, 200, await listPedidosRecentes({
         limit: Number(q.get('limit')) || (ativos ? 100 : 80),
+        offset: Number(q.get('offset')) || 0,
         ativos,
         from: q.get('from') || null,
         to: q.get('to') || null,

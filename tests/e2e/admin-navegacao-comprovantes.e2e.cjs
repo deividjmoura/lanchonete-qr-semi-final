@@ -35,7 +35,10 @@ async function contexto(browser, papel = 'admin', obrigatorio = false) {
     else if (p === '/api/caixa/comprovantes') {
       requests.lista++;
       if (requests.falhar) return route.fulfill({ status: 503, json: { error: 'Comprovantes indisponíveis' } });
-      data = resumo;
+      const qs = new URL(route.request().url()).searchParams;
+      const limit = Number(qs.get('limit')) || resumo.length;
+      const offset = Number(qs.get('offset')) || 0;
+      data = resumo.slice(offset, offset + limit);
     } else if (/^\/api\/admin\/sessoes\/\d+\/comprovante$/.test(p)) {
       const id = Number(p.split('/')[4]);
       requests.detalhe.push(id);

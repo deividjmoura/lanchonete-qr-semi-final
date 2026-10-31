@@ -56,13 +56,17 @@ async function comprovanteSessao(idBruto) {
   }catch(e){try{await client.query('ROLLBACK')}catch(_){} throw e}
   finally{client.release()}
 }
-async function listarComprovantesRecentes() {
+async function listarComprovantesRecentes({ limit = 25, offset = 0 } = {}) {
+  const rawLimit = Number(limit);
+  const lim = Number.isFinite(rawLimit) ? Math.min(50, Math.max(1, Math.trunc(rawLimit))) : 25;
+  const rawOffset = Number(offset);
+  const off = Number.isFinite(rawOffset) ? Math.max(0, Math.trunc(rawOffset)) : 0;
   const {rows}=await pool.query(`
     SELECT s.id,m.numero AS mesa,s.fechada_em,s.cliente_nome,
       COALESCE(s.valor_cobrado,s.valor_total)::numeric(12,2) AS total
     FROM mesa_sessoes s JOIN mesas m ON m.id=s.mesa_id
     WHERE s.status='fechada'
-    ORDER BY s.fechada_em DESC,s.id DESC LIMIT 25`);
+    ORDER BY s.fechada_em DESC,s.id DESC LIMIT $1 OFFSET $2`, [lim, off]);
   return rows.map(r=>({id:r.id,mesa:r.mesa,fechadaEm:r.fechada_em,
     clienteNome:r.cliente_nome,total:Number(r.total)}));
 }

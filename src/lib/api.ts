@@ -206,7 +206,13 @@ export const api = {
     apiSend(`/api/garcom/${token}/pedidos/${pedidoId}/entregar`, "POST", { ...(itemIds?.length ? { itemIds } : {}), ...(etapa ? { etapa } : {}) }),
 
   caixaSessoes: () => apiGet<any[]>("/api/caixa/sessoes"),
-  comprovantesRecentes: () => apiGet<Array<{id:number;mesa:number;fechadaEm:string;clienteNome:string|null;total:number}>>("/api/caixa/comprovantes"),
+  comprovantesRecentes: (pagina?: { limit?: number; offset?: number }) => {
+    const q = new URLSearchParams();
+    if (pagina?.limit != null) q.set("limit", String(pagina.limit));
+    if (pagina?.offset != null) q.set("offset", String(pagina.offset));
+    const s = q.toString();
+    return apiGet<Array<{id:number;mesa:number;fechadaEm:string;clienteNome:string|null;total:number}>>(`/api/caixa/comprovantes${s ? `?${s}` : ""}`);
+  },
   comprovanteSessao: (id: number) => apiGet<any>(`/api/caixa/sessoes/${id}/comprovante`),
   comprovanteSessaoAdmin: (id: number) => apiGet<any>(`/api/admin/sessoes/${id}/comprovante`),
   registrarPagamento: (sessaoId: number, valor: number, formaPagamento: string, idempotencyKey: string) =>
@@ -268,11 +274,13 @@ export const api = {
   },
   adminRelatorio: (from: string, to: string) =>
     apiGet<any>(`/api/admin/relatorio?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
-  adminPedidos: (from?: string, to?: string, ativos?: boolean) => {
+  adminPedidos: (from?: string, to?: string, ativos?: boolean, pagina?: { limit?: number; offset?: number }) => {
     const q = new URLSearchParams();
     if (from) q.set("from", from);
     if (to) q.set("to", to);
     if (ativos) q.set("ativos", "1");
+    if (pagina?.limit != null) q.set("limit", String(pagina.limit));
+    if (pagina?.offset != null) q.set("offset", String(pagina.offset));
     const s = q.toString();
     return apiGet<any[]>(`/api/admin/pedidos${s ? `?${s}` : ""}`);
   },

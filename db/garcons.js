@@ -148,9 +148,11 @@ async function getGarcomPorToken(token) {
   return rows[0] || null;
 }
 
-async function listPedidosRecentes({ limit = 50, ativos = false, from = null, to = null } = {}) {
+async function listPedidosRecentes({ limit = 50, offset = 0, ativos = false, from = null, to = null } = {}) {
   const rawLimit = Number(limit);
   const lim = Number.isFinite(rawLimit) ? Math.min(200, Math.max(1, Math.trunc(rawLimit))) : 50;
+  const rawOffset = Number(offset);
+  const off = Number.isFinite(rawOffset) ? Math.max(0, Math.trunc(rawOffset)) : 0;
   const where = [];
   const params = [];
   let idx = 1;
@@ -172,7 +174,7 @@ async function listPedidosRecentes({ limit = 50, ativos = false, from = null, to
   }
 
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
-  params.push(lim);
+  params.push(lim, off);
 
   const { rows: pedidos } = await pool.query(
     `SELECT p.id, p.status, p.criado_em, p.cliente_nome, p.garcom_nome, p.claimed_at,
@@ -183,7 +185,7 @@ async function listPedidosRecentes({ limit = 50, ativos = false, from = null, to
      JOIN mesas m ON m.id = s.mesa_id
      ${whereSql}
      ORDER BY p.criado_em DESC
-     LIMIT $${idx}`,
+     LIMIT $${idx} OFFSET $${idx + 1}`,
     params
   );
   if (!pedidos.length) return [];
