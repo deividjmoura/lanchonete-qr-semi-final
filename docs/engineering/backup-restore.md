@@ -135,6 +135,39 @@ volume, o RPO era ilimitado. Sequência aprovada para fechar a evidência:
 4. Atualizar a tabela da seção 4 com os valores reais (datas, tempos, destino
    isolado) e fechar a #41 pela PR que referencia esta evidência.
 
+### 4.3 Checklist do dia do upgrade (pré-aprovado, aguardando sinal do cliente)
+
+Decisão do responsável (2026-10-30): o upgrade Hobby → Pro será feito quando o
+cliente der o sinal de entrada. Até lá, nada muda em produção. No dia do upgrade,
+executar nesta ordem — sem decisões pendentes:
+
+- [ ] Upgrade de plano confirmado no Railway (aba Backups do serviço `Postgres`
+      deixa de exibir o aviso de upgrade).
+- [ ] Ativar agendamentos **diário + semanal + mensal** (retenção padrão
+      6/27/89 dias). Verificar com `pitr schedule list` (deve listar os três).
+- [ ] Criar o **primeiro backup sob demanda** (`backup create` ou botão no
+      painel) e aguardar conclusão. Verificar com `pitr backup list`
+      (registrar identificador e horário UTC na tabela da seção 4).
+- [ ] **Restore isolado**: restaurar esse backup para um serviço/banco **novo**
+      (`backup restore` para destino novo; nunca sobre o serviço `Postgres` de
+      produção — se a interface sugerir substituição, parar e registrar aqui).
+      Cronometrar do início do restore até a validação concluir (RTO observado).
+- [ ] Validar no banco restaurado: contagens das tabelas principais batendo com
+      a produção e `SELECT count(*) FROM schema_migrations` igual ao total de
+      migrations do repositório. Registrar divergências (esperado: nenhuma).
+- [ ] Apagar o serviço/banco do drill e registrar na seção 4: backup usado,
+      destino isolado, RPO/RTO observados e confirmação de que a produção não
+      foi tocada.
+- [ ] **PITR por último**, em janela de baixo movimento combinada (a ativação
+      reimplanta o Postgres e causa indisponibilidade curta). Confirmar com
+      `pitr status` → `enabled: true`. Com o PITR, o RPO cai de até 24h para
+      minutos — folga sobre a meta de 24h, mantendo o RTO alvo de 4h.
+- [ ] Abrir a PR de evidência atualizando a seção 4 e fechar a #41 pelo merge.
+
+Critério objetivo de fechamento da #41: agendamento diário ativo + primeiro
+backup concluído + restore isolado validado com RTO medido ≤ 4h + tabela da
+seção 4 preenchida. Sem qualquer um desses itens, a issue permanece aberta.
+
 ## 5. Limites conhecidos
 
 - O drill valida integridade lógica (schema, contagens, constraints, sequences, conexão). Não valida desempenho do
