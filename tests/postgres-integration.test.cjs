@@ -291,7 +291,7 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
     assert.equal(Number(paymentCount.rows[0].total), 10);
 
     const closed = await caixa.fecharSessao(sessaoId, {
-      formaPagamento: 'pix', desconto: 0, taxaServico: 0,
+      formaPagamento: 'pix', desconto: 0, taxaServico: 0, taxaServicoMotivo: 'Isenção de serviço no cenário de teste',
       idempotencyKey: 'close-' + randomUUID(),
     });
     assert.equal(closed.status, 'fechada');

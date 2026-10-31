@@ -405,12 +405,31 @@ export function imprimirRelatorioPdf(opts: {
   resumo: Record<string, unknown>;
   contas: any[];
   porDia?: any[];
+  porGarcom?: any[];
   topProdutos?: any[];
 }) {
-  const { from, to, resumo, contas, porDia = [], topProdutos = [] } = opts;
+  const { from, to, resumo, contas, porDia = [], porGarcom = [], topProdutos = [] } = opts;
   const fat = Number(resumo.faturamento ?? 0);
   const qtd = Number(resumo.contasFechadas ?? contas.length);
   const ticket = Number(resumo.ticketMedio ?? (qtd ? fat / qtd : 0));
+  // #154: composição do total cobrado (vendas − descontos + serviço).
+  const vendasBrutas = Number(resumo.vendasBrutas ?? 0);
+  const servicoTotal = Number(resumo.servicoTotal ?? 0);
+  const descontosTotal = Number(resumo.descontosTotal ?? 0);
+  const totalCobrado = Number(resumo.totalCobrado ?? fat);
+
+  const garcomRows = (porGarcom || [])
+    .map(
+      (g: any) => `<tr>
+          <td>${esc(g.garcomNome || "—")}</td>
+          <td class="num">${esc(g.contas ?? 0)}</td>
+          <td class="num">${esc(BRL(Number(g.vendasBrutas || 0)))}</td>
+          <td class="num"><b>${esc(BRL(Number(g.servicoTotal || 0)))}</b></td>
+          <td class="num">${esc(BRL(Number(g.descontosTotal || 0)))}</td>
+          <td class="num">${esc(BRL(Number(g.totalCobrado || 0)))}</td>
+        </tr>`
+    )
+    .join("");
 
   const porFormaRaw =
     (resumo.porFormaPagamento as Record<string, number> | undefined) ||
@@ -468,7 +487,10 @@ export function imprimirRelatorioPdf(opts: {
         `<tr>
           <td>${esc(d.dia)}</td>
           <td class="num">${esc(d.contas)}</td>
-          <td class="num">${esc(BRL(Number(d.faturamento || 0)))}</td>
+          <td class="num">${esc(BRL(Number(d.vendasBrutas ?? d.faturamento ?? 0)))}</td>
+          <td class="num">${esc(BRL(Number(d.servicoTotal ?? 0)))}</td>
+          <td class="num">${esc(BRL(Number(d.descontosTotal ?? 0)))}</td>
+          <td class="num"><b>${esc(BRL(Number(d.totalCobrado ?? d.faturamento ?? 0)))}</b></td>
         </tr>`
     )
     .join("");
@@ -554,6 +576,14 @@ export function imprimirRelatorioPdf(opts: {
     <div class="kpi"><span>Ticket médio</span><b>${esc(BRL(ticket))}</b></div>
   </div>
 
+  <div class="kpis">
+    <div class="kpi"><span>Vendas (consumo)</span><b>${esc(BRL(vendasBrutas))}</b></div>
+    <div class="kpi"><span>Serviço</span><b>${esc(BRL(servicoTotal))}</b></div>
+    <div class="kpi"><span>Descontos</span><b>− ${esc(BRL(descontosTotal))}</b></div>
+    <div class="kpi"><span>Total cobrado</span><b>${esc(BRL(totalCobrado))}</b></div>
+  </div>
+  <p class="muted">Total cobrado = vendas (consumo) − descontos + serviço.</p>
+
   <h2>Formas de pagamento</h2>
   ${
     formasRows
@@ -568,8 +598,18 @@ export function imprimirRelatorioPdf(opts: {
     diasRows
       ? `<h2>Por dia</h2>
       <table>
-        <thead><tr><th>Dia</th><th class="num">Contas</th><th class="num">Faturamento</th></tr></thead>
+        <thead><tr><th>Dia</th><th class="num">Contas</th><th class="num">Vendas</th><th class="num">Serviço</th><th class="num">Descontos</th><th class="num">Total cobrado</th></tr></thead>
         <tbody>${diasRows}</tbody>
+      </table>`
+      : ""
+  }
+
+  ${
+    garcomRows
+      ? `<h2>Serviço por garçom responsável</h2>
+      <table>
+        <thead><tr><th>Garçom</th><th class="num">Contas</th><th class="num">Vendas</th><th class="num">Serviço (comissão)</th><th class="num">Descontos</th><th class="num">Total cobrado</th></tr></thead>
+        <tbody>${garcomRows}</tbody>
       </table>`
       : ""
   }
@@ -595,7 +635,7 @@ export function imprimirRelatorioPdf(opts: {
             <th>Cliente</th>
             <th class="num">Cobrado</th>
             <th class="num">Desc.</th>
-            <th class="num">Taxa</th>
+            <th class="num">Serviço</th>
             <th>Forma de pagamento</th>
             <th>Fechada em</th>
           </tr>
@@ -661,7 +701,7 @@ export function imprimirComprovanteConsumo(c: {
     <hr class="line"/>${itens||'<p class="meta">Nenhum item entregue.</p>'}<hr class="line"/>
     ${linha("Consumo",c.totalConsumo)}
     ${linha("Desconto", -c.desconto)}
-    ${linha("Taxa",c.taxa)}
+    ${linha("Serviço",c.taxa)}
     <hr class="line-solid"/>${linha("TOTAL COBRADO",c.valorCobrado)}
     <hr class="line"/><p class="bold">PAGAMENTOS REGISTRADOS</p>
     ${pagamentos||'<p class="meta">Nenhum pagamento registrado</p>'}
