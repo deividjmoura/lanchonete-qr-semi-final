@@ -4,7 +4,7 @@
 // node tests/e2e/visual-system.e2e.cjs
 const { chromium } = require("playwright-core");
 const binary = require("@sparticuz/chromium").default;
-const { criarDashboard } = require("./fixtures/dashboard.cjs");
+const { criarDashboard, aguardarLayoutDashboard } = require("./fixtures/dashboard.cjs");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -326,13 +326,13 @@ async function main() {
           }
 
           if (screen === "admin") {
+            await page.locator(".dash-chart__track").first().waitFor();
+            await aguardarLayoutDashboard(page, width);
             assert.equal(await page.locator(".metric-value").count(), 12);
-            assert.ok(
-              await page
-                .locator(".metric-value")
-                .evaluateAll((values) => values.every((el) => el.scrollWidth <= el.clientWidth)),
-              "Métricas não cortam valores",
-            );
+            const cortadas = await page.locator(".metric-value").evaluateAll((values) => values
+              .filter((el) => el.scrollWidth > el.clientWidth)
+              .map((el) => ({ texto: el.textContent, scroll: el.scrollWidth, largura: el.clientWidth })));
+            assert.deepEqual(cortadas, [], `${scheme}/${width}: métricas não cortam valores`);
             const tracks = page.locator(".dash-chart__track");
             assert.equal(await tracks.count(), 7);
             assert.ok((await tracks.first().boundingBox()).height > 100);

@@ -46,4 +46,20 @@ function criarDashboard(opcoes = {}) {
     atualizadoEm: '2026-10-30T15:20:00Z',
   };
 }
-module.exports = { criarDashboard };
+// headless Chromium pode devolver setViewportSize antes de aplicar todas as
+// media queries (inclusive a margem do shell); aguardar o layout real evita
+// inspecionar um estado transitório de desktop comprimido no viewport móvel.
+async function aguardarLayoutDashboard(page, width) {
+  await page.waitForFunction((largura) => {
+    const grid = document.querySelector('.dashboard-grid');
+    const valor = document.querySelector('.card-neon .metric-value');
+    const main = document.querySelector('.ops-main');
+    if (!grid || !valor || !main || window.innerWidth !== largura) return false;
+    const colunas = getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length;
+    const margem = parseFloat(getComputedStyle(main).marginLeft);
+    return colunas === (largura <= 1050 ? 2 : 4) &&
+      (largura > 420 || parseFloat(getComputedStyle(valor).fontSize) <= 18) &&
+      (largura >= 1024 ? margem >= 70 : margem === 0);
+  }, width);
+}
+module.exports = { criarDashboard, aguardarLayoutDashboard };

@@ -3,7 +3,7 @@
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright-core');
 const binary = require('@sparticuz/chromium').default;
-const { criarDashboard } = require('./fixtures/dashboard.cjs');
+const { criarDashboard, aguardarLayoutDashboard } = require('./fixtures/dashboard.cjs');
 const base = process.env.VISUAL_BASE_URL || 'http://localhost:4173';
 
 async function novoContexto(browser, reducedMotion = 'no-preference') {
@@ -145,6 +145,7 @@ async function main() {
 
     for (const width of [320, 375, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 });
+      await aguardarLayoutDashboard(page, width);
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `sem overflow em ${width}px`);
       assert.ok(await page.locator('.metric-value').evaluateAll((values) => values.every((e) => e.scrollWidth <= e.clientWidth)), `valores sem truncar em ${width}px`);
     }
