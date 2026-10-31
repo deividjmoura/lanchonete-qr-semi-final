@@ -158,6 +158,8 @@ Esta seção pressupõe que você já tem o repositório disponível no ambiente
 
 6. Abra `http://localhost:3000`.
 
+O [dashboard administrativo](docs/engineering/dashboard-geral.md) documenta os períodos no fuso da casa, os indicadores em tempo real e a reconciliação dos pagamentos.
+
 **Cuidado com o seed:** `FORCE_SEED=1 npm run db:seed` é destrutivo. Ele apaga pedidos, sessões, pagamentos e cardápio antes de substituir os dados de demonstração. Nunca rode esse comando no banco de produção. A identidade visual atual é provisoriamente QR Admin. A personalização da marca de cada estabelecimento deve ser feita em etapa futura, após validação do produto.
 
 ## Testes e validação

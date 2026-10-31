@@ -4,6 +4,7 @@
 // node tests/e2e/visual-system.e2e.cjs
 const { chromium } = require("playwright-core");
 const binary = require("@sparticuz/chromium").default;
+const { criarDashboard, aguardarLayoutDashboard } = require("./fixtures/dashboard.cjs");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -141,24 +142,15 @@ async function mock(route) {
     };
   else if (p === "/api/admin/mesas" || p === "/api/mesas") data = tables;
   else if (p === "/api/admin/dashboard")
-    data = {
-      faturamento: 1284.5,
-      pedidosTotal: 42,
-      ticketMedio: 53.52,
-      contasFechadas: 24,
-      emAberto: { valorEntregue: 428.8 },
-      porDia: ["Sáb", "Dom", "Seg", "Ter", "Qua", "Qui", "Hoje"].map((label, i) => ({
-        dia: label,
-        label,
-        faturamento: [800, 1200, 0, 680, 900, 1500, 1284][i],
-        contas: 5,
-      })),
+    data = criarDashboard({
+      periodo: u.searchParams.get("periodo") || "hoje", faturamento: 1284.5,
+      pedidosTotal: 42, ticketMedio: 53.52, contasFechadas: 24,
       topProdutos: [
         { nome: "Burger da casa", quantidade: 32 },
         { nome: "X-Bacon", quantidade: 24 },
         { nome: "Batata frita", quantidade: 18 },
       ],
-    };
+    });
   else if (p.includes("/api/mesas/") && p.endsWith("/sessao"))
     data = {
       mesa: 1,
@@ -334,14 +326,14 @@ async function main() {
           }
 
           if (screen === "admin") {
-            assert.equal(await page.locator(".metric-value").count(), 4);
-            assert.ok(
-              await page
-                .locator(".metric-value")
-                .evaluateAll((values) => values.every((el) => el.scrollWidth <= el.clientWidth)),
-              "Métricas não cortam valores",
-            );
-            const tracks = page.locator(".h-44 > div > div");
+            await page.locator(".dash-chart__track").first().waitFor();
+            await aguardarLayoutDashboard(page, width);
+            assert.equal(await page.locator(".metric-value").count(), 12);
+            const cortadas = await page.locator(".metric-value").evaluateAll((values) => values
+              .filter((el) => el.scrollWidth > el.clientWidth)
+              .map((el) => ({ texto: el.textContent, scroll: el.scrollWidth, largura: el.clientWidth })));
+            assert.deepEqual(cortadas, [], `${scheme}/${width}: métricas não cortam valores`);
+            const tracks = page.locator(".dash-chart__track");
             assert.equal(await tracks.count(), 7);
             assert.ok((await tracks.first().boundingBox()).height > 100);
           }

@@ -47,6 +47,8 @@ jobs:
         run: node --test tests/postgres-integration.test.cjs
       - name: Run financial PostgreSQL integration tests
         run: node --test tests/postgres-financial-integration.test.cjs
+      - name: Run dashboard and period reconciliation PostgreSQL tests
+        run: node --test tests/postgres-dashboard.test.cjs
       - name: Run waiter ownership PostgreSQL integration tests
         run: node --test tests/postgres-waiter-integration.test.cjs
       - name: Run waiter removal and concurrency PostgreSQL tests

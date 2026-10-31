@@ -97,6 +97,21 @@ async function main() {
       const u = new URL(req.url());
       if (u.pathname === '/api/caixa/comprovantes' || u.pathname === '/api/admin/pedidos') requisicoes.push(u);
     });
+    // Dashboard completo, sem mock: React → servidor autenticado → PostgreSQL.
+    await page.goto(base + '/#/admin', { waitUntil: 'load' });
+    await page.waitForFunction(() => document.querySelector('.card-neon .metric-value')?.textContent?.includes('R$'));
+    assert.equal(await page.locator('.card-neon').count(), 12);
+    const filtroDashboard = page.getByRole('group', { name: 'Período do dashboard' });
+    const semanaReal = page.waitForResponse((r) => r.url().includes('/api/admin/dashboard?periodo=semana') && r.status() === 200);
+    await filtroDashboard.getByRole('button', { name: 'Semana' }).click();
+    await semanaReal;
+    await page.getByRole('button', { name: /Detalhar Faturamento/ }).click();
+    const detalhesDashboard = page.getByRole('dialog', { name: 'Faturamento' });
+    await detalhesDashboard.getByText('Média por dia').waitFor();
+    await detalhesDashboard.getByRole('button', { name: 'Fechar detalhes' }).click();
+    assert.equal(await page.evaluate(() => sessionStorage.getItem('qradmin-dashboard-periodo')), 'semana');
+    console.log('  ✓ dashboard interativo usa a API e o PostgreSQL reais');
+
     await page.goto(base + '/#/admin/funcoes', { waitUntil: 'load' });
     await page.getByRole('heading', { name: 'Funções', level: 1 }).waitFor();
     await page.getByRole('button', { name: 'Relatório', exact: true }).click();
@@ -153,12 +168,24 @@ async function main() {
         invalido: await get('/api/admin/pedidos?paginado=1&limit=500'),
         cursor: await get('/api/caixa/comprovantes?paginado=1&cursor=invalido'),
         legado: await get('/api/caixa/comprovantes'),
+        dashboard: await get('/api/admin/dashboard?periodo=hoje'),
+        dashboardSemana: await get('/api/admin/dashboard?periodo=semana'),
+        dashboardInvalido: await get('/api/admin/dashboard?periodo=ano'),
+        dashboardLegado: await get('/api/admin/dashboard?from=2042-06-02&to=2042-06-02'),
       };
     });
     assert.equal(adminHttp.invalido.status, 400);
     assert.equal(adminHttp.cursor.status, 400);
     assert.ok(Array.isArray(adminHttp.legado.body));
     assert.ok(adminHttp.legado.body.length <= 25);
+    assert.equal(adminHttp.dashboard.status, 200);
+    assert.equal(adminHttp.dashboard.body.periodo.chave, 'hoje');
+    assert.equal(adminHttp.dashboardSemana.body.periodo.chave, 'semana');
+    assert.equal(adminHttp.dashboardInvalido.status, 400);
+    assert.equal(adminHttp.dashboardLegado.status, 200);
+    assert.equal(typeof adminHttp.dashboardLegado.body.faturamento, 'number');
+    assert.equal(adminHttp.dashboardLegado.body.periodo.from, '2042-06-02');
+    assert.ok(adminHttp.dashboardLegado.body.faturamento >= 640, 'contrato legado continua calculando from/to');
     for (const pessoa of [cozinha, caixa]) {
       const ctx = await browser.newContext();
       await ctx.addCookies([{ name: 'lqr_session', value: pessoa.sessao, url: base, httpOnly: true, sameSite: 'Lax' }]);
@@ -166,14 +193,16 @@ async function main() {
       await outra.goto(base + '/#/' + pessoa.papel);
       const status = await outra.evaluate(async () => ({
         historico: (await fetch('/api/admin/pedidos?paginado=1')).status,
+        dashboard: (await fetch('/api/admin/dashboard?periodo=hoje')).status,
         comprovantes: (await fetch('/api/caixa/comprovantes?paginado=1')).status,
       }));
       assert.equal(status.historico, 403);
+      assert.equal(status.dashboard, 403, 'dashboard continua restrito ao admin');
       assert.equal(status.comprovantes, pessoa.papel === 'caixa' ? 200 : 403);
       await ctx.close();
     }
     assert.deepEqual(erros, [], `sem erros de JavaScript; logs: ${logs.slice(-1500)}`);
-    console.log('  ✓ limites, contrato legado e permissões de admin/caixa/cozinha');
+    console.log('  ✓ limites, dashboard novo/legado e permissões de admin/caixa/cozinha');
   } finally {
     const falhas = [];
     if (browser) { try { await browser.close(); } catch (e) { falhas.push(e.message); } }

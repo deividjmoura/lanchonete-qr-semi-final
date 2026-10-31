@@ -7,6 +7,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require('playwright-core');
 const binary = require('@sparticuz/chromium').default;
+const { criarDashboard } = require('./fixtures/dashboard.cjs');
 
 const base = process.env.VISUAL_BASE_URL || 'http://localhost:4173';
 const screenshots = process.env.QUICK_WINS_SCREENSHOTS_DIR;
@@ -37,15 +38,11 @@ function mockApi(menu) {
     let data = [];
     if (p === '/api/me') data = { staff: { id: 1, papel: 'admin', nome: 'Admin', deveTrocarSenha: false }, csrfToken: 'csrf-test' };
     else if (p === '/api/admin/cardapio' || p === '/api/cardapio') data = menu;
-    else if (p === '/api/admin/dashboard') data = {
-      faturamento: 70000,
-      pedidosTotal: 5,
-      ticketMedio: 100,
-      contasFechadas: 5,
-      emAberto: { valorEntregue: 45 },
-      porDia: dias.map((label, i) => ({ dia: '2026-10-' + String(20 + i), label, faturamento: valores[i], contas: 1 })),
-      topProdutos: [],
-    };
+    else if (p === '/api/admin/dashboard') data = criarDashboard({
+      periodo: url.searchParams.get('periodo') || 'hoje', faturamento: 70000, pedidosTotal: 5,
+      ticketMedio: 100, contasFechadas: 5,
+      historico: dias.map((label, i) => ({ dia: '2026-10-' + String(20 + i), label, faturamento: valores[i], contas: 1 })),
+    });
     else if (p.endsWith('/garcons-ativos')) data = { garcons: [{ id: 1, nome: 'Ana', ativo: true }] };
     else if (p.includes('/api/garcom/') && p.endsWith('/mesas')) data = {
       garcom: { id: 1, nome: 'Ana' },
@@ -124,7 +121,7 @@ async function chartAndStock(browser, scheme) {
 
   // Dados indisponíveis não viram zeros falsos ou consumo em aberto no gráfico.
   const failPage = await context.newPage();
-  await failPage.route('**/api/admin/dashboard', (route) => route.fulfill({ status: 503, json: { error: 'Indisponível' } }));
+  await failPage.route('**/api/admin/dashboard**', (route) => route.fulfill({ status: 503, json: { error: 'Indisponível' } }));
   await failPage.goto(base + '/#/admin');
   await failPage.getByText('Dados de vendas da semana indisponíveis.').waitFor();
   assert.equal(await failPage.locator('.week-bar-value').count(), 0);
