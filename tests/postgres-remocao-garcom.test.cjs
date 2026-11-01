@@ -126,7 +126,15 @@ test('remover difere de desativar, invalida o link, audita e preserva autoria e 
       "UPDATE mesa_sessoes SET valor_total=200, taxa_servico=20, desconto=15, valor_cobrado=205, fechada_em='2026-10-31 15:00:00+00' WHERE id=$1",
       [sessaoPeriodo.id]
     );
+    const eventoExtra = f.request('evento-extra');
+    await pool.query(
+      `INSERT INTO auditoria_eventos(ator_tipo,ator_id,ator_nome,acao,alvo_tipo,alvo_id,request_id,criado_em)
+       VALUES('garcom',$1,$2,'pedido_editado','pedido','fixture',$3,'2026-10-31 13:00:00+00')`,
+      [g.id, g.nome, eventoExtra]
+    );
     const periodo = (await metricasGarcons({ data: '2026-10-30..2026-10-31' })).garcons.find((x) => x.id === g.id);
+    assert.deepEqual(periodo.outrosEventos, [{ acao: 'pedido_editado', quantidade: 1 }],
+      'eventos de auditoria adicionais aparecem sem duplicar ações já medidas');
     assert.deepEqual(
       [periodo.atendimentos, periodo.vendasBrutas, periodo.taxaServico, periodo.descontos, periodo.totalCobrado, periodo.ticketMedio],
       [2, 300, 30, 15, 315, 157.5],
