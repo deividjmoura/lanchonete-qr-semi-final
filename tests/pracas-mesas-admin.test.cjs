@@ -205,6 +205,8 @@ test('aba Mesas usa o panorama novo e preserva as operações existentes', () =>
   assert.match(mapa, /separados por vírgula/);
   assert.match(mapa, /h-12 w-full/);
   assert.match(mapa, /mesasFiltradas\.map/);
+  assert.match(mapa, /onAbrirMesa\(mesa\.numero\)/);
+  assert.doesNotMatch(mapa, />\s*Abrir\s*</);
   assert.doesNotMatch(mapa, /api\.ativarMesas|Limite atingido|teto/);
   assert.match(mapa, /mesaClienteUrl\(mesa\.token\)/);
   assert.match(mapa, /<QrDownloadButton/);
