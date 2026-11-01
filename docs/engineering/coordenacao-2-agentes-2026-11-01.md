@@ -52,11 +52,12 @@ garçons, e **aplicar** os tokens da Frente A em todas as telas administrativas/
 
 ```
 Frente A: tokens (design-tokens.css, index.css) ──► Frente B: aplicação nas telas
-          ^ não depende de nada                        ^ depende dos tokens publicados
+          ^ ENTREGUE em 327307b                        ^ DESBLOQUEADA: pode aplicar agora
 ```
 
-A Frente B **pode** começar pelos defeitos funcionais (não usam tokens) e só depois aplicar o visual.
-A Frente A entrega primeiro a camada de tokens justamente para desbloquear a aplicação.
+**Sem bloqueio pendente:** a camada de tokens já está publicada e verde (394/394 testes). A Frente B
+pode aplicar o visual em paralelo aos defeitos funcionais. Regras de consumo e lista de tokens por
+papel estão na seção 7 (Handoff).
 
 ## Protocolo de coordenação
 
@@ -79,3 +80,46 @@ A Frente A entrega primeiro a camada de tokens justamente para desbloquear a apl
 | B | Correção de #172 (TS1381 + teste) | ⏳ não iniciado |
 | B | Merge/validação de #174 (modal) | ⏳ não iniciado |
 | B | Correção de #176 (regex de data + 2 testes) | ⏳ não iniciado |
+
+---
+
+## 7. Handoff da Frente A — identidade disponível para consumo (2026-11-01)
+
+**Status:** camada de tokens fechada e publicada na branch (`327307b`). A Frente B já pode consumir
+sem esperar mais nada. Números de verificação: **394/394 testes**, `tsc` limpo, `vite build` OK,
+SSR smoke OK.
+
+### O que mudou de contrato (atenção nas telas)
+
+| Antes | Agora | Ação na Frente B |
+|---|---|---|
+| Hex/rgba direto nos CSS de palco | `var(--stage-*)` | usar token; se faltar papel visual, pedir token em vez de escrever cor |
+| `.ops-card-surface` sem brilho | usa `--glass-sheen` + `--glass-border` | nada a fazer; só não sobrescrever `box-shadow` |
+| Fibra de papel no regime expressivo | grade do palco (`--stage-grid`) | nada a fazer |
+| `--surface`/`--brand`/`--accent` da paleta antiga | azul/violeta (`#EEF1F8`/`#0B101B`, `#5B3FC4`/`#8B6FFF`) | onde houver cor fixa, trocar por token semântico |
+| Nenhuma classe de palco global | `.stage-surface`, `.stage-card` | **reutilizar** em telas/panels novos em vez de recriar gradiente + sombra |
+
+### Tokens que a Frente B deve preferir
+
+- **Estrutura de tela escura:** `.stage-surface` (fundo em 3 paradas + 2 halos + grade) e
+  `.stage-card` (vidro + hairline + `--elev-3`, hover `--elev-4`).
+- **Texto sobre palco:** `--stage-ink` → `-2` → `-muted` → `-subtle` → `-faint` (nessa ordem).
+- **Acento por estado de fila:** `--stage-cyan` (em produção), `--stage-amber` (na fila),
+  `--stage-lime` (pronto), `--stage-rose`/`--stage-danger-ink` (atraso).
+- **Movimento:** `--dur-quick`/`--dur-base` com `--ease-out`; nada de bounce. `prefers-reduced-motion`
+  já zera as durações — não é preciso repetir a media query por componente.
+- **Foco/pressão/desabilitado:** já centralizados no arquivo de tokens (`:focus-visible` com
+  `--focus-ring`); não redefinir por tela.
+
+### Ponto de atenção de escopo
+
+`src/index.css` agora tem as classes de palco **e** as regras de estado globais — não editar esse
+arquivo na Frente B; se precisar de ajuste, mandar o pedido com o seletor e o papel desejado.
+
+### Pendências que continuam minhas
+
+1. `tests/e2e/visual-system.e2e.cjs` não roda neste ambiente (Chromium sem `libnss3`/`libnspr4`);
+   a validação visual final depende de quem tiver navegador — a suíte unitária cobre o contrato.
+2. Alinhamento fino do PWA (`public/garcom-pwa/styles.css` é da Frente B): já importa
+   `design-tokens.css` e herda a paleta, mas os cartões de pedido ainda podem usar `--stage-*` para
+   ganhar o mesmo hairline do dashboard.
