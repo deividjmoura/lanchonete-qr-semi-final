@@ -291,6 +291,7 @@ export const api = {
       ticketMedio: number; pedidosRegistrados: number; pedidosComEntregaRegistrada: number;
       mesasAssumidas: number; transferenciasRecebidas: number; transferenciasRealizadas: number;
       itensAssumidos: number; itensRetirados: number; itensEntregues: number;
+      outrosEventos: Array<{ acao: string; quantidade: number }>;
     }> }>(
       `/api/admin/garcons/metricas${from ? "?data=" + encodeURIComponent(to && to !== from ? from + ".." + to : from) : ""}`
     ),
