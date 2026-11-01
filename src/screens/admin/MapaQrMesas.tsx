@@ -1,6 +1,6 @@
 import { Copy } from "@phosphor-icons/react";
 import { useState } from "react";
-import { Badge, Btn } from "../../components/ui";
+import { Badge } from "../../components/ui";
 import { mesaClienteUrl } from "../../lib/mesaUrl";
 import {
   FAIXAS_TEMPO,
@@ -165,11 +165,11 @@ export function MapaQrMesas({ dados, agora, onAbrirMesa, onAtualizado, onErro }:
                 </div>
               </article>
             );
-          })}}
+          })}
             {mesasFiltradas.length === 0 && (
               <p className="p-6 text-center text-sm text-text-muted">Nenhuma mesa encontrada para essa pesquisa.</p>
             )}
-            {mesasNaoEncontradas.length > 0 && mesasFiltradas.length > 0 && (
+            {mesasNaoEncontradas.length > 0 && (
               <p className="border-t border-line p-3 text-center text-xs text-text-muted">
                 Não encontrada(s): {mesasNaoEncontradas.join(", ")}
               </p>
