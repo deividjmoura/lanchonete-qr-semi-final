@@ -84,7 +84,7 @@ export function MapaQrMesas({ dados, agora, onAbrirMesa, onAtualizado, onErro }:
           <p className="p-6 text-center text-sm text-status-danger-ink">Use apenas números positivos separados por vírgula. Ex.: 1, 5, 12.</p>
         ) : (
           <>
-          mesasFiltradas.map((mesa) => {
+          {mesasFiltradas.map((mesa) => {
           const tempo = mesa.abertaEm ? faixaOcupacao(mesa.abertaEm, agora, faixas) : null;
           const faixa = tempo ? FAIXAS_TEMPO[tempo.id] : null;
           const ocupada = Boolean(mesa.sessaoId);
