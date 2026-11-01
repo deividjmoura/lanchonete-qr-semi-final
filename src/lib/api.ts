@@ -284,14 +284,15 @@ export const api = {
   setRemoviveis: (produtoId: number, ingredientes: string[]) =>
     apiSend(`/api/admin/produtos/${produtoId}/removiveis`, "PUT", { ingredientes }),
 
-  metricasGarcons: (data?: string) =>
-    apiGet<{ data: string; criterio: string; garcons: Array<{
+  metricasGarcons: (from?: string, to?: string) =>
+    apiGet<{ periodo: { from: string; to: string; timezone: string }; criterio: string; garcons: Array<{
       id: number; nome: string; ativo: boolean; removido: boolean; atendimentos: number;
-      vendas: number; ticketMedio: number; pedidosRegistrados: number; pedidosComEntregaRegistrada: number;
+      vendas: number; vendasBrutas: number; taxaServico: number; descontos: number; totalCobrado: number;
+      ticketMedio: number; pedidosRegistrados: number; pedidosComEntregaRegistrada: number;
       mesasAssumidas: number; transferenciasRecebidas: number; transferenciasRealizadas: number;
       itensAssumidos: number; itensRetirados: number; itensEntregues: number;
     }> }>(
-      `/api/admin/garcons/metricas${data ? "?data=" + encodeURIComponent(data) : ""}`
+      `/api/admin/garcons/metricas${from ? "?data=" + encodeURIComponent(to && to !== from ? from + ".." + to : from) : ""}`
     ),
     listGarcons: () =>
     apiGet<{ id: number; nome: string; token: string; ativo: boolean; criado_em?: string; entregas?: number }[]>(
