@@ -224,7 +224,7 @@ checar('Panorama', html.panorama, [
   'Sem praça',
   'data-glass-card',
 ]);
-checar('Mapa/QR', html.mapa, ['Mapa de mesas e QR Codes', 'Nº da mesa', 'Copiar link da mesa 1']);
+checar('Mapa/QR', html.mapa, ['Mapa de mesas e QR Codes', 'Pesquisar nº da mesa', 'Digite o número de uma ou mais mesas para exibi-las.']);
 
 // Modais fechados não podem renderizar nada (AnimatePresence).
 for (const [nome, conteudo] of [
