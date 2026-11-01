@@ -1,7 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
-  ArrowDown,
-  ArrowUp,
   Camera,
   CaretDown,
   CaretRight,
@@ -129,7 +127,9 @@ function Cardapio() {
   const addCategoria = usePub((s) => s.addCategoria);
   const renameCategoria = usePub((s) => s.renameCategoria);
   const removeCategoria = usePub((s) => s.removeCategoria);
-  const moverCategoria = usePub((s) => s.moverCategoria);
+  const setCategoriasOrdem = usePub((s) => s.setCategoriasOrdem);
+  const [categoriaArrastada, setCategoriaArrastada] = useState<number | null>(null);
+  const [ordemAtualizada, setOrdemAtualizada] = useState(false);
   const [editando, setEditando] = useState<Produto | null>(null);
   const [novoAberto, setNovoAberto] = useState(false);
   const [novaCat, setNovaCat] = useState("");
@@ -262,18 +262,72 @@ function Cardapio() {
         {catsOrdenadas.map((c, i) => {
           const lista = produtos.filter((p) => p.categoria === c.nome);
           const open = abertas.has(c.id);
+          const reposicionar = (destinoId: number) => {
+            if (categoriaArrastada === null || categoriaArrastada === destinoId) return;
+            const ids = catsOrdenadas.map((cat) => cat.id);
+            const origem = ids.indexOf(categoriaArrastada);
+            const destino = ids.indexOf(destinoId);
+            if (origem < 0 || destino < 0) return;
+            ids.splice(origem, 1);
+            ids.splice(destino, 0, categoriaArrastada);
+            setCategoriasOrdem(ids);
+            setCategoriaArrastada(null);
+            setOrdemAtualizada(true);
+          };
           return (
             <li
               key={c.id}
-              className="rounded-md border border-line bg-surface-raised overflow-hidden"
+              draggable
+              onDragStart={(event) => {
+                if ((event.target as HTMLElement).closest("button:not([data-drag-handle])")) {
+                  event.preventDefault();
+                  return;
+                }
+                setCategoriaArrastada(c.id);
+                event.dataTransfer.effectAllowed = "move";
+                event.dataTransfer.setData("text/plain", String(c.id));
+              }}
+              onDragOver={(event) => {
+                if (categoriaArrastada !== null && categoriaArrastada !== c.id) {
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "move";
+                }
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                reposicionar(c.id);
+              }}
+              onDragEnd={() => setCategoriaArrastada(null)}
+              className={cn(
+                "rounded-md border border-line bg-surface-raised overflow-hidden transition-all",
+                categoriaArrastada === c.id && "opacity-45 scale-[0.99]",
+                categoriaArrastada !== null && categoriaArrastada !== c.id && "border-brand-border",
+              )}
             >
               <div className="flex flex-wrap items-center gap-1.5 px-3 py-2.5">
                 <button
                   type="button"
                   onClick={() => toggleCat(c.id)}
+                  onKeyDown={(event) => {
+                    if (event.altKey && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
+                      event.preventDefault();
+                      const ids = catsOrdenadas.map((cat) => cat.id);
+                      const from = ids.indexOf(c.id);
+                      const to = Math.max(0, Math.min(ids.length - 1, from + (event.key === "ArrowUp" ? -1 : 1)));
+                      if (from !== to) {
+                        ids.splice(from, 1);
+                        ids.splice(to, 0, c.id);
+                        setCategoriasOrdem(ids);
+                        setOrdemAtualizada(true);
+                      }
+                    }
+                  }}
                   aria-expanded={open}
-                  className="flex items-center gap-2.5 flex-1 min-w-[10rem] text-left rounded-sm px-2 py-1.5 hover:bg-surface-hover"
+                  aria-roledescription="categoria arrastável; use Alt mais seta para cima ou para baixo para reordenar"
+                  title="Segure e arraste para mudar a ordem. No teclado, use Alt + ↑ ou Alt + ↓."
+                  className="flex items-center gap-2.5 flex-1 min-w-[10rem] text-left rounded-sm px-2 py-1.5 hover:bg-surface-hover cursor-grab active:cursor-grabbing"
                 >
+                  <span aria-hidden="true" className="text-text-subtle select-none">⠿</span>
                   {open ? (
                     <CaretDown size={16} weight="bold" className="text-brand-ink shrink-0" />
                   ) : (
@@ -288,26 +342,6 @@ function Cardapio() {
                   <Badge tone="neutral">{lista.length}</Badge>
                 </button>
 
-                <button
-                  type="button"
-                  title="Subir"
-                  aria-label={`Subir categoria ${c.nome}`}
-                  disabled={i === 0}
-                  onClick={() => moverCategoria(c.id, -1)}
-                  className="inline-flex size-9 items-center justify-center rounded-sm border border-line bg-surface-sunken text-text-muted hover:text-text disabled:opacity-35"
-                >
-                  <ArrowUp size={15} />
-                </button>
-                <button
-                  type="button"
-                  title="Descer"
-                  aria-label={`Descer categoria ${c.nome}`}
-                  disabled={i === catsOrdenadas.length - 1}
-                  onClick={() => moverCategoria(c.id, 1)}
-                  className="inline-flex size-9 items-center justify-center rounded-sm border border-line bg-surface-sunken text-text-muted hover:text-text disabled:opacity-35"
-                >
-                  <ArrowDown size={15} />
-                </button>
                 <button
                   type="button"
                   title="Renomear"
@@ -380,6 +414,9 @@ function Cardapio() {
           </li>
         )}
       </ul>
+      <p role="status" aria-live="polite" className="text-xs text-text-muted">
+        {ordemAtualizada ? "Ordem das categorias atualizada." : "Para reorganizar, segure uma categoria e arraste para a posição desejada. No teclado, use Alt + ↑ ou Alt + ↓."}
+      </p>
 
       <ProdutoForm produto={editando} onClose={() => setEditando(null)} />
       <ProdutoForm novo={novoAberto} onClose={() => setNovoAberto(false)} />
