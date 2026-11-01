@@ -30,7 +30,7 @@ export function MapaQrMesas({ dados, agora, onAbrirMesa, onAtualizado, onErro }:
   const termosBusca = numero.split(",").map((termo) => termo.trim()).filter(Boolean);
   const numerosBusca = [...new Set(termosBusca.map(Number))];
   const buscaInvalida = termosBusca.some(
-    (termo) => !/^\\d+$/.test(termo) || !Number.isSafeInteger(Number(termo)) || Number(termo) < 1,
+    (termo) => !/^\d+$/.test(termo) || !Number.isSafeInteger(Number(termo)) || Number(termo) < 1,
   );
   const mesasFiltradas = buscaInvalida
     ? []
@@ -78,7 +78,13 @@ export function MapaQrMesas({ dados, agora, onAbrirMesa, onAtualizado, onErro }:
       </div>
 
       <div className="divide-y divide-line overflow-hidden rounded-md border border-line bg-surface-raised">
-        {!numero.trim() ? (\n          <p className="p-6 text-center text-sm text-text-muted">Digite o número de uma ou mais mesas para exibi-las.</p>\n        ) : buscaInvalida ? (\n          <p className="p-6 text-center text-sm text-status-danger-ink">Use apenas números positivos separados por vírgula. Ex.: 1, 5, 12.</p>\n        ) : (\n          mesasFiltradas.map((mesa) => {
+        {!numero.trim() ? (
+          <p className="p-6 text-center text-sm text-text-muted">Digite o número de uma ou mais mesas para exibi-las.</p>
+        ) : buscaInvalida ? (
+          <p className="p-6 text-center text-sm text-status-danger-ink">Use apenas números positivos separados por vírgula. Ex.: 1, 5, 12.</p>
+        ) : (
+          <>
+          mesasFiltradas.map((mesa) => {
           const tempo = mesa.abertaEm ? faixaOcupacao(mesa.abertaEm, agora, faixas) : null;
           const faixa = tempo ? FAIXAS_TEMPO[tempo.id] : null;
           const ocupada = Boolean(mesa.sessaoId);
@@ -161,8 +167,15 @@ export function MapaQrMesas({ dados, agora, onAbrirMesa, onAtualizado, onErro }:
             </div>
           );
         })}
-        {dados.mesas.length === 0 && (
-          <p className="p-6 text-center text-sm text-text-muted">Nenhuma mesa habilitada.</p>
+            {mesasFiltradas.length === 0 && (
+              <p className="p-6 text-center text-sm text-text-muted">Nenhuma mesa encontrada para essa pesquisa.</p>
+            )}
+            {mesasNaoEncontradas.length > 0 && mesasFiltradas.length > 0 && (
+              <p className="border-t border-line p-3 text-center text-xs text-text-muted">
+                Não encontrada(s): {mesasNaoEncontradas.join(", ")}
+              </p>
+            )}
+          </>
         )}
       </div>
     </section>
