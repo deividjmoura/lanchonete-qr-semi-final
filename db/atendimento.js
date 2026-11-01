@@ -483,7 +483,7 @@ async function editarPedidoGarcom(token,pedidoId,body,requestId=null){
 async function metricasGarcons({ data } = {}) {
   const dia = data || new Intl.DateTimeFormat('en-CA', { timeZone: process.env.APP_TIMEZONE || 'America/Sao_Paulo',
     year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date());
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(dia) || Number.isNaN(Date.parse(dia))) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dia) || Number.isNaN(Date.parse(dia))) {
     throw new ErroAtendimento(400, 'Informe data em YYYY-MM-DD');
   }
   const tz = process.env.APP_TIMEZONE || 'America/Sao_Paulo';
