@@ -118,6 +118,28 @@ test('remover difere de desativar, invalida o link, audita e preserva autoria e 
     assert.equal(antes.itensAssumidos, 1);
     assert.equal(antes.itensRetirados, 1);
     assert.equal(antes.itensEntregues, 1);
+    assert.deepEqual([antes.vendasBrutas, antes.taxaServico, antes.descontos, antes.totalCobrado], [100, 10, 0, 110]);
+
+    const mesaPeriodo = await f.novaMesa();
+    const sessaoPeriodo = await f.novaSessao(mesaPeriodo, { responsavel: g.id, fechada: true });
+    await pool.query(
+      "UPDATE mesa_sessoes SET valor_total=200, taxa_servico=20, desconto=15, valor_cobrado=205, fechada_em='2026-10-31 15:00:00+00' WHERE id=$1",
+      [sessaoPeriodo.id]
+    );
+    const eventoExtra = f.request('evento-extra');
+    await pool.query(
+      `INSERT INTO auditoria_eventos(ator_tipo,ator_id,ator_nome,acao,alvo_tipo,alvo_id,request_id,criado_em)
+       VALUES('garcom',$1,$2,'pedido_editado','pedido','fixture',$3,'2026-10-31 13:00:00+00')`,
+      [g.id, g.nome, eventoExtra]
+    );
+    const periodo = (await metricasGarcons({ data: '2026-10-30..2026-10-31' })).garcons.find((x) => x.id === g.id);
+    assert.deepEqual(periodo.outrosEventos, [{ acao: 'pedido_editado', quantidade: 1 }],
+      'eventos de auditoria adicionais aparecem sem duplicar ações já medidas');
+    assert.deepEqual(
+      [periodo.atendimentos, periodo.vendasBrutas, periodo.taxaServico, periodo.descontos, periodo.totalCobrado, periodo.ticketMedio],
+      [2, 300, 30, 15, 315, 157.5],
+      'período soma contas fechadas, serviço e descontos sem duplicar receita'
+    );
     const relatorioAntes = await relatorioVendas({ from: '2026-10-30', to: '2026-10-30' });
     const contaAntes = relatorioAntes.contas.find((conta) => conta.id === sessao.id);
     const servicoAntes = relatorioAntes.porGarcom.find((linha) => linha.garcomId === g.id);

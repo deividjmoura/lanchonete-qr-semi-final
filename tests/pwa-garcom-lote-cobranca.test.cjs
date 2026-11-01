@@ -193,8 +193,25 @@ test('falha no lote avisa inline e reabilita os botões, sem alert bloqueante', 
   assert.equal(botao.disabled, false, 'botão precisa voltar a funcionar após o erro');
 });
 
+test('ação em lote não é oferecida quando só existe um item elegível', async () => {
+  const { root } = await montarEntregas([item(1, 'retirado', { garcomRetirouId: 7 })]);
+  assert.equal(
+    root.botoes().filter((b) => /Confirmar entrega de todos/.test(b.textContent)).length,
+    0,
+    'com um único item, a ação é só a individual — sem botão de lote duplicado',
+  );
+  assert.equal(
+    root.botoes().filter((b) => /Confirmar entrega/.test(b.textContent)).length,
+    1,
+    'a ação individual continua disponível',
+  );
+});
+
 test('cancelar confirmação de entrega não envia dados e reabilita o botão', async () => {
-  const { root, chamadas, ctx } = await montarEntregas([item(1, 'retirado', { garcomRetirouId: 7 })]);
+  const { root, chamadas, ctx } = await montarEntregas([
+    item(1, 'retirado', { garcomRetirouId: 7 }),
+    item(2, 'retirado', { garcomRetirouId: 7 }),
+  ]);
   ctx.confirm = () => false;
   const botao = root.botoes().find((b) => /Confirmar entrega de todos/.test(b.textContent));
   await botao.onclick();
