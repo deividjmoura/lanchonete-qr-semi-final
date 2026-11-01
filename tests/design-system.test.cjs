@@ -291,3 +291,15 @@ test("correções de bugs pré-existentes: MIME .woff2, print.ts sem debíto, Ad
   assert.match(pwaApp, /swReg\?\.update\(\)/);
 });
 
+
+test("Modal React é renderizado em portal e centralizado na viewport", () => {
+  const ui = read("src/components/ui.tsx");
+  const modal = ui.slice(ui.indexOf("export function Modal("), ui.indexOf("\\nexport function Qtd"));
+  assert.match(ui, /import \\{ createPortal \\} from "react-dom"/);
+  assert.match(modal, /createPortal\\(/);
+  assert.match(modal, /setPortalRoot\\(document\\.body\\)/);
+  assert.match(modal, /fixed inset-0 z-\\[100\\] flex items-center justify-center/);
+  assert.match(modal, /max-h-\\[calc\\(100dvh-24px\\)\\]/);
+  assert.match(modal, /document\\.body\\.style\\.overflow = "hidden"/);
+  assert.match(modal, /e\\.key === "Escape"/);
+});
