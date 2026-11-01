@@ -199,7 +199,7 @@ test('aba Mesas usa o panorama novo e preserva as operações existentes', () =>
   assert.match(panorama, /aproximado|aprox\./);
 
   const mapa = read('src/screens/admin/MapaQrMesas.tsx');
-  assert.match(mapa, /Pesquisar Nº da mesa/);
+  assert.match(mapa, /Pesquisar nº da mesa/);
   assert.match(mapa, /termosBusca/);
   assert.match(mapa, /numerosBusca/);
   assert.match(mapa, /separados por vírgula/);
