@@ -186,12 +186,13 @@ export function OpsShell({
           id="ops-navigation"
           ref={sidebarRef}
           className="ops-sidebar"
+          style={{ borderRight: 0 }}
           data-open={menuAberto ? "true" : "false"}
           role={menuAberto ? "dialog" : undefined}
           aria-modal={menuAberto ? true : undefined}
           aria-label="Navegação principal"
         >
-          <div className="flex items-center gap-3 px-3.5 h-16 border-b border-sidebar-line overflow-hidden">
+          <div className="flex items-center gap-3 px-3.5 h-16 overflow-hidden">
             <button
               type="button"
               onClick={() => { irInicio(); if (menuAberto) fecharMenu(); }}
@@ -244,8 +245,8 @@ export function OpsShell({
       )}
 
       <div className={temNav ? "ops-main flex flex-col" : "min-h-dvh flex flex-col"}>
-        <header className="ops-topbar sticky top-0 z-30 border-b border-line bg-surface">
-          <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
+        <header className="ops-topbar sticky top-0 z-30 bg-surface">
+          <div className="w-full px-4 sm:px-6 xl:px-10 2xl:px-12 py-3 flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0 flex items-center gap-3">
               {temNav ? (
                 <button
@@ -312,11 +313,11 @@ export function OpsShell({
             </div>
           </div>
           {subhead && (
-            <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 pb-2.5">{subhead}</div>
+            <div className="w-full px-4 sm:px-6 xl:px-10 2xl:px-12 pb-2.5">{subhead}</div>
           )}
         </header>
 
-        <main className="anim-ticket mx-auto w-full max-w-[1440px] flex-1 px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
+        <main className="anim-ticket w-full flex-1 px-4 sm:px-6 xl:px-10 2xl:px-12 py-5 sm:py-6">
           {children}
         </main>
       </div>
