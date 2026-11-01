@@ -323,6 +323,7 @@ function Cardapio() {
                     }
                   }}
                   aria-expanded={open}
+                  data-drag-handle
                   aria-roledescription="categoria arrastável; use Alt mais seta para cima ou para baixo para reordenar"
                   title="Segure e arraste para mudar a ordem. No teclado, use Alt + ↑ ou Alt + ↓."
                   className="flex items-center gap-2.5 flex-1 min-w-[10rem] text-left rounded-sm px-2 py-1.5 hover:bg-surface-hover cursor-grab active:cursor-grabbing"
