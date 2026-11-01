@@ -490,8 +490,8 @@ async function metricasGarcons({ data } = {}) {
   const { rows } = await pool.query(`
     SELECT g.id, g.nome, g.ativo, (g.removido_em IS NOT NULL) AS removido,
       COUNT(DISTINCT s.id)::int AS atendimentos,
-      COALESCE(SUM(DISTINCT COALESCE(s.valor_cobrado, s.valor_total)), 0)::numeric(12,2) AS vendas,
-      COALESCE(ROUND(AVG(DISTINCT COALESCE(s.valor_cobrado, s.valor_total))::numeric, 2), 0)::numeric(12,2) AS ticket_medio,
+      COALESCE(SUM(COALESCE(s.valor_cobrado, s.valor_total)), 0)::numeric(12,2) AS vendas,
+      COALESCE(ROUND(AVG(COALESCE(s.valor_cobrado, s.valor_total))::numeric, 2), 0)::numeric(12,2) AS ticket_medio,
       (SELECT COUNT(DISTINCT p.id)::int FROM pedidos p
         WHERE p.garcom_registrou_id=g.id AND (p.criado_em AT TIME ZONE $2)::date=$1::date) AS pedidos_registrados,
       (SELECT COUNT(DISTINCT p.id)::int FROM pedidos p
