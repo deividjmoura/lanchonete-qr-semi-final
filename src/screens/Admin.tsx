@@ -1103,7 +1103,7 @@ function Garcons() {
           </table>
         </div>
         <p className="mt-3 text-[11px] text-text-muted">
-          O período respeita o fuso {metricas.length ? "" : "configurado no servidor"}. Eventos sem autoria/horário não são inferidos. Vendas, taxa e descontos vêm das contas fechadas sob responsabilidade do garçom; pedidos e itens são indicadores operacionais separados.
+          O período usa o fuso horário configurado no servidor. Eventos sem autoria/horário não são inferidos. Vendas, taxa e descontos vêm das contas fechadas sob responsabilidade do garçom; pedidos e itens são indicadores operacionais separados.
         </p>
       </section>
 
