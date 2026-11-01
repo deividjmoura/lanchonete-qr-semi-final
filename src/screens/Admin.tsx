@@ -1,7 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
-  ArrowDown,
-  ArrowUp,
   Camera,
   CaretDown,
   CaretRight,
@@ -129,7 +127,9 @@ function Cardapio() {
   const addCategoria = usePub((s) => s.addCategoria);
   const renameCategoria = usePub((s) => s.renameCategoria);
   const removeCategoria = usePub((s) => s.removeCategoria);
-  const moverCategoria = usePub((s) => s.moverCategoria);
+  const setCategoriasOrdem = usePub((s) => s.setCategoriasOrdem);
+  const [categoriaArrastada, setCategoriaArrastada] = useState<number | null>(null);
+  const [ordemAtualizada, setOrdemAtualizada] = useState(false);
   const [editando, setEditando] = useState<Produto | null>(null);
   const [novoAberto, setNovoAberto] = useState(false);
   const [novaCat, setNovaCat] = useState("");
@@ -262,18 +262,73 @@ function Cardapio() {
         {catsOrdenadas.map((c, i) => {
           const lista = produtos.filter((p) => p.categoria === c.nome);
           const open = abertas.has(c.id);
+          const reposicionar = (destinoId: number) => {
+            if (categoriaArrastada === null || categoriaArrastada === destinoId) return;
+            const ids = catsOrdenadas.map((cat) => cat.id);
+            const origem = ids.indexOf(categoriaArrastada);
+            const destino = ids.indexOf(destinoId);
+            if (origem < 0 || destino < 0) return;
+            ids.splice(origem, 1);
+            ids.splice(destino, 0, categoriaArrastada);
+            setCategoriasOrdem(ids);
+            setCategoriaArrastada(null);
+            setOrdemAtualizada(true);
+          };
           return (
             <li
               key={c.id}
-              className="rounded-md border border-line bg-surface-raised overflow-hidden"
+              draggable
+              onDragStart={(event) => {
+                if ((event.target as HTMLElement).closest("button:not([data-drag-handle])")) {
+                  event.preventDefault();
+                  return;
+                }
+                setCategoriaArrastada(c.id);
+                event.dataTransfer.effectAllowed = "move";
+                event.dataTransfer.setData("text/plain", String(c.id));
+              }}
+              onDragOver={(event) => {
+                if (categoriaArrastada !== null && categoriaArrastada !== c.id) {
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "move";
+                }
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                reposicionar(c.id);
+              }}
+              onDragEnd={() => setCategoriaArrastada(null)}
+              className={cn(
+                "rounded-md border border-line bg-surface-raised overflow-hidden transition-all",
+                categoriaArrastada === c.id && "opacity-45 scale-[0.99]",
+                categoriaArrastada !== null && categoriaArrastada !== c.id && "border-brand-border",
+              )}
             >
               <div className="flex flex-wrap items-center gap-1.5 px-3 py-2.5">
                 <button
                   type="button"
                   onClick={() => toggleCat(c.id)}
+                  onKeyDown={(event) => {
+                    if (event.altKey && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
+                      event.preventDefault();
+                      const ids = catsOrdenadas.map((cat) => cat.id);
+                      const from = ids.indexOf(c.id);
+                      const to = Math.max(0, Math.min(ids.length - 1, from + (event.key === "ArrowUp" ? -1 : 1)));
+                      if (from !== to) {
+                        ids.splice(from, 1);
+                        ids.splice(to, 0, c.id);
+                        setCategoriasOrdem(ids);
+                        setOrdemAtualizada(true);
+                      }
+                    }
+                  }}
                   aria-expanded={open}
-                  className="flex items-center gap-2.5 flex-1 min-w-[10rem] text-left rounded-sm px-2 py-1.5 hover:bg-surface-hover"
+                  data-drag-handle
+                  aria-roledescription="categoria arrastável; use Alt mais seta para cima ou para baixo para reordenar"
+                  title="Segure e arraste para mudar a ordem. No teclado, use Alt + ↑ ou Alt + ↓."
+                  className="flex items-center gap-2.5 flex-1 min-w-[10rem] text-left rounded-sm px-2 py-1.5 hover:bg-surface-hover cursor-grab active:cursor-grabbing"
                 >
+                  <span aria-hidden="true" className="text-text-subtle select-none">⠿</span>
                   {open ? (
                     <CaretDown size={16} weight="bold" className="text-brand-ink shrink-0" />
                   ) : (
@@ -288,26 +343,6 @@ function Cardapio() {
                   <Badge tone="neutral">{lista.length}</Badge>
                 </button>
 
-                <button
-                  type="button"
-                  title="Subir"
-                  aria-label={`Subir categoria ${c.nome}`}
-                  disabled={i === 0}
-                  onClick={() => moverCategoria(c.id, -1)}
-                  className="inline-flex size-9 items-center justify-center rounded-sm border border-line bg-surface-sunken text-text-muted hover:text-text disabled:opacity-35"
-                >
-                  <ArrowUp size={15} />
-                </button>
-                <button
-                  type="button"
-                  title="Descer"
-                  aria-label={`Descer categoria ${c.nome}`}
-                  disabled={i === catsOrdenadas.length - 1}
-                  onClick={() => moverCategoria(c.id, 1)}
-                  className="inline-flex size-9 items-center justify-center rounded-sm border border-line bg-surface-sunken text-text-muted hover:text-text disabled:opacity-35"
-                >
-                  <ArrowDown size={15} />
-                </button>
                 <button
                   type="button"
                   title="Renomear"
@@ -380,6 +415,9 @@ function Cardapio() {
           </li>
         )}
       </ul>
+      <p role="status" aria-live="polite" className="text-xs text-text-muted">
+        {ordemAtualizada ? "Ordem das categorias atualizada." : "Para reorganizar, segure uma categoria e arraste para a posição desejada. No teclado, use Alt + ↑ ou Alt + ↓."}
+      </p>
 
       <ProdutoForm produto={editando} onClose={() => setEditando(null)} />
       <ProdutoForm novo={novoAberto} onClose={() => setNovoAberto(false)} />
@@ -745,15 +783,21 @@ function Garcons() {
   const [erro, setErro] = useState<string | null>(null);
   const [mensagem, setMensagem] = useState<string | null>(null);
   const [dataMetricas, setDataMetricas] = useState(() => dataLocal());
-  const [metricas, setMetricas] = useState<
-    Array<{ id: number; nome: string; removido: boolean; atendimentos: number; vendas: number; ticketMedio: number }>
-  >([]);
+  const [dataMetricasAte, setDataMetricasAte] = useState(() => dataLocal());
+  const [metricas, setMetricas] = useState<Array<{
+    id: number; nome: string; removido: boolean; atendimentos: number; vendas: number;
+    vendasBrutas: number; taxaServico: number; descontos: number; totalCobrado: number; ticketMedio: number;
+    pedidosRegistrados: number; pedidosComEntregaRegistrada: number; mesasAssumidas: number;
+    transferenciasRecebidas: number; transferenciasRealizadas: number;
+    itensAssumidos: number; itensRetirados: number; itensEntregues: number;
+    outrosEventos: Array<{ acao: string; quantidade: number }>;
+  }>>([]);
   const [erroMetricas, setErroMetricas] = useState<string | null>(null);
 
   useEffect(() => {
     let ativo = true;
     api
-      .metricasGarcons(dataMetricas)
+      .metricasGarcons(dataMetricas, dataMetricasAte)
       .then((r) => {
         if (ativo) {
           setMetricas(r.garcons);
@@ -766,7 +810,7 @@ function Garcons() {
     return () => {
       ativo = false;
     };
-  }, [dataMetricas]);
+  }, [dataMetricas, dataMetricasAte]);
 
   const carregar = async () => {
     try {
@@ -861,6 +905,27 @@ function Garcons() {
 
   const ativos = lista.filter((g) => g.ativo);
   const inativos = lista.filter((g) => !g.ativo);
+  const totaisMetricas = metricas.reduce((total, g) => ({
+    pedidosRegistrados: total.pedidosRegistrados + g.pedidosRegistrados,
+    pedidosComEntregaRegistrada: total.pedidosComEntregaRegistrada + g.pedidosComEntregaRegistrada,
+    mesasAssumidas: total.mesasAssumidas + g.mesasAssumidas,
+    itensAssumidos: total.itensAssumidos + g.itensAssumidos,
+    itensRetirados: total.itensRetirados + g.itensRetirados,
+    itensEntregues: total.itensEntregues + g.itensEntregues,
+    outrosEventos: total.outrosEventos + g.outrosEventos.reduce((soma, evento) => soma + evento.quantidade, 0),
+    transferenciasRecebidas: total.transferenciasRecebidas + g.transferenciasRecebidas,
+    transferenciasRealizadas: total.transferenciasRealizadas + g.transferenciasRealizadas,
+    atendimentos: total.atendimentos + g.atendimentos,
+    vendasBrutas: total.vendasBrutas + g.vendasBrutas,
+    taxaServico: total.taxaServico + g.taxaServico,
+    descontos: total.descontos + g.descontos,
+    totalCobrado: total.totalCobrado + g.totalCobrado,
+  }), {
+    pedidosRegistrados: 0, pedidosComEntregaRegistrada: 0, mesasAssumidas: 0,
+    itensAssumidos: 0, itensRetirados: 0, itensEntregues: 0, outrosEventos: 0,
+    transferenciasRecebidas: 0, transferenciasRealizadas: 0, atendimentos: 0,
+    vendasBrutas: 0, taxaServico: 0, descontos: 0, totalCobrado: 0,
+  });
   const renderGarcom = (g: GarcomRow) => (
     <li
       key={g.id}
@@ -936,24 +1001,31 @@ function Garcons() {
     <div className="space-y-5">
       <section
         className="rounded-md border border-line bg-surface-raised p-5"
-        aria-label="Desempenho diário de garçons"
+        aria-label="Desempenho de garçons por período"
       >
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-dashed border-line-strong mb-4">
+        <div className="flex flex-wrap items-end justify-between gap-3 pb-4 border-b border-dashed border-line-strong mb-4">
           <div>
             <h3 className="font-display text-2xl font-bold tracking-tight text-text">
               Desempenho da equipe
             </h3>
             <p className="text-xs text-text-muted mt-0.5">
-              Contas encerradas atribuídas ao responsável da sessão
+              Ranking por vendas, com operações atribuídas e valores financeiros sem duplicar receitas.
             </p>
           </div>
-          <input
-            type="date"
-            aria-label="Data das vendas"
-            value={dataMetricas}
-            onChange={(e) => setDataMetricas(e.target.value)}
-            className="h-10 rounded-sm border border-line-strong bg-surface-sunken px-3 font-mono text-xs text-text"
-          />
+          <div className="flex flex-wrap gap-2">
+            <label className="grid gap-1 text-[10px] font-mono uppercase tracking-wider text-text-muted">
+              De
+              <input type="date" aria-label="Início do período" value={dataMetricas}
+                max={dataMetricasAte} onChange={(e) => setDataMetricas(e.target.value)}
+                className="h-10 rounded-sm border border-line-strong bg-surface-sunken px-3 font-mono text-xs text-text" />
+            </label>
+            <label className="grid gap-1 text-[10px] font-mono uppercase tracking-wider text-text-muted">
+              Até
+              <input type="date" aria-label="Fim do período" value={dataMetricasAte}
+                min={dataMetricas} onChange={(e) => setDataMetricasAte(e.target.value)}
+                className="h-10 rounded-sm border border-line-strong bg-surface-sunken px-3 font-mono text-xs text-text" />
+            </label>
+          </div>
         </div>
         {erroMetricas && (
           <p role="alert" className="text-xs text-status-danger-ink mb-3">
@@ -961,38 +1033,87 @@ function Garcons() {
           </p>
         )}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[440px] text-sm text-left">
-            <thead className="border-b border-line font-mono text-[11px] uppercase tracking-wider text-text-muted">
+          <table className="w-full min-w-[1450px] text-sm text-left">
+            <thead className="border-b border-line font-mono text-[10px] uppercase tracking-wider text-text-muted">
               <tr>
-                <th className="py-2.5 pr-2">Garçom</th>
+                <th className="py-2.5 pr-3">Garçom</th>
+                <th className="py-2.5 px-2 text-right">Pedidos registrados</th>
+                <th className="py-2.5 px-2 text-right">Pedidos entregues</th>
+                <th className="py-2.5 px-2 text-right">Mesas assumidas</th>
+                <th className="py-2.5 px-2 text-right">Itens assumidos</th>
+                <th className="py-2.5 px-2 text-right">Retirados</th>
+                <th className="py-2.5 px-2 text-right">Entregues</th>
+                <th className="py-2.5 px-2 text-right">Transferências recebidas</th>
+                <th className="py-2.5 px-2 text-right">Transferências feitas</th>
                 <th className="py-2.5 px-2 text-right">Contas</th>
                 <th className="py-2.5 px-2 text-right">Ticket médio</th>
-                <th className="py-2.5 pl-2 text-right">Vendas</th>
+                <th className="py-2.5 px-2 text-right">Vendas brutas</th>
+                <th className="py-2.5 px-2 text-right">Taxa de serviço</th>
+                <th className="py-2.5 px-2 text-right">Descontos</th>
+                <th className="py-2.5 px-2 text-right">Eventos adicionais</th>
+                <th className="py-2.5 pl-2 text-right">Total cobrado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {metricas.map((g) => (
                 <tr key={g.id}>
-                  <td className="py-3 pr-2 font-semibold text-text">
+                  <td className="py-3 pr-3 font-semibold text-text">
                     {g.nome}{g.removido && <span className="ml-1 text-xs font-normal text-text-muted">(removido)</span>}
                   </td>
+                  <td className="py-3 px-2 text-right font-mono">{g.pedidosRegistrados}</td>
+                  <td className="py-3 px-2 text-right font-mono">{g.pedidosComEntregaRegistrada}</td>
+                  <td className="py-3 px-2 text-right font-mono">{g.mesasAssumidas}</td>
+                  <td className="py-3 px-2 text-right font-mono">{g.itensAssumidos}</td>
+                  <td className="py-3 px-2 text-right font-mono">{g.itensRetirados}</td>
+                  <td className="py-3 px-2 text-right font-mono">{g.itensEntregues}</td>
+                  <td className="py-3 px-2 text-right font-mono">{g.transferenciasRecebidas}</td>
+                  <td className="py-3 px-2 text-right font-mono">{g.transferenciasRealizadas}</td>
                   <td className="py-3 px-2 text-right font-mono">{g.atendimentos}</td>
                   <td className="py-3 px-2 text-right font-mono">{BRL(g.ticketMedio)}</td>
-                  <td className="py-3 pl-2 text-right font-mono font-bold text-brand-ink">
-                    {BRL(g.vendas)}
+                  <td className="py-3 px-2 text-right font-mono">{BRL(g.vendasBrutas)}</td>
+                  <td className="py-3 px-2 text-right font-mono">{BRL(g.taxaServico)}</td>
+                  <td className="py-3 px-2 text-right font-mono text-status-danger-ink">− {BRL(g.descontos)}</td>
+                  <td className="py-3 px-2 text-right text-xs text-text-muted">
+                    {g.outrosEventos.length
+                      ? g.outrosEventos.map((evento) => `${evento.acao}: ${evento.quantidade}`).join(" · ")
+                      : "—"}
                   </td>
+                  <td className="py-3 pl-2 text-right font-mono font-bold text-brand-ink">{BRL(g.totalCobrado)}</td>
                 </tr>
               ))}
+              {metricas.length > 0 && (
+                <tr className="border-t-2 border-line-strong bg-surface-sunken font-semibold">
+                  <td className="py-3 pr-3 text-text">Total do período</td>
+                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.pedidosRegistrados}</td>
+                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.pedidosComEntregaRegistrada}</td>
+                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.mesasAssumidas}</td>
+                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.itensAssumidos}</td>
+                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.itensRetirados}</td>
+                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.itensEntregues}</td>
+                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.transferenciasRecebidas}</td>
+                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.transferenciasRealizadas}</td>
+                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.atendimentos}</td>
+                  <td className="py-3 px-2 text-right font-mono">{BRL(totaisMetricas.atendimentos ? totaisMetricas.totalCobrado / totaisMetricas.atendimentos : 0)}</td>
+                  <td className="py-3 px-2 text-right font-mono">{BRL(totaisMetricas.vendasBrutas)}</td>
+                  <td className="py-3 px-2 text-right font-mono">{BRL(totaisMetricas.taxaServico)}</td>
+                  <td className="py-3 px-2 text-right font-mono text-status-danger-ink">− {BRL(totaisMetricas.descontos)}</td>
+                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.outrosEventos}</td>
+                  <td className="py-3 pl-2 text-right font-mono font-bold text-brand-ink">{BRL(totaisMetricas.totalCobrado)}</td>
+                </tr>
+              )}
               {!metricas.length && (
                 <tr>
-                  <td colSpan={4} className="py-6 text-center text-xs text-text-muted">
-                    Nenhum atendimento encerrado nesta data.
+                  <td colSpan={16} className="py-6 text-center text-xs text-text-muted">
+                    Nenhuma atividade registrada neste período.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+        <p className="mt-3 text-[11px] text-text-muted">
+          O período usa o fuso horário configurado no servidor. Eventos sem autoria/horário não são inferidos. A coluna de eventos adicionais lista auditorias atribuídas diretamente ao garçom e não repete operações já contadas nas demais colunas. Vendas, taxa e descontos vêm das contas fechadas sob responsabilidade do garçom.
+        </p>
       </section>
 
       <section className="rounded-md border border-line bg-surface-raised overflow-hidden">
