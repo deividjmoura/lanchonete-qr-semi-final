@@ -494,8 +494,9 @@ async function metricasGarcons({ data } = {}) {
       COALESCE(ROUND(AVG(COALESCE(s.valor_cobrado, s.valor_total))::numeric, 2), 0)::numeric(12,2) AS ticket_medio,
       (SELECT COUNT(DISTINCT p.id)::int FROM pedidos p
         WHERE p.garcom_registrou_id=g.id AND (p.criado_em AT TIME ZONE $2)::date=$1::date) AS pedidos_registrados,
-      (SELECT COUNT(DISTINCT p.id)::int FROM pedidos p
-        WHERE p.garcom_entregou_id=g.id AND (p.criado_em AT TIME ZONE $2)::date=$1::date) AS pedidos_com_entrega_registrada,
+      (SELECT COUNT(DISTINCT ip.pedido_id)::int FROM itens_pedido ip
+        WHERE ip.entregue_por_id=g.id AND ip.entregue_em IS NOT NULL
+          AND (ip.entregue_em AT TIME ZONE $2)::date=$1::date) AS pedidos_com_entrega_registrada,
       (SELECT COUNT(DISTINCT h.sessao_id)::int FROM mesa_atendimento_historico h
         WHERE h.garcom_novo_id=g.id AND (h.alterado_em AT TIME ZONE $2)::date=$1::date) AS mesas_assumidas,
       (SELECT COUNT(*)::int FROM mesa_atendimento_historico h
