@@ -145,9 +145,10 @@ test('lotes combinam prontos e aceites próprios, sem incluir itens de outros ga
   let confirmacoes = 0;
   ctx.confirm = () => { confirmacoes++; return true; };
   const retirar = root.botoes().find((b) => /Retirar todos \(2\)/.test(b.textContent));
-  const entregar = root.botoes().find((b) => /Confirmar entrega de todos \(1\)/.test(b.textContent));
+  const entregar = root.botoes().find((b) => /Confirmar entrega/.test(b.textContent));
   assert.ok(retirar, 'lote de retirada ausente');
-  assert.ok(entregar, 'lote de entrega ausente');
+  assert.ok(entregar, 'entrega individual ausente');
+  assert.equal(root.botoes().some((b) => /Confirmar entrega de todos/.test(b.textContent)), false, 'não deve duplicar entrega de um único item');
   await retirar.onclick();
   assert.deepEqual(chamadas[0].body.itemIds, [1, 2]);
   assert.equal(chamadas[0].body.etapa, 'retirar');
@@ -158,11 +159,12 @@ test('lotes combinam prontos e aceites próprios, sem incluir itens de outros ga
   assert.equal(confirmacoes, 1, 'a confirmação de entrega permanece');
 });
 
-test('lote de retirada existe também para um único item pronto', async () => {
+test('ação de lote não é exibida para um único item pronto', async () => {
   const { root, chamadas, ctx } = await montarEntregas([item(1, 'concluido')]);
   ctx.confirm = () => { throw new Error('retirada não deve abrir confirmação'); };
-  const botao = root.botoes().find((b) => /Retirar todos \(1\)/.test(b.textContent));
-  assert.ok(botao);
+  const botao = root.botoes().find((b) => b.textContent === 'Retirar item');
+  assert.ok(botao, 'ação individual deve continuar disponível');
+  assert.equal(root.botoes().some((b) => /Retirar todos/.test(b.textContent)), false, 'não deve duplicar retirada de um único item');
   await botao.onclick();
   assert.deepEqual(chamadas[0].body.itemIds, [1]);
   assert.equal(chamadas[0].body.etapa, 'retirar');
