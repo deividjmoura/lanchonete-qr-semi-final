@@ -486,7 +486,7 @@ async function metricasGarcons({ data } = {}) {
   // Compatibilidade: data única continua aceita; intervalo usa "início..fim".
   const partes = typeof data === 'string' && data.includes('..') ? data.split('..') : [data || hoje, data || hoje];
   const [from, to] = partes;
-  const formatoValido = (valor) => /^\\d{4}-\\d{2}-\\d{2}$/.test(valor || '') && !Number.isNaN(Date.parse(valor));
+  const formatoValido = (valor) => /^\d{4}-\d{2}-\d{2}$/.test(valor || '') && !Number.isNaN(Date.parse(valor));
   if (partes.length !== 2 || !formatoValido(from) || !formatoValido(to) || from > to) {
     throw new ErroAtendimento(400, 'Informe um período válido em YYYY-MM-DD');
   }
