@@ -481,28 +481,94 @@ async function editarPedidoGarcom(token,pedidoId,body,requestId=null){
   return editarPedidoCliente(rows[0].token,id,body,garcom.id,requestId);
 }
 async function metricasGarcons({ data } = {}) {
-  const dia = data || new Intl.DateTimeFormat('en-CA', { timeZone: process.env.APP_TIMEZONE || 'America/Sao_Paulo',
+  const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: process.env.APP_TIMEZONE || 'America/Sao_Paulo',
     year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date());
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dia) || Number.isNaN(Date.parse(dia))) {
-    throw new ErroAtendimento(400, 'Informe data em YYYY-MM-DD');
+  // Compatibilidade: data única continua aceita; intervalo usa "início..fim".
+  const partes = typeof data === 'string' && data.includes('..') ? data.split('..') : [data || hoje, data || hoje];
+  const [from, to] = partes;
+  const formatoValido = (valor) => /^\d{4}-\d{2}-\d{2}$/.test(valor || '') && !Number.isNaN(Date.parse(valor));
+  if (partes.length !== 2 || !formatoValido(from) || !formatoValido(to) || from > to) {
+    throw new ErroAtendimento(400, 'Informe um período válido em YYYY-MM-DD');
   }
-  // Receita: somente contas FECHADAS; atribuição ao responsável pela sessão.
-  // Nunca somar pedidos e contas juntos, pois isso duplica receita.
+  const tz = process.env.APP_TIMEZONE || 'America/Sao_Paulo';
   const { rows } = await pool.query(`
     SELECT g.id, g.nome, g.ativo, (g.removido_em IS NOT NULL) AS removido,
-      COUNT(s.id)::int AS atendimentos,
+      COUNT(DISTINCT s.id)::int AS atendimentos,
       COALESCE(SUM(COALESCE(s.valor_cobrado, s.valor_total)), 0)::numeric(12,2) AS vendas,
-      COALESCE(ROUND(AVG(COALESCE(s.valor_cobrado, s.valor_total))::numeric, 2), 0)::numeric(12,2) AS ticket_medio
+      COALESCE(ROUND(AVG(COALESCE(s.valor_cobrado, s.valor_total))::numeric, 2), 0)::numeric(12,2) AS ticket_medio,
+      (SELECT COUNT(DISTINCT p.id)::int FROM pedidos p
+        WHERE p.garcom_registrou_id=g.id AND (p.criado_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date) AS pedidos_registrados,
+      (SELECT COUNT(DISTINCT ip.pedido_id)::int FROM itens_pedido ip
+        WHERE ip.entregue_por_id=g.id AND ip.entregue_em IS NOT NULL
+          AND (ip.entregue_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date) AS pedidos_com_entrega_registrada,
+      (SELECT COUNT(DISTINCT h.sessao_id)::int FROM mesa_atendimento_historico h
+        WHERE h.garcom_novo_id=g.id AND (h.alterado_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date) AS mesas_assumidas,
+      (SELECT COUNT(*)::int FROM mesa_atendimento_historico h
+        WHERE h.garcom_novo_id=g.id AND h.garcom_anterior_id IS NOT NULL
+          AND (h.alterado_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date) AS transferencias_recebidas,
+      (SELECT COUNT(*)::int FROM mesa_atendimento_historico h
+        WHERE h.garcom_anterior_id=g.id AND (h.alterado_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date) AS transferencias_realizadas,
+      (SELECT COUNT(*)::int FROM itens_pedido ip
+        WHERE ip.aceito_por_id=g.id AND ip.aceito_em IS NOT NULL
+          AND (ip.aceito_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date) AS itens_assumidos,
+      (SELECT COUNT(*)::int FROM itens_pedido ip
+        WHERE ip.retirado_por_id=g.id AND ip.retirado_em IS NOT NULL
+          AND (ip.retirado_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date) AS itens_retirados,
+      (SELECT COUNT(*)::int FROM itens_pedido ip
+        WHERE ip.entregue_por_id=g.id AND ip.entregue_em IS NOT NULL
+          AND (ip.entregue_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date) AS itens_entregues,
+      (SELECT COALESCE(json_agg(json_build_object('acao', ev.acao, 'quantidade', ev.total) ORDER BY ev.acao), '[]'::json)
+         FROM (
+           SELECT ae.acao, COUNT(*)::int AS total
+             FROM auditoria_eventos ae
+            WHERE ae.ator_tipo='garcom' AND ae.ator_id=g.id AND ae.resultado='sucesso'
+              AND (ae.criado_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date
+              AND ae.acao NOT IN ('mesa_iniciada','mesa_assumida','mesa_transferida',
+                'entrega_assumida','itens_retirados','itens_entregues','item_status','sessao_fechada')
+            GROUP BY ae.acao
+         ) ev) AS outros_eventos
     FROM garcons g
     LEFT JOIN mesa_sessoes s
       ON s.garcom_responsavel_id=g.id AND s.status='fechada'
-     AND (s.fechada_em AT TIME ZONE $2)::date = $1::date
+     AND (s.fechada_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date
     GROUP BY g.id, g.nome, g.ativo, g.removido_em
     HAVING g.removido_em IS NULL OR COUNT(s.id) > 0
-    ORDER BY vendas DESC, g.nome ASC`, [dia, process.env.APP_TIMEZONE || 'America/Sao_Paulo']);
-  return { data: dia, criterio: 'contas fechadas atribuídas ao responsável pela sessão',
-    garcons: rows.map(x=>({ id:x.id, nome:x.nome, ativo:x.ativo, removido:x.removido, atendimentos:x.atendimentos,
-      vendas:Number(x.vendas), ticketMedio:Number(x.ticket_medio) })) };
+    ORDER BY vendas DESC, pedidos_registrados DESC, g.nome ASC
+  `, [from, to, tz]);
+
+  // O relatório financeiro é a fonte autoritativa de vendas, serviço e descontos.
+  // Assim não duplicamos receitas nem inferimos descontos a partir dos pagamentos.
+  const relatorio = await require('./relatorio').relatorioVendas({ from, to });
+  const financeiroPorGarcom = new Map(
+    relatorio.porGarcom.filter((item) => item.garcomId != null).map((item) => [Number(item.garcomId), item])
+  );
+  return {
+    periodo: { from, to, timezone: tz },
+    criterio: 'eventos atribuídos ao garçom no período selecionado e no fuso configurado; vendas, serviço e descontos apenas de contas fechadas sob sua responsabilidade',
+    garcons: rows.map(x => {
+      const financeiro = financeiroPorGarcom.get(Number(x.id)) || {};
+      const totalCobrado = Number(financeiro.totalCobrado ?? x.vendas);
+      const contas = Number(x.atendimentos);
+      return {
+        id:x.id, nome:x.nome, ativo:x.ativo, removido:x.removido,
+        atendimentos:contas, vendas:totalCobrado,
+        vendasBrutas:Number(financeiro.vendasBrutas ?? x.vendas),
+        taxaServico:Number(financeiro.servicoTotal ?? 0),
+        descontos:Number(financeiro.descontosTotal ?? 0),
+        totalCobrado,
+        ticketMedio:contas ? Number((totalCobrado / contas).toFixed(2)) : 0,
+        pedidosRegistrados:x.pedidos_registrados,
+        pedidosComEntregaRegistrada:x.pedidos_com_entrega_registrada,
+        mesasAssumidas:x.mesas_assumidas,
+        transferenciasRecebidas:x.transferencias_recebidas,
+        transferenciasRealizadas:x.transferencias_realizadas,
+        itensAssumidos:x.itens_assumidos,
+        itensRetirados:x.itens_retirados,
+        itensEntregues:x.itens_entregues,
+        outrosEventos:x.outros_eventos || []
+      };
+    })
+  };
 }
 async function transferirMesaAdmin(staff,numeroBruto,destinoBruto,requestId=null) {
   const numero=Number(numeroBruto),destinoId=Number(destinoBruto);

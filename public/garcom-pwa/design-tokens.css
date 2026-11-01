@@ -1,11 +1,15 @@
 /*
  * QR Admin — Design Tokens Compartilhados (SPA + PWA do Garçom)
- * Direção estética: "A COMANDA / Taproom Brasa"
+ * Direção estética global: "Palco Azul/Violeta" (referência: dashboard "Os números da sua casa")
  *
- * Arquitetura em dois níveis:
+ * Arquitetura em três níveis:
  *   1. Primitivos de marca (--prim-*): paleta base sem branco ou preto puros.
- *   2. Tokens semânticos (--surface*, --text*, --brand*, --accent*, --line*, --status-*):
- *      únicos tokens consumidos por componentes no SPA e no PWA.
+ *   2. Primitivos do palco (--stage-*): superfícies de vidro, camadas, acentos neon e hairlines
+ *      que dão profundidade às telas escuras. NENHUM componente escreve hex: consome estes tokens.
+ *   3. Tokens semânticos (--surface*, --text*, --brand*, --accent*, --line*, --status-*):
+ *      únicos tokens consumidos pelos componentes do SPA e do PWA nos dois temas.
+ *
+ * Exceção declarada: a interface do cardápio do cliente (rota #/mesa/:token) mantém layout próprio.
  */
 
 @font-face {
@@ -111,6 +115,48 @@
   --sidebar-notch: 20px;
   --touch-min: 48px;
 
+  /* Identidade global azul/violeta (dashboard "Os números da sua casa").
+     Substitui a paleta anterior (papel/madeira/brasa): aquela direção fica restrita
+     à interface do cardápio do cliente (#/mesa/:token), que tem layout próprio. */
+  --prim-meia-noite: #0b101b;
+  --prim-meia-noite-elevada: #141b29;
+  --prim-meia-noite-rebaixo: #080d16;
+  --prim-meia-noite-profunda: #080d16;
+  --prim-nevoa: #eef1f8;
+  --prim-nevoa-elevada: #f8faff;
+  --prim-nevoa-rebaixo: #e0e5f1;
+  --prim-nevoa-hover: #e6ebf5;
+  --prim-nevoa-borda: #c7cfe0;
+  --prim-nevoa-forte: #a5b0c8;
+  --prim-azul-tinta: #121829;
+  --prim-azul-medio: #48536d;
+  --prim-azul-claro: #616d88;
+  --prim-noite-tinta: #eef1fb;
+  --prim-noite-medio: #a9b4cc;
+  --prim-noite-claro: #7f8ba6;
+  --prim-noite-borda: #2a3348;
+  --prim-noite-forte: #3b4660;
+  --prim-noite-hover: #1b2232;
+  --prim-azul-linha: #1f2637;
+  --prim-violeta: #7c5cff;
+  --prim-violeta-escuro: #5b3fc4;
+  --prim-violeta-escuro-hover: #4b32b0;
+  --prim-violeta-claro: #8b6fff;
+  --prim-violeta-hover: #6b4bf0;
+  --prim-violeta-tinta-claro: #4a32a6;
+  --prim-violeta-tinta-escuro: #b7a5ff;
+  --prim-azul-agua: #4fd1e0;
+  --prim-azul-agua-claro: #8fe6f0;
+  --prim-azul-agua-tinta-claro: #0a5a63;
+  --prim-verde-ink-claro: #1c6b3e;
+  --prim-verde-ink-escuro: #7fe0b0;
+  --prim-ambar-ink-claro: #8a5600;
+  --prim-ambar-ink-escuro: #ffcf8a;
+  --prim-azul-ink-claro: #17558f;
+  --prim-azul-ink-escuro: #8fd0f0;
+  --prim-vermelho-ink-claro: #9e2b3a;
+  --prim-vermelho-ink-escuro: #ffb3b3;
+
   /* Motion contido */
   --ease-ticket: cubic-bezier(0.22, 1.18, 0.36, 1);
   --ease-snap: cubic-bezier(0.2, 0, 0, 1);
@@ -119,69 +165,180 @@
 }
 
 /* ==========================================================================
-   2. TOKENS SEMÂNTICOS — TEMA CLARO (Papel de Comanda + Stout + Brasa)
+   1b. PRIMITIVOS DO PALCO (Nível 1b — superfícies, vidro e acentos de dado)
+   Identidade global azul/violeta. Consumidos por dashboard/cozinha/bar/Admin/PWA.
+   ========================================================================== */
+:root {
+  /* Superfícies do palco (fundo escuro com profundidade) */
+  --stage-bg: #0b101b;
+  --stage-bg-2: #101322;
+  --stage-bg-3: #111525;
+  --stage-panel: rgba(27, 34, 50, 0.86);
+  --stage-panel-2: rgba(20, 27, 41, 0.92);
+  --stage-card: rgba(31, 37, 57, 0.95);
+  --stage-card-2: rgba(17, 23, 37, 0.96);
+  --stage-card-3: rgba(28, 35, 53, 0.92);
+  --stage-card-4: rgba(14, 20, 33, 0.94);
+  --stage-inset: #101723;
+  --stage-inset-2: rgba(14, 21, 35, 0.65);
+  --stage-inset-3: #0c1121;
+  --stage-inset-deep: #101827;
+  --stage-scrim: rgba(5, 7, 17, 0.79);
+
+  /* Tinta do palco */
+  --stage-ink: #f5f7ff;
+  --stage-ink-2: #e4eafb;
+  --stage-ink-3: #d7caff;
+  --stage-ink-muted: #aebad0;
+  --stage-ink-muted-2: #b8c4d8;
+  --stage-ink-subtle: #93a1bb;
+  --stage-ink-faint: #6c7691;
+
+  /* Linhas e hairlines */
+  --stage-line: #283044;
+  --stage-line-2: #303a50;
+  --stage-line-3: #3b4660;
+  --stage-line-4: #414c64;
+  --stage-line-5: #39445b;
+  --stage-line-base: #263149;
+  --stage-hairline: rgba(255, 255, 255, 0.04);
+  --stage-hairline-2: rgba(255, 255, 255, 0.07);
+  --stage-hairline-3: rgba(255, 255, 255, 0.10);
+  --stage-hairline-4: rgba(255, 255, 255, 0.145);
+
+  /* Acento violeta (padrão) */
+  --stage-hairline-5: rgba(255, 255, 255, 0.21);
+  --stage-violet: #c8b8ff;
+  --stage-violet-deep: #7151bf;
+  --stage-violet-soft: rgba(142, 105, 229, 0.19);
+
+  /* Acentos de dado (ciano, lima, rosa, âmbar, menta) */
+  --stage-violet-text: #b7a5ff;
+  --stage-cyan: #83edee;
+  --stage-cyan-deep: #278a9c;
+  --stage-cyan-soft: rgba(65, 188, 199, 0.17);
+  --stage-lime: #d8fa9c;
+  --stage-lime-deep: #809b40;
+  --stage-lime-soft: rgba(174, 216, 93, 0.16);
+  --stage-lime-ink: #ccf88f;
+  --stage-rose: #ffc2da;
+  --stage-rose-deep: #af5c87;
+  --stage-rose-soft: rgba(224, 123, 168, 0.16);
+  --stage-amber: #ffd2a2;
+  --stage-amber-deep: #af7042;
+  --stage-amber-soft: rgba(232, 153, 89, 0.16);
+  --stage-mint: #8bf8ce;
+  --stage-mint-2: #7bf2c8;
+  --stage-mint-text: #a4f4d5;
+  --stage-mint-text-2: #a7eecf;
+  --stage-mint-bar: #8ce8d1;
+  --stage-on-accent: #151a28;
+
+  /* Estados no palco */
+  --stage-ok-line: #33584f;
+  --stage-ok-soft: rgba(22, 59, 50, 0.53);
+  --stage-ok-ink: #a9ecc8;
+  --stage-warn-line: #6d5a33;
+  --stage-warn-soft: rgba(47, 38, 22, 0.79);
+  --stage-warn-surface: #4a3526;
+  --stage-warn-ink: #ffe0b9;
+  --stage-warn-ink-2: #ffe4af;
+  --stage-warn-line-2: #c39b58;
+  --stage-danger-line: #a95f5c;
+  --stage-danger-soft: rgba(59, 32, 39, 0.79);
+  --stage-danger-soft-2: #3b2027;
+  --stage-danger-surface: #44242c;
+  --stage-danger-border: #c78480;
+  --stage-danger-ink: #ffe1dd;
+  --stage-danger-ink-2: #ffd9d5;
+  --stage-danger-ink-3: #ff9b95;
+  --stage-danger-ink-4: #ffc4be;
+  --stage-danger-deep: #7d4340;
+  --stage-danger-shadow: rgba(42, 13, 18, 0.35);
+  --stage-info-line: #2f6a73;
+  --stage-info-soft: rgba(18, 48, 56, 0.79);
+  --stage-info-ink: #b9f2f6;
+  --stage-shadow-1: rgba(3, 7, 18, 0.29);
+
+  /* Sombras, foco e textura */
+  --stage-shadow-2: rgba(3, 7, 18, 0.42);
+  --stage-shadow-3: rgba(3, 7, 18, 0.62);
+  --stage-shadow-4: rgba(3, 4, 11, 0.67);
+  --stage-shadow-inset: rgba(5, 9, 20, 0.64);
+  --stage-focus: #b8f3ff;
+  --stage-grid: rgba(131, 147, 180, 0.07);
+  --stage-veil: rgba(255, 255, 255, 0.12);
+  --stage-glow-violet: rgba(104, 77, 200, 0.18);
+  --stage-glow-cyan: rgba(15, 143, 159, 0.13);
+  --stage-scroll-thumb: #43506a;
+  --stage-scroll-thumb-hover: #566684;
+  --stage-scroll-track: #1d293c;
+}
+
+/* ==========================================================================
+   2. TOKENS SEMÂNTICOS — TEMA CLARO (Névoa Azul + Violeta)
    ========================================================================== */
 :root,
 [data-theme="claro"] {
   color-scheme: light;
 
-  --surface: var(--prim-papel);
-  --surface-raised: var(--prim-papel-claro);
-  --surface-sunken: var(--prim-papel-rebaixo);
-  --surface-hover: var(--prim-papel-hover);
-  --surface-sidebar: var(--prim-stout);
-  --surface-overlay: rgba(23, 18, 14, 0.72);
+  --surface: var(--prim-nevoa);
+  --surface-raised: var(--prim-nevoa-elevada);
+  --surface-sunken: var(--prim-nevoa-rebaixo);
+  --surface-hover: var(--prim-nevoa-hover);
+  --surface-sidebar: var(--prim-meia-noite);
+  --surface-overlay: rgba(16, 22, 38, 0.72);
 
-  --text: var(--prim-stout);
-  --text-muted: var(--prim-malte-medio);
-  --text-subtle: var(--prim-malte-claro);
+  --text: var(--prim-azul-tinta);
+  --text-muted: var(--prim-azul-medio);
+  --text-subtle: var(--prim-azul-claro);
 
-  --sidebar-text: var(--prim-giz);
-  --sidebar-muted: var(--prim-giz-medio);
-  --sidebar-line: var(--prim-stout-suave);
+  --sidebar-text: var(--prim-noite-tinta);
+  --sidebar-muted: var(--prim-noite-medio);
+  --sidebar-line: var(--prim-azul-linha);
 
-  --brand: var(--prim-brasa-escura);
-  --brand-hover: var(--prim-brasa-hover-claro);
-  --brand-contrast: var(--prim-papel-claro);
-  --brand-ink: var(--prim-brasa-tinta);
-  --brand-surface: color-mix(in srgb, var(--prim-brasa) 11%, var(--prim-papel-claro));
-  --brand-border: color-mix(in srgb, var(--prim-brasa) 38%, var(--prim-papel-borda));
+  --brand: var(--prim-violeta-escuro);
+  --brand-hover: var(--prim-violeta-escuro-hover);
+  --brand-contrast: var(--prim-nevoa-elevada);
+  --brand-ink: var(--prim-violeta-tinta-claro);
+  --brand-surface: color-mix(in srgb, var(--prim-violeta) 12%, var(--prim-nevoa-elevada));
+  --brand-border: color-mix(in srgb, var(--prim-violeta) 38%, var(--prim-nevoa-borda));
 
-  --accent: var(--prim-latao);
-  --accent-ink: var(--prim-latao-tinta-claro);
-  --accent-surface: color-mix(in srgb, var(--prim-latao) 14%, var(--prim-papel-claro));
-  --accent-border: color-mix(in srgb, var(--prim-latao) 42%, var(--prim-papel-borda));
+  --accent: var(--prim-azul-agua-tinta-claro);
+  --accent-ink: var(--prim-azul-agua-tinta-claro);
+  --accent-surface: color-mix(in srgb, var(--prim-azul-agua) 16%, var(--prim-nevoa-elevada));
+  --accent-border: color-mix(in srgb, var(--prim-azul-agua) 40%, var(--prim-nevoa-borda));
 
-  --line: var(--prim-papel-borda);
-  --line-strong: var(--prim-papel-forte);
-  --focus-ring: var(--prim-brasa-tinta);
+  --line: var(--prim-nevoa-borda);
+  --line-strong: var(--prim-nevoa-forte);
+  --focus-ring: var(--prim-violeta-tinta-claro);
 
-  --status-success: var(--prim-lupulo-escuro);
-  --status-success-ink: var(--prim-lupulo-escuro);
-  --status-success-contrast: var(--prim-papel-claro);
-  --status-success-surface: color-mix(in srgb, var(--prim-lupulo) 13%, var(--prim-papel-claro));
-  --status-success-border: color-mix(in srgb, var(--prim-lupulo) 40%, var(--prim-papel-borda));
+  --status-success: var(--prim-verde-ink-claro);
+  --status-success-ink: var(--prim-verde-ink-claro);
+  --status-success-contrast: var(--prim-nevoa-elevada);
+  --status-success-surface: color-mix(in srgb, var(--prim-verde-ink-claro) 12%, var(--prim-nevoa-elevada));
+  --status-success-border: color-mix(in srgb, var(--prim-verde-ink-claro) 40%, var(--prim-nevoa-borda));
 
-  --status-warning: var(--prim-latao);
-  --status-warning-ink: var(--prim-latao-tinta-claro);
-  --status-warning-surface: color-mix(in srgb, var(--prim-latao) 16%, var(--prim-papel-claro));
-  --status-warning-border: color-mix(in srgb, var(--prim-latao) 46%, var(--prim-papel-borda));
+  --status-warning: var(--prim-ambar-ink-claro);
+  --status-warning-ink: var(--prim-ambar-ink-claro);
+  --status-warning-surface: color-mix(in srgb, var(--prim-ambar-ink-claro) 14%, var(--prim-nevoa-elevada));
+  --status-warning-border: color-mix(in srgb, var(--prim-ambar-ink-claro) 44%, var(--prim-nevoa-borda));
 
-  --status-info: var(--prim-cobalto-escuro);
-  --status-info-ink: var(--prim-cobalto-escuro);
-  --status-info-surface: color-mix(in srgb, var(--prim-cobalto) 12%, var(--prim-papel-claro));
-  --status-info-border: color-mix(in srgb, var(--prim-cobalto) 38%, var(--prim-papel-borda));
+  --status-info: var(--prim-azul-ink-claro);
+  --status-info-ink: var(--prim-azul-ink-claro);
+  --status-info-surface: color-mix(in srgb, var(--prim-azul-ink-claro) 12%, var(--prim-nevoa-elevada));
+  --status-info-border: color-mix(in srgb, var(--prim-azul-ink-claro) 38%, var(--prim-nevoa-borda));
 
-  --status-danger: var(--prim-carmim-escuro);
-  --status-danger-ink: var(--prim-carmim-escuro);
-  --status-danger-contrast: var(--prim-papel-claro);
-  --status-danger-surface: color-mix(in srgb, var(--prim-carmim) 11%, var(--prim-papel-claro));
-  --status-danger-border: color-mix(in srgb, var(--prim-carmim) 38%, var(--prim-papel-borda));
+  --status-danger: var(--prim-vermelho-ink-claro);
+  --status-danger-ink: var(--prim-vermelho-ink-claro);
+  --status-danger-contrast: var(--prim-nevoa-elevada);
+  --status-danger-surface: color-mix(in srgb, var(--prim-vermelho-ink-claro) 11%, var(--prim-nevoa-elevada));
+  --status-danger-border: color-mix(in srgb, var(--prim-vermelho-ink-claro) 38%, var(--prim-nevoa-borda));
 
   /* Superfície física de código QR e comprovante impresso (invariável em claro/escuro) */
-  --qr-paper: var(--prim-papel-claro);
-  --qr-ink: var(--prim-stout);
-  --qr-border: var(--prim-papel-borda);
+  --qr-paper: var(--prim-nevoa-elevada);
+  --qr-ink: var(--prim-meia-noite);
+  --qr-border: var(--prim-nevoa-borda);
 
   /* Aliases semânticos de aviso consumidos por regra auditada no PWA */
   --qr-amber-500: var(--status-warning);
@@ -189,59 +346,70 @@
 }
 
 /* ==========================================================================
-   3. TOKENS SEMÂNTICOS — TEMA ESCURO (Lousa Quente + Sidebar Stout Profundo)
+   3. TOKENS SEMÂNTICOS — TEMA ESCURO (Meia-noite Azul + Sidebar Profunda)
    ========================================================================== */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="claro"]) {
     color-scheme: dark;
-    --surface: var(--prim-lousa);
-    --surface-raised: var(--prim-lousa-elevada);
-    --surface-sunken: var(--prim-lousa-rebaixo);
-    --surface-hover: var(--prim-lousa-hover);
-    --surface-sidebar: var(--prim-stout-profundo);
-    --surface-overlay: rgba(16, 12, 9, 0.82);
-    --text: var(--prim-giz);
-    --text-muted: var(--prim-giz-medio);
-    --text-subtle: var(--prim-giz-sutil);
-    --sidebar-text: var(--prim-giz);
-    --sidebar-muted: var(--prim-giz-medio);
-    --sidebar-line: var(--prim-stout-suave);
-    --brand: var(--prim-brasa);
-    --brand-hover: var(--prim-brasa-hover-escuro);
-    --brand-contrast: var(--prim-stout);
-    --brand-ink: var(--prim-brasa-clara);
-    --brand-surface: color-mix(in srgb, var(--prim-brasa) 16%, var(--prim-lousa-elevada));
-    --brand-border: color-mix(in srgb, var(--prim-brasa) 44%, var(--prim-lousa-borda));
-    --accent: var(--prim-latao);
-    --accent-ink: var(--prim-latao-tinta-escuro);
-    --accent-surface: color-mix(in srgb, var(--prim-latao) 16%, var(--prim-lousa-elevada));
-    --accent-border: color-mix(in srgb, var(--prim-latao) 44%, var(--prim-lousa-borda));
-    --line: var(--prim-lousa-borda);
-    --line-strong: var(--prim-lousa-forte);
-    --focus-ring: var(--prim-brasa-clara);
-    --status-success: var(--prim-lupulo);
-    --status-success-ink: var(--prim-lupulo-claro);
-    --status-success-contrast: var(--prim-giz);
-    --status-success-surface: color-mix(in srgb, var(--prim-lupulo) 18%, var(--prim-lousa-elevada));
-    --status-success-border: color-mix(in srgb, var(--prim-lupulo) 48%, var(--prim-lousa-borda));
-    --status-warning: var(--prim-latao);
-    --status-warning-ink: var(--prim-latao-tinta-escuro);
-    --status-warning-surface: color-mix(in srgb, var(--prim-latao) 18%, var(--prim-lousa-elevada));
-    --status-warning-border: color-mix(in srgb, var(--prim-latao) 48%, var(--prim-lousa-borda));
-    --status-info: var(--prim-cobalto);
-    --status-info-ink: var(--prim-cobalto-claro);
-    --status-info-surface: color-mix(in srgb, var(--prim-cobalto) 20%, var(--prim-lousa-elevada));
-    --status-info-border: color-mix(in srgb, var(--prim-cobalto) 48%, var(--prim-lousa-borda));
-    --status-danger: var(--prim-carmim);
-    --status-danger-ink: var(--prim-carmim-claro);
-    --status-danger-contrast: var(--prim-giz);
-    --status-danger-surface: color-mix(in srgb, var(--prim-carmim) 20%, var(--prim-lousa-elevada));
-    --status-danger-border: color-mix(in srgb, var(--prim-carmim) 48%, var(--prim-lousa-borda));
-    --qr-amber-500: var(--status-warning);
-    --qr-amber-700: var(--status-warning-ink);
-    --shadow-card: 0 8px 24px -6px rgba(10, 8, 6, 0.38), 0 2px 6px -1px rgba(10, 8, 6, 0.24);
-    --shadow-card-hover: 0 14px 32px -6px rgba(10, 8, 6, 0.48);
-    --shadow-modal: 0 26px 56px -12px rgba(10, 8, 6, 0.62);
+  --surface: var(--prim-meia-noite);
+  --surface-raised: var(--prim-meia-noite-elevada);
+  --surface-sunken: var(--prim-meia-noite-rebaixo);
+  --surface-hover: var(--prim-noite-hover);
+  --surface-sidebar: var(--prim-meia-noite-profunda);
+  --surface-overlay: rgba(5, 8, 14, 0.82);
+
+  --text: var(--prim-noite-tinta);
+  --text-muted: var(--prim-noite-medio);
+  --text-subtle: var(--prim-noite-claro);
+
+  --sidebar-text: var(--prim-noite-tinta);
+  --sidebar-muted: var(--prim-noite-medio);
+  --sidebar-line: var(--prim-azul-linha);
+
+  --brand: var(--prim-violeta-claro);
+  --brand-hover: var(--prim-violeta);
+  --brand-contrast: var(--prim-meia-noite);
+  --brand-ink: var(--prim-violeta-tinta-escuro);
+  --brand-surface: color-mix(in srgb, var(--prim-violeta) 16%, var(--prim-meia-noite-elevada));
+  --brand-border: color-mix(in srgb, var(--prim-violeta) 44%, var(--prim-noite-borda));
+
+  --accent: var(--prim-azul-agua);
+  --accent-ink: var(--prim-azul-agua-claro);
+  --accent-surface: color-mix(in srgb, var(--prim-azul-agua) 16%, var(--prim-meia-noite-elevada));
+  --accent-border: color-mix(in srgb, var(--prim-azul-agua) 42%, var(--prim-noite-borda));
+
+  --line: var(--prim-noite-borda);
+  --line-strong: var(--prim-noite-forte);
+  --focus-ring: var(--prim-azul-agua-claro);
+
+  --status-success: var(--prim-verde-ink-escuro);
+  --status-success-ink: var(--prim-verde-ink-escuro);
+  --status-success-contrast: var(--prim-meia-noite);
+  --status-success-surface: color-mix(in srgb, var(--prim-verde-ink-escuro) 16%, var(--prim-meia-noite-elevada));
+  --status-success-border: color-mix(in srgb, var(--prim-verde-ink-escuro) 44%, var(--prim-noite-borda));
+
+  --status-warning: var(--prim-ambar-ink-escuro);
+  --status-warning-ink: var(--prim-ambar-ink-escuro);
+  --status-warning-surface: color-mix(in srgb, var(--prim-ambar-ink-escuro) 16%, var(--prim-meia-noite-elevada));
+  --status-warning-border: color-mix(in srgb, var(--prim-ambar-ink-escuro) 44%, var(--prim-noite-borda));
+
+  --status-info: var(--prim-azul-ink-escuro);
+  --status-info-ink: var(--prim-azul-ink-escuro);
+  --status-info-surface: color-mix(in srgb, var(--prim-azul-ink-escuro) 16%, var(--prim-meia-noite-elevada));
+  --status-info-border: color-mix(in srgb, var(--prim-azul-ink-escuro) 44%, var(--prim-noite-borda));
+
+  --status-danger: var(--prim-vermelho-ink-escuro);
+  --status-danger-ink: var(--prim-vermelho-ink-escuro);
+  --status-danger-contrast: var(--prim-meia-noite);
+  --status-danger-surface: color-mix(in srgb, var(--prim-vermelho-ink-escuro) 16%, var(--prim-meia-noite-elevada));
+  --status-danger-border: color-mix(in srgb, var(--prim-vermelho-ink-escuro) 44%, var(--prim-noite-borda));
+
+  --qr-amber-500: var(--status-warning);
+  --qr-amber-700: var(--status-warning-ink);
+
+  --shadow-card: 0 10px 26px -8px rgba(4, 8, 16, 0.55), 0 2px 6px -1px rgba(4, 8, 16, 0.35);
+  --shadow-card-hover: 0 16px 34px -8px rgba(4, 8, 16, 0.62);
+  --shadow-modal: 0 30px 70px -16px rgba(4, 8, 16, 0.72);
   }
 }
 
@@ -250,63 +418,125 @@
 .dark {
   color-scheme: dark;
 
-  --surface: var(--prim-lousa);
-  --surface-raised: var(--prim-lousa-elevada);
-  --surface-sunken: var(--prim-lousa-rebaixo);
-  --surface-hover: var(--prim-lousa-hover);
-  --surface-sidebar: var(--prim-stout-profundo);
-  --surface-overlay: rgba(16, 12, 9, 0.82);
+  --surface: var(--prim-meia-noite);
+  --surface-raised: var(--prim-meia-noite-elevada);
+  --surface-sunken: var(--prim-meia-noite-rebaixo);
+  --surface-hover: var(--prim-noite-hover);
+  --surface-sidebar: var(--prim-meia-noite-profunda);
+  --surface-overlay: rgba(5, 8, 14, 0.82);
 
-  --text: var(--prim-giz);
-  --text-muted: var(--prim-giz-medio);
-  --text-subtle: var(--prim-giz-sutil);
+  --text: var(--prim-noite-tinta);
+  --text-muted: var(--prim-noite-medio);
+  --text-subtle: var(--prim-noite-claro);
 
-  --sidebar-text: var(--prim-giz);
-  --sidebar-muted: var(--prim-giz-medio);
-  --sidebar-line: var(--prim-stout-suave);
+  --sidebar-text: var(--prim-noite-tinta);
+  --sidebar-muted: var(--prim-noite-medio);
+  --sidebar-line: var(--prim-azul-linha);
 
-  --brand: var(--prim-brasa);
-  --brand-hover: var(--prim-brasa-hover-escuro);
-  --brand-contrast: var(--prim-stout);
-  --brand-ink: var(--prim-brasa-clara);
-  --brand-surface: color-mix(in srgb, var(--prim-brasa) 16%, var(--prim-lousa-elevada));
-  --brand-border: color-mix(in srgb, var(--prim-brasa) 44%, var(--prim-lousa-borda));
+  --brand: var(--prim-violeta-claro);
+  --brand-hover: var(--prim-violeta);
+  --brand-contrast: var(--prim-meia-noite);
+  --brand-ink: var(--prim-violeta-tinta-escuro);
+  --brand-surface: color-mix(in srgb, var(--prim-violeta) 16%, var(--prim-meia-noite-elevada));
+  --brand-border: color-mix(in srgb, var(--prim-violeta) 44%, var(--prim-noite-borda));
 
-  --accent: var(--prim-latao);
-  --accent-ink: var(--prim-latao-tinta-escuro);
-  --accent-surface: color-mix(in srgb, var(--prim-latao) 16%, var(--prim-lousa-elevada));
-  --accent-border: color-mix(in srgb, var(--prim-latao) 44%, var(--prim-lousa-borda));
+  --accent: var(--prim-azul-agua);
+  --accent-ink: var(--prim-azul-agua-claro);
+  --accent-surface: color-mix(in srgb, var(--prim-azul-agua) 16%, var(--prim-meia-noite-elevada));
+  --accent-border: color-mix(in srgb, var(--prim-azul-agua) 42%, var(--prim-noite-borda));
 
-  --line: var(--prim-lousa-borda);
-  --line-strong: var(--prim-lousa-forte);
-  --focus-ring: var(--prim-brasa-clara);
+  --line: var(--prim-noite-borda);
+  --line-strong: var(--prim-noite-forte);
+  --focus-ring: var(--prim-azul-agua-claro);
 
-  --status-success: var(--prim-lupulo);
-  --status-success-ink: var(--prim-lupulo-claro);
-  --status-success-contrast: var(--prim-giz);
-  --status-success-surface: color-mix(in srgb, var(--prim-lupulo) 18%, var(--prim-lousa-elevada));
-  --status-success-border: color-mix(in srgb, var(--prim-lupulo) 48%, var(--prim-lousa-borda));
+  --status-success: var(--prim-verde-ink-escuro);
+  --status-success-ink: var(--prim-verde-ink-escuro);
+  --status-success-contrast: var(--prim-meia-noite);
+  --status-success-surface: color-mix(in srgb, var(--prim-verde-ink-escuro) 16%, var(--prim-meia-noite-elevada));
+  --status-success-border: color-mix(in srgb, var(--prim-verde-ink-escuro) 44%, var(--prim-noite-borda));
 
-  --status-warning: var(--prim-latao);
-  --status-warning-ink: var(--prim-latao-tinta-escuro);
-  --status-warning-surface: color-mix(in srgb, var(--prim-latao) 18%, var(--prim-lousa-elevada));
-  --status-warning-border: color-mix(in srgb, var(--prim-latao) 48%, var(--prim-lousa-borda));
+  --status-warning: var(--prim-ambar-ink-escuro);
+  --status-warning-ink: var(--prim-ambar-ink-escuro);
+  --status-warning-surface: color-mix(in srgb, var(--prim-ambar-ink-escuro) 16%, var(--prim-meia-noite-elevada));
+  --status-warning-border: color-mix(in srgb, var(--prim-ambar-ink-escuro) 44%, var(--prim-noite-borda));
 
-  --status-info: var(--prim-cobalto);
-  --status-info-ink: var(--prim-cobalto-claro);
-  --status-info-surface: color-mix(in srgb, var(--prim-cobalto) 20%, var(--prim-lousa-elevada));
-  --status-info-border: color-mix(in srgb, var(--prim-cobalto) 48%, var(--prim-lousa-borda));
+  --status-info: var(--prim-azul-ink-escuro);
+  --status-info-ink: var(--prim-azul-ink-escuro);
+  --status-info-surface: color-mix(in srgb, var(--prim-azul-ink-escuro) 16%, var(--prim-meia-noite-elevada));
+  --status-info-border: color-mix(in srgb, var(--prim-azul-ink-escuro) 44%, var(--prim-noite-borda));
 
-  --status-danger: var(--prim-carmim);
-  --status-danger-ink: var(--prim-carmim-claro);
-  --status-danger-contrast: var(--prim-giz);
-  --status-danger-surface: color-mix(in srgb, var(--prim-carmim) 20%, var(--prim-lousa-elevada));
-  --status-danger-border: color-mix(in srgb, var(--prim-carmim) 48%, var(--prim-lousa-borda));
+  --status-danger: var(--prim-vermelho-ink-escuro);
+  --status-danger-ink: var(--prim-vermelho-ink-escuro);
+  --status-danger-contrast: var(--prim-meia-noite);
+  --status-danger-surface: color-mix(in srgb, var(--prim-vermelho-ink-escuro) 16%, var(--prim-meia-noite-elevada));
+  --status-danger-border: color-mix(in srgb, var(--prim-vermelho-ink-escuro) 44%, var(--prim-noite-borda));
 
   --qr-amber-500: var(--status-warning);
   --qr-amber-700: var(--status-warning-ink);
 
-  --shadow-card: 0 8px 24px -6px rgba(10, 8, 6, 0.38), 0 2px 6px -1px rgba(10, 8, 6, 0.24);
-  --shadow-card-hover: 0 14px 32px -6px rgba(10, 8, 6, 0.48);
-  --shadow-modal: 0 26px 56px -12px rgba(10, 8, 6, 0.62);
+  --shadow-card: 0 10px 26px -8px rgba(4, 8, 16, 0.55), 0 2px 6px -1px rgba(4, 8, 16, 0.35);
+  --shadow-card-hover: 0 16px 34px -8px rgba(4, 8, 16, 0.62);
+  --shadow-modal: 0 30px 70px -16px rgba(4, 8, 16, 0.72);
+}
+
+/* ==========================================================================
+   4. TOKENS DE ESPAÇAMENTO, MOVIMENTO E SUPERFÍCIE DE VIDRO
+   ========================================================================== */
+:root {
+  /* Escala de espaçamento (múltiplos de 4px) — usar em vez de valores soltos */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 48px;
+
+  /* Durações e curvas de movimento */
+  --dur-instant: 90ms;
+  --dur-quick: 140ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Elevação em camadas (o tom é fixo do palco; a opacidade muda por tema) */
+  --elev-1: 0 1px 2px rgba(4, 8, 16, 0.16);
+  --elev-2: 0 6px 18px -8px rgba(4, 8, 16, 0.32);
+  --elev-3: 0 14px 34px -12px rgba(4, 8, 16, 0.44);
+  --elev-4: 0 26px 60px -18px rgba(4, 8, 16, 0.58);
+
+  /* Vidro: combinações prontas de superfície + hairline + elevação */
+  --glass-blur: 14px;
+  --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.085), transparent 46%);
+  --glass-border: var(--stage-hairline-3);
+  --glass-shadow: 0 12px 28px -10px var(--stage-shadow-2);
+}
+
+/* Estados de interação compartilhados: nenhum componente redefine a regra. */
+:where(a, button, summary, [role="button"], input, select, textarea):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+:where(button, [role="button"])[aria-pressed="true"],
+:where(button, [role="button"])[aria-selected="true"] {
+  border-color: var(--brand-border);
+}
+
+:where(button, [role="button"], a, summary):disabled,
+:where(button, [role="button"])[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-instant: 0ms;
+    --dur-quick: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+  }
 }

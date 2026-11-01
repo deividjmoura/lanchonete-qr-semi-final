@@ -72,13 +72,15 @@ test('identidade visual do dashboard nas telas ativas (vidro, acento, sombra)', 
   for (const classe of ['ops-stage', 'ops-sessao', 'ops-card', 'ops-pill']) {
     assert.ok(css.includes('.' + classe), `classe ${classe} definida`);
   }
-  assert.match(css, /border-radius:\s*24px/);
+  // A camada de vidro do palco não escreve cor literal: tudo vem de token.
+  assert.doesNotMatch(css, /#[0-9a-fA-F]{3,8}\b|rgba?\(/, 'operacional.css sem hex/rgba literais');
+  assert.match(css, /border-radius:\s*var\(--radius-lg\)/);
   assert.match(css, /box-shadow:[^;]*inset 0 1px 0/);
   assert.match(css, /color-mix\(in srgb, var\(--ops-accent\)/);
   assert.match(fila, /import "\.\.\/screens\/operacional\.css"/);
-  // Contraste: texto principal e muted claros sobre o vidro escuro.
-  assert.match(css, /color:\s*#f3f5ff/);
-  assert.match(css, /color:\s*#a9b6cf/);
+  // Contraste: texto principal e muted claros sobre o vidro escuro, agora por token.
+  assert.match(css, /color:\s*var\(--stage-ink\)/);
+  assert.match(css, /color:\s*var\(--stage-ink-muted\)/);
 });
 
 test('linguagem visual do dashboard chega ao caixa e ao PWA sem perder contraste', () => {

@@ -1,7 +1,7 @@
 /**
  * Preferência de tema clara/escura compartilhada entre o SPA e o PWA do garçom.
  * Espelha os tokens semânticos de `public/garcom-pwa/design-tokens.css`
- * (direção "A COMANDA / Taproom Brasa", zero branco/preto puros).
+ * (identidade global "Palco Azul/Violeta", zero branco/preto puros).
  */
 
 export type Tema = "claro" | "escuro";
@@ -11,32 +11,32 @@ export const EVENTO_TEMA = "qradmin-tema";
 
 export const TOKENS_TEMA: Record<Tema, Record<string, string>> = {
   claro: {
-    "--surface": "#f0e6d2",
-    "--surface-raised": "#f7f0e2",
-    "--surface-sunken": "#e5d8be",
-    "--surface-sidebar": "#17120e",
-    "--text": "#17120e",
-    "--text-muted": "#594b3e",
-    "--brand": "#bf3b11",
-    "--brand-contrast": "#f7f0e2",
-    "--brand-ink": "#b5360d",
-    "--accent": "#c99a2e",
-    "--line": "#cfc0a3",
-    "--line-strong": "#b09d7b",
+    "--surface": "#eef1f8",
+    "--surface-raised": "#f8faff",
+    "--surface-sunken": "#e0e5f1",
+    "--surface-sidebar": "#0b101b",
+    "--text": "#121829",
+    "--text-muted": "#48536d",
+    "--brand": "#5b3fc4",
+    "--brand-contrast": "#f8faff",
+    "--brand-ink": "#4a32a6",
+    "--accent": "#0a5a63",
+    "--line": "#c7cfe0",
+    "--line-strong": "#a5b0c8",
   },
   escuro: {
-    "--surface": "#141813",
-    "--surface-raised": "#1c211b",
-    "--surface-sunken": "#0f120e",
-    "--surface-sidebar": "#100c09",
-    "--text": "#ede5d5",
-    "--text-muted": "#b0a795",
-    "--brand": "#e8501f",
-    "--brand-contrast": "#17120e",
-    "--brand-ink": "#ff7d52",
-    "--accent": "#c99a2e",
-    "--line": "#2e362c",
-    "--line-strong": "#434e40",
+    "--surface": "#0b101b",
+    "--surface-raised": "#141b29",
+    "--surface-sunken": "#080d16",
+    "--surface-sidebar": "#080d16",
+    "--text": "#eef1fb",
+    "--text-muted": "#a9b4cc",
+    "--brand": "#8b6fff",
+    "--brand-contrast": "#0b101b",
+    "--brand-ink": "#b7a5ff",
+    "--accent": "#4fd1e0",
+    "--line": "#2a3348",
+    "--line-strong": "#3b4660",
   },
 };
 

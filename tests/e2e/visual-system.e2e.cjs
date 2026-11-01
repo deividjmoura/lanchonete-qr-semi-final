@@ -1,5 +1,5 @@
 "use strict";
-// Validação visual e estrutural do sistema "A COMANDA / Taproom Brasa" em Chromium real.
+// Validação visual e estrutural do sistema "Palco Azul/Violeta" em Chromium real.
 // npm run build && npm run preview -- --host 0.0.0.0 --port 4173
 // node tests/e2e/visual-system.e2e.cjs
 const { chromium } = require("playwright-core");
@@ -227,6 +227,19 @@ async function main() {
         if (!location.hash.startsWith("#/login"))
           sessionStorage.setItem("pub-auth", JSON.stringify({ role: "admin", nome: "Admin" }));
         localStorage.setItem("garcom-notification-intro-v1-visual", "1");
+        /* O PWA reconecta o SSE em ~1s quando o stream do mock fecha, e cada
+           reconexão dispara refreshLiveData() -> loadDeliveries(), que troca os
+           cards por replaceChildren(). Isso derrubava o clique do acordeão de
+           forma intermitente (o teste lia o aria-expanded de um nó já removido).
+           Aqui o realtime é neutralizado: este teste valida layout/tema, não
+           atualização em tempo real — e o acordeão é exercitado sem corrida. */
+        window.EventSource = class {
+          constructor() {
+            this.onerror = null;
+          }
+          addEventListener() {}
+          close() {}
+        };
       });
       await context.route("**/api/**", mock);
       const page = await context.newPage();
