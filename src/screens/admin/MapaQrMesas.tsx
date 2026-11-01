@@ -85,88 +85,87 @@ export function MapaQrMesas({ dados, agora, onAbrirMesa, onAtualizado, onErro }:
         ) : (
           <>
           {mesasFiltradas.map((mesa) => {
-          const tempo = mesa.abertaEm ? faixaOcupacao(mesa.abertaEm, agora, faixas) : null;
-          const faixa = tempo ? FAIXAS_TEMPO[tempo.id] : null;
-          const ocupada = Boolean(mesa.sessaoId);
-          return (
-            <div key={mesa.id} data-glass-card className="flex flex-wrap items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-hover">
-              <div
-                className={cn(
-                  "flex size-11 shrink-0 items-center justify-center rounded-sm border font-mono text-base font-bold",
-                  ocupada
-                    ? "border-brand-border bg-brand-surface text-brand-ink"
-                    : "border-line bg-surface-sunken text-text-muted",
-                )}
-              >
-                {String(mesa.numero).padStart(2, "0")}
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-semibold text-text">Mesa {String(mesa.numero).padStart(2, "0")}</p>
-                  <Badge tone={ocupada ? "brass" : "sage"} dot>
-                    {ocupada ? "Ocupada" : "Livre"}
-                  </Badge>
-                  <span className="rounded-full border border-line bg-surface-sunken px-2 py-0.5 text-[10px] font-semibold text-text-muted">
-                    {mesa.pracaNome || "Sem praça"}
-                  </span>
-                  {ocupada && faixa && (
-                    <span className={cn("rounded-full border px-2 py-0.5 font-mono text-[10px] font-bold", faixa.classe)}>
-                      {formatarDuracao(tempo?.minutos)} · {faixa.rotulo}
-                    </span>
-                  )}
-                  {ocupada && <span className="font-mono text-xs font-bold text-text">{BRL(mesa.saldo)}</span>}
-                </div>
-                <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-text-muted">
-                  {ocupada ? (
-                    <>
-                      <span>Garçom: {mesa.garcomResponsavelNome || "a definir"}</span>
-                      <span className="text-text-subtle">·</span>
-                      <span>
-                        {mesa.pedidosAtivos} {mesa.pedidosAtivos === 1 ? "pedido ativo" : "pedidos ativos"}
-                      </span>
-                      {mesa.pago > 0 && (
-                        <>
-                          <span className="text-text-subtle">·</span>
-                          <span>já pago {BRL(mesa.pago)}</span>
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <span>Sem sessão aberta · sem consumo</span>
-                  )}
-                </p>
-              </div>
-
-              <div className="ml-auto flex flex-wrap items-center gap-1.5">
-                <Btn size="sm" variant="outline" onClick={() => onAbrirMesa(mesa.numero)} className="px-2.5">
-                  Abrir
-                </Btn>
+            const tempo = mesa.abertaEm ? faixaOcupacao(mesa.abertaEm, agora, faixas) : null;
+            const faixa = tempo ? FAIXAS_TEMPO[tempo.id] : null;
+            const ocupada = Boolean(mesa.sessaoId);
+            return (
+              <article key={mesa.id} data-glass-card className="flex flex-wrap items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-hover">
                 <button
                   type="button"
-                  title={copiado === mesa.id ? "Link copiado" : "Copiar link da mesa"}
-                  aria-label={`Copiar link da mesa ${mesa.numero}`}
-                  onClick={() => void copiarLink(mesa)}
-                  className="inline-flex size-10 shrink-0 items-center justify-center rounded-sm border border-line bg-surface-sunken text-text-muted hover:border-line-strong hover:text-text"
+                  onClick={() => onAbrirMesa(mesa.numero)}
+                  aria-label={`Abrir detalhes da mesa ${mesa.numero}`}
+                  className="flex min-w-0 flex-1 flex-wrap items-center gap-3 rounded-md text-left outline-offset-4 focus-visible:outline-2 focus-visible:outline-focus-ring"
                 >
-                  {copiado === mesa.id ? (
-                    <span className="font-mono text-[10px] font-bold text-status-success-ink">OK</span>
-                  ) : (
-                    <Copy size={16} />
-                  )}
+                  <span
+                    className={cn(
+                      "flex size-11 shrink-0 items-center justify-center rounded-sm border font-mono text-base font-bold",
+                      ocupada
+                        ? "border-brand-border bg-brand-surface text-brand-ink"
+                        : "border-line bg-surface-sunken text-text-muted",
+                    )}
+                  >
+                    {String(mesa.numero).padStart(2, "0")}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-semibold text-text">Mesa {String(mesa.numero).padStart(2, "0")}</span>
+                      <Badge tone={ocupada ? "brass" : "sage"} dot>
+                        {ocupada ? "Ocupada" : "Livre"}
+                      </Badge>
+                      <span className="rounded-full border border-line bg-surface-sunken px-2 py-0.5 text-[10px] font-semibold text-text-muted">
+                        {mesa.pracaNome || "Sem praça"}
+                      </span>
+                      {ocupada && faixa && (
+                        <span className={cn("rounded-full border px-2 py-0.5 font-mono text-[10px] font-bold", faixa.classe)}>
+                          {formatarDuracao(tempo?.minutos)} · {faixa.rotulo}
+                        </span>
+                      )}
+                      {ocupada && <span className="font-mono text-xs font-bold text-text">{BRL(mesa.saldo)}</span>}
+                    </span>
+                    <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-text-muted">
+                      {ocupada ? (
+                        <>
+                          <span>Garçom: {mesa.garcomResponsavelNome || "a definir"}</span>
+                          <span className="text-text-subtle">·</span>
+                          <span>
+                            {mesa.pedidosAtivos} {mesa.pedidosAtivos === 1 ? "pedido ativo" : "pedidos ativos"}
+                          </span>
+                          {mesa.pago > 0 && (
+                            <>
+                              <span className="text-text-subtle">·</span>
+                              <span>já pago {BRL(mesa.pago)}</span>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <span>Sem sessão aberta · sem consumo</span>
+                      )}
+                    </span>
+                  </span>
                 </button>
-                <QrDownloadButton numero={mesa.numero} token={mesa.token} />
-                {ocupada && mesa.sessaoId && (
-                  <LiberarMesaBotao
-                    mesa={mesa}
-                    onErro={onErro}
-                    onAtualizado={onAtualizado}
-                  />
-                )}
-              </div>
-            </div>
-          );
-        })}
+
+                <div className="ml-auto flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    title={copiado === mesa.id ? "Link copiado" : "Copiar link da mesa"}
+                    aria-label={`Copiar link da mesa ${mesa.numero}`}
+                    onClick={() => void copiarLink(mesa)}
+                    className="inline-flex size-10 shrink-0 items-center justify-center rounded-sm border border-line bg-surface-sunken text-text-muted hover:border-line-strong hover:text-text"
+                  >
+                    {copiado === mesa.id ? (
+                      <span className="font-mono text-[10px] font-bold text-status-success-ink">OK</span>
+                    ) : (
+                      <Copy size={16} />
+                    )}
+                  </button>
+                  <QrDownloadButton numero={mesa.numero} token={mesa.token} />
+                  {ocupada && mesa.sessaoId && (
+                    <LiberarMesaBotao mesa={mesa} onErro={onErro} onAtualizado={onAtualizado} />
+                  )}
+                </div>
+              </article>
+            );
+          })}}
             {mesasFiltradas.length === 0 && (
               <p className="p-6 text-center text-sm text-text-muted">Nenhuma mesa encontrada para essa pesquisa.</p>
             )}
