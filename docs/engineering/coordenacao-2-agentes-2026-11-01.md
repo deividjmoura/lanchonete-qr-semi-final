@@ -138,3 +138,32 @@ arquivo na Frente B; se precisar de ajuste, mandar o pedido com o seletor e o pa
 Aguardando revisão do responsável para merge (nenhum merge foi feito por mim). Enquanto o #179 não
 entrar em `main`, a Frente B consome os tokens a partir desta branch ou espera o merge — o importante é
 **não duplicar** a camada de tokens nas telas.
+
+## 9. CI: o `visual-system` não era flake de infraestrutura (achado registrado)
+
+O job `postgres-integration` falhou duas vezes seguidas no PR #179 com
+`visual-system.e2e.cjs:389` (`aria-expanded` esperado `true`, recebido `false`). O diagnóstico inicial
+— "deve ser flake" — estava **errado**, e a evidência que descartou o palpite foi esta:
+
+| Run | Evento | Mesmo SHA | Resultado |
+|---|---|---|---|
+| 41339828561 | `pull_request` | `e195edb` | failure (E2E) |
+| 41339824806 | `push` | `e195edb` | **success** (E2E passou) |
+
+**Causa raiz:** o PWA abre `EventSource('/api/events')`; o mock do teste responde um stream que fecha
+na hora, o realtime reconecta em ~1s (`public/js/realtime.js`, backoff + `schedule()`), e cada
+reconexão chama `refreshLiveData()` → `loadDeliveries()`, que faz `root.replaceChildren()`. O clique do
+acordeão (~140 ms a 1 s) caía nessa janela e o teste lia o atributo de um nó já desanexado.
+
+**Observação útil:** o commit `8dc51f4` ("espera o renderer no acordeão") já havia tentado corrigir o
+mesmo sintoma com `waitForFunction`, atribuindo a falha ao timing do CDP. A espera não resolve porque o
+problema não é leitura antecipada — é o DOM ser substituído no meio da interação.
+
+**Correção:** `EventSource` neutro no `addInitScript` do `visual-system` (que valida layout/tema/shell
+offline, não tempo real). Medição: **2 falhas em 5 execuções antes → 8/8 verdes depois**; suíte E2E
+completa 11/11.
+
+**Nota para quem for revisar E2E aqui:** o Chromium **passou a rodar neste ambiente** extraindo
+`node_modules/@sparticuz/chromium/bin/al2023.tar.br` para `/tmp/al2023` e exportando
+`LD_LIBRARY_PATH=/tmp/al2023/lib:/tmp/al2023/usr/lib`. Isso derruba a limitação antiga ("E2E não roda
+aqui") e permite medir intermitência com repetição em vez de supor.
