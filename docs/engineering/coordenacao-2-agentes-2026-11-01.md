@@ -123,3 +123,18 @@ arquivo na Frente B; se precisar de ajuste, mandar o pedido com o seletor e o pa
 2. Alinhamento fino do PWA (`public/garcom-pwa/styles.css` é da Frente B): já importa
    `design-tokens.css` e herda a paleta, mas os cartões de pedido ainda podem usar `--stage-*` para
    ganhar o mesmo hairline do dashboard.
+
+## 8. PR da Frente A aberto e verde
+
+**PR #179** — `feat(design): identidade global Palco Azul/Violeta em tokens, palco e documentação`
+→ base `main`, 7 commits, 19 arquivos.
+
+| Check | Resultado |
+|---|---|
+| `verify` | pass (1m02s) |
+| `postgres-migrations` | pass (42s) |
+| `postgres-integration` | pass (5m18s) |
+
+Aguardando revisão do responsável para merge (nenhum merge foi feito por mim). Enquanto o #179 não
+entrar em `main`, a Frente B consome os tokens a partir desta branch ou espera o merge — o importante é
+**não duplicar** a camada de tokens nas telas.
