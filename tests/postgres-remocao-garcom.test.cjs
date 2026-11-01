@@ -105,12 +105,19 @@ test('remover difere de desativar, invalida o link, audita e preserva autoria e 
     const sessao = await f.novaSessao(mesa, { responsavel: g.id, fechada: true });
     const pedido = await f.novoPedido(sessao, g);
     const item = await f.novoItem(pedido, g, 'entregue');
-    await pool.query('INSERT INTO mesa_atendimento_historico(sessao_id,garcom_novo_id) VALUES($1,$2)', [sessao.id, g.id]);
+    await pool.query("UPDATE pedidos SET criado_em='2026-10-30 12:00:00+00' WHERE id=$1", [pedido.id]);
+    await pool.query("UPDATE itens_pedido SET aceito_em='2026-10-30 12:01:00+00',retirado_em='2026-10-30 12:02:00+00',entregue_em='2026-10-30 12:03:00+00' WHERE id=$1", [item.id]);
+    await pool.query("INSERT INTO mesa_atendimento_historico(sessao_id,garcom_novo_id,alterado_em) VALUES($1,$2,'2026-10-30 12:00:00+00')", [sessao.id, g.id]);
 
     const antes = (await metricasGarcons({ data: '2026-10-30' })).garcons.find((x) => x.id === g.id);
     assert.equal(antes.vendas, 110);
     assert.equal(antes.atendimentos, 1);
     assert.equal(antes.ticketMedio, 110);
+    assert.equal(antes.pedidosRegistrados, 1);
+    assert.equal(antes.mesasAssumidas, 1);
+    assert.equal(antes.itensAssumidos, 1);
+    assert.equal(antes.itensRetirados, 1);
+    assert.equal(antes.itensEntregues, 1);
     const relatorioAntes = await relatorioVendas({ from: '2026-10-30', to: '2026-10-30' });
     const contaAntes = relatorioAntes.contas.find((conta) => conta.id === sessao.id);
     const servicoAntes = relatorioAntes.porGarcom.find((linha) => linha.garcomId === g.id);
