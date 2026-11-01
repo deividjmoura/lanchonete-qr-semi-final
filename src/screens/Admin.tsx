@@ -1002,11 +1002,12 @@ function Garcons() {
           </p>
         )}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1120px] text-sm text-left">
+          <table className="w-full min-w-[1200px] text-sm text-left">
             <thead className="border-b border-line font-mono text-[10px] uppercase tracking-wider text-text-muted">
               <tr>
                 <th className="py-2.5 pr-3">Garçom</th>
                 <th className="py-2.5 px-2 text-right">Pedidos registrados</th>
+                <th className="py-2.5 px-2 text-right">Pedidos entregues</th>
                 <th className="py-2.5 px-2 text-right">Mesas assumidas</th>
                 <th className="py-2.5 px-2 text-right">Itens assumidos</th>
                 <th className="py-2.5 px-2 text-right">Retirados</th>
@@ -1025,6 +1026,7 @@ function Garcons() {
                     {g.nome}{g.removido && <span className="ml-1 text-xs font-normal text-text-muted">(removido)</span>}
                   </td>
                   <td className="py-3 px-2 text-right font-mono">{g.pedidosRegistrados}</td>
+                  <td className="py-3 px-2 text-right font-mono">{g.pedidosComEntregaRegistrada}</td>
                   <td className="py-3 px-2 text-right font-mono">{g.mesasAssumidas}</td>
                   <td className="py-3 px-2 text-right font-mono">{g.itensAssumidos}</td>
                   <td className="py-3 px-2 text-right font-mono">{g.itensRetirados}</td>
@@ -1038,7 +1040,7 @@ function Garcons() {
               ))}
               {!metricas.length && (
                 <tr>
-                  <td colSpan={11} className="py-6 text-center text-xs text-text-muted">
+                  <td colSpan={12} className="py-6 text-center text-xs text-text-muted">
                     Nenhuma atividade registrada para esta data.
                   </td>
                 </tr>
