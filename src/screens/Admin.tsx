@@ -783,8 +783,10 @@ function Garcons() {
   const [erro, setErro] = useState<string | null>(null);
   const [mensagem, setMensagem] = useState<string | null>(null);
   const [dataMetricas, setDataMetricas] = useState(() => dataLocal());
+  const [dataMetricasAte, setDataMetricasAte] = useState(() => dataLocal());
   const [metricas, setMetricas] = useState<Array<{
-    id: number; nome: string; removido: boolean; atendimentos: number; vendas: number; ticketMedio: number;
+    id: number; nome: string; removido: boolean; atendimentos: number; vendas: number;
+    vendasBrutas: number; taxaServico: number; descontos: number; totalCobrado: number; ticketMedio: number;
     pedidosRegistrados: number; pedidosComEntregaRegistrada: number; mesasAssumidas: number;
     transferenciasRecebidas: number; transferenciasRealizadas: number;
     itensAssumidos: number; itensRetirados: number; itensEntregues: number;
@@ -794,7 +796,7 @@ function Garcons() {
   useEffect(() => {
     let ativo = true;
     api
-      .metricasGarcons(dataMetricas)
+      .metricasGarcons(dataMetricas, dataMetricasAte)
       .then((r) => {
         if (ativo) {
           setMetricas(r.garcons);
@@ -807,7 +809,7 @@ function Garcons() {
     return () => {
       ativo = false;
     };
-  }, [dataMetricas]);
+  }, [dataMetricas, dataMetricasAte]);
 
   const carregar = async () => {
     try {
@@ -902,6 +904,26 @@ function Garcons() {
 
   const ativos = lista.filter((g) => g.ativo);
   const inativos = lista.filter((g) => !g.ativo);
+  const totaisMetricas = metricas.reduce((total, g) => ({
+    pedidosRegistrados: total.pedidosRegistrados + g.pedidosRegistrados,
+    pedidosComEntregaRegistrada: total.pedidosComEntregaRegistrada + g.pedidosComEntregaRegistrada,
+    mesasAssumidas: total.mesasAssumidas + g.mesasAssumidas,
+    itensAssumidos: total.itensAssumidos + g.itensAssumidos,
+    itensRetirados: total.itensRetirados + g.itensRetirados,
+    itensEntregues: total.itensEntregues + g.itensEntregues,
+    transferenciasRecebidas: total.transferenciasRecebidas + g.transferenciasRecebidas,
+    transferenciasRealizadas: total.transferenciasRealizadas + g.transferenciasRealizadas,
+    atendimentos: total.atendimentos + g.atendimentos,
+    vendasBrutas: total.vendasBrutas + g.vendasBrutas,
+    taxaServico: total.taxaServico + g.taxaServico,
+    descontos: total.descontos + g.descontos,
+    totalCobrado: total.totalCobrado + g.totalCobrado,
+  }), {
+    pedidosRegistrados: 0, pedidosComEntregaRegistrada: 0, mesasAssumidas: 0,
+    itensAssumidos: 0, itensRetirados: 0, itensEntregues: 0,
+    transferenciasRecebidas: 0, transferenciasRealizadas: 0, atendimentos: 0,
+    vendasBrutas: 0, taxaServico: 0, descontos: 0, totalCobrado: 0,
+  });
   const renderGarcom = (g: GarcomRow) => (
     <li
       key={g.id}
@@ -977,24 +999,31 @@ function Garcons() {
     <div className="space-y-5">
       <section
         className="rounded-md border border-line bg-surface-raised p-5"
-        aria-label="Desempenho diário de garçons"
+        aria-label="Desempenho de garçons por período"
       >
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-dashed border-line-strong mb-4">
+        <div className="flex flex-wrap items-end justify-between gap-3 pb-4 border-b border-dashed border-line-strong mb-4">
           <div>
             <h3 className="font-display text-2xl font-bold tracking-tight text-text">
               Desempenho da equipe
             </h3>
             <p className="text-xs text-text-muted mt-0.5">
-              Contas encerradas atribuídas ao responsável da sessão
+              Ranking por vendas, com operações atribuídas e valores financeiros sem duplicar receitas.
             </p>
           </div>
-          <input
-            type="date"
-            aria-label="Data das vendas"
-            value={dataMetricas}
-            onChange={(e) => setDataMetricas(e.target.value)}
-            className="h-10 rounded-sm border border-line-strong bg-surface-sunken px-3 font-mono text-xs text-text"
-          />
+          <div className="flex flex-wrap gap-2">
+            <label className="grid gap-1 text-[10px] font-mono uppercase tracking-wider text-text-muted">
+              De
+              <input type="date" aria-label="Início do período" value={dataMetricas}
+                max={dataMetricasAte} onChange={(e) => setDataMetricas(e.target.value)}
+                className="h-10 rounded-sm border border-line-strong bg-surface-sunken px-3 font-mono text-xs text-text" />
+            </label>
+            <label className="grid gap-1 text-[10px] font-mono uppercase tracking-wider text-text-muted">
+              Até
+              <input type="date" aria-label="Fim do período" value={dataMetricasAte}
+                min={dataMetricas} onChange={(e) => setDataMetricasAte(e.target.value)}
+                className="h-10 rounded-sm border border-line-strong bg-surface-sunken px-3 font-mono text-xs text-text" />
+            </label>
+          </div>
         </div>
         {erroMetricas && (
           <p role="alert" className="text-xs text-status-danger-ink mb-3">
@@ -1002,7 +1031,7 @@ function Garcons() {
           </p>
         )}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1200px] text-sm text-left">
+          <table className="w-full min-w-[1450px] text-sm text-left">
             <thead className="border-b border-line font-mono text-[10px] uppercase tracking-wider text-text-muted">
               <tr>
                 <th className="py-2.5 pr-3">Garçom</th>
@@ -1016,7 +1045,10 @@ function Garcons() {
                 <th className="py-2.5 px-2 text-right">Transferências feitas</th>
                 <th className="py-2.5 px-2 text-right">Contas</th>
                 <th className="py-2.5 px-2 text-right">Ticket médio</th>
-                <th className="py-2.5 pl-2 text-right">Vendas</th>
+                <th className="py-2.5 px-2 text-right">Vendas brutas</th>
+                <th className="py-2.5 px-2 text-right">Taxa de serviço</th>
+                <th className="py-2.5 px-2 text-right">Descontos</th>
+                <th className="py-2.5 pl-2 text-right">Total cobrado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -1035,13 +1067,35 @@ function Garcons() {
                   <td className="py-3 px-2 text-right font-mono">{g.transferenciasRealizadas}</td>
                   <td className="py-3 px-2 text-right font-mono">{g.atendimentos}</td>
                   <td className="py-3 px-2 text-right font-mono">{BRL(g.ticketMedio)}</td>
-                  <td className="py-3 pl-2 text-right font-mono font-bold text-brand-ink">{BRL(g.vendas)}</td>
+                  <td className="py-3 px-2 text-right font-mono">{BRL(g.vendasBrutas)}</td>
+                  <td className="py-3 px-2 text-right font-mono">{BRL(g.taxaServico)}</td>
+                  <td className="py-3 px-2 text-right font-mono text-status-danger-ink">− {BRL(g.descontos)}</td>
+                  <td className="py-3 pl-2 text-right font-mono font-bold text-brand-ink">{BRL(g.totalCobrado)}</td>
                 </tr>
               ))}
+              {metricas.length > 0 && (
+                <tr className="border-t-2 border-line-strong bg-surface-sunken font-semibold">
+                  <td className="py-3 pr-3 text-text">Total do período</td>
+                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.pedidosRegistrados}</td>
+                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.pedidosComEntregaRegistrada}</td>
+                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.mesasAssumidas}</td>
+                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.itensAssumidos}</td>
+                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.itensRetirados}</td>
+                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.itensEntregues}</td>
+                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.transferenciasRecebidas}</td>
+                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.transferenciasRealizadas}</td>
+                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.atendimentos}</td>
+                  <td className="py-3 px-2 text-right font-mono">{BRL(totaisMetricas.atendimentos ? totaisMetricas.totalCobrado / totaisMetricas.atendimentos : 0)}</td>
+                  <td className="py-3 px-2 text-right font-mono">{BRL(totaisMetricas.vendasBrutas)}</td>
+                  <td className="py-3 px-2 text-right font-mono">{BRL(totaisMetricas.taxaServico)}</td>
+                  <td className="py-3 px-2 text-right font-mono text-status-danger-ink">− {BRL(totaisMetricas.descontos)}</td>
+                  <td className="py-3 pl-2 text-right font-mono font-bold text-brand-ink">{BRL(totaisMetricas.totalCobrado)}</td>
+                </tr>
+              )}
               {!metricas.length && (
                 <tr>
-                  <td colSpan={12} className="py-6 text-center text-xs text-text-muted">
-                    Nenhuma atividade registrada para esta data.
+                  <td colSpan={15} className="py-6 text-center text-xs text-text-muted">
+                    Nenhuma atividade registrada neste período.
                   </td>
                 </tr>
               )}
@@ -1049,7 +1103,7 @@ function Garcons() {
           </table>
         </div>
         <p className="mt-3 text-[11px] text-text-muted">
-          Os indicadores contam apenas ações com autoria e horário registrados. Receita e ticket consideram somente contas fechadas atribuídas ao responsável da mesa; pedidos e itens são métricas operacionais separadas.
+          O período respeita o fuso {metricas.length ? "" : "configurado no servidor"}. Eventos sem autoria/horário não são inferidos. Vendas, taxa e descontos vêm das contas fechadas sob responsabilidade do garçom; pedidos e itens são indicadores operacionais separados.
         </p>
       </section>
 
