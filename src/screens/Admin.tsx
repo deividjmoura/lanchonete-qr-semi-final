@@ -790,6 +790,7 @@ function Garcons() {
     pedidosRegistrados: number; pedidosComEntregaRegistrada: number; mesasAssumidas: number;
     transferenciasRecebidas: number; transferenciasRealizadas: number;
     itensAssumidos: number; itensRetirados: number; itensEntregues: number;
+    outrosEventos: Array<{ acao: string; quantidade: number }>;
   }>>([]);
   const [erroMetricas, setErroMetricas] = useState<string | null>(null);
 
@@ -911,6 +912,7 @@ function Garcons() {
     itensAssumidos: total.itensAssumidos + g.itensAssumidos,
     itensRetirados: total.itensRetirados + g.itensRetirados,
     itensEntregues: total.itensEntregues + g.itensEntregues,
+    outrosEventos: total.outrosEventos + g.outrosEventos.reduce((soma, evento) => soma + evento.quantidade, 0),
     transferenciasRecebidas: total.transferenciasRecebidas + g.transferenciasRecebidas,
     transferenciasRealizadas: total.transferenciasRealizadas + g.transferenciasRealizadas,
     atendimentos: total.atendimentos + g.atendimentos,
@@ -920,7 +922,7 @@ function Garcons() {
     totalCobrado: total.totalCobrado + g.totalCobrado,
   }), {
     pedidosRegistrados: 0, pedidosComEntregaRegistrada: 0, mesasAssumidas: 0,
-    itensAssumidos: 0, itensRetirados: 0, itensEntregues: 0,
+    itensAssumidos: 0, itensRetirados: 0, itensEntregues: 0, outrosEventos: 0,
     transferenciasRecebidas: 0, transferenciasRealizadas: 0, atendimentos: 0,
     vendasBrutas: 0, taxaServico: 0, descontos: 0, totalCobrado: 0,
   });
@@ -1048,6 +1050,7 @@ function Garcons() {
                 <th className="py-2.5 px-2 text-right">Vendas brutas</th>
                 <th className="py-2.5 px-2 text-right">Taxa de serviço</th>
                 <th className="py-2.5 px-2 text-right">Descontos</th>
+                <th className="py-2.5 px-2 text-right">Eventos adicionais</th>
                 <th className="py-2.5 pl-2 text-right">Total cobrado</th>
               </tr>
             </thead>
@@ -1070,6 +1073,11 @@ function Garcons() {
                   <td className="py-3 px-2 text-right font-mono">{BRL(g.vendasBrutas)}</td>
                   <td className="py-3 px-2 text-right font-mono">{BRL(g.taxaServico)}</td>
                   <td className="py-3 px-2 text-right font-mono text-status-danger-ink">− {BRL(g.descontos)}</td>
+                  <td className="py-3 px-2 text-right text-xs text-text-muted">
+                    {g.outrosEventos.length
+                      ? g.outrosEventos.map((evento) => `${evento.acao}: ${evento.quantidade}`).join(" · ")
+                      : "—"}
+                  </td>
                   <td className="py-3 pl-2 text-right font-mono font-bold text-brand-ink">{BRL(g.totalCobrado)}</td>
                 </tr>
               ))}
@@ -1089,12 +1097,13 @@ function Garcons() {
                   <td className="py-3 px-2 text-right font-mono">{BRL(totaisMetricas.vendasBrutas)}</td>
                   <td className="py-3 px-2 text-right font-mono">{BRL(totaisMetricas.taxaServico)}</td>
                   <td className="py-3 px-2 text-right font-mono text-status-danger-ink">− {BRL(totaisMetricas.descontos)}</td>
+                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.outrosEventos}</td>
                   <td className="py-3 pl-2 text-right font-mono font-bold text-brand-ink">{BRL(totaisMetricas.totalCobrado)}</td>
                 </tr>
               )}
               {!metricas.length && (
                 <tr>
-                  <td colSpan={15} className="py-6 text-center text-xs text-text-muted">
+                  <td colSpan={16} className="py-6 text-center text-xs text-text-muted">
                     Nenhuma atividade registrada neste período.
                   </td>
                 </tr>
@@ -1103,7 +1112,7 @@ function Garcons() {
           </table>
         </div>
         <p className="mt-3 text-[11px] text-text-muted">
-          O período usa o fuso horário configurado no servidor. Eventos sem autoria/horário não são inferidos. Vendas, taxa e descontos vêm das contas fechadas sob responsabilidade do garçom; pedidos e itens são indicadores operacionais separados.
+          O período usa o fuso horário configurado no servidor. Eventos sem autoria/horário não são inferidos. A coluna de eventos adicionais lista auditorias atribuídas diretamente ao garçom e não repete operações já contadas nas demais colunas. Vendas, taxa e descontos vêm das contas fechadas sob responsabilidade do garçom.
         </p>
       </section>
 
