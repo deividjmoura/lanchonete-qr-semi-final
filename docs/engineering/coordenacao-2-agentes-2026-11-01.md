@@ -74,7 +74,8 @@ A Frente A entrega primeiro a camada de tokens justamente para desbloquear a apl
 | Frente | Item | Estado |
 |---|---|---|
 | A | Diagnóstico de auditoria | ✅ entregue (`auditoria-2026-11-01-diagnostico.md`) |
-| A | Camada de tokens azul/violeta | ⏳ aguardando liberação do responsável |
+| A | Camada de tokens azul/violeta | ⏳ aguardando o responsável liberar o início |
+| B | Briefing entregue (`prompt-frente-b-agente-2.md`) | ✅ com correções já validadas em worktree isolado |
 | B | Correção de #172 (TS1381 + teste) | ⏳ não iniciado |
 | B | Merge/validação de #174 (modal) | ⏳ não iniciado |
 | B | Correção de #176 (regex de data + 2 testes) | ⏳ não iniciado |
