@@ -1,6 +1,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Moon, Sun, X } from "@phosphor-icons/react";
 import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "../utils/cn";
 import { alternarTema, EVENTO_TEMA, temaAtual, type Tema } from "../lib/tema";
 
@@ -215,17 +216,33 @@ export function Modal({
   closeOnBackdrop?: boolean;
 }) {
   const reduceMotion = useReducedMotion();
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (!open || !closeOnBackdrop) return;
+    setPortalRoot(document.body);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, closeOnBackdrop, onClose]);
+  }, [open, onClose]);
 
-  return (
+  useEffect(() => {
+    if (!open) return;
+    const overflowAnterior = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = overflowAnterior;
+    };
+  }, [open]);
+
+  if (!portalRoot) return null;
+
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -233,12 +250,12 @@ export function Modal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: reduceMotion ? 0 : 0.14 }}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-3 sm:p-4"
           onClick={() => {
             if (closeOnBackdrop) onClose();
           }}
         >
-          <div className="absolute inset-0 bg-surface-overlay" />
+          <div className="fixed inset-0 bg-surface-overlay" />
           <motion.div
             role="dialog"
             aria-modal="true"
@@ -249,7 +266,7 @@ export function Modal({
             onClick={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
             className={cn(
-              "relative rounded-t-xl sm:rounded-xl border border-line bg-surface-raised shadow-modal w-full max-h-[92dvh] overflow-y-auto no-scrollbar",
+              "relative my-auto w-full max-h-[calc(100dvh-24px)] overflow-y-auto overscroll-contain rounded-xl border border-line bg-surface-raised shadow-modal no-scrollbar",
               wide ? "sm:max-w-2xl" : "sm:max-w-md",
             )}
           >
@@ -265,7 +282,8 @@ export function Modal({
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    portalRoot,
   );
 }
 
