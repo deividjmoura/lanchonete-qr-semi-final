@@ -199,9 +199,18 @@ test('aba Mesas usa o panorama novo e preserva as operações existentes', () =>
   assert.match(panorama, /aproximado|aprox\./);
 
   const mapa = read('src/screens/admin/MapaQrMesas.tsx');
-  assert.match(mapa, /Nº da mesa/);
-  assert.match(mapa, /onAbrirMesa\(n\)/);
-  assert.match(mapa, /api\.ativarMesas/);
+  assert.match(mapa, /Pesquisar nº da mesa/);
+  assert.match(mapa, /termosBusca/);
+  assert.match(mapa, /!numero\.trim\(\)/);
+  assert.match(mapa, /numero\.split\(","\)/);
+  assert.match(mapa, /mesasNaoEncontradas/);
+  assert.match(mapa, /numerosBusca/);
+  assert.match(mapa, /separados por vírgula/);
+  assert.match(mapa, /h-12 w-full/);
+  assert.match(mapa, /mesasFiltradas\.map/);
+  assert.match(mapa, /onAbrirMesa\(mesa\.numero\)/);
+  assert.doesNotMatch(mapa, />\s*Abrir\s*</);
+  assert.doesNotMatch(mapa, /api\.ativarMesas|Limite atingido|teto/);
   assert.match(mapa, /mesaClienteUrl\(mesa\.token\)/);
   assert.match(mapa, /<QrDownloadButton/);
   assert.match(mapa, /fecharSessao\(mesa\.sessaoId, "dinheiro"\)/);

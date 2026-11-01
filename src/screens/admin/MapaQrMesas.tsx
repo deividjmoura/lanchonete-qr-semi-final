@@ -1,7 +1,6 @@
-import { Copy, LinkSimple, Plus } from "@phosphor-icons/react";
+import { Copy } from "@phosphor-icons/react";
 import { useState } from "react";
-import { Badge, Btn } from "../../components/ui";
-import { api } from "../../lib/api";
+import { Badge } from "../../components/ui";
 import { mesaClienteUrl } from "../../lib/mesaUrl";
 import {
   FAIXAS_TEMPO,
@@ -24,46 +23,21 @@ type Props = {
 };
 
 export function MapaQrMesas({ dados, agora, onAbrirMesa, onAtualizado, onErro }: Props) {
-  const { quantidade, limite, faixas } = dados.config;
+  const { faixas } = dados.config;
   const [numero, setNumero] = useState("");
-  const [adicionando, setAdicionando] = useState(false);
   const [copiado, setCopiado] = useState<number | null>(null);
 
-  const abrirPorNumero = () => {
-    const n = Number(numero);
-    if (!Number.isSafeInteger(n) || n < 1 || n > limite) {
-      onErro(`Informe o número de uma mesa entre 1 e ${limite}.`);
-      return;
-    }
-    if (n > quantidade) {
-      onErro(`A mesa ${n} ainda não está habilitada — hoje há ${quantidade} mesas ativas.`);
-      return;
-    }
-    onErro(null);
-    onAbrirMesa(n);
-  };
-
-  const adicionarMesas = async () => {
-    const restante = limite - quantidade;
-    if (restante <= 0) return;
-    const resposta = prompt(`Quantas mesas deseja adicionar? (1 a ${restante})`, String(Math.min(10, restante)));
-    if (resposta === null) return;
-    const extra = Number(resposta);
-    if (!Number.isSafeInteger(extra) || extra < 1 || extra > restante) {
-      onErro(`Informe uma quantidade inteira entre 1 e ${restante}.`);
-      return;
-    }
-    setAdicionando(true);
-    onErro(null);
-    try {
-      await api.ativarMesas(quantidade + extra);
-      onAtualizado();
-    } catch (e) {
-      onErro(e instanceof Error ? e.message : "Falha ao ativar mesas");
-    } finally {
-      setAdicionando(false);
-    }
-  };
+  const termosBusca = numero.split(",").map((termo) => termo.trim()).filter(Boolean);
+  const numerosBusca = [...new Set(termosBusca.map(Number))];
+  const buscaInvalida = termosBusca.some(
+    (termo) => !/^\d+$/.test(termo) || !Number.isSafeInteger(Number(termo)) || Number(termo) < 1,
+  );
+  const mesasFiltradas = buscaInvalida
+    ? []
+    : dados.mesas.filter((mesa) => numerosBusca.includes(mesa.numero));
+  const mesasNaoEncontradas = buscaInvalida
+    ? []
+    : numerosBusca.filter((n) => !dados.mesas.some((mesa) => mesa.numero === n));
 
   const copiarLink = async (mesa: MesaPanorama) => {
     const url = mesaClienteUrl(mesa.token);
@@ -78,130 +52,129 @@ export function MapaQrMesas({ dados, agora, onAbrirMesa, onAtualizado, onErro }:
 
   return (
     <section className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-md border border-line bg-surface-raised p-4 sm:p-5">
+      <div className="flex flex-wrap items-end justify-between gap-4 rounded-md border border-line bg-surface-raised p-4 sm:p-5">
         <div className="min-w-0">
           <h3 className="font-display text-xl font-bold tracking-tight text-text">Mapa de mesas e QR Codes</h3>
-          <p className="mt-0.5 font-mono text-xs text-text-muted">
-            {quantidade} ativas · teto {limite}
-          </p>
+          <p className="mt-0.5 text-xs text-text-muted">Pesquise para visualizar as mesas desejadas.</p>
         </div>
-        <div className="flex flex-wrap items-end gap-2">
-          <label className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
-            Nº da mesa
-            <input
-              type="number"
-              min={1}
-              max={limite}
-              inputMode="numeric"
-              value={numero}
-              placeholder="Ex.: 12"
-              onChange={(e) => setNumero(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") abrirPorNumero();
-              }}
-              className="mt-1 block h-10 w-24 rounded-sm border border-line-strong bg-surface-sunken px-3 font-mono text-sm text-text"
-            />
-          </label>
-          <Btn size="sm" variant="outline" onClick={abrirPorNumero}>
-            <LinkSimple size={15} weight="bold" /> Abrir mesa
-          </Btn>
-          <Btn
-            size="sm"
-            onClick={() => void adicionarMesas()}
-            disabled={adicionando || quantidade >= limite}
-          >
-            <Plus size={15} weight="bold" />
-            {adicionando ? "Adicionando…" : quantidade >= limite ? "Limite atingido" : "Adicionar mesas"}
-          </Btn>
-        </div>
+        <label className="block w-full sm:w-auto font-mono text-[10px] uppercase tracking-wider text-text-muted">
+          Pesquisar nº da mesa
+          <input
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            value={numero}
+            placeholder="Ex.: 1, 5, 12"
+            title="Pesquise uma ou mais mesas. Separe os números por vírgula (ex.: 1, 5, 12)."
+            aria-label="Pesquisar uma ou mais mesas por número, separadas por vírgula"
+            aria-describedby="mapa-mesas-ajuda"
+            onChange={(e) => setNumero(e.target.value)}
+            className="mt-1 block h-12 w-full rounded-sm border border-line-strong bg-surface-sunken px-4 font-mono text-base text-text sm:w-72"
+          />
+          <span id="mapa-mesas-ajuda" className="sr-only">
+            Digite um número ou vários números separados por vírgula, por exemplo 1, 5, 12.
+          </span>
+        </label>
       </div>
 
       <div className="divide-y divide-line overflow-hidden rounded-md border border-line bg-surface-raised">
-        {dados.mesas.map((mesa) => {
-          const tempo = mesa.abertaEm ? faixaOcupacao(mesa.abertaEm, agora, faixas) : null;
-          const faixa = tempo ? FAIXAS_TEMPO[tempo.id] : null;
-          const ocupada = Boolean(mesa.sessaoId);
-          return (
-            <div key={mesa.id} data-glass-card className="flex flex-wrap items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-hover">
-              <div
-                className={cn(
-                  "flex size-11 shrink-0 items-center justify-center rounded-sm border font-mono text-base font-bold",
-                  ocupada
-                    ? "border-brand-border bg-brand-surface text-brand-ink"
-                    : "border-line bg-surface-sunken text-text-muted",
-                )}
-              >
-                {String(mesa.numero).padStart(2, "0")}
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-semibold text-text">Mesa {String(mesa.numero).padStart(2, "0")}</p>
-                  <Badge tone={ocupada ? "brass" : "sage"} dot>
-                    {ocupada ? "Ocupada" : "Livre"}
-                  </Badge>
-                  <span className="rounded-full border border-line bg-surface-sunken px-2 py-0.5 text-[10px] font-semibold text-text-muted">
-                    {mesa.pracaNome || "Sem praça"}
-                  </span>
-                  {ocupada && faixa && (
-                    <span className={cn("rounded-full border px-2 py-0.5 font-mono text-[10px] font-bold", faixa.classe)}>
-                      {formatarDuracao(tempo?.minutos)} · {faixa.rotulo}
-                    </span>
-                  )}
-                  {ocupada && <span className="font-mono text-xs font-bold text-text">{BRL(mesa.saldo)}</span>}
-                </div>
-                <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-text-muted">
-                  {ocupada ? (
-                    <>
-                      <span>Garçom: {mesa.garcomResponsavelNome || "a definir"}</span>
-                      <span className="text-text-subtle">·</span>
-                      <span>
-                        {mesa.pedidosAtivos} {mesa.pedidosAtivos === 1 ? "pedido ativo" : "pedidos ativos"}
-                      </span>
-                      {mesa.pago > 0 && (
-                        <>
-                          <span className="text-text-subtle">·</span>
-                          <span>já pago {BRL(mesa.pago)}</span>
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <span>Sem sessão aberta · sem consumo</span>
-                  )}
-                </p>
-              </div>
-
-              <div className="ml-auto flex flex-wrap items-center gap-1.5">
-                <Btn size="sm" variant="outline" onClick={() => onAbrirMesa(mesa.numero)} className="px-2.5">
-                  Abrir
-                </Btn>
+        {!numero.trim() ? (
+          <p className="p-6 text-center text-sm text-text-muted">Digite o número de uma ou mais mesas para exibi-las.</p>
+        ) : buscaInvalida ? (
+          <p className="p-6 text-center text-sm text-status-danger-ink">Use apenas números positivos separados por vírgula. Ex.: 1, 5, 12.</p>
+        ) : (
+          <>
+          {mesasFiltradas.map((mesa) => {
+            const tempo = mesa.abertaEm ? faixaOcupacao(mesa.abertaEm, agora, faixas) : null;
+            const faixa = tempo ? FAIXAS_TEMPO[tempo.id] : null;
+            const ocupada = Boolean(mesa.sessaoId);
+            return (
+              <article key={mesa.id} data-glass-card className="flex flex-wrap items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-hover">
                 <button
                   type="button"
-                  title={copiado === mesa.id ? "Link copiado" : "Copiar link da mesa"}
-                  aria-label={`Copiar link da mesa ${mesa.numero}`}
-                  onClick={() => void copiarLink(mesa)}
-                  className="inline-flex size-10 shrink-0 items-center justify-center rounded-sm border border-line bg-surface-sunken text-text-muted hover:border-line-strong hover:text-text"
+                  onClick={() => onAbrirMesa(mesa.numero)}
+                  aria-label={`Abrir detalhes da mesa ${mesa.numero}`}
+                  className="flex min-w-0 flex-1 flex-wrap items-center gap-3 rounded-md text-left outline-offset-4 focus-visible:outline-2 focus-visible:outline-focus-ring"
                 >
-                  {copiado === mesa.id ? (
-                    <span className="font-mono text-[10px] font-bold text-status-success-ink">OK</span>
-                  ) : (
-                    <Copy size={16} />
-                  )}
+                  <span
+                    className={cn(
+                      "flex size-11 shrink-0 items-center justify-center rounded-sm border font-mono text-base font-bold",
+                      ocupada
+                        ? "border-brand-border bg-brand-surface text-brand-ink"
+                        : "border-line bg-surface-sunken text-text-muted",
+                    )}
+                  >
+                    {String(mesa.numero).padStart(2, "0")}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-semibold text-text">Mesa {String(mesa.numero).padStart(2, "0")}</span>
+                      <Badge tone={ocupada ? "brass" : "sage"} dot>
+                        {ocupada ? "Ocupada" : "Livre"}
+                      </Badge>
+                      <span className="rounded-full border border-line bg-surface-sunken px-2 py-0.5 text-[10px] font-semibold text-text-muted">
+                        {mesa.pracaNome || "Sem praça"}
+                      </span>
+                      {ocupada && faixa && (
+                        <span className={cn("rounded-full border px-2 py-0.5 font-mono text-[10px] font-bold", faixa.classe)}>
+                          {formatarDuracao(tempo?.minutos)} · {faixa.rotulo}
+                        </span>
+                      )}
+                      {ocupada && <span className="font-mono text-xs font-bold text-text">{BRL(mesa.saldo)}</span>}
+                    </span>
+                    <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-text-muted">
+                      {ocupada ? (
+                        <>
+                          <span>Garçom: {mesa.garcomResponsavelNome || "a definir"}</span>
+                          <span className="text-text-subtle">·</span>
+                          <span>
+                            {mesa.pedidosAtivos} {mesa.pedidosAtivos === 1 ? "pedido ativo" : "pedidos ativos"}
+                          </span>
+                          {mesa.pago > 0 && (
+                            <>
+                              <span className="text-text-subtle">·</span>
+                              <span>já pago {BRL(mesa.pago)}</span>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <span>Sem sessão aberta · sem consumo</span>
+                      )}
+                    </span>
+                  </span>
                 </button>
-                <QrDownloadButton numero={mesa.numero} token={mesa.token} />
-                {ocupada && mesa.sessaoId && (
-                  <LiberarMesaBotao
-                    mesa={mesa}
-                    onErro={onErro}
-                    onAtualizado={onAtualizado}
-                  />
-                )}
-              </div>
-            </div>
-          );
-        })}
-        {dados.mesas.length === 0 && (
-          <p className="p-6 text-center text-sm text-text-muted">Nenhuma mesa habilitada.</p>
+
+                <div className="ml-auto flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    title={copiado === mesa.id ? "Link copiado" : "Copiar link da mesa"}
+                    aria-label={`Copiar link da mesa ${mesa.numero}`}
+                    onClick={() => void copiarLink(mesa)}
+                    className="inline-flex size-10 shrink-0 items-center justify-center rounded-sm border border-line bg-surface-sunken text-text-muted hover:border-line-strong hover:text-text"
+                  >
+                    {copiado === mesa.id ? (
+                      <span className="font-mono text-[10px] font-bold text-status-success-ink">OK</span>
+                    ) : (
+                      <Copy size={16} />
+                    )}
+                  </button>
+                  <QrDownloadButton numero={mesa.numero} token={mesa.token} />
+                  {ocupada && mesa.sessaoId && (
+                    <LiberarMesaBotao mesa={mesa} onErro={onErro} onAtualizado={onAtualizado} />
+                  )}
+                </div>
+              </article>
+            );
+          })}
+            {mesasFiltradas.length === 0 && (
+              <p className="p-6 text-center text-sm text-text-muted">Nenhuma mesa encontrada para essa pesquisa.</p>
+            )}
+            {mesasNaoEncontradas.length > 0 && (
+              <p className="border-t border-line p-3 text-center text-xs text-text-muted">
+                Não encontrada(s): {mesasNaoEncontradas.join(", ")}
+              </p>
+            )}
+          </>
         )}
       </div>
     </section>
