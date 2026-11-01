@@ -516,7 +516,17 @@ async function metricasGarcons({ data } = {}) {
           AND (ip.retirado_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date) AS itens_retirados,
       (SELECT COUNT(*)::int FROM itens_pedido ip
         WHERE ip.entregue_por_id=g.id AND ip.entregue_em IS NOT NULL
-          AND (ip.entregue_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date) AS itens_entregues
+          AND (ip.entregue_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date) AS itens_entregues,
+      (SELECT COALESCE(json_agg(json_build_object('acao', ev.acao, 'quantidade', ev.total) ORDER BY ev.acao), '[]'::json)
+         FROM (
+           SELECT ae.acao, COUNT(*)::int AS total
+             FROM auditoria_eventos ae
+            WHERE ae.ator_tipo='garcom' AND ae.ator_id=g.id AND ae.resultado='sucesso'
+              AND (ae.criado_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date
+              AND ae.acao NOT IN ('mesa_iniciada','mesa_assumida','mesa_transferida',
+                'entrega_assumida','itens_retirados','itens_entregues','item_status')
+            GROUP BY ae.acao
+         ) ev) AS outros_eventos
     FROM garcons g
     LEFT JOIN mesa_sessoes s
       ON s.garcom_responsavel_id=g.id AND s.status='fechada'
@@ -554,7 +564,8 @@ async function metricasGarcons({ data } = {}) {
         transferenciasRealizadas:x.transferencias_realizadas,
         itensAssumidos:x.itens_assumidos,
         itensRetirados:x.itens_retirados,
-        itensEntregues:x.itens_entregues
+        itensEntregues:x.itens_entregues,
+        outrosEventos:x.outros_eventos || []
       };
     })
   };
