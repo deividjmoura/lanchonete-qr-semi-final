@@ -156,17 +156,20 @@
   isolation: isolate;
 }
 
-/* Textura sutil de papel (~4,5%), restrita exclusivamente ao regime expressivo */
+/* Grade discreta do palco (identidade azul/violeta), restrita ao regime expressivo.
+   Só definição de malha: nenhum tom fixo aqui, tudo vem de --stage-grid. */
 [data-regime="expressive"]::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  opacity: 0.045;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 160px 160px;
+  opacity: 0.55;
+  background-image:
+    linear-gradient(var(--stage-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--stage-grid) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, var(--stage-bg), transparent 72%);
 }
 
 [data-regime="operational"] {
@@ -368,6 +371,7 @@
    -------------------------------------------------------------------------- */
 .ops-card-surface {
   background:
+    var(--glass-sheen),
     linear-gradient(
       152deg,
       color-mix(in srgb, var(--surface-raised) 93%, var(--brand-surface)) 0%,
@@ -376,7 +380,7 @@
   border-color: color-mix(in srgb, var(--line-strong) 70%, var(--line));
   box-shadow:
     var(--shadow-card),
-    inset 0 1px 0 color-mix(in srgb, var(--surface-raised) 86%, transparent);
+    inset 0 1px 0 var(--glass-border);
   transition: box-shadow var(--dur-fast) var(--ease-snap),
     border-color var(--dur-fast) var(--ease-snap);
 }
@@ -384,7 +388,7 @@
 .ops-card-surface:hover {
   box-shadow:
     var(--shadow-card-hover, var(--shadow-card)),
-    inset 0 1px 0 color-mix(in srgb, var(--surface-raised) 86%, transparent);
+    inset 0 1px 0 var(--glass-border);
 }
 
 .ops-card-surface[aria-pressed="true"] {
@@ -399,6 +403,7 @@
    todas as telas ativas. O movimento é por cartão, curto e opcional. */
 [data-glass-card] {
   background:
+    var(--glass-sheen),
     linear-gradient(
       152deg,
       color-mix(in srgb, var(--surface-raised) 94%, var(--brand-surface)) 0%,
@@ -406,16 +411,18 @@
     );
   box-shadow:
     var(--shadow-card),
-    inset 0 1px 0 color-mix(in srgb, var(--surface-raised) 86%, transparent);
-  transition: box-shadow var(--dur-fast) var(--ease-snap),
-    border-color var(--dur-fast) var(--ease-snap);
+    inset 0 1px 0 var(--glass-border);
+  transition: box-shadow var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
 }
 
 @media (hover: hover) {
   [data-glass-card]:hover {
     box-shadow:
       var(--shadow-card-hover, var(--shadow-card)),
-      inset 0 1px 0 color-mix(in srgb, var(--surface-raised) 86%, transparent);
+      inset 0 1px 0 var(--glass-border);
+    transform: translateY(-1px);
   }
 }
 
@@ -444,7 +451,67 @@ article[data-glass-card] {
   .ops-card-surface:hover {
     box-shadow:
       var(--shadow-card),
-      inset 0 1px 0 color-mix(in srgb, var(--surface-raised) 86%, transparent);
+      inset 0 1px 0 var(--glass-border);
+  }
+}
+
+/* ==========================================================================
+   PALCO COMPARTILHADO (dashboard, cozinha, bar, Admin e PWA)
+   Uma única composição de superfície para toda tela escura: gradiente de
+   profundidade + dois halos de acento + grade discreta. Nenhum hex aqui.
+   ========================================================================== */
+.stage-surface {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--stage-line);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(ellipse at 7% 2%, var(--stage-glow-violet), transparent 34%),
+    radial-gradient(ellipse at 95% 18%, var(--stage-glow-cyan), transparent 30%),
+    linear-gradient(145deg, var(--stage-bg-2) 0%, var(--stage-bg) 56%, var(--stage-bg-3) 100%);
+  color: var(--stage-ink);
+  box-shadow: var(--elev-3);
+}
+
+.stage-surface::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--stage-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--stage-grid) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, var(--stage-ink-faint), transparent 70%);
+  opacity: 0.35;
+}
+
+/* Cartão de vidro do palco: superfície + hairline interna + elevação em camadas. */
+.stage-card {
+  position: relative;
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--stage-violet) 24%, var(--stage-line-base));
+  border-radius: var(--radius-md);
+  background:
+    var(--glass-sheen),
+    linear-gradient(150deg, var(--stage-card), var(--stage-card-2));
+  box-shadow:
+    inset 0 1px 0 var(--stage-hairline-4),
+    var(--elev-3);
+  color: var(--stage-ink);
+  transition: border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .stage-card:hover {
+    border-color: color-mix(in srgb, var(--stage-violet) 62%, var(--stage-line-base));
+    box-shadow:
+      inset 0 1px 0 var(--stage-hairline-5),
+      var(--elev-4);
   }
 }
 
@@ -475,7 +542,7 @@ article[data-glass-card] {
 }
 
 .anim-ticket {
-  animation: ticket-enter var(--dur-page) var(--ease-ticket) both;
+  animation: ticket-enter var(--dur-base) var(--ease-out) both;
 }
 
 .anim-stamp {

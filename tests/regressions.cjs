@@ -71,15 +71,15 @@ test('tema respeita sistema sem armazenamento e preferência salva', () => {
   const t = theme();
   t.aplicarTema('escuro');
   assert.equal(t.saved(), 'escuro');
-  assert.equal(t.meta.content, '#141813');
+  assert.equal(t.meta.content, '#0b101b');
   assert.equal(theme({ saved: t.saved() }).temaAtual(), 'escuro');
 });
 test('tema claro mantém o fundo suave separado da superfície dos cartões', () => {
   const t = theme();
   t.aplicarTema('claro');
-  assert.equal(t.root.style.values['--surface'], '#f0e6d2');
-  assert.equal(t.root.style.values['--surface-raised'], '#f7f0e2');
-  assert.equal(t.meta.content, '#f0e6d2');
+  assert.equal(t.root.style.values['--surface'], '#eef1f8');
+  assert.equal(t.root.style.values['--surface-raised'], '#f8faff');
+  assert.equal(t.meta.content, '#eef1f8');
 });
 test('inicialização antes do React respeita sistema com armazenamento bloqueado', () => {
   const script = fs.readFileSync('public/garcom-pwa/theme-init.js', 'utf8');
@@ -87,15 +87,15 @@ test('inicialização antes do React respeita sistema com armazenamento bloquead
   vm.runInNewContext(script, context);
   assert.equal(context.document.documentElement.dataset.theme, 'escuro');
   assert.equal(context.document.documentElement.classList.contains('dark'), true);
-  assert.equal(context.document.documentElement.style.values['--surface'], '#141813');
+  assert.equal(context.document.documentElement.style.values['--surface'], '#0b101b');
 });
 test('bootstrap compartilhado aplica o tema claro antes do primeiro paint', () => {
   const script = fs.readFileSync('public/garcom-pwa/theme-init.js', 'utf8');
   const context = { document: { documentElement: criarRoot() }, localStorage: { getItem() { return 'claro'; } }, window: { matchMedia: () => ({ matches: false }) } };
   vm.runInNewContext(script, context);
   assert.equal(context.document.documentElement.dataset.theme, 'claro');
-  assert.equal(context.document.documentElement.style.values['--surface'], '#f0e6d2');
-  assert.equal(context.document.documentElement.style.values['--surface-raised'], '#f7f0e2');
+  assert.equal(context.document.documentElement.style.values['--surface'], '#eef1f8');
+  assert.equal(context.document.documentElement.style.values['--surface-raised'], '#f8faff');
 });
 test('tema normaliza valores legados light/dark de builds anteriores', () => {
   assert.equal(theme({ saved: 'dark', dark: false }).temaAtual(), 'escuro');
