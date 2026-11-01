@@ -782,9 +782,12 @@ function Garcons() {
   const [erro, setErro] = useState<string | null>(null);
   const [mensagem, setMensagem] = useState<string | null>(null);
   const [dataMetricas, setDataMetricas] = useState(() => dataLocal());
-  const [metricas, setMetricas] = useState<
-    Array<{ id: number; nome: string; removido: boolean; atendimentos: number; vendas: number; ticketMedio: number }>
-  >([]);
+  const [metricas, setMetricas] = useState<Array<{
+    id: number; nome: string; removido: boolean; atendimentos: number; vendas: number; ticketMedio: number;
+    pedidosRegistrados: number; pedidosComEntregaRegistrada: number; mesasAssumidas: number;
+    transferenciasRecebidas: number; transferenciasRealizadas: number;
+    itensAssumidos: number; itensRetirados: number; itensEntregues: number;
+  }>>([]);
   const [erroMetricas, setErroMetricas] = useState<string | null>(null);
 
   useEffect(() => {
@@ -998,10 +1001,17 @@ function Garcons() {
           </p>
         )}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[440px] text-sm text-left">
-            <thead className="border-b border-line font-mono text-[11px] uppercase tracking-wider text-text-muted">
+          <table className="w-full min-w-[1120px] text-sm text-left">
+            <thead className="border-b border-line font-mono text-[10px] uppercase tracking-wider text-text-muted">
               <tr>
-                <th className="py-2.5 pr-2">Garçom</th>
+                <th className="py-2.5 pr-3">Garçom</th>
+                <th className="py-2.5 px-2 text-right">Pedidos registrados</th>
+                <th className="py-2.5 px-2 text-right">Mesas assumidas</th>
+                <th className="py-2.5 px-2 text-right">Itens assumidos</th>
+                <th className="py-2.5 px-2 text-right">Retirados</th>
+                <th className="py-2.5 px-2 text-right">Entregues</th>
+                <th className="py-2.5 px-2 text-right">Transferências recebidas</th>
+                <th className="py-2.5 px-2 text-right">Transferências feitas</th>
                 <th className="py-2.5 px-2 text-right">Contas</th>
                 <th className="py-2.5 px-2 text-right">Ticket médio</th>
                 <th className="py-2.5 pl-2 text-right">Vendas</th>
@@ -1010,26 +1020,34 @@ function Garcons() {
             <tbody className="divide-y divide-line">
               {metricas.map((g) => (
                 <tr key={g.id}>
-                  <td className="py-3 pr-2 font-semibold text-text">
+                  <td className="py-3 pr-3 font-semibold text-text">
                     {g.nome}{g.removido && <span className="ml-1 text-xs font-normal text-text-muted">(removido)</span>}
                   </td>
+                  <td className="py-3 px-2 text-right font-mono">{g.pedidosRegistrados}</td>
+                  <td className="py-3 px-2 text-right font-mono">{g.mesasAssumidas}</td>
+                  <td className="py-3 px-2 text-right font-mono">{g.itensAssumidos}</td>
+                  <td className="py-3 px-2 text-right font-mono">{g.itensRetirados}</td>
+                  <td className="py-3 px-2 text-right font-mono">{g.itensEntregues}</td>
+                  <td className="py-3 px-2 text-right font-mono">{g.transferenciasRecebidas}</td>
+                  <td className="py-3 px-2 text-right font-mono">{g.transferenciasRealizadas}</td>
                   <td className="py-3 px-2 text-right font-mono">{g.atendimentos}</td>
                   <td className="py-3 px-2 text-right font-mono">{BRL(g.ticketMedio)}</td>
-                  <td className="py-3 pl-2 text-right font-mono font-bold text-brand-ink">
-                    {BRL(g.vendas)}
-                  </td>
+                  <td className="py-3 pl-2 text-right font-mono font-bold text-brand-ink">{BRL(g.vendas)}</td>
                 </tr>
               ))}
               {!metricas.length && (
                 <tr>
-                  <td colSpan={4} className="py-6 text-center text-xs text-text-muted">
-                    Nenhum atendimento encerrado nesta data.
+                  <td colSpan={11} className="py-6 text-center text-xs text-text-muted">
+                    Nenhuma atividade registrada para esta data.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+        <p className="mt-3 text-[11px] text-text-muted">
+          Os indicadores contam apenas ações com autoria e horário registrados. Receita e ticket consideram somente contas fechadas atribuídas ao responsável da mesa; pedidos e itens são métricas operacionais separadas.
+        </p>
       </section>
 
       <section className="rounded-md border border-line bg-surface-raised overflow-hidden">
