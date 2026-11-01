@@ -524,7 +524,7 @@ async function metricasGarcons({ data } = {}) {
             WHERE ae.ator_tipo='garcom' AND ae.ator_id=g.id AND ae.resultado='sucesso'
               AND (ae.criado_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date
               AND ae.acao NOT IN ('mesa_iniciada','mesa_assumida','mesa_transferida',
-                'entrega_assumida','itens_retirados','itens_entregues','item_status')
+                'entrega_assumida','itens_retirados','itens_entregues','item_status','sessao_fechada')
             GROUP BY ae.acao
          ) ev) AS outros_eventos
     FROM garcons g
