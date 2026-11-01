@@ -540,7 +540,7 @@ async function loadDeliveries(){
    const barra=document.createElement('div');barra.className='action-row';
    for(const etapa of ['retirar','entregar']){
     const ids=lotes[etapa];
-    if(!ids.length)continue;
+    if(ids.length<2)continue;
     const all=document.createElement('button');all.type='button';all.className=etapa==='retirar'?'primary':'secondary';
     all.textContent=rotulos[etapa]+' ('+ids.length+')';
     all.onclick=async()=>{
