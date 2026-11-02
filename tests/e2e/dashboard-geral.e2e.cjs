@@ -173,7 +173,7 @@ async function main() {
     assert.ok(caixaGrade, 'grade do dashboard está visível');
     const posicaoInicial = await cardFaturamento.evaluate((el) => ({ column: el.style.gridColumn, row: el.style.gridRow }));
     await cardFaturamento.dragTo(grade, {
-      targetPosition: { x: Math.round(caixaGrade.width * 0.22), y: Math.max(10, caixaGrade.height - 20) },
+      targetPosition: { x: Math.round(caixaGrade.width * 0.22), y: Math.max(10, Math.min(caixaGrade.height - 20, (await page.evaluate(() => innerHeight)) - caixaGrade.y - 40)) },
     });
     await page.waitForFunction((antes) => {
       const card = document.querySelector('[data-dashboard-card="faturamento"]');
@@ -186,7 +186,7 @@ async function main() {
     const rankingWidget = page.locator('[data-dashboard-widget="ranking"]');
     const caixaGradeAtual = await grade.boundingBox();
     await rankingWidget.dragTo(grade, {
-      targetPosition: { x: Math.round(caixaGradeAtual.width * 0.68), y: Math.max(10, caixaGradeAtual.height - 20) },
+      targetPosition: { x: Math.round(caixaGradeAtual.width * 0.68), y: Math.max(10, Math.min(caixaGradeAtual.height - 20, (await page.evaluate(() => innerHeight)) - caixaGradeAtual.y - 40)) },
     });
     const rankingPosicionado = await rankingWidget.evaluate((el) => ({ column: el.style.gridColumn, row: el.style.gridRow }));
     assert.ok(rankingPosicionado.row !== '7 / span 4' || rankingPosicionado.column !== '8 / span 5',
