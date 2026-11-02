@@ -8,7 +8,7 @@ Pedido por QR Code, produção por setor, entrega progressiva, cobrança e gest�
 
 [![Produção](https://img.shields.io/badge/Deploy-Railway-7B61FF?style=for-the-badge)](https://qradminn.up.railway.app/)
 
-**[Abrir o guia visual interativo do sistema](./guia-sistema.html)** · [Documentação técnica](#documentação-técnica)
+**[Abrir o guia visual interativo do sistema](public/guia-sistema.html)** · [Documentação técnica](#documentação-técnica)
 
 </div>
 
