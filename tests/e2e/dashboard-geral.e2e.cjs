@@ -165,19 +165,96 @@ async function main() {
 
     // Editor: resize por gesto no canto, visibilidade e persistência explícita.
     await page.getByRole('button', { name: 'Editar dashboard' }).click();
+    // Requisito: mover é arraste real de mouse, não setas nem botões de passo.
+    assert.equal(await page.locator('.card-neon__resize button, .dashboard-widget__resize button, [aria-label^="Mover "]').count(), 0,
+      'o editor não oferece controles direcionais');
     const cardFaturamento = page.locator('[data-dashboard-card="faturamento"]');
     const alca = page.getByRole('button', { name: 'Arraste para redimensionar Faturamento' });
+    // Arraste livre com o mouse: o destino é definido pelo ponto de soltura.
+    const grade = page.locator('.dashboard-grid');
+    assert.ok(await grade.boundingBox(), 'grade do dashboard está visível');
+
+    // Ponto de soltura dentro da área visível da grade, como um mouse real faria.
+    const pontoNaGrade = async (fracaoX) => {
+      const caixa = await grade.boundingBox();
+      return {
+        caixa,
+        alvo: {
+          x: Math.round(caixa.width * fracaoX),
+          y: Math.max(10, Math.min(caixa.height - 20, (await page.evaluate(() => innerHeight)) - caixa.y - 40)),
+        },
+      };
+    };
+    const esperarPosicaoNova = (seletor, antes) => page.waitForFunction(([alvo, posicaoAntes]) => {
+      const el = document.querySelector(alvo);
+      return el && (el.style.gridColumn !== posicaoAntes.column || el.style.gridRow !== posicaoAntes.row);
+    }, [seletor, antes]);
+    const posicaoDe = (locator) => locator.evaluate((el) => ({ column: el.style.gridColumn, row: el.style.gridRow }));
+    const semSobreposicaoDeWidgets = () => page.locator('.dashboard-grid').evaluate((gridEl) => {
+      const nodes = [...gridEl.querySelectorAll('[data-dashboard-card], [data-dashboard-widget]')];
+      const rects = nodes.map((node) => node.getBoundingClientRect());
+      return rects.every((a, i) => rects.every((b, j) => i === j ||
+        a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top));
+    });
+
+    const posicaoInicial = await posicaoDe(cardFaturamento);
+    const { caixa: caixaGrade, alvo: destinoFaturamento } = await pontoNaGrade(0.22);
+    await cardFaturamento.dragTo(grade, { targetPosition: destinoFaturamento });
+    await esperarPosicaoNova('[data-dashboard-card="faturamento"]', posicaoInicial);
+    const posicaoMovida = await posicaoDe(cardFaturamento);
+    assert.notDeepEqual(posicaoMovida, posicaoInicial, 'o card foi movido para o ponto escolhido com o mouse');
+    // O destino é respeitado: o card fica embaixo do ponto onde o mouse soltou,
+    // mesmo quando a área já estava ocupada por outro widget.
+    const caixaMovida = await cardFaturamento.boundingBox();
+    const ponteiro = { x: caixaGrade.x + destinoFaturamento.x, y: caixaGrade.y + destinoFaturamento.y };
+    assert.ok(ponteiro.x >= caixaMovida.x - 1 && ponteiro.x <= caixaMovida.x + caixaMovida.width + 1 &&
+      ponteiro.y >= caixaMovida.y - 1 && ponteiro.y <= caixaMovida.y + caixaMovida.height + 1,
+    `o card deve ficar sob o ponteiro (ponteiro ${JSON.stringify(ponteiro)}, card ${JSON.stringify(caixaMovida)})`);
+
+    // O ranking usa o mesmo arraste livre e a mesma proteção contra colisão.
+    const rankingWidget = page.locator('[data-dashboard-widget="ranking"]');
+    const rankingAntes = await posicaoDe(rankingWidget);
+    const { alvo: destinoRanking } = await pontoNaGrade(0.68);
+    await rankingWidget.dragTo(grade, { targetPosition: destinoRanking });
+    await esperarPosicaoNova('[data-dashboard-widget="ranking"]', rankingAntes);
+    assert.notDeepEqual(await posicaoDe(rankingWidget), rankingAntes, 'o ranking também pode ser movido com o mouse');
+
     const caixaAlca = await alca.boundingBox();
     assert.ok(caixaAlca, 'alça de redimensionamento está visível');
+    const tamanhoAntes = await cardFaturamento.evaluate((el) => ({ column: el.style.gridColumn, row: el.style.gridRow }));
     await page.mouse.move(caixaAlca.x + caixaAlca.width / 2, caixaAlca.y + caixaAlca.height / 2);
     await page.mouse.down();
-    await page.mouse.move(caixaAlca.x + caixaAlca.width / 2 + 330, caixaAlca.y + caixaAlca.height / 2 + 190, { steps: 8 });
+    await page.mouse.move(caixaAlca.x + caixaAlca.width / 2 + 120, caixaAlca.y + caixaAlca.height / 2 + 100, { steps: 8 });
     await page.mouse.up();
-    await page.waitForFunction(() => {
+    await page.waitForFunction((antes) => {
       const card = document.querySelector('[data-dashboard-card="faturamento"]');
-      return card?.style.gridColumn === 'span 2' && card?.style.gridRow === 'span 2';
-    });
-    assert.equal(await page.locator('.dashboard-group--movement').evaluate((el) => el.getBoundingClientRect().bottom < document.querySelector('.dashboard-group--operation').getBoundingClientRect().top), true, '01 Movimento permanece acima de 02 Operação');
+      return card && (card.style.gridColumn !== antes.column || card.style.gridRow !== antes.row);
+    }, tamanhoAntes);
+    const tamanhoDepois = await cardFaturamento.evaluate((el) => ({ column: el.style.gridColumn, row: el.style.gridRow }));
+    assert.notEqual(tamanhoDepois.column, tamanhoAntes.column, 'a largura muda ao arrastar a alça');
+    assert.notEqual(tamanhoDepois.row, tamanhoAntes.row, 'a altura muda ao arrastar a alça');
+    assert.equal(await semSobreposicaoDeWidgets(), true, 'nenhum card ou painel pode se sobrepor aos demais');
+
+    // O gráfico "Semana da casa" também é movido por arraste real. O gesto é
+    // feito com o mouse cru para conferir a prévia de encaixe no meio do arraste.
+    const graficoWidget = page.locator('[data-dashboard-widget="grafico"]');
+    const graficoAntes = await posicaoDe(graficoWidget);
+    await graficoWidget.scrollIntoViewIfNeeded();
+    const caixaGrafico = await graficoWidget.boundingBox();
+    const caixaGradeGrafico = await grade.boundingBox();
+    await page.mouse.move(caixaGrafico.x + 30, caixaGrafico.y + 30);
+    await page.mouse.down();
+    await page.mouse.move(caixaGrafico.x + 90, caixaGrafico.y + 90, { steps: 6 });
+    await page.mouse.move(caixaGradeGrafico.x + Math.round(caixaGradeGrafico.width * 0.35), caixaGrafico.y + 60, { steps: 8 });
+    const previaEncaixe = page.locator('[data-dashboard-drop-preview]');
+    await previaEncaixe.waitFor();
+    assert.equal(await previaEncaixe.evaluate((el) => getComputedStyle(el).pointerEvents), 'none',
+      'a prévia do encaixe não pode interceptar o mouse');
+    await page.mouse.up();
+    await esperarPosicaoNova('[data-dashboard-widget="grafico"]', graficoAntes);
+    assert.notDeepEqual(await posicaoDe(graficoWidget), graficoAntes, 'o gráfico também pode ser movido com o mouse');
+    assert.equal(await semSobreposicaoDeWidgets(), true, 'o gráfico não pode se sobrepor aos demais widgets');
+
     await page.getByRole('button', { name: 'Ocultar Faturamento' }).click();
     assert.equal(await cardFaturamento.getAttribute('data-visible'), 'false');
     await page.getByRole('button', { name: 'Salvar layout do dashboard' }).click();
@@ -191,6 +268,14 @@ async function main() {
     const confirmacao = page.getByRole('alertdialog').filter({ hasText: 'Restaurar o dashboard padrão?' });
     await confirmacao.getByRole('button', { name: 'Restaurar padrão' }).click();
     await page.waitForFunction(() => document.querySelectorAll('.card-neon').length === 12);
+
+    // O layout responsivo continua íntegro com o editor aberto.
+    for (const width of [375, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await aguardarLayoutDashboard(page, width);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        `sem overflow com o editor aberto em ${width}px`);
+    }
     assert.deepEqual(errors, []);
     await context.close();
 

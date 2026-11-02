@@ -110,7 +110,7 @@
 .dash-chart__scroll { max-width: 100%; overflow-x: auto; padding-bottom: 4px; scrollbar-color: var(--stage-scroll-thumb-hover) var(--stage-scroll-track); scrollbar-width: thin; }
 .dash-chart__bars { display: flex; align-items: flex-end; gap: clamp(6px, 1vw, 12px); height: 200px; }
 .dash-chart__column { display: flex; flex: 1 1 0; flex-direction: column; align-items: center; min-width: 0; height: 100%; gap: 9px; }
-.dash-chart__track { position: relative; width: 100%; flex: 1; min-height: 0; overflow: hidden; border: 1px solid var(--stage-line-5); border-radius: 8px; background: var(--stage-inset-deep); }
+.dash-chart__track { position: relative; width: 100%; flex: 1; min-height: 84px; overflow: hidden; border: 1px solid var(--stage-line-5); border-radius: 8px; background: var(--stage-inset-deep); }
 .dash-chart__fill { position: absolute; inset: 0; transform-origin: bottom; border-radius: 6px; background: linear-gradient(180deg, var(--stage-violet), var(--stage-violet-deep) 72%, var(--stage-violet-deep)); }
 .dashboard-stage .week-bar-value { z-index: 1; background: var(--stage-ink); color: var(--stage-inset-deep); }
 .dash-chart__day { color: var(--stage-ink-muted-2); font-size: 10px; font-weight: 700; line-height: 1; }
@@ -379,3 +379,78 @@
   .dashboard-grid .card-neon { grid-column: span 1 !important; }
 }
 
+
+
+/* Editor livre: uma única grade para indicadores, evolução e ranking. */
+.dashboard-layout { display: block; min-width: 0; }
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-rows: 84px;
+  grid-auto-flow: row;
+  align-items: stretch;
+  gap: 14px;
+  min-width: 0;
+  position: relative;
+  isolation: isolate;
+}
+.dashboard-grid > .card-neon,
+.dashboard-grid > .dashboard-widget { min-width: 0; min-height: 0; }
+.dashboard-grid > .card-neon { position: relative; height: 100%; overflow: visible; }
+.dashboard-grid > .card-neon .card-neon__open { min-height: 0; height: 100%; }
+.dashboard-widget { position: relative; min-width: 0; min-height: 0; overflow: visible; }
+.dashboard-widget > .dash-panel { width: 100%; height: 100%; min-height: 100%; box-sizing: border-box; overflow: auto; }
+.dashboard-widget--editing { outline: 1px dashed var(--stage-violet); outline-offset: 2px; border-radius: 18px; cursor: grab; }
+.dashboard-widget--editing:active { cursor: grabbing; }
+.dashboard-widget--hidden { opacity: .48; filter: grayscale(.35); }
+.dashboard-widget__visibility,
+.dashboard-widget__resize {
+  position: absolute; z-index: 8; display: grid; place-items: center;
+  width: 36px; height: 36px; border: 1px solid var(--stage-line-4);
+  border-radius: 10px; color: var(--stage-ink); background: var(--stage-inset-deep);
+  box-shadow: 0 3px 12px var(--stage-shadow-2);
+}
+.dashboard-widget__visibility { top: 9px; right: 9px; }
+.dashboard-widget__resize { right: 0; bottom: 0; width: 40px; height: 40px; border-radius: 12px 0 14px 0; cursor: nwse-resize; touch-action: none; color: var(--stage-violet-text); }
+.dashboard-widget__visibility:focus-visible,
+.dashboard-widget__resize:focus-visible { outline: 3px solid var(--stage-focus); outline-offset: 2px; }
+.dashboard-edit-banner { margin-bottom: 14px; }
+.dashboard-edit-banner strong { color: var(--stage-violet-text); }
+@media (max-width: 1050px) {
+  .dashboard-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+  .dashboard-grid > .card-neon,
+  .dashboard-grid > .dashboard-widget { grid-column: auto / span 4 !important; grid-row: auto !important; min-height: 176px; }
+}
+@media (max-width: 700px) {
+  .dashboard-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
+  .dashboard-grid > .card-neon,
+  .dashboard-grid > .dashboard-widget { grid-column: auto / span 4 !important; grid-row: auto !important; min-height: 176px; }
+  .dashboard-widget > .dash-panel { min-height: 260px; }
+}
+
+
+
+
+/* Arraste nativo pelo mouse durante a edição, sem controles artificiais de posição. */
+.card-neon--editing { cursor: grab; }
+.card-neon--editing:active { cursor: grabbing; }
+.card-neon--editing .card-neon__open { cursor: grab; }
+.card-neon--editing:active .card-neon__open { cursor: grabbing; }
+
+
+/* Prévia do encaixe durante o arraste: mostra na grade a célula exata onde o
+   widget será solto — inclusive quando outro widget precisa ceder o lugar. */
+.dashboard-grid__preview {
+  position: relative;
+  z-index: 6;
+  border: 2px dashed color-mix(in srgb, var(--stage-violet) 90%, transparent);
+  border-radius: 17px;
+  background: color-mix(in srgb, var(--stage-violet) 16%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--stage-violet) 24%, transparent), 0 12px 30px var(--stage-shadow-2);
+  pointer-events: none;
+}
+@media (max-width: 1050px) {
+  /* No layout empilhado as posições salvas não são aplicadas, então a prévia
+     não corresponde ao encaixe e fica oculta. */
+  .dashboard-grid__preview { display: none; }
+}

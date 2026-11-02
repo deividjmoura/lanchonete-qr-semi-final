@@ -62,7 +62,7 @@ async function aguardarLayoutDashboard(page, width) {
       const fonte = valor && parseFloat(getComputedStyle(valor).fontSize);
       const margem = main && parseFloat(getComputedStyle(main).marginLeft);
       return { inner: innerWidth, colunas, fonte, margem,
-        pronto: innerWidth === largura && colunas === (largura <= 1050 ? 2 : 4) &&
+        pronto: innerWidth === largura && colunas === (largura <= 700 ? 4 : largura <= 1050 ? 8 : 12) &&
           (largura > 420 || (fonte != null && fonte <= 18)) &&
           (largura >= 1024 ? margem != null && margem >= 70 : margem === 0) };
     }, width);

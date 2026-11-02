@@ -61,3 +61,20 @@ ela informa que está mostrando a última leitura bem-sucedida.
 **descartável** e `DATABASE_URL=... npm run test:e2e` cobrem reconciliação,
 períodos, fuso, permissões, contrato legado, teclado, layout, troca rápida de
 período, falhas de rede, parallax global e `prefers-reduced-motion`.
+
+
+## Editor visual e composição livre
+
+O editor do painel usa uma única grade de 12 colunas para os 12 indicadores, o gráfico de evolução e o ranking de produtos. Cada elemento mantém coordenadas, largura, altura e visibilidade próprias no armazenamento local do navegador. A posição é definida por arraste; largura e altura são ajustadas pela alça no canto inferior direito.
+
+- O arraste usa a posição real do ponteiro: a célula onde o mouse agarrou o widget é descontada, então o card permanece sob o cursor e o canto superior esquerdo não salta para o ponto de soltura.
+- O destino indicado pelo ponteiro é sempre respeitado. Quando a área já está ocupada, os widgets atingidos cedem o lugar e vão para a vaga livre mais próxima (a vaga deixada pelo card arrastado é a primeira opção), sem sobreposição.
+- A alça de redimensionamento aplica exatamente o tamanho pedido; se a área nova estiver ocupada, os vizinhos atingidos são deslocados da mesma forma, em vez de o gesto ser recusado.
+- Durante o arraste, `data-dashboard-drop-preview` desenha na grade a célula de encaixe (sem capturar o mouse).
+- O motor de layout (`src/lib/dashboard-layout.ts`) valida limites, descarta coordenadas fracionárias e nunca devolve a vaga de origem como destino de um arraste, que era a causa do card "voltar sozinho" para o lugar de partida.
+- O layout anterior (qradmin-dashboard-layout-v1) é migrado para coordenadas de grade, preservando a ordem e a visibilidade dos indicadores; a nova estrutura é salva em qradmin-dashboard-layout-v2.
+- Gráfico e ranking participam da mesma edição e têm controles próprios de visibilidade e tamanho.
+- Em telas menores, os elementos são apresentados em fluxo vertical/compacto sem sobrescrever as coordenadas persistidas no desktop.
+- Restaurar padrão substitui e salva a composição local original.
+
+A personalização permanece local ao navegador/dispositivo, como no editor anterior; não é sincronizada entre contas ou dispositivos nesta versão.
