@@ -194,7 +194,7 @@ function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggl
     resizeStart.current = null; if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
   return <article className={`card-neon card-neon--${card.cor} ${editando ? "card-neon--editing" : ""} ${layout.visible ? "" : "card-neon--hidden"}`}
-    style={{ gridColumn: `${layout.x + 1} / span ${layout.w}`, gridRow: `${layout.y + 1} / span ${layout.h}` }}
+    style={{ gridColumn: `${layout.x + 1} / span ${layout.w}`, gridRow: `${layout.y + 1} / span ${layout.h}`, order: layout.y * 12 + layout.x }}
     draggable={editando}
     onDragStart={(event) => { if (!editando || (event.target as HTMLElement).closest(".card-neon__resize-handle, .card-neon__visibility")) { event.preventDefault(); return; } onDragStart(card.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", card.id); }} onDragEnd={onDragEnd}
     data-dashboard-card={card.id} data-visible={layout.visible ? "true" : "false"}>
@@ -388,7 +388,7 @@ function WidgetFrame({ id, layout, editando, onToggleVisibility, onResize, onDra
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
   return <div className={`dashboard-widget ${editando ? "dashboard-widget--editing" : ""} ${layout.visible ? "" : "dashboard-widget--hidden"}`}
-    style={{ gridColumn: `${layout.x + 1} / span ${layout.w}`, gridRow: `${layout.y + 1} / span ${layout.h}` }}
+    style={{ gridColumn: `${layout.x + 1} / span ${layout.w}`, gridRow: `${layout.y + 1} / span ${layout.h}`, order: layout.y * 12 + layout.x }}
     draggable={editando}
     onDragStart={(event) => { if (!editando || (event.target as HTMLElement).closest(".dashboard-widget__resize, .dashboard-widget__visibility")) { event.preventDefault(); return; } onDragStart(id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", id); }} onDragEnd={onDragEnd}
     data-dashboard-widget={id} data-visible={layout.visible ? "true" : "false"}>
