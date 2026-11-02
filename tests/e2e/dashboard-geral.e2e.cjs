@@ -167,17 +167,34 @@ async function main() {
     await page.getByRole('button', { name: 'Editar dashboard' }).click();
     const cardFaturamento = page.locator('[data-dashboard-card="faturamento"]');
     const alca = page.getByRole('button', { name: 'Arraste para redimensionar Faturamento' });
-    const caixaAlca = await alca.boundingBox();
-    assert.ok(caixaAlca, 'alça de redimensionamento está visível');
-    await page.mouse.move(caixaAlca.x + caixaAlca.width / 2, caixaAlca.y + caixaAlca.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(caixaAlca.x + caixaAlca.width / 2 + 330, caixaAlca.y + caixaAlca.height / 2 + 190, { steps: 8 });
-    await page.mouse.up();
+    // Mover para a área ocupada por outro card: o motor deve encontrar um espaço livre.
+    await cardFaturamento.dragTo(page.locator('[data-dashboard-card="pedidos"]'));
     await page.waitForFunction(() => {
       const card = document.querySelector('[data-dashboard-card="faturamento"]');
-      return card?.style.gridColumn === 'span 2' && card?.style.gridRow === 'span 2';
+      return card && (card.style.gridColumn !== '1 / span 3' || Number(card.style.gridRow.split('/')[0]) !== 1);
     });
-    assert.equal(await page.locator('.dashboard-group--movement').evaluate((el) => el.getBoundingClientRect().bottom < document.querySelector('.dashboard-group--operation').getBoundingClientRect().top), true, '01 Movimento permanece acima de 02 Operação');
+    const posicaoMovida = await cardFaturamento.evaluate((el) => ({ column: el.style.gridColumn, row: el.style.gridRow }));
+    assert.notEqual(posicaoMovida.row, '1 / span 2', 'o card foi retirado da posição inicial');
+    assert.notEqual(posicaoMovida.column, '1 / span 3', 'o card foi reposicionado no canvas');
+
+    const caixaAlca = await alca.boundingBox();
+    assert.ok(caixaAlca, 'alça de redimensionamento está visível');
+    const tamanhoAntes = await cardFaturamento.evaluate((el) => ({ column: el.style.gridColumn, row: el.style.gridRow }));
+    await page.mouse.move(caixaAlca.x + caixaAlca.width / 2, caixaAlca.y + caixaAlca.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(caixaAlca.x + caixaAlca.width / 2 + 250, caixaAlca.y + caixaAlca.height / 2 + 190, { steps: 8 });
+    await page.mouse.up();
+    await page.waitForFunction((antes) => {
+      const card = document.querySelector('[data-dashboard-card="faturamento"]');
+      return card && (card.style.gridColumn !== antes.column || card.style.gridRow !== antes.row);
+    }, tamanhoAntes);
+    const semSobreposicao = await page.locator('.dashboard-grid').evaluate((grid) => {
+      const nodes = [...grid.querySelectorAll('[data-dashboard-card], [data-dashboard-widget]')];
+      const rects = nodes.map((node) => node.getBoundingClientRect());
+      return rects.every((a, i) => rects.every((b, j) => i === j ||
+        a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top));
+    });
+    assert.equal(semSobreposicao, true, 'nenhum card ou painel pode se sobrepor aos demais');
     await page.getByRole('button', { name: 'Ocultar Faturamento' }).click();
     assert.equal(await cardFaturamento.getAttribute('data-visible'), 'false');
     await page.getByRole('button', { name: 'Salvar layout do dashboard' }).click();
