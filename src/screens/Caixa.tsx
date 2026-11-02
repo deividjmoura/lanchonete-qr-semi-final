@@ -515,6 +515,21 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                     />
                   </label>
                 </div>
+                <div className="mt-3">
+                  <Btn
+                    full
+                    size="lg"
+                    variant="sage"
+                    onClick={fechar}
+                    disabled={!podeEncerrar}
+                  >
+                    <Check size={16} weight="bold" /> Autorizar desconto e fechar conta
+                  </Btn>
+                  <p className="mt-2 text-[11px] leading-relaxed text-text-muted">
+                    O login e a senha serão validados pelo servidor. Se a autorização for recusada,
+                    você poderá informar as credenciais novamente.
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -725,7 +740,8 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
             </div>
           )}
 
-          {/* Fechamento da conta */}
+          {/* Fechamento padrão; com desconto/ajuste, o envio fica junto das credenciais do gerente. */}
+          {!precisaGerente && (
           <div className="pt-1">
             {sessao.pedidosPendentes != null && sessao.pedidosPendentes > 0 && (
               <p className="mb-2 text-center text-xs text-brand-ink font-medium">
@@ -768,6 +784,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
               </div>
             )}
           </div>
+          )}
         </div>
       </div>
     </div>
