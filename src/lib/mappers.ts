@@ -387,9 +387,12 @@ export function mapCaixaSessoes(rows: any[]): { sessoes: Sessao[]; pedidos: Pedi
           escolha: null,
           obs: String(it.observacao || it.obs || ""),
           totalUnit: qtd > 0 ? sub / qtd : precoBase,
+          /* O caixa devolve pedidosEntregues sem o status do item. Supor
+             "recebido" aqui fazia a comanda inteira reaparecer na cozinha e no
+             bar como pendente — o padrão honesto é o estado do pedido: entregue. */
           status: (["recebido","em_producao","concluido","aceito","retirado","entregue","cancelado"].includes(String(it.status || ""))
             ? (String(it.status) as any)
-            : "recebido"),
+            : "entregue"),
           setor: it.setor === "bar" ? "bar" as const : "cozinha" as const,
         };
       });

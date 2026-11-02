@@ -1,16 +1,18 @@
-import { Check, MapPin, Plus, WarningCircle } from "@phosphor-icons/react";
+import { Check, MapPin, Plus, Trash, WarningCircle } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { Btn, Modal } from "../../components/ui";
+import { confirmarAcao } from "../../lib/confirmacao";
 import { api } from "../../lib/api";
 import type { Praca } from "../../lib/panorama";
 
 /**
  * Editor das praças internas (Praia, Guarda-sol, Salão...).
  *
- * Os nomes são linhas no banco: criar ou renomear aqui muda o panorama, o mapa
- * e o modal da mesa sem alterar código nem reiniciar o servidor. Não existe
- * exclusão: uma praça usada no histórico continua legível; para "desativar"
- * basta devolver as mesas para "Sem praça".
+ * Os nomes são linhas no banco: criar, renomear ou excluir aqui muda o
+ * panorama, o mapa e o modal da mesa sem alterar código nem reiniciar o
+ * servidor. Excluir uma praça não apaga mesa nenhuma: as mesas vinculadas
+ * voltam para "Sem praça" (a FK é ON DELETE SET NULL) e o histórico de contas
+ * continua legível, porque o nome sai apenas da lista de classificação.
  */
 export function GerenciarPracas({
   aberto,
@@ -26,6 +28,7 @@ export function GerenciarPracas({
   const [nomes, setNomes] = useState<Record<number, string>>({});
   const [nova, setNova] = useState("");
   const [salvando, setSalvando] = useState<number | "nova" | null>(null);
+  const [excluindo, setExcluindo] = useState<number | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
 
@@ -73,6 +76,41 @@ export function GerenciarPracas({
       setErro(e instanceof Error ? e.message : "Falha ao criar a praça");
     } finally {
       setSalvando(null);
+    }
+  };
+
+  const remover = async (praca: Praca) => {
+    const mesas = Number(praca.mesas || 0);
+    const confirmado = await confirmarAcao({
+      titulo: `Excluir a praça “${praca.nome}”?`,
+      mensagem: mesas
+        ? `${mesas} ${mesas === 1 ? "mesa volta" : "mesas voltam"} para “Sem praça”. Nenhuma mesa é apagada e a praça deixa de aparecer nos filtros. A exclusão não pode ser desfeita.`
+        : "A praça deixa de aparecer nos filtros, no mapa e no detalhe da mesa. A exclusão não pode ser desfeita.",
+      confirmar: "Excluir praça",
+      perigo: true,
+    });
+    if (!confirmado) return;
+    setExcluindo(praca.id);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const out = await api.adminRemoverPraca(praca.id);
+      const afetadas = out.mesasAfetadas?.length ?? mesas;
+      setSucesso(
+        afetadas
+          ? `Praça “${praca.nome}” excluída. ${afetadas} ${afetadas === 1 ? "mesa voltou" : "mesas voltaram"} para “Sem praça”.`
+          : `Praça “${praca.nome}” excluída.`,
+      );
+      setNomes((atual) => {
+        const proximo = { ...atual };
+        delete proximo[praca.id];
+        return proximo;
+      });
+      await onAtualizado();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Falha ao excluir a praça");
+    } finally {
+      setExcluindo(null);
     }
   };
 
@@ -134,10 +172,19 @@ export function GerenciarPracas({
                 <Btn
                   size="sm"
                   variant="outline"
-                  disabled={!alterado || salvando === praca.id}
+                  disabled={!alterado || salvando === praca.id || excluindo === praca.id}
                   onClick={() => void renomear(praca)}
                 >
                   <Check size={15} weight="bold" /> {salvando === praca.id ? "Salvando…" : "Salvar"}
+                </Btn>
+                <Btn
+                  size="sm"
+                  variant="danger"
+                  disabled={salvando === praca.id || excluindo === praca.id}
+                  onClick={() => void remover(praca)}
+                  aria-label={`Excluir a praça ${praca.nome}`}
+                >
+                  <Trash size={15} weight="bold" /> {excluindo === praca.id ? "Excluindo…" : "Excluir"}
                 </Btn>
               </li>
             );
@@ -167,8 +214,9 @@ export function GerenciarPracas({
         </div>
 
         <p className="mt-3 text-[11px] leading-relaxed text-text-subtle">
-          Mesa sem praça aparece em “Sem praça” — nunca como uma praça fictícia. Remover uma praça não é oferecido:
-          ela pode estar citada no histórico de contas.
+          Mesa sem praça aparece em “Sem praça” — nunca como uma praça fictícia. Excluir uma praça devolve as mesas
+          dela para “Sem praça”: nenhuma mesa é apagada e o histórico de contas continua legível, o nome só sai da
+          lista de classificação.
         </p>
       </div>
     </Modal>

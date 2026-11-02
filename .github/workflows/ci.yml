@@ -102,6 +102,9 @@ jobs:
       - name: Panorama render smoke (SSR, sem Chromium)
         run: npm run smoke:panorama
 
+      - name: Fila de produção render smoke (SSR, sem Chromium)
+        run: npm run smoke:fila
+
       - name: dist/ integrity
         run: |
           test -f dist/index.html

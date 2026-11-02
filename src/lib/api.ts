@@ -303,6 +303,9 @@ export const api = {
   adminCriarPraca: (nome: string) => apiSend<PracaSalva>("/api/admin/pracas", "POST", { nome }),
   adminAtualizarPraca: (id: number, body: { nome?: string; ordem?: number }) =>
     apiSend<PracaSalva>(`/api/admin/pracas/${id}`, "PATCH", body),
+  /** Exclui a praça; as mesas vinculadas voltam para "Sem praça". */
+  adminRemoverPraca: (id: number) =>
+    apiSend<{ id: number; nome: string; mesasAfetadas: number[] }>(`/api/admin/pracas/${id}`, "DELETE"),
   /** pracaId null devolve a mesa para "Sem praça". */
   adminDefinirPracaMesa: (numero: number, pracaId: number | null) =>
     apiSend<{ mesa: number; pracaId: number | null; pracaNome: string | null; alterada: boolean }>(

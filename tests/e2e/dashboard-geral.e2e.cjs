@@ -29,6 +29,31 @@ async function novoContexto(browser, reducedMotion = 'no-preference') {
         topProdutos: Array.from({ length: 8 }, (_, i) => ({ nome: `Item especial ${i + 1}`, quantidade: 30 - i })),
       }) });
     }
+    if (path === '/api/admin/mesas/panorama') {
+      const agora = Date.now();
+      const mesa = (numero, aberta) => ({
+        id: numero, numero, token: `tk-${numero}`,
+        status: aberta ? 'ocupada' : 'livre',
+        pracaId: 1, pracaNome: 'Praia', pracaOrdem: 1,
+        sessaoId: aberta ? 900 + numero : null,
+        abertaEm: aberta ? new Date(agora - 40 * 60000).toISOString() : null,
+        tempo: null,
+        clienteNome: aberta ? `Cliente ${numero}` : null,
+        garcomResponsavelId: aberta ? 2 : null,
+        garcomResponsavelNome: aberta ? 'Bruno Tavares' : null,
+        consumo: aberta ? 120.5 : 0, pago: aberta ? 30 : 0, saldo: aberta ? 90.5 : 0,
+        pedidosAtivos: aberta ? 2 : 0, pedidosRecebidos: 1, pedidosPreparo: 1,
+        pedidosProntos: aberta ? 1 : 0, itensNaFila: aberta ? 3 : 0, itensProntosRetirada: 0,
+      });
+      return route.fulfill({ json: {
+        config: { quantidade: 4, limite: 70, faixas: { atencaoMinutos: 45, criticoMinutos: 90 } },
+        pracas: [{ id: 1, nome: 'Praia', ordem: 1, mesas: 4 }],
+        mesas: [mesa(1, true), mesa(2, true), mesa(3, false), mesa(4, false)],
+        vendas: { periodo: url.searchParams.get('periodo') || 'hoje', timezone: 'America/Sao_Paulo', desde: null, ate: null, porMesa: [] },
+        fluxo: { janela: { horas: 24, desde: null, ate: null }, amostraMinima: 5, limiteEtapaHoras: 12, etapas: [], setores: {} },
+        atualizadoEm: new Date().toISOString(),
+      } });
+    }
     if (path.includes('event')) return route.fulfill({ status: 200, contentType: 'text/event-stream', body: ': teste\n\n' });
     return route.fulfill({ json: [] });
   });
@@ -73,8 +98,7 @@ async function main() {
       ['Contas fechadas', 'Média por dia'], ['Taxa de serviço', 'Descontos no período'],
       ['Pagamentos', 'Sem detalhamento de pagamento'], ['Mais pedidos', 'Item especial 8'],
       ['Tempo de entrega', 'Unidades com horário de entrega'], ['Consumo em aberto', 'Saldo pendente estimado'],
-      ['Mesas ocupadas', 'Mesas livres'], ['Garçons ativos', 'Garçons com cadastro ativo'],
-      ['Itens em operação', 'Prontos para retirada'],
+      ['Garçons ativos', 'Garçons com cadastro ativo'], ['Itens em operação', 'Prontos para retirada'],
     ];
     for (const [nome, conteudo] of detalhes) {
       await page.getByRole('button', { name: new RegExp(`^Detalhar ${nome}:`) }).click();
@@ -84,12 +108,23 @@ async function main() {
         await modal.getByText('Cartão de débito').waitFor();
         await modal.getByText(/lançamentos acima do valor cobrado/).waitFor();
       }
-      if (['Consumo em aberto', 'Mesas ocupadas', 'Garçons ativos', 'Itens em operação'].includes(nome)) {
+      if (['Consumo em aberto', 'Garçons ativos', 'Itens em operação'].includes(nome)) {
         await modal.getByText(/independente do (filtro|período)/).first().waitFor();
       }
       await modal.getByRole('button', { name: 'Fechar detalhes' }).click();
       await modal.waitFor({ state: 'hidden' });
     }
+    /* “Mesas ocupadas” não abre o detalhe do card: cobre o painel com as
+       mesas abertas, no estilo do dashboard, com quem pediu e quem leva. */
+    await page.getByRole('button', { name: /^Detalhar Mesas ocupadas:/ }).click();
+    const mesasAbertas = page.getByRole('dialog', { name: 'Mesas ocupadas', exact: true });
+    await mesasAbertas.getByText(/mesas abertas de 4 habilitadas/).waitFor();
+    await mesasAbertas.getByText('Consumo em aberto', { exact: true }).first().waitFor();
+    assert.equal(await mesasAbertas.locator('.dash-mesa').count(), 2, 'só as mesas com sessão entram');
+    await mesasAbertas.getByText('Quem está levando').first().waitFor();
+    await mesasAbertas.getByRole('button', { name: 'Fechar mesas abertas' }).click();
+    await mesasAbertas.waitFor({ state: 'hidden' });
+
     const ranking = page.getByRole('region', { name: 'Mais pedidos' });
     assert.equal(await ranking.locator('li').count(), 5);
     await ranking.getByRole('button', { name: 'Carregar mais' }).click();

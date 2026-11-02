@@ -34,21 +34,24 @@ test('as duas sessões começam recolhidas e podem ser abertas de forma independ
   assert.match(fila, /\{!aberta \? null :/);
 });
 
-test('fila usa rolagem lateral com 2–3 linhas e barra discreta', () => {
-  assert.match(css, /grid-auto-flow:\s*column/);
-  assert.match(css, /grid-auto-columns:\s*288px/, 'cartão com largura própria: uma comanda não estica a tela');
-  assert.match(css, /grid-template-rows:\s*repeat\(2, minmax\(0, auto\)\)/);
-  assert.match(css, /@media \(min-width: 1280px\)[\s\S]*?grid-template-rows:\s*repeat\(3, minmax\(0, auto\)\)/);
-  assert.match(css, /overflow-x:\s*auto/);
-  assert.match(css, /scrollbar-width:\s*thin/);
-  assert.match(css, /scroll-snap-type:\s*x proximity/);
-  assert.match(fila, /className="fila-rolagem"/);
-  assert.match(fila, /className="fila-trilho"/);
+test('a fila preenche a linha da esquerda para a direita e só desce no fim', () => {
+  // Leitura em linha: 1ª comanda no canto superior esquerdo, as próximas para
+  // a direita; ao acabar a linha, a próxima desce. Nada de coluna (cima→baixo)
+  // nem de rolagem lateral escondendo o resto da fila.
+  assert.doesNotMatch(css, /grid-auto-flow:\s*column/);
+  assert.doesNotMatch(css, /grid-auto-columns/, 'sem trilho de colunas largas');
+  assert.doesNotMatch(css, /scroll-snap-type:\s*x/, 'a fila não é mais um carrossel lateral');
+  assert.doesNotMatch(css, /\.fila-dica/, 'sem dica de arraste lateral');
+  assert.match(css, /\.fila-grade__cartoes \{\s*display: grid;/);
+  assert.match(css, /grid-template-columns: repeat\(auto-fill, minmax\(min\(100%, 272px\), 1fr\)\)/);
+  assert.match(css, /@media \(min-width: 1280px\)[\s\S]*?grid-template-columns: repeat\(auto-fill, minmax\(312px, 1fr\)\)/);
+  assert.match(fila, /className="fila-grade"/);
+  assert.match(fila, /className="fila-grade__cartoes"/);
 });
 
 test('telas pequenas continuam legíveis (320/375) e o movimento respeita reduced motion', () => {
   assert.match(css, /@media \(max-width: 420px\)/);
-  assert.match(css, /grid-auto-columns:\s*252px/);
+  assert.match(css, /@media \(max-width: 420px\)[\s\S]*?\.fila-grade__cartoes \{\s*gap: 10px;/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(css, /transform:\s*none !important/);
   assert.match(fila, /useReducedMotion\(\)/);

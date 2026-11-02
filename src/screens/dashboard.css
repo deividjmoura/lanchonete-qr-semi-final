@@ -458,3 +458,416 @@
      não corresponde ao encaixe e fica oculta. */
   .dashboard-grid__preview { display: none; }
 }
+
+/* ==========================================================================
+   Mesas abertas — modal aberto pelo card “Mesas ocupadas”.
+   Cobre o painel e repete a linguagem do dashboard (mesmos tons, tipografia
+   e grade de cartões), agora com o detalhe de cada mesa do salão.
+   ========================================================================== */
+.dash-dialog--full {
+  width: min(1360px, calc(100vw - 24px));
+  max-width: none;
+  max-height: min(94dvh, 1060px);
+  padding: 0;
+  overflow: hidden;
+}
+/* `display` só quando aberto: o UA esconde o <dialog> fechado com display:none
+   e uma regra de autor venceria o estilo do navegador. */
+.dash-dialog--full[open] { display: flex; }
+.dash-mesas {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  border-radius: inherit;
+  color: var(--stage-ink);
+  background:
+    radial-gradient(ellipse at 8% -10%, var(--stage-glow-violet), transparent 30%),
+    radial-gradient(ellipse at 96% 6%, var(--stage-glow-cyan), transparent 26%),
+    linear-gradient(145deg, var(--stage-bg-2) 0%, var(--stage-bg) 56%, var(--stage-bg-2) 100%);
+}
+.dash-mesas__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 19px 22px 16px;
+  border-bottom: 1px solid var(--stage-line-2);
+  background: linear-gradient(180deg, var(--stage-hairline-3), transparent);
+}
+.dash-mesas__head-main { min-width: 0; }
+.dash-mesas__head-main .dash-kicker { display: flex; align-items: center; gap: 8px; }
+.dash-mesas__head-main .dash-kicker > span:first-child {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--stage-mint); box-shadow: 0 0 11px var(--stage-mint-2);
+}
+.dash-mesas__head-main h3 {
+  margin: 7px 0 5px;
+  color: var(--stage-ink);
+  font-family: var(--font-display), serif;
+  font-size: clamp(21px, 2.4vw, 29px);
+  font-weight: 700;
+  letter-spacing: -.03em;
+  line-height: 1.1;
+}
+.dash-mesas__head-main p:last-child { margin: 0; color: var(--stage-ink-muted); font-size: 12px; line-height: 1.5; }
+.dash-mesas__actions { display: flex; flex: none; align-items: center; gap: 10px; }
+.dash-mesas__updated {
+  color: var(--stage-ink-subtle);
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+.dash-mesas__refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--stage-line-4);
+  border-radius: 10px;
+  color: var(--stage-ink);
+  background: var(--stage-inset-2);
+  font-size: 12px;
+  font-weight: 700;
+}
+.dash-mesas__refresh:disabled { opacity: .6; cursor: default; }
+.dash-mesas__refresh:focus-visible,
+.dash-mesas__chips button:focus-visible,
+.dash-mesa__toggle:focus-visible,
+.dash-mesas__search:focus-within,
+.dash-mesas__select select:focus-visible {
+  outline: 3px solid var(--stage-focus);
+  outline-offset: 2px;
+}
+.dash-girando { animation: dash-girar 1s linear infinite; }
+@keyframes dash-girar { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .dash-girando { animation: none; } }
+
+.dash-mesas__body {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  min-height: 0;
+  padding: 17px 22px 22px;
+  overflow-y: auto;
+  scrollbar-color: var(--stage-scroll-thumb-hover) var(--stage-scroll-track);
+  scrollbar-width: thin;
+}
+.dash-mesas__stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.dash-mesas__stat {
+  --neon: var(--stage-violet);
+  --neon-deep: var(--stage-violet-deep);
+  --neon-soft: var(--stage-violet-soft);
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid color-mix(in srgb, var(--neon) 32%, var(--stage-line-base));
+  border-radius: 14px;
+  background: linear-gradient(150deg, var(--stage-card), var(--stage-card-2));
+  box-shadow: inset 0 1px 0 var(--stage-hairline-4), 0 10px 22px var(--stage-shadow-1);
+}
+.dash-mesas__stat--ciano { --neon: var(--stage-cyan); --neon-deep: var(--stage-cyan-deep); --neon-soft: var(--stage-cyan-soft); }
+.dash-mesas__stat--laranja { --neon: var(--stage-amber); --neon-deep: var(--stage-amber-deep); --neon-soft: var(--stage-amber-soft); }
+.dash-mesas__stat--lima { --neon: var(--stage-lime); --neon-deep: var(--stage-lime-deep); --neon-soft: var(--stage-lime-soft); }
+.dash-mesas__stat--rosa { --neon: var(--stage-rose); --neon-deep: var(--stage-rose-deep); --neon-soft: var(--stage-rose-soft); }
+.dash-mesas__stat-icon {
+  display: grid;
+  place-items: center;
+  width: 32px; height: 32px;
+  border: 1px solid color-mix(in srgb, var(--neon) 35%, transparent);
+  border-radius: 10px;
+  color: var(--neon);
+  background: var(--neon-soft);
+}
+.dash-mesas__stat-label {
+  margin: 10px 0 3px;
+  color: var(--stage-ink-muted-2);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+.dash-mesas__stat-value {
+  margin: 0;
+  color: var(--stage-ink);
+  font-family: var(--font-display), serif;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.dash-mesas__stat-detail { margin: 4px 0 0; color: var(--stage-ink-subtle); font-size: 11px; line-height: 1.4; }
+
+.dash-mesas__toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.dash-mesas__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 240px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--stage-line-3);
+  border-radius: 11px;
+  color: var(--stage-ink-subtle);
+  background: var(--stage-inset);
+}
+.dash-mesas__search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--stage-ink);
+  font-size: 13px;
+}
+.dash-mesas__search input:focus { outline: none; }
+.dash-mesas__select select {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--stage-line-3);
+  border-radius: 11px;
+  color: var(--stage-ink);
+  background: var(--stage-inset);
+  font-size: 12px;
+  font-weight: 700;
+}
+.dash-mesas__chips {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--stage-line-3);
+  border-radius: 12px;
+  background: var(--stage-inset);
+}
+.dash-mesas__chips button {
+  min-height: 32px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  color: var(--stage-ink-muted-2);
+  font-size: 11px;
+  font-weight: 700;
+  transition: background .18s, color .18s;
+}
+.dash-mesas__chips button[aria-pressed="true"] {
+  color: var(--stage-on-accent);
+  background: var(--stage-lime-ink);
+  box-shadow: 0 3px 13px var(--stage-lime-soft);
+}
+.dash-mesas__erro {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 13px;
+  border: 1px solid var(--stage-danger-line);
+  border-radius: 11px;
+  background: var(--stage-danger-soft);
+  color: var(--stage-danger-ink);
+  font-size: 12px;
+}
+.dash-mesas__erro button { margin-left: auto; font-weight: 800; text-decoration: underline; }
+.dash-mesas__empty {
+  display: flex;
+  min-height: 180px;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  color: var(--stage-ink-muted);
+  font-size: 13px;
+  text-align: center;
+}
+.dash-mesas__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(275px, 1fr)); gap: 14px; }
+.dash-mesas__pagination { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding-top: 2px; }
+
+/* Cartão de mesa aberta: o mesmo neon do dashboard, cor por situação. */
+.dash-mesa {
+  --neon: var(--stage-cyan);
+  --neon-deep: var(--stage-cyan-deep);
+  --neon-soft: var(--stage-cyan-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 15px 16px;
+  border: 1px solid color-mix(in srgb, var(--neon) 34%, var(--stage-line-base));
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, var(--stage-veil), transparent 45%),
+    radial-gradient(ellipse at 100% -12%, var(--neon-soft), transparent 62%),
+    linear-gradient(150deg, var(--stage-card), var(--stage-card-2));
+  box-shadow: inset 0 1px 0 var(--stage-hairline-4), 0 12px 26px var(--stage-shadow-1);
+}
+.dash-mesa--atencao { --neon: var(--stage-amber); --neon-deep: var(--stage-amber-deep); --neon-soft: var(--stage-amber-soft); }
+.dash-mesa--critica {
+  --neon: var(--stage-rose);
+  --neon-deep: var(--stage-rose-deep);
+  --neon-soft: var(--stage-rose-soft);
+  border-color: color-mix(in srgb, var(--neon) 58%, var(--stage-line-base));
+}
+.dash-mesa__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.dash-mesa__ident { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.dash-mesa__numero {
+  margin: 0;
+  font-family: var(--font-display), serif;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -.04em;
+  line-height: 1;
+}
+.dash-mesa__label {
+  color: var(--stage-ink-muted-2);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.dash-mesa__badges { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; text-align: right; }
+.dash-mesa__praca {
+  padding: 3px 8px;
+  border: 1px solid var(--stage-line-4);
+  border-radius: 50px;
+  color: var(--stage-ink-muted-2);
+  font-size: 10px;
+  font-weight: 700;
+}
+.dash-mesa__faixa {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px solid var(--stage-line-4);
+  border-radius: 50px;
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.dash-mesa__faixa--recente { color: var(--stage-mint-text); border-color: var(--stage-ok-line); background: var(--stage-ok-soft); }
+.dash-mesa__faixa--atencao { color: var(--stage-warn-ink); border-color: var(--stage-warn-line); background: var(--stage-warn-soft); }
+.dash-mesa__faixa--critica { color: var(--stage-danger-ink); border-color: var(--stage-danger-line); background: var(--stage-danger-soft); }
+.dash-mesa__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0;
+  padding: 11px 0;
+  border-top: 1px solid var(--stage-hairline-3);
+  border-bottom: 1px solid var(--stage-hairline-3);
+}
+.dash-mesa__row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.dash-mesa__row dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  color: var(--stage-ink-subtle);
+  font-size: 11px;
+  font-weight: 600;
+}
+.dash-mesa__row dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--stage-ink);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+.dash-mesa__row-sub { color: var(--stage-ink-subtle); font-weight: 500; }
+.dash-mesa__footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.dash-mesa__footer-label {
+  margin: 0;
+  color: var(--stage-ink-muted-2);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+.dash-mesa__footer-value {
+  margin: 3px 0 0;
+  color: var(--stage-warn-ink);
+  font-family: var(--font-mono), monospace;
+  font-size: 16px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.dash-mesa__footer-note { margin: 0; color: var(--stage-ink-subtle); font-size: 10px; text-align: right; }
+.dash-mesa__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  border: 1px solid var(--stage-line-4);
+  border-radius: 10px;
+  color: var(--stage-ink);
+  background: var(--stage-inset-2);
+  font-size: 11px;
+  font-weight: 700;
+}
+.dash-mesa__toggle:hover { border-color: color-mix(in srgb, var(--neon) 60%, var(--stage-line-4)); color: var(--neon); }
+
+/* Detalhe da mesa (pedidos, quem pediu e quem levou) aberto dentro do cartão. */
+.dash-mesa__detalhe {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 11px;
+  border-top: 1px dashed var(--stage-line-4);
+}
+.dash-mesa__detalhe-vazio,
+.dash-mesa__detalhe-nota { margin: 0; color: var(--stage-ink-subtle); font-size: 11px; line-height: 1.5; }
+.dash-mesa__detalhe-erro { margin: 0; color: var(--stage-danger-ink); font-size: 11px; }
+.dash-mesa__pedidos { display: flex; flex-direction: column; gap: 9px; margin: 0; padding: 0; list-style: none; }
+.dash-mesa__pedido {
+  padding: 10px;
+  border: 1px solid var(--stage-line-4);
+  border-radius: 11px;
+  background: var(--stage-inset-2);
+}
+.dash-mesa__pedido-top { display: flex; align-items: center; gap: 8px; }
+.dash-mesa__pedido-id { color: var(--neon); font-family: var(--font-mono), monospace; font-size: 11px; font-weight: 800; }
+.dash-mesa__pedido-hora { color: var(--stage-ink-subtle); font-size: 10px; }
+.dash-mesa__pedido-status {
+  margin-left: auto;
+  padding: 2px 8px;
+  border: 1px solid var(--stage-line-4);
+  border-radius: 50px;
+  color: var(--stage-ink-muted-2);
+  font-size: 10px;
+  font-weight: 700;
+}
+.dash-mesa__pedido-quem { margin: 6px 0 0; color: var(--stage-ink-muted); font-size: 11px; line-height: 1.45; }
+.dash-mesa__pedido-quem strong { color: var(--stage-ink); }
+.dash-mesa__itens { display: flex; flex-direction: column; gap: 4px; margin: 7px 0 0; padding: 0; list-style: none; }
+.dash-mesa__item { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; color: var(--stage-ink); font-size: 11px; }
+.dash-mesa__item--cancelado { opacity: .55; text-decoration: line-through; }
+.dash-mesa__item-nome { min-width: 0; overflow-wrap: anywhere; }
+.dash-mesa__item-nome strong { color: var(--neon); font-family: var(--font-mono), monospace; }
+.dash-mesa__item-setor {
+  margin-left: 6px;
+  color: var(--stage-ink-faint);
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.dash-mesa__item-status { flex: none; color: var(--stage-ink-subtle); font-size: 10px; }
+.dash-mesa__pagamentos ul { display: flex; flex-direction: column; gap: 4px; margin: 5px 0 0; padding: 0; list-style: none; }
+.dash-mesa__pagamentos li { display: flex; justify-content: space-between; gap: 10px; color: var(--stage-ink-muted); font-size: 11px; }
+.dash-mesa__pagamentos strong { color: var(--stage-ink); font-family: var(--font-mono), monospace; }
+
+@media (max-width: 900px) {
+  .dash-mesas__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .dash-dialog--full { width: calc(100vw - 14px); max-height: 96dvh; }
+  .dash-mesas__head { padding: 15px 15px 13px; }
+  .dash-mesas__actions { width: 100%; }
+  .dash-mesas__updated { margin-right: auto; }
+  .dash-mesas__body { padding: 14px 15px 18px; }
+  .dash-mesas__stats { grid-template-columns: minmax(0, 1fr); }
+  .dash-mesas__grid { grid-template-columns: minmax(0, 1fr); }
+}

@@ -139,13 +139,17 @@ export function FilaProducao({
     [hydrate, reportarErro, setor]
   );
 
-  const contagens = useMemo(() => contarItensPorEtapa(pedidos), [pedidos]);
+  /* Só os itens que ESTE setor produz: a comanda é dividida por item, então um
+     pedido misto aparece pela metade na cozinha e pela metade no bar. Sem esse
+     recorte, a comanda inteira (inclusive a parte do outro setor) era exibida
+     nas duas telas. */
+  const contagens = useMemo(() => contarItensPorEtapa(pedidos, setor), [pedidos, setor]);
   const cards = useMemo(
     () => ({
-      em_producao: cardsDaEtapa(pedidos, "em_producao"),
-      na_fila: cardsDaEtapa(pedidos, "na_fila"),
+      em_producao: cardsDaEtapa(pedidos, "em_producao", setor),
+      na_fila: cardsDaEtapa(pedidos, "na_fila", setor),
     }),
-    [pedidos]
+    [pedidos, setor]
   );
   const comandasNaFila = cards.na_fila.length;
   // Intencionalmente fora de useMemo: o relógio da tela (useAgora) redesenha a
@@ -235,14 +239,12 @@ export function FilaProducao({
                 </p>
               ) : (
                 <>
-                  <p className="fila-dica">Arraste para o lado para ver as próximas comandas.</p>
                   <div
-                    className="fila-rolagem"
+                    className="fila-grade"
                     role="region"
                     aria-label={`Comandas ${etapa.id === "na_fila" ? "na fila" : "em produção"}`}
-                    tabIndex={0}
                   >
-                    <div className="fila-trilho">
+                    <div className="fila-grade__cartoes">
                       <AnimatePresence mode="sync" initial={false}>
                         {lista.map((card) => (
                           <CardComandaItem

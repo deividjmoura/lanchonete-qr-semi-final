@@ -5,6 +5,7 @@ import {
 } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { ControlesPaginacao, useLimiteLocal } from "../components/Paginacao";
+import { MesasAbertasModal } from "./dashboard/MesasAbertasModal";
 import { api } from "../lib/api";
 import type { DashboardGeral, DiaDashboard, PeriodoDashboard } from "../lib/dashboard";
 import { BRL } from "../lib/utils";
@@ -445,6 +446,8 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
   const [erro, setErro] = useState(false);
   const [tentativa, setTentativa] = useState(0);
   const [selecionado, setSelecionado] = useState<CardId | null>(null);
+  /** “Mesas ocupadas” cobre o painel com as mesas abertas em vez do detalhe. */
+  const [mesasAbertas, setMesasAbertas] = useState(false);
   const [layout, setLayout] = useState<DashboardLayout>(lerLayout);
   const [layoutSalvo, setLayoutSalvo] = useState(true);
   const [arrastado, setArrastado] = useState<WidgetId | null>(null);
@@ -663,7 +666,8 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
         onDrop={editMode ? soltarWidget : undefined}>
         {todos.filter((card) => editMode || layout.widgets[card.id].visible)
           .sort((a, b) => layout.widgets[a.id].y - layout.widgets[b.id].y || layout.widgets[a.id].x - layout.widgets[b.id].x)
-          .map((card) => <Cartao key={card.id} card={card} disponivel={Boolean(dash)} onClick={() => setSelecionado(card.id)}
+          .map((card) => <Cartao key={card.id} card={card} disponivel={Boolean(dash)}
+            onClick={() => (card.id === "mesas" ? setMesasAbertas(true) : setSelecionado(card.id))}
             editando={editMode} layout={layout.widgets[card.id]} onResize={(w, h) => redimensionar(card.id, w, h)}
             onToggleVisibility={() => alternarVisibilidade(card.id)}
             onDragStart={iniciarArraste} onDragEnd={finalizarArraste} />)}
@@ -704,5 +708,7 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
         <Detalhes id={selecionado} dash={dash} />
       </>}
     </dialog>
+
+    <MesasAbertasModal open={mesasAbertas} onClose={() => setMesasAbertas(false)} />
   </div>;
 }

@@ -142,6 +142,9 @@ test('rotas administrativas expõem panorama, detalhe por número e praças', ()
   assert.match(server, /p === '\/api\/admin\/pracas' && req\.method === 'GET'/);
   assert.match(server, /p === '\/api\/admin\/pracas' && req\.method === 'POST'/);
   assert.match(server, /pracas\\\/\(\\d\+\)\$/);
+  // Exclusão de praça: rota própria, auditada e com o mesmo gate das demais.
+  assert.match(server, /req\.method === 'DELETE'[\s\S]{0,240}?removerPraca\(Number\(m\[1\]\), staff, reqId\)/);
+  assert.match(server, /type: 'praca_removida'/);
   assert.match(server, /admin\\\/mesas\\\/\(\\d\+\)\\\/praca\$/);
   assert.match(server, /definirPracaMesa\(Number\(m\[1\]\), payload\?\.pracaId, staff, reqId\)/);
   assert.match(server, /mesaDetalhe\(Number\(m\[1\]\)\)/);
@@ -224,6 +227,11 @@ test('aba Mesas usa o panorama novo e preserva as operações existentes', () =>
   assert.match(pracas, /api\.adminCriarPraca\(nome\)/);
   assert.match(pracas, /Ficam no banco/);
   assert.match(pracas, /Sem praça/);
+  // Excluir também, mas nunca sem confirmação e avisando o que acontece.
+  assert.match(pracas, /api\.adminRemoverPraca\(praca\.id\)/);
+  assert.match(pracas, /confirmarAcao/);
+  assert.match(pracas, /Excluir a praça/);
+  assert.match(pracas, /mesa volta" : "mesas voltam"\} para “Sem praça”/);
 
   const modal = read('src/screens/admin/MesaDetalheModal.tsx');
   assert.match(modal, /api\.adminDefinirPracaMesa\(numero, pracaSelecionada\)/);

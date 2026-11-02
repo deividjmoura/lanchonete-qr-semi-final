@@ -151,10 +151,15 @@ Servida localmente em `public/garcom-pwa/fonts/` sob CSP `'self'`, totalizando *
 
 ### 6.3 Fila de Produção por Item (Cozinha e Bar)
 - **Duas sessões recolhíveis:** "Em produção" e "Na fila". Ambas nascem **recolhidas** para manter a tela limpa; cada uma abre de forma independente (`aria-expanded` + `aria-controls`) e a preferência do operador é lembrada por setor em `localStorage`. O corpo recolhido não renderiza cartões.
-- **Rolagem lateral:** `.fila-trilho` usa `grid-auto-flow: column` com 2 linhas até `767px` e 3 linhas a partir de `1280px`; os cartões rolam na horizontal (`.fila-rolagem`) com `scroll-snap`, barra fina e `overscroll-behavior-x: contain`. A página nunca ganha rolagem horizontal própria.
+- **Leitura em linha (esquerda → direita):** `.fila-grade__cartoes` é uma grade `repeat(auto-fill, minmax(...))` que preenche a linha da esquerda para a direita e só desce quando a linha acaba — nunca coluna por coluna (`grid-auto-flow: column`) e nunca escondendo comandas num carrossel lateral. A largura mínima cresce com a tela (`272px` no celular, `288px` de `768px`, `312px` de `1280px`) e a página rola na vertical, sem rolagem horizontal própria.
+- **Cada setor vê só o que produz:** a comanda é recortada por item (`pedidosDoSetor`/`cardsDaEtapa` com o setor da tela). Um pedido com burger e caipirinha aparece com o burger na cozinha e com a caipirinha no bar — nunca inteiro nos dois. A API já filtra (`/api/(cozinha|bar)/pedidos`), e a tela refaz o recorte porque o store é compartilhado com caixa e garçom: comanda que vem do caixa chega com os itens `entregue` e não volta para a fila de produção.
 - **Unidade é o item:** cada cartão mostra apenas os itens daquela etapa. Iniciar/liberar um item grava `PATCH /api/(cozinha|bar)/itens/:id/status` e afeta só ele; a ação de comanda é secundária, nomeada ("Iniciar/Liberar os N itens desta comanda") e atinge apenas os itens da seção aberta.
 - **Sem coluna de prontos:** o item concluído sai da fila do setor e aparece imediatamente na fila do garçom (`concluido`), mantendo retirada direta, aceite, entregas parciais e notificações.
 - **Feedback imediato:** um `role="status"` anuncia "iniciado/liberado — já aparece para o garçom" porque o cartão troca de seção (que pode estar recolhida).
+
+### 6.3.1 Caixa — coluna “Comandas abertas”
+- **Rolagem interna:** a partir de `1024px` a coluna das comandas (`.caixa-comandas`) não estica a página: `height: 0` tira a lista do cálculo da linha do grid, `min-height: max(100%, 24rem)` devolve a altura da linha (definida pelo cartão de pagamento ao lado) com um piso de `24rem`. A lista rola por dentro (`.caixa-comandas__rolagem`), então o operador nunca perde o cartão de pagamento de vista.
+- **Abaixo de `1024px` nada muda:** a coluna empilha e a página rola inteira — sem scroll aninhado no celular.
 
 ### 6.4 Cardápio do Cliente — Tema Praia (`#/mesa/:token`)
 
