@@ -252,21 +252,34 @@ function mapProdutoRow(p) {
   };
 }
 
+/* Categorias que entram na lista do admin: as que têm pelo menos um produto
+   ativo (o caso normal, com os itens editáveis um a um) e as que estão vazias
+   porque foram criadas à mão e ainda esperam produtos. Fica de fora só a
+   categoria que restou apenas com produtos arquivados por uma importação —
+   ela não tem nada para editar, e as vendas antigas continuam no histórico. */
+const SQL_CATEGORIAS_ADMIN = `SELECT c.id, c.nome, c.ordem
+   FROM categorias c
+  WHERE EXISTS (
+          SELECT 1 FROM produtos p
+           WHERE p.categoria_id = c.id AND p.arquivado = FALSE
+        )
+     OR NOT EXISTS (
+          SELECT 1 FROM produtos p WHERE p.categoria_id = c.id
+        )
+  ORDER BY c.ordem, c.id`;
+
+const SQL_CATEGORIAS_ADMIN_SEM_ARQUIVADOS = 'SELECT id, nome, ordem FROM categorias ORDER BY ordem, id';
+
 async function getCardapioAdmin() {
-  /* Categorias montadas só por produtos arquivados (sobra de importação) não
-     aparecem; categorias vazias criadas à mão continuam visíveis. */
-  const { rows: categorias } = await pool.query(
-    `SELECT c.id, c.nome, c.ordem
-       FROM categorias c
-      WHERE NOT EXISTS (
-              SELECT 1 FROM produtos p
-               WHERE p.categoria_id = c.id AND p.arquivado = FALSE
-            )
-         OR NOT EXISTS (
-              SELECT 1 FROM produtos p WHERE p.categoria_id = c.id
-            )
-      ORDER BY c.ordem, c.id`
-  );
+  let categorias;
+  try {
+    ({ rows: categorias } = await pool.query(SQL_CATEGORIAS_ADMIN));
+  } catch (e) {
+    /* Banco ainda sem a migration 0033 (coluna `arquivado`): a lista do admin
+       não pode sumir por causa disso — cai no SELECT simples de antes. */
+    if (!e || e.code !== '42703') throw e;
+    ({ rows: categorias } = await pool.query(SQL_CATEGORIAS_ADMIN_SEM_ARQUIVADOS));
+  }
   let produtos;
   try {
     ({ rows: produtos } = await pool.query(
