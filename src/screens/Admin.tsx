@@ -1,6 +1,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Camera,
+  Check,
   CaretDown,
   CaretRight,
   Copy,
@@ -24,7 +25,7 @@ import { OpsShell } from "../components/OpsShell";
 import Dashboard from "./Dashboard";
 import MesasAdmin from "./admin/MesasAdmin";
 import { ControlesPaginacao, ListaLimitada, useLimiteLocal } from "../components/Paginacao";
-import { Badge, Btn, Input, Modal } from "../components/ui";
+import { Badge, Btn, IconBtn, Input, Modal } from "../components/ui";
 import { usePaginacaoCursor } from "../hooks/usePaginacaoCursor";
 import { TrocarSenha } from "../components/TrocarSenha";
 import { ir } from "../router";
@@ -62,6 +63,7 @@ export default function Admin({ secao }: { secao?: string }) {
   const hydrateCardapio = usePub((s) => s.hydrateCardapio);
   const hydrateMesas = usePub((s) => s.hydrateMesas);
   const reduceMotion = useReducedMotion();
+  const [dashboardEditMode, setDashboardEditMode] = useState(false);
 
   useEffect(() => {
     void hydrateCardapio();
@@ -98,6 +100,7 @@ export default function Admin({ secao }: { secao?: string }) {
       regime="expressive"
       kicker="Gestão"
       titulo={abaAtual.label}
+      toolbarAction={aba === "painel" ? <IconBtn active={dashboardEditMode} label={dashboardEditMode ? "Concluir edição do dashboard" : "Editar dashboard"} aria-pressed={dashboardEditMode} onClick={() => setDashboardEditMode((value) => !value)} className="ops-dashboard-edit-toggle">{dashboardEditMode ? <Check size={20} weight="bold" /> : <PencilSimple size={20} weight="bold" />}</IconBtn> : undefined}
     >
       <AnimatePresence mode="wait">
         <motion.div
@@ -107,7 +110,7 @@ export default function Admin({ secao }: { secao?: string }) {
           exit={{ opacity: 0 }}
           transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.22, 1, 0.36, 1] }}
         >
-          {aba === "painel" && <Dashboard />}
+          {aba === "painel" && <Dashboard editMode={dashboardEditMode} />}
           {aba === "cardapio" && <Cardapio />}
           {aba === "mesas" && <MesasAdmin />}
           {aba === "garcons" && <Garcons />}
