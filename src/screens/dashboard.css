@@ -177,3 +177,19 @@
 @media (prefers-reduced-motion: reduce) {
   .card-neon, .card-neon::after { transform: none !important; }
 }
+
+/* Dashboard — Casa & Operação */
+.dashboard-stage{background:var(--stage-bg)!important;border:1px solid var(--stage-line)!important;box-shadow:var(--elev-1)!important}
+.dashboard-stage::before,.dashboard-stage::after{display:none!important}
+.dashboard-intro h2 span{color:var(--stage-mostarda)!important}
+.dash-eyebrow>span:first-child,.dash-now>span,.card-neon__live>span{background:var(--stage-musgo)!important;box-shadow:none!important}
+.card-neon,.dash-panel{background:var(--stage-card)!important;border:1px solid var(--stage-line)!important;box-shadow:var(--elev-1)!important;backdrop-filter:none!important}
+.card-neon::before,.card-neon::after,.dash-panel::before,.dash-panel::after{display:none!important}
+.card-neon--violeta,.card-neon--cyan{--neon:var(--stage-mostarda);--neon-deep:var(--prim-mostarda);--neon-soft:var(--stage-mostarda-soft)}
+.card-neon--lima{--neon:var(--stage-musgo);--neon-deep:var(--prim-musgo);--neon-soft:var(--stage-musgo-soft)}
+.card-neon--rosa{--neon:var(--stage-terracota);--neon-deep:var(--prim-terracota);--neon-soft:var(--stage-terracota-soft)}
+.card-neon--laranja{--neon:var(--stage-mostarda);--neon-deep:var(--prim-mostarda);--neon-soft:var(--stage-mostarda-soft)}
+.card-neon__icon,.dash-panel__icon{box-shadow:none!important;border-color:var(--stage-line)!important}
+.num-extruded{text-shadow:none!important;color:var(--neon,var(--stage-ink))!important}
+.dash-chart__fill{background:var(--stage-mostarda)!important}
+.dash-ranking__placeholder{background:var(--stage-mostarda-soft)!important}

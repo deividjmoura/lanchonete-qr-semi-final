@@ -11,32 +11,16 @@ export const EVENTO_TEMA = "qradmin-tema";
 
 export const TOKENS_TEMA: Record<Tema, Record<string, string>> = {
   claro: {
-    "--surface": "#eef1f8",
-    "--surface-raised": "#f8faff",
-    "--surface-sunken": "#e0e5f1",
-    "--surface-sidebar": "#0b101b",
-    "--text": "#121829",
-    "--text-muted": "#48536d",
-    "--brand": "#5b3fc4",
-    "--brand-contrast": "#f8faff",
-    "--brand-ink": "#4a32a6",
-    "--accent": "#0a5a63",
-    "--line": "#c7cfe0",
-    "--line-strong": "#a5b0c8",
+    "--surface":"#F5F5F4","--surface-raised":"#FAFAF9","--surface-sunken":"#E7E5E4","--surface-sidebar":"#E7E5E4",
+    "--text":"#1C1917","--text-muted":"#57534E","--brand":"#B45309","--brand-contrast":"#FAFAF9","--brand-ink":"#FAFAF9",
+    "--accent":"#0F766E","--line":"#D6D3D1","--line-strong":"#A8A29E",
+    "--status-success":"#3F6212","--status-warning":"#A16207","--status-danger":"#B91C1C","--status-info":"#0F766E"
   },
   escuro: {
-    "--surface": "#0b101b",
-    "--surface-raised": "#141b29",
-    "--surface-sunken": "#080d16",
-    "--surface-sidebar": "#080d16",
-    "--text": "#eef1fb",
-    "--text-muted": "#a9b4cc",
-    "--brand": "#8b6fff",
-    "--brand-contrast": "#0b101b",
-    "--brand-ink": "#b7a5ff",
-    "--accent": "#4fd1e0",
-    "--line": "#2a3348",
-    "--line-strong": "#3b4660",
+    "--surface":"#1C1917","--surface-raised":"#292524","--surface-sunken":"#0C0A09","--surface-sidebar":"#0C0A09",
+    "--text":"#F5F5F4","--text-muted":"#A8A29E","--brand":"#D97706","--brand-contrast":"#1C1917","--brand-ink":"#F5F5F4",
+    "--accent":"#14B8A6","--line":"#44403C","--line-strong":"#57534E",
+    "--status-success":"#65A30D","--status-warning":"#EAB308","--status-danger":"#DC2626","--status-info":"#14B8A6"
   },
 };
 

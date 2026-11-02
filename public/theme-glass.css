@@ -1,3 +1,4 @@
+@import url("/garcom-pwa/design-tokens.css");
 /**
  * Tema glass — translucidez + fundo restaurante
  * Só aparência; não altera comportamento.
@@ -1141,4 +1142,39 @@ body.modal-open {
   overflow: hidden;
   /* evita shift horizontal ao esconder scrollbar */
   padding-right: var(--sbw, 0px);
+}
+
+/* Override legado: Casa & Operação em Admin, Cozinha, Bar, Caixa, Garçom e Login. */
+html,body{background:var(--surface)!important;background-image:none!important;color:var(--text)!important;font-family:var(--font-sans)!important}
+body::before,body::after{background-image:none!important;opacity:0!important}
+:root,html,[data-theme="dark"],[data-theme="light"]{--bg:var(--surface);--bg-elevated:var(--surface-raised);--surface-2:var(--surface-raised);--surface-3:var(--surface-sunken);--primary:var(--brand);--primary-hover:var(--brand-hover);--primary-soft:var(--brand-soft);--success:var(--status-success);--success-soft:var(--status-success-surface);--warning:var(--status-warning);--warning-soft:var(--status-warning-surface);--danger:var(--status-danger);--danger-soft:var(--status-danger-surface);--glass-blur:0px;--glass-sheen:none;--glass-border:1px solid var(--line);--glass-shadow:var(--elev-1)}
+.panel,.card,.kpi-card,.ops-row,.modal,.modal-content,.cart,.pay-card,.pedido-card,.order-card,.table-card,.edit-panel,.admin-tabs,.glass-shell,.glass-nav,.glass-tabs{background:var(--surface-raised)!important;color:var(--text)!important;border-color:var(--line)!important;box-shadow:var(--elev-1)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.panel::before,.panel::after,.card::before,.card::after,.glass-shell::before,.glass-shell::after{display:none!important}
+button.primary,.btn.primary,.btn-primary,.admin-tabs button.active,.glass-tabs button.active,.glass-tabs button[aria-selected="true"]{background:var(--brand)!important;border-color:var(--brand)!important;color:var(--brand-ink)!important;box-shadow:none!important}
+button,input,select,textarea{font-family:var(--font-sans)}
+input,select,textarea{background:var(--surface-sunken)!important;color:var(--text)!important;border-color:var(--line)!important}
+h1,h2,h3,.dash-title,.card-title{color:var(--text)!important;font-family:var(--font-display),Georgia,serif!important}
+.muted,label,.kpi-label,.ops-row span{color:var(--text-muted)!important}
+
+/* Tokens da camada legada: esta folha é carregada depois do tema antigo e, portanto,
+   precisa reafirmar os semânticos para não manter superfícies translúcidas. */
+:root,[data-theme="dark"],[data-theme="escuro"] {
+ color-scheme:dark;
+ --surface:#1C1917;--surface-raised:#292524;--surface-sunken:#0C0A09;--surface-hover:#332E2A;--surface-sidebar:#0C0A09;
+ --text:#F5F5F4;--text-muted:#A8A29E;--text-subtle:#78716C;
+ --brand:#D97706;--brand-hover:#F59E0B;--brand-ink:#F5F5F4;--brand-soft:color-mix(in srgb,#D97706 18%,transparent);
+ --accent:#14B8A6;--accent-ink:#042F2E;--line:#44403C;--line-strong:#57534E;--focus-ring:#D97706;
+ --status-success:#65A30D;--status-warning:#EAB308;--status-danger:#DC2626;--status-info:#14B8A6;
+ --bg:#1C1917;--bg-elevated:#292524;--surface-2:#292524;--surface-3:#0C0A09;--primary:#D97706;--primary-hover:#F59E0B;--primary-soft:rgba(217,119,6,.18);
+ --success:#65A30D;--success-soft:rgba(101,163,13,.16);--warning:#EAB308;--warning-soft:rgba(234,179,8,.16);--danger:#DC2626;--danger-soft:rgba(220,38,38,.16);
+}
+[data-theme="claro"],[data-theme="light"] {
+ color-scheme:light;
+ --surface:#F5F5F4;--surface-raised:#FAFAF9;--surface-sunken:#E7E5E4;--surface-hover:#E7E5E4;--surface-sidebar:#E7E5E4;
+ --text:#1C1917;--text-muted:#57534E;--text-subtle:#78716C;
+ --brand:#B45309;--brand-hover:#92400E;--brand-ink:#FAFAF9;--brand-soft:rgba(180,83,9,.14);
+ --accent:#0F766E;--accent-ink:#F0FDFA;--line:#D6D3D1;--line-strong:#A8A29E;--focus-ring:#B45309;
+ --status-success:#3F6212;--status-warning:#A16207;--status-danger:#B91C1C;--status-info:#0F766E;
+ --bg:#F5F5F4;--bg-elevated:#FAFAF9;--surface-2:#FAFAF9;--surface-3:#E7E5E4;--primary:#B45309;--primary-hover:#92400E;--primary-soft:rgba(180,83,9,.14);
+ --success:#3F6212;--success-soft:rgba(63,98,18,.12);--warning:#A16207;--warning-soft:rgba(161,98,7,.12);--danger:#B91C1C;--danger-soft:rgba(185,28,28,.10);
 }

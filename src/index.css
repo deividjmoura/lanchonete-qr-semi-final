@@ -583,3 +583,10 @@ article[data-glass-card] {
     color: var(--qr-ink) !important;
   }
 }
+
+/* Casa & Operação: aparência sólida e sem efeitos de IA. */
+:root{--glass-blur:0px;--glass-sheen:none}
+body{background:var(--surface);color:var(--text);font-family:var(--font-sans)}
+.stage-surface,.stage-card,[data-glass-card]{background:var(--surface-raised)!important;border:1px solid var(--line)!important;box-shadow:var(--elev-1)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.stage-surface::before,.stage-card::before,.stage-card::after,[data-glass-card]::before,[data-glass-card]::after{display:none!important}
+[data-regime] .regime-grid::before{display:none!important}

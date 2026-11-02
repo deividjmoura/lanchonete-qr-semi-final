@@ -184,3 +184,68 @@ Servida localmente em `public/garcom-pwa/fonts/` sob CSP `'self'`, totalizando *
 - **Atualização ativa do Service Worker (`public/garcom-pwa/app.js`):** registro com `{ updateViaCache: 'none' }` e checagem ativa (`swReg?.update()`) ao reconectar (`online`) ou retornar ao primeiro plano (`visibilitychange`).
 - **Quiet zone óptica em QR Codes (`.qr-quiet-zone`):** fundo `--qr-paper` (névoa elevada) e tinta `--qr-ink` (meia-noite) são **invariantes** em claro/escuro — o código impresso na tela não muda de tom quando o operador alterna o tema.
 
+
+# QR Admin — Design System
+## Direção visual: Casa & Operação
+
+> Identidade oficial de todas as telas internas. Exceção: a tela pública do cliente `/#/mesa/:token`, que permanece fora deste escopo.
+
+### Princípios
+- Ferramenta real de operação gastronômica: legível, densa, confiável e sem brilho desnecessário.
+- Paleta quente: carvão, papel, mostarda, musgo, petróleo e terracota.
+- Superfícies sólidas, bordas discretas e sombras secas.
+- Sem neon, violeta/ciano como acentos principais, glassmorphism, sheen ou grades decorativas.
+- Tokens compartilhados são fonte única de verdade; camadas CSS consomem tokens sem hex/rgb locais.
+- Contraste AA mínimo e alvos de toque operacionais de 48px.
+
+### Escopo
+Login/Landing, Dashboard, Admin (cardápio, mesas, garçons e funções), Cozinha, Bar, Caixa e Garçom PWA. A rota pública `/#/mesa/:token` não deve ser alterada.
+
+### Paleta
+| Papel | Claro | Escuro |
+|---|---|---|
+| Fundo | `#F5F5F4` | `#1C1917` |
+| Superfície | `#FAFAF9` | `#292524` |
+| Rebaixo | `#E7E5E4` | `#0C0A09` |
+| Primária | `#B45309` | `#D97706` |
+| Informação | `#0F766E` | `#14B8A6` |
+| Sucesso | `#3F6212` | `#65A30D` |
+| Alerta | `#A16207` | `#EAB308` |
+| Texto | `#1C1917` | `#F5F5F4` |
+
+### Tokens e tipografia
+Fonte única: `public/garcom-pwa/design-tokens.css`, compartilhada entre SPA e PWA. Preservar os três níveis `--prim-*`, `--stage-*`, semânticos e transversais. Temas: `claro/escuro` e aliases `light/dark`.
+- Display: `"Source Serif 4", Georgia, serif`
+- UI: `"Inter", system-ui, sans-serif`
+- Mono: `"IBM Plex Mono", ui-monospace, monospace`
+Fallbacks locais evitam dependência de rede.
+
+### Regimes
+- Expressivo: Login, Landing, Dashboard e gestão Admin. Títulos serif clássicos, KPIs claros, cartões sólidos.
+- Operacional: Cozinha, Bar, Caixa e Garçom PWA. Densidade alta, tempos monoespaçados, estados contrastados e controles grandes.
+
+### Estados
+| Estado | Token |
+|---|---|
+| Na fila | `--stage-mostarda` |
+| Em produção | `--stage-petroleo` |
+| Pronto/liberado | `--stage-musgo` |
+| Atrasado | `--stage-terracota` |
+| Entregue | `--stage-ink-muted` |
+| Cancelado | `--stage-danger` |
+
+Garçom: Aceitar = mostarda; Retirar = petróleo; Entregar = musgo.
+
+### Componentes e navegação
+- Botão primário: `--brand`; secundário em superfície elevada com borda `--line`.
+- Cards: `--surface-raised`, borda `--line`, sombra curta `--elev-1`.
+- Inputs: `--surface-sunken`, borda `--line`, foco `--focus-ring`.
+- Badges usam fundos suaves; tabelas preservam separadores funcionais.
+- Desktop: sidebar compacta; touch: alvos ≥48px e safe area.
+- Phosphor Icons; sem emojis como ícones de interface.
+
+### Movimento e acessibilidade
+Transições curtas, sem bounce ou glow; respeitar `prefers-reduced-motion`. Manter foco visível e contraste AA (AAA preferencial em texto principal).
+
+### Aceite
+Nenhuma tela interna usa violeta/ciano neon como acento; sem glow, grade decorativa ou glass pesado; temas claros/escuros coerentes; Cozinha/Bar legíveis à distância; PWA no regime operacional; rota pública do cliente inalterada.

@@ -648,3 +648,14 @@
     transform: none !important;
   }
 }
+
+/* Cozinha e Bar — palco operacional fosco */
+.ops-stage{background:var(--stage-bg)!important;border:1px solid var(--stage-line)!important;box-shadow:var(--elev-1)!important}
+.ops-stage::before,.ops-stage::after{display:none!important}
+.ops-card,.ops-sessao,.ops-sessao__toggle{background:var(--stage-card)!important;border-color:var(--stage-line)!important;box-shadow:var(--elev-1)!important;backdrop-filter:none!important}
+.ops-card::before,.ops-card::after,.ops-sessao::before,.ops-sessao::after{display:none!important}
+.ops-card{--ops-accent:var(--stage-mostarda);--ops-accent-deep:var(--prim-mostarda);--ops-accent-soft:var(--stage-mostarda-soft)}
+.ops-card--fila,.ops-card[data-status="fila"]{--ops-accent:var(--stage-mostarda);--ops-accent-deep:var(--prim-mostarda);--ops-accent-soft:var(--stage-mostarda-soft)}
+.ops-card--producao,.ops-card[data-status="producao"]{--ops-accent:var(--stage-petroleo);--ops-accent-deep:var(--prim-petroleo);--ops-accent-soft:var(--stage-petroleo-soft)}
+.ops-card--pronto,.ops-card[data-status="pronto"]{--ops-accent:var(--stage-musgo);--ops-accent-deep:var(--prim-musgo);--ops-accent-soft:var(--stage-musgo-soft)}
+.ops-card__acao,.ops-card__todos{min-height:48px}

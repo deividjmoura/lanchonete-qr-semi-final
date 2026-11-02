@@ -1420,3 +1420,8 @@ dialog.sheet[open] {
     transform: none !important;
   }
 }
+
+/* PWA Garçom — linguagem operacional compartilhada */
+:root{font-family:var(--font-sans)}
+.order,.table-tile,.panel,.card{box-shadow:var(--elev-1)}
+button,.btn,.action-button{min-height:max(44px,var(--touch-target-min))}
