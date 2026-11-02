@@ -12,6 +12,7 @@ import { usePub } from "../store/usePub";
 import "./dashboard.css";
 
 const STORAGE_PERIODO = "qradmin-dashboard-periodo";
+const STORAGE_LAYOUT = "qradmin-dashboard-layout-v1";
 const PERIODOS: { id: PeriodoDashboard; label: string }[] = [
   { id: "hoje", label: "Hoje" }, { id: "semana", label: "Semana" }, { id: "mes", label: "Mês" },
 ];
@@ -23,6 +24,49 @@ type Card = {
   cor: "violeta" | "ciano" | "lima" | "rosa" | "laranja";
   variacao?: string; atual?: boolean;
 };
+
+type CardLayout = { w: number; h: number };
+type HeadingLayout = { label: string; title: string; labelSize: number; titleSize: number };
+type DashboardLayout = {
+  order: CardId[];
+  sizes: Record<CardId, CardLayout>;
+  headings: { movimento: HeadingLayout; operacao: HeadingLayout };
+};
+const CARD_IDS: CardId[] = ["faturamento", "pedidos", "ticket", "contas", "servico", "pagamentos", "produtos", "entrega", "consumo", "mesas", "garcons", "fila"];
+const LAYOUT_PADRAO: DashboardLayout = {
+  order: CARD_IDS,
+  sizes: Object.fromEntries(CARD_IDS.map((id) => [id, { w: 1, h: 1 }])) as Record<CardId, CardLayout>,
+  headings: {
+    movimento: { label: "01 / MOVIMENTO", title: "Visão do período", labelSize: 10, titleSize: 23 },
+    operacao: { label: "02 / OPERAÇÃO", title: "A casa agora", labelSize: 10, titleSize: 23 },
+  },
+};
+function lerLayout(): DashboardLayout {
+  try {
+    const raw = localStorage.getItem(STORAGE_LAYOUT);
+    if (!raw) return LAYOUT_PADRAO;
+    const parsed = JSON.parse(raw) as Partial<DashboardLayout>;
+    const order = Array.isArray(parsed.order)
+      ? [...new Set(parsed.order.filter((id): id is CardId => CARD_IDS.includes(id as CardId))), ...CARD_IDS.filter((id) => !parsed.order!.includes(id))]
+      : CARD_IDS;
+    const sizes = { ...LAYOUT_PADRAO.sizes };
+    for (const id of CARD_IDS) {
+      const size = parsed.sizes?.[id];
+      if (size) sizes[id] = { w: Math.max(1, Math.min(4, Number(size.w) || 1)), h: Math.max(1, Math.min(3, Number(size.h) || 1)) };
+    }
+    const headings = { ...LAYOUT_PADRAO.headings };
+    for (const key of ["movimento", "operacao"] as const) {
+      const h = parsed.headings?.[key];
+      if (h) headings[key] = {
+        label: typeof h.label === "string" ? h.label.slice(0, 60) : headings[key].label,
+        title: typeof h.title === "string" ? h.title.slice(0, 80) : headings[key].title,
+        labelSize: Math.max(8, Math.min(18, Number(h.labelSize) || 10)),
+        titleSize: Math.max(16, Math.min(40, Number(h.titleSize) || 23)),
+      };
+    }
+    return { order, sizes, headings };
+  } catch { return LAYOUT_PADRAO; }
+}
 
 function periodoInicial(): PeriodoDashboard {
   try {
@@ -125,29 +169,72 @@ function useParallax(ref: React.RefObject<HTMLDivElement | null>) {
   }, [ref]);
 }
 
-function Cartao({ card, disponivel, onClick }: { card: Card; disponivel: boolean; onClick: () => void }) {
+function Cartao({ card, disponivel, onClick, editando, layout, onResize, onDragStart, onDrop }: {
+  card: Card; disponivel: boolean; onClick: () => void; editando: boolean;
+  layout: CardLayout; onResize: (key: "w" | "h", delta: number) => void;
+  onDragStart: (id: CardId) => void; onDrop: (id: CardId) => void;
+}) {
   const Icon = card.Icon;
   return (
-    <button
-      type="button" className={`card-neon card-neon--${card.cor}`} onClick={onClick}
-      disabled={!disponivel} aria-haspopup="dialog"
-      aria-label={`Detalhar ${card.label}: ${card.valor}`}
+    <article
+      className={`card-neon card-neon--${card.cor} ${editando ? "card-neon--editing" : ""}`}
+      style={{ gridColumn: `span ${layout.w}`, gridRow: `span ${layout.h}` }}
+      draggable={editando}
+      onDragStart={(event) => { if (!editando) { event.preventDefault(); return; } onDragStart(card.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", card.id); }}
+      onDragOver={(event) => { if (editando) { event.preventDefault(); event.dataTransfer.dropEffect = "move"; } }}
+      onDrop={(event) => { if (editando) { event.preventDefault(); onDrop(card.id); } }}
+      onDragEnd={() => onDrop(card.id)}
+      data-dashboard-card={card.id}
     >
-      <span className="card-neon__top">
-        <span className="card-neon__icon"><Icon size={20} weight="duotone" /></span>
-        <ArrowUpRight className="card-neon__arrow" size={17} />
-      </span>
-      <span className="card-neon__label">{card.label}</span>
-      <span className="metric-value num-extruded">{card.valor}</span>
-      <span className="card-neon__bottom">
-        <span className="card-neon__sub">{card.sub}</span>
-        {card.variacao && <span className="card-neon__change">{card.variacao}</span>}
-        {card.atual && <span className="card-neon__live"><span /> Agora</span>}
-      </span>
-    </button>
+      <button type="button" className="card-neon__open" onClick={onClick} disabled={!disponivel || editando}
+        aria-haspopup="dialog" aria-label={`Detalhar ${card.label}: ${card.valor}`}>
+        <span className="card-neon__top">
+          <span className="card-neon__icon"><Icon size={22} weight="duotone" /></span>
+          <ArrowUpRight className="card-neon__arrow" size={18} />
+        </span>
+        <span className="card-neon__label">{card.label}</span>
+        <span className="metric-value num-extruded">{card.valor}</span>
+        <span className="card-neon__bottom">
+          <span className="card-neon__sub">{card.sub}</span>
+          {card.variacao && <span className="card-neon__change">{card.variacao}</span>}
+          {card.atual && <span className="card-neon__live"><span /> Agora</span>}
+        </span>
+      </button>
+      {editando && <div className="card-neon__resize" aria-label={`Redimensionar ${card.label}`}>
+        <span>Posição: arraste o cartão</span>
+        <div><button type="button" aria-label={`Diminuir largura de ${card.label}`} onClick={() => onResize("w", -1)} disabled={layout.w <= 1}>−</button>
+          <small>{layout.w} col.</small>
+          <button type="button" aria-label={`Aumentar largura de ${card.label}`} onClick={() => onResize("w", 1)} disabled={layout.w >= 4}>+</button>
+          <button type="button" aria-label={`Diminuir altura de ${card.label}`} onClick={() => onResize("h", -1)} disabled={layout.h <= 1}>−</button>
+          <small>{layout.h} alt.</small>
+          <button type="button" aria-label={`Aumentar altura de ${card.label}`} onClick={() => onResize("h", 1)} disabled={layout.h >= 3}>+</button>
+        </div>
+      </div>}
+    </article>
   );
 }
 
+function CabecalhoEditavel({ tipo, config, editando, onChange, meta }: {
+  tipo: "movimento" | "operacao"; config: HeadingLayout; editando: boolean;
+  onChange: (key: keyof HeadingLayout, value: string | number) => void; meta: ReactNode;
+}) {
+  return <div className="dash-section-heading" data-dashboard-heading={tipo}>
+    <div>
+      {editando ? <>
+        <input aria-label={`Legenda ${tipo}`} value={config.label} onChange={(e) => onChange("label", e.target.value)} className="dash-heading-input dash-heading-input--label" style={{ fontSize: config.labelSize }} />
+        <input aria-label={`Título ${tipo}`} value={config.title} onChange={(e) => onChange("title", e.target.value)} className="dash-heading-input dash-heading-input--title" style={{ fontSize: config.titleSize }} />
+        <div className="dash-heading-sizes">
+          <label>Legenda <input aria-label={`Tamanho da legenda ${tipo}`} type="range" min="8" max="18" value={config.labelSize} onChange={(e) => onChange("labelSize", Number(e.target.value))} /><output>{config.labelSize}px</output></label>
+          <label>Título <input aria-label={`Tamanho do título ${tipo}`} type="range" min="16" max="40" value={config.titleSize} onChange={(e) => onChange("titleSize", Number(e.target.value))} /><output>{config.titleSize}px</output></label>
+        </div>
+      </> : <>
+        <p className="dash-kicker" style={{ fontSize: config.labelSize }}>{config.label}</p>
+        <h3 style={{ fontSize: config.titleSize }}>{config.title}{tipo === "operacao" && <span className="dash-now"><span /> AGORA</span>}</h3>
+      </>}
+    </div>
+    <span className="dash-section-meta">{meta}</span>
+  </div>;
+}
 function Linha({ nome, valor }: { nome: string; valor: ReactNode }) {
   return <div className="dash-detail-row"><span>{nome}</span><strong>{valor}</strong></div>;
 }
@@ -289,7 +376,7 @@ function Grafico({ dias, periodo, loading }: { dias: DiaDashboard[]; periodo: Pe
   </section>;
 }
 
-export default function Dashboard() {
+export default function Dashboard({ editMode = false }: { editMode?: boolean }) {
   const produtos = usePub((s) => s.produtos);
   const [periodo, setPeriodo] = useState<PeriodoDashboard>(periodoInicial);
   const [dash, setDash] = useState<DashboardGeral | null>(null);
@@ -297,9 +384,14 @@ export default function Dashboard() {
   const [erro, setErro] = useState(false);
   const [tentativa, setTentativa] = useState(0);
   const [selecionado, setSelecionado] = useState<CardId | null>(null);
+  const [layout, setLayout] = useState<DashboardLayout>(lerLayout);
+  const [arrastado, setArrastado] = useState<CardId | null>(null);
   const stage = useRef<HTMLDivElement>(null);
   const dialogo = useRef<HTMLDialogElement>(null);
   useParallax(stage);
+
+  useEffect(() => { try { localStorage.setItem(STORAGE_LAYOUT, JSON.stringify(layout)); } catch { /* preferências continuam na sessão */ } }, [layout]);
+  useEffect(() => { if (!editMode) setArrastado(null); }, [editMode]);
 
   useEffect(() => {
     try { sessionStorage.setItem(STORAGE_PERIODO, periodo); } catch { /* filtro ainda funciona sem storage */ }
@@ -362,6 +454,15 @@ export default function Dashboard() {
     { id: "fila", label: "Itens em operação", valor: valor(qtdFila, (n) => numero(n, 0)), sub: agora ? `${agora.itens.preparo} em preparo · ${agora.itens.prontos} prontos` : carregando, Icon: CookingPot, cor: "laranja", atual: true },
   ];
   const todos = [...metricas, ...operacao];
+  const cardsOrdenados = layout.order.map((id) => todos.find((card) => card.id === id)).filter((card): card is Card => Boolean(card));
+  const redimensionar = (id: CardId, key: "w" | "h", delta: number) => setLayout((atual) => ({ ...atual, sizes: { ...atual.sizes, [id]: { ...atual.sizes[id], [key]: Math.max(1, Math.min(key === "w" ? 4 : 3, atual.sizes[id][key] + delta)) } } }));
+  const reordenar = (destino: CardId) => {
+    if (!arrastado || arrastado === destino) return;
+    setLayout((atual) => { const order = [...atual.order]; const from = order.indexOf(arrastado); const to = order.indexOf(destino); if (from < 0 || to < 0) return atual; order.splice(from, 1); order.splice(to, 0, arrastado); return { ...atual, order }; });
+    setArrastado(null);
+  };
+  const alterarCabecalho = (tipo: "movimento" | "operacao", key: keyof HeadingLayout, value: string | number) => setLayout((atual) => ({ ...atual, headings: { ...atual.headings, [tipo]: { ...atual.headings[tipo], [key]: value } } }));
+  const restaurarLayout = () => setLayout(LAYOUT_PADRAO);
   const atualSelecionado = todos.find((c) => c.id === selecionado);
   const top = dash?.topProdutos || [];
   const topVisiveis = useLimiteLocal(top, 5, periodo);
@@ -389,18 +490,18 @@ export default function Dashboard() {
       <button type="button" onClick={() => { setLoading(true); setErro(false); setTentativa((n) => n + 1); }}>Tentar novamente</button>
     </div>}
 
-    <section aria-label="Indicadores do período">
-      <div className="dash-section-heading"><div><p className="dash-kicker">01 / MOVIMENTO</p><h3>Visão do período</h3></div>
-        <span className="dash-section-meta">{dash ? intervalo(dash.periodo.from, dash.periodo.to) : "—"} <span>·</span> {dash?.periodo.timezone || "fuso da casa"}</span>
-      </div>
-      <div className="dashboard-grid">{metricas.map((card) => <Cartao key={card.id} card={card} disponivel={Boolean(dash)} onClick={() => setSelecionado(card.id)} />)}</div>
-    </section>
-
-    <section aria-label="Indicadores atuais">
-      <div className="dash-section-heading"><div><p className="dash-kicker">02 / OPERAÇÃO</p><h3>A casa agora <span className="dash-now"><span /> AGORA</span></h3></div>
-        <span className="dash-section-meta">{dash ? `Atualizado às ${horario(dash)} · a cada 30 s` : "Retrato atual"}</span>
-      </div>
-      <div className="dashboard-grid">{operacao.map((card) => <Cartao key={card.id} card={card} disponivel={Boolean(dash)} onClick={() => setSelecionado(card.id)} />)}</div>
+    {editMode && <div className="dashboard-edit-banner" role="status">
+      <span><strong>Modo de edição</strong> · arraste os cards para reorganizar, ajuste largura/altura e edite os títulos e legendas.</span>
+      <button type="button" onClick={restaurarLayout}>Restaurar padrão</button>
+    </div>}
+    <section aria-label="Indicadores do dashboard" className="dashboard-layout">
+      <CabecalhoEditavel tipo="movimento" config={layout.headings.movimento} editando={editMode} onChange={(key, value) => alterarCabecalho("movimento", key, value)}
+        meta={<>{dash ? intervalo(dash.periodo.from, dash.periodo.to) : "—"} <span>·</span> {dash?.periodo.timezone || "fuso da casa"}</>} />
+      <CabecalhoEditavel tipo="operacao" config={layout.headings.operacao} editando={editMode} onChange={(key, value) => alterarCabecalho("operacao", key, value)}
+        meta={dash ? `Atualizado às ${horario(dash)} · a cada 30 s` : "Retrato atual"} />
+      <div className="dashboard-grid">{cardsOrdenados.map((card) => <Cartao key={card.id} card={card} disponivel={Boolean(dash)} onClick={() => setSelecionado(card.id)}
+        editando={editMode} layout={layout.sizes[card.id]} onResize={(key, delta) => redimensionar(card.id, key, delta)}
+        onDragStart={setArrastado} onDrop={reordenar} />)}</div>
     </section>
 
     <div className="dashboard-bottom">

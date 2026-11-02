@@ -11,7 +11,7 @@ function escalaDock(distanciaPx: number, maxDist = 88): number {
  * Magnificação tipo macOS dock para uma lista vertical de itens.
  * Retorna refs + scales + handlers de mouse.
  */
-export function useDockMagnify(itemCount: number, reduceMotion: boolean | null) {
+export function useDockMagnify(itemCount: number, reduceMotion: boolean | null, axis: "x" | "y" = "y") {
   const navListRef = useRef<HTMLElement>(null);
   const itemRefs = useRef<(HTMLElement | null)[]>([]);
   const [scales, setScales] = useState<number[]>(() => Array.from({ length: itemCount }, () => 1));
@@ -24,16 +24,16 @@ export function useDockMagnify(itemCount: number, reduceMotion: boolean | null) 
   const onMouseMove = useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
       if (reduceMotion || !navListRef.current) return;
-      const y = event.clientY;
+      const pointer = axis === "x" ? event.clientX : event.clientY;
       const next = itemRefs.current.map((el) => {
         if (!el) return 1;
         const rect = el.getBoundingClientRect();
-        const centro = rect.top + rect.height / 2;
-        return escalaDock(Math.abs(y - centro));
+        const centro = axis === "x" ? rect.left + rect.width / 2 : rect.top + rect.height / 2;
+        return escalaDock(Math.abs(pointer - centro));
       });
       setScales(next);
     },
-    [reduceMotion],
+    [reduceMotion, axis],
   );
 
   const onMouseLeave = useCallback(() => {
@@ -52,12 +52,12 @@ export function useDockMagnify(itemCount: number, reduceMotion: boolean | null) 
       const scale = scales[index] ?? 1;
       return {
         transform: `scale(${scale})`,
-        transformOrigin: "left center" as const,
+        transformOrigin: axis === "x" ? "center bottom" as const : "left center" as const,
         transition: reduceMotion ? "none" : "transform 120ms cubic-bezier(0.2, 0, 0, 1)",
         zIndex: scale > 1.05 ? 2 : 1,
       };
     },
-    [scales, reduceMotion],
+    [scales, reduceMotion, axis],
   );
 
   return { navListRef, setItemRef, itemStyle, onMouseMove, onMouseLeave, scales };

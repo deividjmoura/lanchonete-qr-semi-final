@@ -185,3 +185,57 @@
   background: transparent !important;
   padding-inline: 6px;
 }
+
+
+/* Header sem faixa de fundo: os controles seguem a linguagem visual do dock. */
+.ops-topbar {
+  background: transparent !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+.ops-topbar .ops-toolbar-dock {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: visible;
+}
+.ops-toolbar-dock-item {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center bottom;
+  will-change: transform;
+}
+.ops-topbar .ops-toolbar-dock button {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--sidebar-muted, var(--text-muted));
+  transition: color 140ms ease, transform 120ms cubic-bezier(.2, 0, 0, 1);
+}
+.ops-topbar .ops-toolbar-dock button:hover,
+.ops-topbar .ops-toolbar-dock button:focus-visible,
+.ops-topbar .ops-toolbar-dock button[aria-pressed="true"] {
+  color: var(--brand);
+  background: transparent !important;
+  border-color: transparent !important;
+  outline-offset: 3px;
+}
+.ops-topbar .ops-toolbar-dock button svg {
+  width: 21px;
+  height: 21px;
+}
+
+
+@media (max-width: 420px) {
+  .ops-topbar .ops-toolbar-dock { gap: 1px; }
+  .ops-topbar .ops-toolbar-dock button {
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    padding: 0 !important;
+  }
+  .ops-topbar .ops-toolbar-dock button svg { width: 18px; height: 18px; }
+}
