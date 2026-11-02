@@ -444,7 +444,7 @@ describe('5. Mobile — Responsividade e Acessibilidade', () => {
     assert.match(mesaSrc, /h-13|h-11|h-10/, 'Alvos de toque em celular respeitam dimensões táteis (>= 40px)');
     // Modal possui role dialog e aria-modal
     const uiSrc = fs.readFileSync('src/components/ui.tsx', 'utf8');
-    assert.match(uiSrc, /role="dialog"/, 'Modais usam role="dialog"');
+    assert.match(uiSrc, /role=\{alert \? "alertdialog" : "dialog"\}/, 'Modais usam dialog ou alertdialog conforme o contexto');
     assert.match(uiSrc, /aria-modal="true"/, 'Modais declaram aria-modal="true"');
   });
 });
