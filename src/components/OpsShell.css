@@ -1,16 +1,16 @@
 /* Navegação desktop em formato dock: ícones fixos, sem expansão nem placas. */
 @media (min-width: 1024px) {
   .ops-sidebar {
-    width: var(--sidebar-collapsed, 72px);
+    width: var(--sidebar-collapsed, 72px) !important;
     overflow: visible;
     border-right: 0 !important;
     box-shadow: none;
-    transition: none;
+    transition: none !important;
   }
 
   .ops-sidebar:hover,
   .ops-sidebar:focus-within {
-    width: var(--sidebar-collapsed, 72px);
+    width: var(--sidebar-collapsed, 72px) !important;
   }
 
   .ops-sidebar > div:first-child {
@@ -123,4 +123,31 @@
 .ops-card__alerta {
   border-top: 0 !important;
   border-bottom: 0 !important;
+}
+
+/* O recorte decorativo do item ativo não deve competir com o tooltip. */
+@media (min-width: 1024px) {
+  .ops-nav-item[data-active="true"]::before,
+  .ops-nav-item[data-active="true"]::after {
+    display: none !important;
+  }
+
+  .ops-nav-item[data-active="true"]:hover::after,
+  .ops-nav-item[data-active="true"]:focus-visible::after {
+    display: block !important;
+    content: attr(data-label) !important;
+    position: absolute;
+    z-index: 100;
+    left: calc(100% + 12px);
+    top: 50%;
+    width: auto;
+    height: auto;
+    transform: translateY(-50%);
+    padding: 0;
+    background: transparent;
+    color: var(--text);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: none;
+  }
 }
