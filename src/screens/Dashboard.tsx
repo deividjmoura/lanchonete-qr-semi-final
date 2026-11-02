@@ -377,7 +377,7 @@ function Grafico({ dias, periodo, loading }: { dias: DiaDashboard[]; periodo: Pe
 function WidgetFrame({ id, layout, editando, onToggleVisibility, onResize, onDragStart, onDragEnd, onMoveWidget, children }: {
   id: "grafico" | "ranking"; layout: WidgetLayout; editando: boolean;
   onToggleVisibility: () => void; onResize: (w: number, h: number) => void;
-  onDragStart: (id: WidgetId) => void; onDragEnd: () => void; children: ReactNode;
+  onDragStart: (id: WidgetId) => void; onDragEnd: () => void; onMoveWidget: (id: WidgetId, x: number, y: number) => void; children: ReactNode;
 }) {
   const resizeStart = useRef<{ x: number; y: number; w: number; h: number; cellW: number; cellH: number } | null>(null);
   const iniciarResize = (event: React.PointerEvent<HTMLButtonElement>) => {
