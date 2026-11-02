@@ -597,12 +597,12 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
             onDragStart={(id) => setArrastado(id)} onDragEnd={() => setArrastado(null)} />)}
         {(editMode || layout.widgets.grafico.visible) && <WidgetFrame id="grafico" layout={layout.widgets.grafico} editando={editMode}
           onToggleVisibility={() => alternarVisibilidade("grafico")} onResize={(w, h) => redimensionar("grafico", w, h)}
-          onDragStart={(id) => setArrastado(id)} onDragEnd={() => setArrastado(null)} onMoveWidget={moverWidget}>
+          onDragStart={(id) => setArrastado(id)} onDragEnd={() => setArrastado(null)}>
           <Grafico dias={diasGrafico} periodo={periodo} loading={loading} />
         </WidgetFrame>}
         {(editMode || layout.widgets.ranking.visible) && <WidgetFrame id="ranking" layout={layout.widgets.ranking} editando={editMode}
           onToggleVisibility={() => alternarVisibilidade("ranking")} onResize={(w, h) => redimensionar("ranking", w, h)}
-          onDragStart={(id) => setArrastado(id)} onDragEnd={() => setArrastado(null)} onMoveWidget={moverWidget}>
+          onDragStart={(id) => setArrastado(id)} onDragEnd={() => setArrastado(null)}>
           <section aria-label="Mais pedidos" className="dash-panel dash-ranking">
             <div className="dash-panel__head"><div><p className="dash-kicker">DESTAQUES DO PERÍODO</p><h3>Mais pedidos</h3><p>Itens não cancelados por quantidade</p></div><span className="dash-panel__icon dash-panel__icon--lima"><Trophy size={19} weight="duotone" /></span></div>
             {!dash ? <p className="dash-ranking__empty">{carregando}</p> : !top.length ? <p className="dash-ranking__empty">Nenhum item pedido no período.</p> : <ul>
