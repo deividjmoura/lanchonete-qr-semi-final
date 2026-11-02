@@ -21,14 +21,14 @@
     estilos();
     return new Promise(resolve=>{
       const overlay=document.createElement('div');overlay.className='qr-confirm-overlay';
-      const dialog=document.createElement('section');dialog.className='qr-confirm-dialog';dialog.setAttribute('role','alertdialog');dialog.setAttribute('aria-modal','true');
+      const dialog=document.createElement('section');dialog.className='qr-confirm-dialog';dialog.setAttribute('role','alertdialog');dialog.setAttribute('aria-modal','true');dialog.setAttribute('aria-labelledby','qr-confirm-title');dialog.setAttribute('aria-describedby','qr-confirm-message');
       const head=document.createElement('div');head.className='qr-confirm-head';
       const icon=document.createElement('span');icon.className='qr-confirm-icon';icon.textContent=danger?'!':'?';
       const titleWrap=document.createElement('div');
       const eyebrow=document.createElement('p');eyebrow.className='qr-confirm-eyebrow';eyebrow.textContent='Confirmação necessária';
-      const h=document.createElement('h2');h.className='qr-confirm-title';h.textContent=title;
+      const h=document.createElement('h2');h.id='qr-confirm-title';h.className='qr-confirm-title';h.textContent=title;
       titleWrap.append(eyebrow,h);head.append(icon,titleWrap);
-      const body=document.createElement('p');body.className='qr-confirm-message';body.textContent=message;
+      const body=document.createElement('p');body.id='qr-confirm-message';body.className='qr-confirm-message';body.textContent=message;
       dialog.append(head,body);
       let input=null;
       if(inputLabel){const label=document.createElement('label');label.className='qr-confirm-message';label.textContent=inputLabel;input=document.createElement('input');input.className='qr-confirm-input';input.placeholder=placeholder;input.autocomplete='off';input.addEventListener('input',()=>input.setCustomValidity(''));label.append(input);dialog.append(label)}
