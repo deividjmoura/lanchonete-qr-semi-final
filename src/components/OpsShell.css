@@ -1,0 +1,112 @@
+/* Navegação desktop em formato dock: ícones fixos, sem expansão nem placas. */
+@media (min-width: 1024px) {
+  .ops-sidebar {
+    width: var(--sidebar-collapsed, 72px);
+    overflow: visible;
+    border-right: 0 !important;
+    box-shadow: none;
+    transition: none;
+  }
+
+  .ops-sidebar:hover,
+  .ops-sidebar:focus-within {
+    width: var(--sidebar-collapsed, 72px);
+  }
+
+  .ops-sidebar > div:first-child {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .ops-sidebar .ops-brand {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .ops-sidebar .ops-brand > .ops-sidebar-label {
+    display: none;
+  }
+
+  .ops-nav-list {
+    align-items: center;
+    gap: 8px;
+    padding: 12px 0;
+    overflow: visible;
+  }
+
+  .ops-nav-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    min-width: 52px;
+    height: 52px;
+    min-height: 52px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 16px;
+    background: transparent !important;
+    color: var(--sidebar-muted);
+    transform-origin: center center !important;
+    transition: color 140ms ease, transform 120ms cubic-bezier(.2, 0, 0, 1);
+  }
+
+  .ops-nav-item:hover,
+  .ops-nav-item:focus-visible,
+  .ops-nav-item[data-active="true"] {
+    margin: 0;
+    border: 0;
+    border-radius: 16px;
+    background: transparent !important;
+    color: var(--brand);
+  }
+
+  .ops-nav-item > .ops-sidebar-label {
+    display: none !important;
+  }
+
+  .ops-nav-item::after {
+    content: attr(data-label);
+    position: absolute;
+    z-index: 100;
+    left: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%) translateX(-3px);
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--text);
+    font: 600 13px/1.2 var(--font-sans);
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 120ms ease, transform 120ms ease, visibility 120ms;
+  }
+
+  .ops-nav-item:hover::after,
+  .ops-nav-item:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(-50%) translateX(0);
+  }
+
+  .ops-nav-item > svg {
+    flex: none;
+  }
+
+  .ops-topbar {
+    border-bottom: 0 !important;
+    box-shadow: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ops-nav-item,
+  .ops-nav-item::after {
+    transition: none !important;
+  }
+}
