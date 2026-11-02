@@ -37,17 +37,17 @@ test("provider React apresenta alerta modal contextual com cancelar e confirmar"
   assert.match(service, /confirmarAcao/);
 });
 
-test("páginas estáticas e PWA carregam o mesmo modal de confirmação", () => {
-  assert.match(ler("public/admin.html"), /src="\/js\/confirmacao\.js"/);
-  assert.match(ler("public/caixa.html"), /src="\/js\/confirmacao\.js"/);
-  assert.match(ler("public/garcom-pwa/index.html"), /src="\.\.\/js\/confirmacao\.js"/);
+test("páginas estáticas e PWA carregam o mesmo modal de confirmação offline", () => {
+  assert.match(ler("public/admin.html"), /src="\/garcom-pwa\/confirmacao\.js"/);
+  assert.match(ler("public/caixa.html"), /src="\/garcom-pwa\/confirmacao\.js"/);
+  assert.match(ler("public/garcom-pwa/index.html"), /src="\.\/confirmacao\.js"/);
   const sw = ler("public/garcom-pwa/sw.js");
-  assert.match(sw, /garcom-pwa-shell-v35/);
-  assert.match(sw, /\.\.\/js\/confirmacao\.js/);
-  assert.match(sw, /url\.pathname!==\x27\/js\/confirmacao\.js\x27/);
-  const helper = ler("public/js/confirmacao.js");
+  assert.match(sw, /garcom-pwa-shell-v36/);
+  assert.match(sw, /'\.\/confirmacao\.js'/);
+  assert.match(sw, /if\(!url\.pathname\.startsWith\('\x27\/garcom-pwa\/\x27\)\)return;/);
+  const helper = ler("public/garcom-pwa/confirmacao.js");
   assert.match(helper, /role','alertdialog'/);
   assert.match(helper, /aria-modal/);
   assert.match(helper, /solicitarTextoQR/);
-  cp.execFileSync(process.execPath, ["--check", "public/js/confirmacao.js"]);
+  cp.execFileSync(process.execPath, ["--check", "public/garcom-pwa/confirmacao.js"]);
 });
