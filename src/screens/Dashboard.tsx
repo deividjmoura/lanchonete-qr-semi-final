@@ -408,6 +408,51 @@ function Grafico({ dias, periodo, loading }: { dias: DiaDashboard[]; periodo: Pe
   </section>;
 }
 
+function WidgetFrame({ id, layout, editando, onToggleVisibility, onResize, onDragStart, children }: {
+  id: "grafico" | "ranking"; layout: WidgetLayout; editando: boolean;
+  onToggleVisibility: () => void; onResize: (w: number, h: number) => void;
+  onDragStart: (id: WidgetId) => void; children: ReactNode;
+}) {
+  const resizeStart = useRef<{ x: number; y: number; w: number; h: number; cellW: number; cellH: number } | null>(null);
+  const iniciarResize = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault(); event.stopPropagation();
+    const grid = event.currentTarget.closest(".dashboard-grid") as HTMLElement | null;
+    if (!grid) return;
+    const style = window.getComputedStyle(grid);
+    const gap = Number.parseFloat(style.columnGap) || 14;
+    const rowGap = Number.parseFloat(style.rowGap) || 14;
+    const cellW = (grid.clientWidth - gap * 11) / 12;
+    const cellH = Number.parseFloat(style.gridAutoRows) || 84;
+    resizeStart.current = { x: event.clientX, y: event.clientY, w: layout.w, h: layout.h, cellW: cellW + gap, cellH: cellH + rowGap };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const moverResize = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const start = resizeStart.current; if (!start) return;
+    event.preventDefault();
+    onResize(Math.max(1, Math.min(12 - layout.x, start.w + Math.round((event.clientX - start.x) / start.cellW))),
+      Math.max(1, Math.min(20, start.h + Math.round((event.clientY - start.y) / start.cellH))));
+  };
+  const finalizarResize = (event: React.PointerEvent<HTMLButtonElement>) => {
+    resizeStart.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+  return <div className={`dashboard-widget ${editando ? "dashboard-widget--editing" : ""} ${layout.visible ? "" : "dashboard-widget--hidden"}`}
+    style={{ gridColumn: `${layout.x + 1} / span ${layout.w}`, gridRow: `${layout.y + 1} / span ${layout.h}` }}
+    draggable={editando}
+    onDragStart={(event) => { if (!editando || (event.target as HTMLElement).closest(".dashboard-widget__resize, .dashboard-widget__visibility")) { event.preventDefault(); return; } onDragStart(id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", id); }}
+    data-dashboard-widget={id} data-visible={layout.visible ? "true" : "false"}>
+    {children}
+    {editando && <>
+      <button type="button" className="dashboard-widget__visibility" onClick={onToggleVisibility}
+        aria-label={layout.visible ? `Ocultar ${id === "grafico" ? "Evolução da semana" : "Mais pedidos"}` : `Exibir ${id === "grafico" ? "Evolução da semana" : "Mais pedidos"}`}
+        aria-pressed={layout.visible}>{layout.visible ? <Eye size={17} weight="bold" /> : <EyeSlash size={17} weight="bold" />}</button>
+      <button type="button" className="dashboard-widget__resize" aria-label={`Arraste para redimensionar ${id === "grafico" ? "Evolução da semana" : "Mais pedidos"}`}
+        onPointerDown={iniciarResize} onPointerMove={moverResize} onPointerUp={finalizarResize}
+        onPointerCancel={finalizarResize}><ArrowsOut size={15} weight="bold" /></button>
+    </>}
+  </div>;
+}
+
 export default function Dashboard({ editMode = false }: { editMode?: boolean }) {
   const produtos = usePub((s) => s.produtos);
   const [periodo, setPeriodo] = useState<PeriodoDashboard>(periodoInicial);
@@ -418,7 +463,7 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
   const [selecionado, setSelecionado] = useState<CardId | null>(null);
   const [layout, setLayout] = useState<DashboardLayout>(lerLayout);
   const [layoutSalvo, setLayoutSalvo] = useState(true);
-  const [arrastado, setArrastado] = useState<CardId | null>(null);
+  const [arrastado, setArrastado] = useState<WidgetId | null>(null);
   const stage = useRef<HTMLDivElement>(null);
   const dialogo = useRef<HTMLDialogElement>(null);
   useParallax(stage);
@@ -486,28 +531,42 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
     { id: "fila", label: "Itens em operação", valor: valor(qtdFila, (n) => numero(n, 0)), sub: agora ? `${agora.itens.preparo} em preparo · ${agora.itens.prontos} prontos` : carregando, Icon: CookingPot, cor: "laranja", atual: true },
   ];
   const todos = [...metricas, ...operacao];
-  const idsMovimento = new Set<CardId>(metricas.map((card) => card.id));
-  const ordenarGrupo = (grupo: Card[]) => layout.order.map((id) => grupo.find((card) => card.id === id)).filter((card): card is Card => Boolean(card));
-  const cardsMovimento = ordenarGrupo(metricas);
-  const cardsOperacao = ordenarGrupo(operacao);
-  const redimensionar = (id: CardId, w: number, h: number) => {
-    setLayoutSalvo(false);
-    setLayout((atual) => ({ ...atual, sizes: { ...atual.sizes, [id]: { ...atual.sizes[id], w, h } } }));
+  const redimensionar = (id: WidgetId, w: number, h: number) => {
+    setLayout((atual) => {
+      const atualWidget = atual.widgets[id];
+      const candidato = { ...atualWidget, w: Math.max(1, Math.min(12 - atualWidget.x, w)), h: Math.max(1, Math.min(20, h)) };
+      if (!canPlaceWidget(atual.widgets, id, candidato)) return atual;
+      setLayoutSalvo(false);
+      return { widgets: { ...atual.widgets, [id]: candidato } };
+    });
   };
-  const alternarVisibilidade = (id: CardId) => {
+  const alternarVisibilidade = (id: WidgetId) => {
     setLayoutSalvo(false);
-    setLayout((atual) => ({ ...atual, sizes: { ...atual.sizes, [id]: { ...atual.sizes[id], visible: !atual.sizes[id].visible } } }));
+    setLayout((atual) => ({ widgets: { ...atual.widgets, [id]: { ...atual.widgets[id], visible: !atual.widgets[id].visible } } }));
   };
-  const reordenar = (destino: CardId) => {
-    if (!arrastado) return;
-    if (arrastado === destino || idsMovimento.has(arrastado) !== idsMovimento.has(destino)) { setArrastado(null); return; }
-    setLayoutSalvo(false);
-    setLayout((atual) => { const order = [...atual.order]; const from = order.indexOf(arrastado); const to = order.indexOf(destino); if (from < 0 || to < 0) return atual; order.splice(from, 1); order.splice(to, 0, arrastado); return { ...atual, order }; });
+  const moverWidget = (id: WidgetId, x: number, y: number) => {
+    setLayout((atual) => {
+      const widget = atual.widgets[id];
+      const posicao = findAvailablePosition(atual.widgets, id, { ...widget, x, y });
+      setLayoutSalvo(false);
+      return { widgets: { ...atual.widgets, [id]: { ...widget, ...posicao } } };
+    });
+  };
+  const soltarWidget = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const id = (event.dataTransfer.getData("text/plain") || arrastado) as WidgetId | null;
+    if (!id || !WIDGET_IDS.includes(id)) { setArrastado(null); return; }
+    const grid = event.currentTarget;
+    const rect = grid.getBoundingClientRect();
+    const style = window.getComputedStyle(grid);
+    const gap = Number.parseFloat(style.columnGap) || 14;
+    const rowGap = Number.parseFloat(style.rowGap) || 14;
+    const cellW = (grid.clientWidth - gap * 11) / 12;
+    const cellH = Number.parseFloat(style.gridAutoRows) || 84;
+    const x = Math.max(0, Math.min(11, Math.floor((event.clientX - rect.left) / (cellW + gap))));
+    const y = Math.max(0, Math.floor((event.clientY - rect.top) / (cellH + rowGap)));
+    moverWidget(id, x, y);
     setArrastado(null);
-  };
-  const alterarCabecalho = (tipo: "movimento" | "operacao", key: keyof HeadingLayout, value: string | number) => {
-    setLayoutSalvo(false);
-    setLayout((atual) => ({ ...atual, headings: { ...atual.headings, [tipo]: { ...atual.headings[tipo], [key]: value } } }));
   };
   const salvarLayout = () => {
     try { localStorage.setItem(STORAGE_LAYOUT, JSON.stringify(layout)); setLayoutSalvo(true); }
@@ -516,7 +575,7 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
   const restaurarLayout = async () => {
     const confirmado = await confirmarAcao({
       titulo: "Restaurar o dashboard padrão?",
-      mensagem: "A organização, os tamanhos, a visibilidade dos cards e os títulos personalizados serão substituídos pelo layout original. Essa alteração também será salva neste navegador.",
+      mensagem: "A posição, o tamanho e a visibilidade de todos os cards e painéis serão substituídos pelo layout original. Essa alteração também será salva neste navegador.",
       confirmar: "Restaurar padrão",
       perigo: true,
     });
@@ -553,46 +612,43 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
     </div>}
 
     {editMode && <div className="dashboard-edit-banner" role="status">
-      <span><strong>Modo de edição</strong> · arraste os cards para mover; puxe a alça no canto inferior direito para redimensionar; use o olho para ocultar ou exibir.</span>
+      <span><strong>Modo de edição</strong> · arraste qualquer card ou painel para posicionar; puxe a alça no canto inferior direito para redimensionar; use o olho para ocultar ou exibir. O sistema impede sobreposição.</span>
       <div className="dashboard-edit-actions">
         <button type="button" onClick={salvarLayout} disabled={layoutSalvo} aria-label="Salvar layout do dashboard">{layoutSalvo ? "Layout salvo" : "Salvar layout"}</button>
         <button type="button" onClick={() => void restaurarLayout()}>Restaurar padrão</button>
       </div>
     </div>}
-    <section aria-label="Indicadores do dashboard" className="dashboard-layout">
-      <div className="dashboard-group dashboard-group--movement">
-        <CabecalhoEditavel tipo="movimento" config={layout.headings.movimento} editando={editMode} onChange={(key, value) => alterarCabecalho("movimento", key, value)}
-          meta={<>{dash ? intervalo(dash.periodo.from, dash.periodo.to) : "—"} <span>·</span> {dash?.periodo.timezone || "fuso da casa"}</>} />
-        <div className="dashboard-grid">{cardsMovimento.filter((card) => editMode || layout.sizes[card.id].visible).map((card) => <Cartao key={card.id} card={card} disponivel={Boolean(dash)} onClick={() => setSelecionado(card.id)}
-          editando={editMode} layout={layout.sizes[card.id]} onResize={(w, h) => redimensionar(card.id, w, h)}
-          onToggleVisibility={() => alternarVisibilidade(card.id)} onDragStart={setArrastado} onDrop={reordenar} />)}</div>
-      </div>
-      <div className="dashboard-group dashboard-group--operation">
-        <CabecalhoEditavel tipo="operacao" config={layout.headings.operacao} editando={editMode} onChange={(key, value) => alterarCabecalho("operacao", key, value)}
-          meta={dash ? `Atualizado às ${horario(dash)} · a cada 30 s` : "Retrato atual"} />
-        <div className="dashboard-grid">{cardsOperacao.filter((card) => editMode || layout.sizes[card.id].visible).map((card) => <Cartao key={card.id} card={card} disponivel={Boolean(dash)} onClick={() => setSelecionado(card.id)}
-          editando={editMode} layout={layout.sizes[card.id]} onResize={(w, h) => redimensionar(card.id, w, h)}
-          onToggleVisibility={() => alternarVisibilidade(card.id)} onDragStart={setArrastado} onDrop={reordenar} />)}</div>
+    <section aria-label="Dashboard personalizável" className="dashboard-layout">
+      <div className="dashboard-grid" onDragOver={(event) => { if (editMode) { event.preventDefault(); event.dataTransfer.dropEffect = "move"; } }}
+        onDrop={editMode ? soltarWidget : undefined}>
+        {todos.filter((card) => editMode || layout.widgets[card.id].visible)
+          .sort((a, b) => layout.widgets[a.id].y - layout.widgets[b.id].y || layout.widgets[a.id].x - layout.widgets[b.id].x)
+          .map((card) => <Cartao key={card.id} card={card} disponivel={Boolean(dash)} onClick={() => setSelecionado(card.id)}
+            editando={editMode} layout={layout.widgets[card.id]} onResize={(w, h) => redimensionar(card.id, w, h)}
+            onToggleVisibility={() => alternarVisibilidade(card.id)} onDragStart={setArrastado} />)}
+        {(editMode || layout.widgets.grafico.visible) && <WidgetFrame id="grafico" layout={layout.widgets.grafico} editando={editMode}
+          onToggleVisibility={() => alternarVisibilidade("grafico")} onResize={(w, h) => redimensionar("grafico", w, h)} onDragStart={setArrastado}>
+          <Grafico dias={diasGrafico} periodo={periodo} loading={loading} />
+        </WidgetFrame>}
+        {(editMode || layout.widgets.ranking.visible) && <WidgetFrame id="ranking" layout={layout.widgets.ranking} editando={editMode}
+          onToggleVisibility={() => alternarVisibilidade("ranking")} onResize={(w, h) => redimensionar("ranking", w, h)} onDragStart={setArrastado}>
+          <section aria-label="Mais pedidos" className="dash-panel dash-ranking">
+            <div className="dash-panel__head"><div><p className="dash-kicker">DESTAQUES DO PERÍODO</p><h3>Mais pedidos</h3><p>Itens não cancelados por quantidade</p></div><span className="dash-panel__icon dash-panel__icon--lima"><Trophy size={19} weight="duotone" /></span></div>
+            {!dash ? <p className="dash-ranking__empty">{carregando}</p> : !top.length ? <p className="dash-ranking__empty">Nenhum item pedido no período.</p> : <ul>
+              {topVisiveis.itens.map((item, index) => {
+                const produto = produtos.find((p) => p.id === item.id) || produtos.find((p) => p.nome === item.nome);
+                return <li key={item.id} className="dash-ranking__item">
+                  <span className="dash-ranking__number">{String(index + 1).padStart(2, "0")}</span>
+                  {produto?.foto ? <img className="dash-ranking__image" src={produto.foto} alt="" /> : <span className="dash-ranking__image dash-ranking__placeholder" aria-hidden="true">{item.nome.slice(0, 1).toUpperCase()}</span>}
+                  <div className="dash-ranking__content"><div><strong>{item.nome}</strong><span>{item.quantidade} un.</span></div><div className="dash-ranking__track"><span style={{ width: `${item.quantidade / maxTop * 100}%` }} /></div></div>
+                </li>;
+              })}
+            </ul>}
+            <ControlesPaginacao {...topVisiveis} className="dash-ranking__pagination" />
+          </section>
+        </WidgetFrame>}
       </div>
     </section>
-
-    <div className="dashboard-bottom">
-      <Grafico dias={diasGrafico} periodo={periodo} loading={loading} />
-      <section aria-label="Mais pedidos" className="dash-panel dash-ranking">
-        <div className="dash-panel__head"><div><p className="dash-kicker">DESTAQUES DO PERÍODO</p><h3>Mais pedidos</h3><p>Itens não cancelados por quantidade</p></div><span className="dash-panel__icon dash-panel__icon--lima"><Trophy size={19} weight="duotone" /></span></div>
-        {!dash ? <p className="dash-ranking__empty">{carregando}</p> : !top.length ? <p className="dash-ranking__empty">Nenhum item pedido no período.</p> : <ul>
-          {topVisiveis.itens.map((item, index) => {
-            const produto = produtos.find((p) => p.id === item.id) || produtos.find((p) => p.nome === item.nome);
-            return <li key={item.id} className="dash-ranking__item">
-              <span className="dash-ranking__number">{String(index + 1).padStart(2, "0")}</span>
-              {produto?.foto ? <img className="dash-ranking__image" src={produto.foto} alt="" /> : <span className="dash-ranking__image dash-ranking__placeholder" aria-hidden="true">{item.nome.slice(0, 1).toUpperCase()}</span>}
-              <div className="dash-ranking__content"><div><strong>{item.nome}</strong><span>{item.quantidade} un.</span></div><div className="dash-ranking__track"><span style={{ width: `${item.quantidade / maxTop * 100}%` }} /></div></div>
-            </li>;
-          })}
-        </ul>}
-        <ControlesPaginacao {...topVisiveis} className="dash-ranking__pagination" />
-      </section>
-    </div>
     <p className="dashboard-footnote"><Sparkle size={15} /> Valores do período usam a data de fechamento. Indicadores marcados “agora” são independentes do filtro.</p>
 
     <dialog ref={dialogo} className="dash-dialog" aria-labelledby="dashboard-dialog-title" onClose={() => setSelecionado(null)} onClick={(e) => { if (e.target === e.currentTarget) e.currentTarget.close(); }}>
