@@ -185,7 +185,7 @@ async function salvarProd(id) {
 }
 
 async function esgotarProd(id) {
-  if (!confirm('Marcar produto como esgotado (estoque 0 e indisponível)?')) return;
+  if (!await window.confirmarQR('Marcar produto como esgotado?', 'O estoque será definido como zero e o produto ficará indisponível para novos pedidos.', { confirmText: 'Marcar esgotado', danger: true })) return;
   const r = await fetch('/api/admin/produtos/' + id, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ controlaEstoque: true, estoque: 0, disponivel: false }),
@@ -221,7 +221,7 @@ async function addAdd(produtoId) {
 }
 
 async function delAdd(id) {
-  if (!confirm('Remover este adicional?')) return;
+  if (!await window.confirmarQR('Remover adicional?', 'Este adicional será removido do produto e deixará de aparecer para novos pedidos.', { confirmText: 'Remover', danger: true })) return;
   const r = await fetch('/api/admin/adicionais/' + id, { method: 'DELETE' });
   if (!r.ok) { const data = await r.json(); return toast(data.error || 'Erro'); }
   toast('Adicional removido');
@@ -242,7 +242,7 @@ async function salvarRems(produtoId) {
 }
 
 async function excluirProd(id) {
-  if (!confirm('Excluir este produto permanentemente? Só funciona se ele nunca tiver sido pedido. Prefira Pausar se já vendeu.')) return;
+  if (!await window.confirmarQR('Excluir produto permanentemente?', 'A exclusão só funciona se o produto nunca tiver sido pedido. Se já vendeu, prefira Pausar para preservar o histórico.', { confirmText: 'Excluir produto', danger: true })) return;
   const r = await fetch('/api/admin/produtos/' + id, { method: 'DELETE' });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) return toast(data.error || 'Erro ao excluir');
