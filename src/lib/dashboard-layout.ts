@@ -35,7 +35,9 @@ export function findAvailablePosition(
   const x = Math.max(0, Math.min(columns - w, Math.round(desired.x)));
   const y = Math.max(0, Math.round(desired.y));
   const candidates: DashboardRect[] = [];
-  for (let dy = 0; dy <= maxRows; dy += 1) {
+  const bottomMost = Object.values(widgets).reduce((bottom, rect) => Math.max(bottom, rect.y + rect.h), 0);
+  const searchLimit = Math.max(maxRows, bottomMost + h + 1);
+  for (let dy = 0; dy <= searchLimit; dy += 1) {
     const row = y + dy;
     const xs = Array.from({ length: columns - w + 1 }, (_, i) => i)
       .sort((a, b) => Math.abs(a - x) - Math.abs(b - x));
@@ -48,5 +50,5 @@ export function findAvailablePosition(
       if (canPlaceWidget(widgets, id, candidate, columns)) return candidate;
     }
   }
-  return { x: 0, y: y + maxRows + 1, w, h };
+  return { x: 0, y: Math.max(y, bottomMost) + h + 1, w, h };
 }
