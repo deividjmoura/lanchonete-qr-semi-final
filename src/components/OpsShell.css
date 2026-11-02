@@ -151,3 +151,37 @@
     pointer-events: none;
   }
 }
+
+
+/* Acabamento minimalista solicitado: a navegação reserva espaço, mas não pinta
+   uma faixa sólida; os ícones ficam diretamente sobre o fundo da aplicação. */
+@media (min-width: 1024px) {
+  .ops-sidebar {
+    background: transparent !important;
+  }
+
+  .ops-nav-item {
+    width: 54px;
+    min-width: 54px;
+    height: 54px;
+    min-height: 54px;
+  }
+}
+
+/* Remove os contornos decorativos ainda visíveis na fila e no dashboard.
+   As bordas dos cartões de conteúdo e dos controles funcionais permanecem. */
+.ops-stage,
+.dashboard-stage {
+  border: 0 !important;
+}
+
+.ops-pill,
+.ops-sessao__contagem {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.ops-sessao__contagem {
+  background: transparent !important;
+  padding-inline: 6px;
+}
