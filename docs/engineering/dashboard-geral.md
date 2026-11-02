@@ -61,3 +61,17 @@ ela informa que está mostrando a última leitura bem-sucedida.
 **descartável** e `DATABASE_URL=... npm run test:e2e` cobrem reconciliação,
 períodos, fuso, permissões, contrato legado, teclado, layout, troca rápida de
 período, falhas de rede, parallax global e `prefers-reduced-motion`.
+
+
+## Editor visual e composição livre
+
+O editor do painel usa uma única grade de 12 colunas para os 12 indicadores, o gráfico de evolução e o ranking de produtos. Cada elemento mantém coordenadas, largura, altura e visibilidade próprias no armazenamento local do navegador. A posição é definida por arraste; largura e altura são ajustadas pela alça no canto inferior direito.
+
+- O motor de layout valida limites e colisões antes de aceitar um redimensionamento.
+- Ao mover um elemento para uma área ocupada, o editor procura a posição livre mais próxima, sem sobrepor outro elemento.
+- O layout anterior (qradmin-dashboard-layout-v1) é migrado para coordenadas de grade, preservando a ordem e a visibilidade dos indicadores; a nova estrutura é salva em qradmin-dashboard-layout-v2.
+- Gráfico e ranking participam da mesma edição e têm controles próprios de visibilidade e tamanho.
+- Em telas menores, os elementos são apresentados em fluxo vertical/compacto sem sobrescrever as coordenadas persistidas no desktop.
+- Restaurar padrão substitui e salva a composição local original.
+
+A personalização permanece local ao navegador/dispositivo, como no editor anterior; não é sincronizada entre contas ou dispositivos nesta versão.
