@@ -43,6 +43,12 @@ const {
   removerProduto,
 } = require('./db/admin');
 const {
+  ErroImportCardapio,
+  lerCsvCardapio,
+  importarCardapio,
+  modeloCsv: MODELO_CSV_CARDAPIO,
+} = require('./db/cardapio-import');
+const {
   listSessoesAbertas,
   fecharSessao,
   registrarPagamento,
@@ -104,6 +110,8 @@ const { cancelarItem, liberarAceite } = require('./db/itens-operacoes');
 
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
+/* Importação de cardápio: 2 MB é folgado para ~2000 linhas em CSV. */
+const MAX_IMPORT_CARDAPIO_BYTES = Number(process.env.CARDAPIO_CSV_MAX_BYTES || 2 * 1024 * 1024);
 const MAX_BODY_BYTES = Number(process.env.MAX_BODY_BYTES || 128 * 1024);
 
 function clientIp(req) {
@@ -1123,6 +1131,57 @@ const server = http.createServer(async (req, res) => {
     }
     if (p === '/api/admin/cardapio' && req.method === 'GET') {
       return json(res, 200, await getCardapioAdmin());
+    }
+
+    /* Modelo do CSV de importação (mesmo texto usado nos testes e na doc). */
+    if (p === '/api/admin/cardapio/modelo.csv' && req.method === 'GET') {
+      res.writeHead(200, {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="cardapio_completo.csv"',
+        'Cache-Control': 'no-store',
+      });
+      // BOM para o Excel abrir os acentos corretamente em pt-BR.
+      return res.end('\uFEFF' + MODELO_CSV_CARDAPIO);
+    }
+
+    /* Etapa 1 da importação: só lê e valida. Nada é gravado aqui. */
+    if (p === '/api/admin/cardapio/importar/previa' && req.method === 'POST') {
+      try {
+        const b = await body(req, { maxBytes: MAX_IMPORT_CARDAPIO_BYTES });
+        return json(res, 200, lerCsvCardapio(b.csv ?? b.texto ?? ''));
+      } catch (e) {
+        if (e instanceof ErroImportCardapio) {
+          return json(res, e.status, { error: e.message, ...e.detalhes });
+        }
+        if (e && e.status === 413) return json(res, 413, { error: 'Arquivo maior que 2 MB.' });
+        throw e;
+      }
+    }
+
+    /* Etapa 2: substitui (ou atualiza) o cardápio em uma única transação. */
+    if (p === '/api/admin/cardapio/importar' && req.method === 'POST') {
+      try {
+        const staff = await getStaffDaRequisicao(req);
+        const b = await body(req, { maxBytes: MAX_IMPORT_CARDAPIO_BYTES });
+        if (b.confirmar !== true) {
+          return json(res, 400, { error: 'Confirme a importação antes de substituir o cardápio.' });
+        }
+        const out = await importarCardapio({
+          texto: b.csv ?? b.texto ?? '',
+          modo: b.modo === 'atualizar' ? 'atualizar' : 'substituir',
+          ator: staff,
+          requestId: reqId,
+        });
+        invalidarCardapio();
+        broadcast('update', { type: 'cardapio_importado' });
+        return json(res, 200, out);
+      } catch (e) {
+        if (e instanceof ErroImportCardapio) {
+          return json(res, e.status, { error: e.message, ...e.detalhes });
+        }
+        if (e && e.status === 413) return json(res, 413, { error: 'Arquivo maior que 2 MB.' });
+        throw e;
+      }
     }
 
     if (p === '/api/admin/upload-foto' && req.method === 'POST') {

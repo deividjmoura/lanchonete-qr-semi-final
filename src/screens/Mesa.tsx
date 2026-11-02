@@ -867,7 +867,6 @@ export default function Mesa({ token }: { token: string }) {
                       <h3 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-text">
                         {g.nome}
                       </h3>
-                      <span className="mesa-categoria__contagem">{g.itens.length}</span>
                     </div>
                     {usaTrilho(g.itens.length) ? (
                       <TrilhoCardapio rotulo={`${g.nome}: deslize para ver todos os itens`} chave={g.itens.length}>

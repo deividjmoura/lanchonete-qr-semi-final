@@ -511,20 +511,6 @@ body[data-mesa-praia] .mesa-praia-topo::after {
   color: color-mix(in srgb, var(--praia-mar-fundo) 88%, var(--text));
 }
 
-.mesa-categoria__contagem {
-  margin-left: auto;
-  flex: none;
-  padding: 0.1rem 0.55rem;
-  border: 1px solid color-mix(in srgb, var(--praia-mar-fundo) 26%, var(--line));
-  border-radius: var(--radius-pill);
-  background-color: color-mix(in srgb, var(--praia-mar) 12%, var(--surface-raised));
-  color: color-mix(in srgb, var(--praia-mar) 72%, var(--text));
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
 /* --------------------------------------------------------------------------
    8. Trilho horizontal: no máximo DUAS linhas por categoria
    -------------------------------------------------------------------------- */
