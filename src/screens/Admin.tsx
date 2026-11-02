@@ -90,6 +90,7 @@ export default function Admin({ secao }: { secao?: string }) {
 
   const abaAtual = ABAS.find((a) => a.id === secao) || ABAS[0];
   const aba = abaAtual.id;
+  useEffect(() => { if (aba !== "painel") setDashboardEditMode(false); }, [aba]);
 
   // Não renderiza ferramentas administrativas durante o redirecionamento de outro papel.
   if (!auth || auth.role !== "admin") return null;
