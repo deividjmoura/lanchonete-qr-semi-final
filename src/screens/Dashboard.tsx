@@ -198,7 +198,8 @@ function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggl
     draggable={editando}
     onDragStart={(event) => { if (!editando || (event.target as HTMLElement).closest(".card-neon__resize-handle, .card-neon__visibility")) { event.preventDefault(); return; } onDragStart(card.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", card.id); }} onDragEnd={onDragEnd}
     data-dashboard-card={card.id} data-visible={layout.visible ? "true" : "false"}>
-    <button type="button" className="card-neon__open" onClick={onClick} disabled={!disponivel || editando || !layout.visible}
+    <button type="button" className="card-neon__open" onClick={() => { if (!editando) onClick(); }}
+      disabled={!disponivel || (!editando && !layout.visible)}
       aria-haspopup="dialog" aria-label={`Detalhar ${card.label}: ${card.valor}`}>
       <span className="card-neon__top"><span className="card-neon__icon"><Icon size={22} weight="duotone" /></span><ArrowUpRight className="card-neon__arrow" size={18} /></span>
       <span className="card-neon__label">{card.label}</span><span className="metric-value num-extruded">{card.valor}</span>
