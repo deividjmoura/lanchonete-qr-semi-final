@@ -41,6 +41,7 @@ import type { ItemPedido, Pedido, Produto, TipoProduto } from "../lib/types";
 import { CATEGORIAS } from "../lib/data";
 import { usePub } from "../store/usePub";
 import { BRL } from "../lib/utils";
+import { confirmarAcao } from "../lib/confirmacao";
 import { cn } from "../utils/cn";
 
 const ABAS = [
@@ -879,7 +880,8 @@ function Garcons() {
   };
 
   const remover = async (g: GarcomRow) => {
-    if (!confirm(`Remover "${g.nome}" definitivamente da lista? O link será invalidado e não poderá ser reativado. O histórico será preservado.`)) return;
+    const confirmado = await confirmarAcao({ titulo: "Remover garçom?", mensagem: `O garçom "${g.nome}" será removido da lista. O link de acesso será invalidado e não poderá ser reativado. O histórico será preservado.`, confirmar: "Remover garçom", perigo: true });
+    if (!confirmado) return;
     setBusy(true);
     setErro(null);
     setMensagem(null);
