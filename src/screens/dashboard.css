@@ -237,3 +237,13 @@
 @media (max-width: 1050px) {
   .dashboard-grid .card-neon { grid-column: span 1 !important; grid-row: span 1 !important; }
 }
+
+
+@media (max-width: 360px) {
+  .dashboard-stage .week-bar-value {
+    padding: 2px 1px;
+    font-size: 9px;
+    line-height: 1;
+  }
+  .dash-chart__bars { gap: 4px; }
+}
