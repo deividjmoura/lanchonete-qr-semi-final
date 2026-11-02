@@ -66,10 +66,13 @@ reaplicar migrations em produção não desfaz renomeações.
 
 - `mesas.praca_id` referencia a praça com `ON DELETE SET NULL`.
 - **Sem praça** é `praca_id NULL` — nunca uma praça fictícia.
-- O admin cria e renomeia praças em **Mesas → Praças**, sem deploy
-  (`POST /api/admin/pracas`, `PATCH /api/admin/pracas/:id`). Não há exclusão:
-  a praça pode estar citada no histórico; para “desativá-la”, devolva as mesas
-  para Sem praça.
+- O admin cria, renomeia e **exclui** praças em **Mesas → Praças**, sem deploy
+  (`POST /api/admin/pracas`, `PATCH /api/admin/pracas/:id`,
+  `DELETE /api/admin/pracas/:id`). Excluir é seguro: `ON DELETE SET NULL`
+  devolve as mesas da praça para Sem praça, nenhuma mesa é apagada e o nome sai
+  apenas da lista de classificação — o histórico continua legível. A exclusão
+  pede confirmação na UI, informa quantas mesas voltarão para Sem praça e gera
+  o evento `praca_removida` na auditoria, na mesma transação.
 - `PUT /api/admin/mesas/:numero/praca` grava a classificação e registra o evento
   `mesa_praca_definida` na auditoria, na mesma transação.
 
@@ -126,4 +129,6 @@ Coberturas: `tests/mesas-panorama.test.cjs` (faixas, fluxo, SQL),
 `tests/panorama-ui.test.cjs` (filtros/resumos da UI),
 `tests/pracas-mesas-admin.test.cjs` (praças, rotas, CSRF, modal) e
 `tests/postgres-mesas-panorama.test.cjs` (70 mesas, consumo × vendas, tempos
-incompletos, persistência da praça e auditoria).
+incompletos, persistência da praça e auditoria) e
+`tests/postgres-pracas-remocao.test.cjs` (exclusão de praça: mesas em Sem
+praça, 404 e auditoria).

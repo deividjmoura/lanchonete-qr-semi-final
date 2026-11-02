@@ -47,6 +47,7 @@ const suites = [
   'postgres-financial-concurrency.test.cjs',
   'postgres-password-change.test.cjs',
   'postgres-mesas-panorama.test.cjs',
+  'postgres-pracas-remocao.test.cjs',
   'postgres-garcom-servico.test.cjs',
   'postgres-producao-parcial.test.cjs',
 ];

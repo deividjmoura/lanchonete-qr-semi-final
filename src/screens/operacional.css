@@ -249,69 +249,36 @@
   text-transform: uppercase;
 }
 
-/* ------------------------------------------------- rolagem horizontal */
+/* --------------------------------------------------- grade das comandas */
 
-.fila-rolagem {
-  overflow-x: auto;
-  overflow-y: hidden;
-  overscroll-behavior-x: contain;
+.fila-grade {
   padding: 12px 2px 6px;
-  scroll-snap-type: x proximity;
-  scrollbar-width: thin;
-  scrollbar-color: var(--stage-ink-faint) var(--stage-inset-deep);
 }
 
-/* Barra discreta: só aparece quando há conteúdo para rolar. */
-.fila-rolagem::-webkit-scrollbar {
-  height: 8px;
-}
-.fila-rolagem::-webkit-scrollbar-track {
-  background: transparent;
-}
-.fila-rolagem::-webkit-scrollbar-thumb {
-  border-radius: var(--radius-pill)
-  background: var(--stage-scroll-thumb);
-}
-.fila-rolagem:hover::-webkit-scrollbar-thumb {
-  background: var(--stage-scroll-thumb-hover);
-}
-
-/* 2 linhas no celular/tablet e 3 em telas largas: a fila cresce para o lado,
-   não para baixo, então a tela nunca "vira um corredor". */
-.fila-trilho {
+/* Leitura em linha, como a operação lê a fila: a primeira comanda fica no
+   canto superior esquerdo, as próximas seguem para a DIREITA e só quando a
+   linha acaba a fila desce para a próxima. Nada de preencher a coluna de cima
+   para baixo (auto-flow em coluna) nem de rolagem lateral escondendo o resto
+   da fila: a grade usa a largura da tela e a página cresce para baixo. */
+.fila-grade__cartoes {
   display: grid;
-  grid-auto-flow: column;
-  grid-template-rows: repeat(2, minmax(0, auto));
-  grid-auto-columns: 288px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 272px), 1fr));
   gap: 12px;
   align-items: start;
 }
 
 @media (min-width: 768px) {
-  .fila-trilho {
-    grid-auto-columns: 320px;
+  .fila-grade__cartoes {
+    grid-template-columns: repeat(auto-fill, minmax(288px, 1fr));
     gap: 14px;
   }
 }
 
 @media (min-width: 1280px) {
-  .fila-trilho {
-    grid-template-rows: repeat(3, minmax(0, auto));
-    grid-auto-columns: 336px;
-  }
-}
-
-.fila-dica {
-  margin: 0 4px;
-  color: var(--stage-ink-subtle);
-  font-family: var(--font-mono), monospace;
-  font-size: 10px;
-  letter-spacing: 0.06em;
-}
-
-@media (min-width: 900px) {
-  .fila-dica {
-    display: none;
+  .fila-grade__cartoes {
+    /* Telas grandes: cartões um pouco mais largos em vez de muitas colunas
+       estreitas — o item precisa caber em uma linha. */
+    grid-template-columns: repeat(auto-fill, minmax(312px, 1fr));
   }
 }
 
@@ -323,7 +290,6 @@
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
-  scroll-snap-align: start;
   border: 1px solid color-mix(in srgb, var(--ops-accent) 30%, var(--stage-line-base));
   border-radius: 16px;
   background:
@@ -625,8 +591,7 @@
   .ops-sessao__corpo {
     padding: 0 8px 10px;
   }
-  .fila-trilho {
-    grid-auto-columns: 252px;
+  .fila-grade__cartoes {
     gap: 10px;
   }
   .ops-card__topo,

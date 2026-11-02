@@ -136,6 +136,60 @@ async function atualizarPraca(id, { nome, ordem } = {}) {
   }
 }
 
+/**
+ * Exclui uma praça de vez.
+ *
+ * A FK de `mesas.praca_id` é `ON DELETE SET NULL`: as mesas da praça voltam
+ * para “Sem praça” (praca_id NULL) e nenhuma mesa é apagada. O histórico de
+ * contas continua legível porque o nome da praça sai apenas da lista de
+ * classificação — nada é reescrito retroativamente.
+ */
+async function removerPraca(idBruto, ator = null, requestId = null) {
+  const pracaId = numeroInteiroPositivo(idBruto, 'praça');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows: pracas } = await client.query(
+      'SELECT id, nome FROM mesa_pracas WHERE id = $1 FOR UPDATE',
+      [pracaId]
+    );
+    if (!pracas[0]) throw new ErroAdmin(404, 'Praça não encontrada');
+    const nome = pracas[0].nome;
+    // As mesas afetadas são lidas antes: é o que a UI confirma com o operador.
+    const { rows: mesas } = await client.query(
+      'SELECT numero FROM mesas WHERE praca_id = $1 ORDER BY numero',
+      [pracaId]
+    );
+    await client.query('DELETE FROM mesa_pracas WHERE id = $1', [pracaId]);
+    if (ator && Number.isInteger(ator.id)) {
+      const { registrarEvento } = require('./auditoria');
+      await registrarEvento(client, {
+        atorTipo: 'staff',
+        atorId: ator.id,
+        atorNome: ator.nome || null,
+        acao: 'praca_removida',
+        alvoTipo: 'praca',
+        alvoId: String(pracaId),
+        requestId,
+        // Contexto mínimo e sem aninhamento: a auditoria guarda só primitivos
+        // (política de db/auditoria.js — nunca listas/objetos).
+        contexto: {
+          nome,
+          mesasAfetadas: mesas.length,
+          numeros: mesas.map((m) => Number(m.numero)).join(',') || null,
+        },
+      });
+    }
+    await client.query('COMMIT');
+    return { id: pracaId, nome, mesasAfetadas: mesas.map((m) => Number(m.numero)) };
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 /** Atribui (ou remove, com pracaId null) a praça de uma mesa habilitada. */
 async function definirPracaMesa(numeroBruto, pracaBruto, ator = null, requestId = null) {
   const numero = Number(numeroBruto);
@@ -729,6 +783,7 @@ module.exports = {
   listarPracas,
   criarPraca,
   atualizarPraca,
+  removerPraca,
   definirPracaMesa,
   quantidadeMesasAtivas,
   ativarMesas,

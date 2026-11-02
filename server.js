@@ -26,6 +26,7 @@ const {
   listarPracas,
   criarPraca,
   atualizarPraca,
+  removerPraca,
   definirPracaMesa,
   quantidadeMesasAtivas,
   ativarMesas,
@@ -1028,6 +1029,19 @@ const server = http.createServer(async (req, res) => {
       try {
         const out = await atualizarPraca(Number(m[1]), (await body(req)) || {});
         broadcast('update', { type: 'praca_atualizada', pracaId: out.id });
+        return json(res, 200, out);
+      } catch (e) {
+        if (e instanceof ErroAdmin) return json(res, e.status, { error: e.message });
+        throw e;
+      }
+    }
+    /* Exclusão de praça: as mesas vinculadas voltam para “Sem praça”
+       (ON DELETE SET NULL). Nenhuma mesa é removida — só o vínculo. */
+    if ((m = p.match(/^\/api\/admin\/pracas\/(\d+)$/)) && req.method === 'DELETE') {
+      try {
+        const staff = await getStaffDaRequisicao(req);
+        const out = await removerPraca(Number(m[1]), staff, reqId);
+        broadcast('update', { type: 'praca_removida', pracaId: out.id });
         return json(res, 200, out);
       } catch (e) {
         if (e instanceof ErroAdmin) return json(res, e.status, { error: e.message });

@@ -235,14 +235,12 @@ export function FilaProducao({
                 </p>
               ) : (
                 <>
-                  <p className="fila-dica">Arraste para o lado para ver as próximas comandas.</p>
                   <div
-                    className="fila-rolagem"
+                    className="fila-grade"
                     role="region"
                     aria-label={`Comandas ${etapa.id === "na_fila" ? "na fila" : "em produção"}`}
-                    tabIndex={0}
                   >
-                    <div className="fila-trilho">
+                    <div className="fila-grade__cartoes">
                       <AnimatePresence mode="sync" initial={false}>
                         {lista.map((card) => (
                           <CardComandaItem
