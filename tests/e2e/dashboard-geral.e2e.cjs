@@ -177,7 +177,7 @@ async function main() {
       const card = document.querySelector('[data-dashboard-card="faturamento"]');
       return card?.style.gridColumn === 'span 2' && card?.style.gridRow === 'span 2';
     });
-    assert.equal(await page.locator('.dashboard-group--movement').evaluate((el) => el.compareDocumentPosition(document.querySelector('.dashboard-group--operation')) & Node.DOCUMENT_POSITION_FOLLOWING ? true : false), true, '01 Movimento permanece acima de 02 Operação');
+    assert.equal(await page.locator('.dashboard-group--movement').evaluate((el) => el.getBoundingClientRect().bottom < document.querySelector('.dashboard-group--operation').getBoundingClientRect().top), true, '01 Movimento permanece acima de 02 Operação');
     await page.getByRole('button', { name: 'Ocultar Faturamento' }).click();
     assert.equal(await cardFaturamento.getAttribute('data-visible'), 'false');
     await page.getByRole('button', { name: 'Salvar layout do dashboard' }).click();
