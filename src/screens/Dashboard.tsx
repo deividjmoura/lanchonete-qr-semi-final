@@ -123,13 +123,6 @@ function variacao(atual: number | null, anterior: number | null) {
   if (Math.abs(valor) < 0.05) return "Sem variação";
   return `${valor > 0 ? "+" : ""}${numero(valor)}% vs. período anterior`;
 }
-function horario(dash: DashboardGeral) {
-  try {
-    return new Intl.DateTimeFormat("pt-BR", {
-      timeZone: dash.periodo.timezone, hour: "2-digit", minute: "2-digit",
-    }).format(new Date(dash.atualizadoEm));
-  } catch { return "—"; }
-}
 const formaNome = (forma: string) => ({
   dinheiro: "Dinheiro", pix: "Pix", cartao_debito: "Cartão de débito",
   cartao_credito: "Cartão de crédito", outro: "Outra forma",
