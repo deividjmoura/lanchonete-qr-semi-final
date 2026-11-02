@@ -322,17 +322,21 @@ async function main() {
               const mainBefore = await page.locator(".ops-main").boundingBox();
               assert.ok(mainBefore.x >= 71, `${screen}/${scheme}: main x=${mainBefore.x}`);
 
-              // Hover expande como overlay para ~248px sem reflow de .ops-main
-              await page.locator(".ops-sidebar").hover();
+              // O dock permanece compacto no hover; só o rótulo do ícone aparece.
+              const navItem = page.locator(".ops-nav-item").first();
+              await navItem.hover();
               await page.waitForTimeout(80);
               const sidebarHover = await page.locator(".ops-sidebar").boundingBox();
               const mainAfter = await page.locator(".ops-main").boundingBox();
-              assert.equal(Math.round(sidebarHover.width), 248, "Sidebar expandida = 248px");
+              assert.equal(Math.round(sidebarHover.width), 72, "Dock permanece em 72px no hover");
               assert.equal(
                 Math.round(mainAfter.x),
                 Math.round(mainBefore.x),
-                "Expansão da sidebar não causa reflow no conteúdo",
+                "Hover do dock não causa reflow no conteúdo",
               );
+              const tooltip = await navItem.evaluate((el) => getComputedStyle(el, "::after"));
+              assert.equal(tooltip.opacity, "1", "Rótulo aparece como tooltip no hover");
+              assert.equal(tooltip.backgroundColor, "rgba(0, 0, 0, 0)", "Tooltip sem fundo");
               await page.mouse.move(700, 200);
             }
             await inViewport(page, page.getByRole("button", { name: /Ativar tema/ }));
@@ -463,7 +467,7 @@ async function main() {
       true,
     );
     await offline.close();
-    console.log(`✓ ${layouts} layouts, temas, sidebar 72->248px, cards expansíveis e shell offline validados.`);
+    console.log(`✓ ${layouts} layouts, temas, dock fixo em 72px com tooltip, cards expansíveis e shell offline validados.`);
   } finally {
     await browser.close();
   }
