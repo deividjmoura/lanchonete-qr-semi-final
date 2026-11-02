@@ -338,9 +338,9 @@ function setConnection(state){
 async function reviewConflict(localId){
  const order=await offlineStore.get(localId);if(!order)return;
  if(order.errorCode==='RESPONSAVEL_EXISTENTE'){
-  if(!confirm((order.lastError||'Mesa com outro responsável')+'\nEnviar exatamente este pedido como colaborador?'))return;
+  if(!await window.confirmarQR('Enviar pedido como colaborador?', (order.lastError||'Mesa com outro responsável')+'\nO pedido original será enviado exatamente como está, sem alterar itens ou chave.', { confirmText: 'Enviar pedido' }))return;
   order.collaborationApproved=true;
- }else if(!confirm('Reenviar o pedido original sem alterar produtos ou chave? Isso não cria uma cópia se o servidor já tiver confirmado.'))return;
+ }else if(!await window.confirmarQR('Reenviar pedido original?', 'O pedido será reenviado sem alterar produtos ou chave. Se o servidor já o confirmou, a chave de idempotência impede criar uma cópia.', { confirmText: 'Reenviar pedido' }))return;
  order.status='offline';order.nextAttemptAt=0;await putOrder(order);await renderOrders();await syncOne(localId,true);
 }
 function exportPending(){
@@ -1060,7 +1060,7 @@ $('#requestNotificationPermission').addEventListener('click',async()=>{
  try{
    const result=await Notification.requestPermission();
    if(result==='denied'){
-     const confirmed=window.confirm('Você recusou as notificações e não receberá avisos por este navegador. Deseja confirmar essa escolha? Você poderá configurar novamente depois nas configurações do site e neste painel.');
+     const confirmed=await window.confirmarQR('Confirmar recusa das notificações?', 'Você não receberá avisos por este navegador. A permissão poderá ser alterada novamente nas configurações do site e neste painel.', { confirmText: 'Confirmar escolha' });
      if(confirmed){localStorage.setItem('garcom-notifications-declined-'+waiterToken,'1');$('#consentStatus').textContent='Escolha salva. Você não receberá notificações enquanto a permissão estiver negada. Para reativar, altere a permissão nas configurações do navegador.';decidiu=true}
      else $('#consentStatus').textContent='A permissão foi negada pelo navegador. Para tentar novamente, altere-a nas configurações do site.';
    }else if(result==='granted'){
