@@ -110,7 +110,7 @@
 .dash-chart__scroll { max-width: 100%; overflow-x: auto; padding-bottom: 4px; scrollbar-color: var(--stage-scroll-thumb-hover) var(--stage-scroll-track); scrollbar-width: thin; }
 .dash-chart__bars { display: flex; align-items: flex-end; gap: clamp(6px, 1vw, 12px); height: 200px; }
 .dash-chart__column { display: flex; flex: 1 1 0; flex-direction: column; align-items: center; min-width: 0; height: 100%; gap: 9px; }
-.dash-chart__track { position: relative; width: 100%; flex: 1; min-height: 0; overflow: hidden; border: 1px solid var(--stage-line-5); border-radius: 8px; background: var(--stage-inset-deep); }
+.dash-chart__track { position: relative; width: 100%; flex: 1; min-height: 84px; overflow: hidden; border: 1px solid var(--stage-line-5); border-radius: 8px; background: var(--stage-inset-deep); }
 .dash-chart__fill { position: absolute; inset: 0; transform-origin: bottom; border-radius: 6px; background: linear-gradient(180deg, var(--stage-violet), var(--stage-violet-deep) 72%, var(--stage-violet-deep)); }
 .dashboard-stage .week-bar-value { z-index: 1; background: var(--stage-ink); color: var(--stage-inset-deep); }
 .dash-chart__day { color: var(--stage-ink-muted-2); font-size: 10px; font-weight: 700; line-height: 1; }
