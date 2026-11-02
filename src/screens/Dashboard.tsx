@@ -10,7 +10,9 @@ import type { DashboardGeral, DiaDashboard, PeriodoDashboard } from "../lib/dash
 import { BRL } from "../lib/utils";
 import { usePub } from "../store/usePub";
 import { confirmarAcao } from "../lib/confirmacao";
-import { canPlaceWidget, findAvailablePosition, type DashboardRect } from "../lib/dashboard-layout";
+import {
+  canPlaceWidget, DASHBOARD_COLUMNS, findAvailablePosition, placeWidget, resizeWidget, type DashboardRect,
+} from "../lib/dashboard-layout";
 import "./dashboard.css";
 
 const STORAGE_PERIODO = "qradmin-dashboard-periodo";
@@ -170,29 +172,43 @@ function useParallax(ref: React.RefObject<HTMLDivElement | null>) {
   }, [ref]);
 }
 
+type GradeMetrics = { rect: DOMRect; passoX: number; passoY: number; colunas: number };
+
+/** Medidas reais da grade. Arraste e redimensionamento usam esta mesma régua,
+ * então um pixel do ponteiro sempre corresponde à mesma célula nos dois gestos. */
+function medirGrade(grid: HTMLElement): GradeMetrics {
+  const style = window.getComputedStyle(grid);
+  const columns = DASHBOARD_COLUMNS;
+  const gap = Number.parseFloat(style.columnGap) || 14;
+  const rowGap = Number.parseFloat(style.rowGap) || 14;
+  const cellW = (grid.clientWidth - gap * (columns - 1)) / columns;
+  const cellH = Number.parseFloat(style.gridAutoRows) || 84;
+  return { rect: grid.getBoundingClientRect(), passoX: cellW + gap, passoY: cellH + rowGap, colunas: columns };
+}
+
 function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggleVisibility, onDragStart, onDragEnd }: {
   card: Card; disponivel: boolean; onClick: () => void; editando: boolean; layout: WidgetLayout;
   onResize: (w: number, h: number) => void; onToggleVisibility: () => void;
-  onDragStart: (id: WidgetId) => void; onDragEnd: () => void;
+  onDragStart: (id: WidgetId, event: React.DragEvent<HTMLElement>) => void; onDragEnd: () => void;
 }) {
   const Icon = card.Icon;
-  const resizeStart = useRef<{ x: number; y: number; w: number; h: number; cellW: number; cellH: number } | null>(null);
+  const resizeStart = useRef<{ x: number; y: number; w: number; h: number; passoX: number; passoY: number; colunas: number } | null>(null);
   const iniciarResize = (event: React.PointerEvent<HTMLButtonElement>) => {
     event.preventDefault(); event.stopPropagation();
     const grid = event.currentTarget.closest(".dashboard-grid") as HTMLElement | null;
     const card = event.currentTarget.closest(".card-neon") as HTMLElement | null;
     if (!grid || !card) return;
-    const style = window.getComputedStyle(grid); const gap = Number.parseFloat(style.columnGap) || 14;
-    const rowGap = Number.parseFloat(style.rowGap) || 14; const columns = 12;
-    const cellW = (grid.clientWidth - gap * (columns - 1)) / columns;
-    const cellH = Number.parseFloat(style.gridAutoRows) || 84;
-    resizeStart.current = { x: event.clientX, y: event.clientY, w: layout.w, h: layout.h, cellW: cellW + gap, cellH: cellH + rowGap };
+    const grade = medirGrade(grid);
+    resizeStart.current = {
+      x: event.clientX, y: event.clientY, w: layout.w, h: layout.h,
+      passoX: grade.passoX, passoY: grade.passoY, colunas: grade.colunas,
+    };
     card.setPointerCapture(event.pointerId);
   };
   const moverResize = (event: React.PointerEvent<HTMLElement>) => {
     const start = resizeStart.current; if (!start) return; event.preventDefault();
-    const nextW = Math.max(1, Math.min(12 - layout.x, start.w + Math.round((event.clientX - start.x) / start.cellW)));
-    const nextH = Math.max(1, Math.min(100, start.h + Math.round((event.clientY - start.y) / start.cellH)));
+    const nextW = Math.max(1, Math.min(start.colunas - layout.x, start.w + Math.round((event.clientX - start.x) / start.passoX)));
+    const nextH = Math.max(1, Math.min(100, start.h + Math.round((event.clientY - start.y) / start.passoY)));
     onResize(nextW, nextH);
   };
   const finalizarResize = (event: React.PointerEvent<HTMLElement>) => {
@@ -204,9 +220,9 @@ function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggl
     draggable={editando}
     onDragStart={(event) => {
       if (!editando || (event.target as HTMLElement).closest(".card-neon__resize-handle, .card-neon__visibility")) { event.preventDefault(); return; }
-      onDragStart(card.id);
       event.dataTransfer.effectAllowed = "move";
       event.dataTransfer.setData("text/plain", card.id);
+      onDragStart(card.id, event);
     }}
     onDragEnd={onDragEnd}
     onPointerMove={moverResize} onPointerUp={finalizarResize} onPointerCancel={finalizarResize}
@@ -375,26 +391,25 @@ function Grafico({ dias, periodo, loading }: { dias: DiaDashboard[]; periodo: Pe
 function WidgetFrame({ id, layout, editando, onToggleVisibility, onResize, onDragStart, onDragEnd, children }: {
   id: "grafico" | "ranking"; layout: WidgetLayout; editando: boolean;
   onToggleVisibility: () => void; onResize: (w: number, h: number) => void;
-  onDragStart: (id: WidgetId) => void; onDragEnd: () => void; children: ReactNode;
+  onDragStart: (id: WidgetId, event: React.DragEvent<HTMLElement>) => void; onDragEnd: () => void; children: ReactNode;
 }) {
-  const resizeStart = useRef<{ x: number; y: number; w: number; h: number; cellW: number; cellH: number } | null>(null);
+  const resizeStart = useRef<{ x: number; y: number; w: number; h: number; passoX: number; passoY: number; colunas: number } | null>(null);
   const iniciarResize = (event: React.PointerEvent<HTMLButtonElement>) => {
     event.preventDefault(); event.stopPropagation();
     const grid = event.currentTarget.closest(".dashboard-grid") as HTMLElement | null;
     if (!grid) return;
-    const style = window.getComputedStyle(grid);
-    const gap = Number.parseFloat(style.columnGap) || 14;
-    const rowGap = Number.parseFloat(style.rowGap) || 14;
-    const cellW = (grid.clientWidth - gap * 11) / 12;
-    const cellH = Number.parseFloat(style.gridAutoRows) || 84;
-    resizeStart.current = { x: event.clientX, y: event.clientY, w: layout.w, h: layout.h, cellW: cellW + gap, cellH: cellH + rowGap };
+    const grade = medirGrade(grid);
+    resizeStart.current = {
+      x: event.clientX, y: event.clientY, w: layout.w, h: layout.h,
+      passoX: grade.passoX, passoY: grade.passoY, colunas: grade.colunas,
+    };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   const moverResize = (event: React.PointerEvent<HTMLButtonElement>) => {
     const start = resizeStart.current; if (!start) return;
     event.preventDefault();
-    onResize(Math.max(1, Math.min(12 - layout.x, start.w + Math.round((event.clientX - start.x) / start.cellW))),
-      Math.max(1, Math.min(100, start.h + Math.round((event.clientY - start.y) / start.cellH))));
+    onResize(Math.max(1, Math.min(start.colunas - layout.x, start.w + Math.round((event.clientX - start.x) / start.passoX))),
+      Math.max(1, Math.min(100, start.h + Math.round((event.clientY - start.y) / start.passoY))));
   };
   const finalizarResize = (event: React.PointerEvent<HTMLButtonElement>) => {
     resizeStart.current = null;
@@ -403,7 +418,12 @@ function WidgetFrame({ id, layout, editando, onToggleVisibility, onResize, onDra
   return <div className={`dashboard-widget ${editando ? "dashboard-widget--editing" : ""} ${layout.visible ? "" : "dashboard-widget--hidden"}`}
     style={{ gridColumn: `${layout.x + 1} / span ${layout.w}`, gridRow: `${layout.y + 1} / span ${layout.h}`, order: layout.y * 12 + layout.x }}
     draggable={editando}
-    onDragStart={(event) => { if (!editando || (event.target as HTMLElement).closest(".dashboard-widget__resize, .dashboard-widget__visibility")) { event.preventDefault(); return; } onDragStart(id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", id); }} onDragEnd={onDragEnd}
+    onDragStart={(event) => {
+      if (!editando || (event.target as HTMLElement).closest(".dashboard-widget__resize, .dashboard-widget__visibility")) { event.preventDefault(); return; }
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", id);
+      onDragStart(id, event);
+    }} onDragEnd={onDragEnd}
     data-dashboard-widget={id} data-visible={layout.visible ? "true" : "false"}>
     {children}
     {editando && <>
@@ -428,6 +448,8 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
   const [layout, setLayout] = useState<DashboardLayout>(lerLayout);
   const [layoutSalvo, setLayoutSalvo] = useState(true);
   const [arrastado, setArrastado] = useState<WidgetId | null>(null);
+  const [previa, setPrevia] = useState<DashboardRect | null>(null);
+  const arraste = useRef<{ id: WidgetId | null; offsetX: number; offsetY: number }>({ id: null, offsetX: 0, offsetY: 0 });
   const stage = useRef<HTMLDivElement>(null);
   const dialogo = useRef<HTMLDialogElement>(null);
   useParallax(stage);
@@ -440,7 +462,12 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
     } catch { /* a composição segue ativa mesmo sem persistência */ }
   }, []);
 
-  useEffect(() => { if (!editMode) setArrastado(null); }, [editMode]);
+  useEffect(() => {
+    if (editMode) return;
+    setArrastado(null);
+    setPrevia(null);
+    arraste.current = { id: null, offsetX: 0, offsetY: 0 };
+  }, [editMode]);
 
   useEffect(() => {
     try { sessionStorage.setItem(STORAGE_PERIODO, periodo); } catch { /* filtro ainda funciona sem storage */ }
@@ -503,13 +530,60 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
     { id: "fila", label: "Itens em operação", valor: valor(qtdFila, (n) => numero(n, 0)), sub: agora ? `${agora.itens.preparo} em preparo · ${agora.itens.prontos} prontos` : carregando, Icon: CookingPot, cor: "laranja", atual: true },
   ];
   const todos = [...metricas, ...operacao];
+  const iniciarArraste = (id: WidgetId, event: React.DragEvent<HTMLElement>) => {
+    const grid = event.currentTarget.closest(".dashboard-grid") as HTMLElement | null;
+    const widget = layout.widgets[id];
+    if (!grid || !widget) { arraste.current = { id, offsetX: 0, offsetY: 0 }; setArrastado(id); return; }
+    const grade = medirGrade(grid);
+    // Onde o ponteiro agarrou o widget, medido em células: assim o card continua
+    // sob o cursor em vez de saltar com o canto superior esquerdo no mouse.
+    arraste.current = {
+      id,
+      offsetX: Math.max(0, Math.min(widget.w - 1, Math.floor((event.clientX - grade.rect.left) / grade.passoX) - widget.x)),
+      offsetY: Math.max(0, Math.min(widget.h - 1, Math.floor((event.clientY - grade.rect.top) / grade.passoY) - widget.y)),
+    };
+    setArrastado(id);
+    setPrevia(null);
+  };
+  const finalizarArraste = () => {
+    arraste.current = { id: null, offsetX: 0, offsetY: 0 };
+    setArrastado(null);
+    setPrevia(null);
+  };
+  /** Célula superior esquerda que o widget deve assumir para ficar sob o ponteiro. */
+  const destinoDoPonteiro = (event: React.DragEvent<HTMLElement>, id: WidgetId) => {
+    const grid = event.currentTarget as HTMLElement | null;
+    const widget = layout.widgets[id];
+    if (!grid || !widget) return null;
+    const grade = medirGrade(grid);
+    const celulaX = Math.floor((event.clientX - grade.rect.left) / grade.passoX);
+    const celulaY = Math.floor((event.clientY - grade.rect.top) / grade.passoY);
+    return {
+      x: Math.max(0, Math.min(grade.colunas - widget.w, celulaX - arraste.current.offsetX)),
+      y: Math.max(0, celulaY - arraste.current.offsetY),
+      w: widget.w, h: widget.h,
+    };
+  };
+  const prevendoDestino = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!editMode) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    const id = arraste.current.id;
+    if (!id) return;
+    const alvo = destinoDoPonteiro(event, id);
+    if (!alvo) return;
+    setPrevia((atual) => (atual && atual.x === alvo.x && atual.y === alvo.y &&
+      atual.w === alvo.w && atual.h === alvo.h ? atual : alvo));
+  };
   const redimensionar = (id: WidgetId, w: number, h: number) => {
     setLayoutSalvo(false);
     setLayout((atual) => {
       const atualWidget = atual.widgets[id];
-      const candidato = { ...atualWidget, w: Math.max(1, Math.min(12 - atualWidget.x, w)), h: Math.max(1, Math.min(100, h)) };
-      if (!canPlaceWidget(atual.widgets, id, candidato)) return atual;
-      return { widgets: { ...atual.widgets, [id]: candidato } };
+      const candidato = { ...atualWidget, w: Math.max(1, Math.min(DASHBOARD_COLUMNS - atualWidget.x, w)), h: Math.max(1, Math.min(100, h)) };
+      if (canPlaceWidget(atual.widgets, id, candidato)) return { widgets: { ...atual.widgets, [id]: candidato } };
+      // O tamanho pedido é respeitado: quem estiver na área nova cede o lugar
+      // para a vaga livre mais próxima, sem sobreposição.
+      return { widgets: resizeWidget(atual.widgets, id, { w: candidato.w, h: candidato.h }) };
     });
   };
   const alternarVisibilidade = (id: WidgetId) => {
@@ -520,29 +594,19 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
     setLayoutSalvo(false);
     setLayout((atual) => {
       const widget = atual.widgets[id];
-      const desejada = { ...widget, x, y };
-      const { [id]: _origem, ...outrosWidgets } = atual.widgets;
-      const posicao = canPlaceWidget(outrosWidgets, id, desejada)
-        ? desejada
-        : findAvailablePosition(outrosWidgets, id, desejada);
-      return { widgets: { ...atual.widgets, [id]: { ...widget, ...posicao } } };
+      if (!widget) return atual;
+      // O destino do ponteiro é sempre o destino final; quem já ocupa a área
+      // escolhida é que se desloca.
+      return { widgets: placeWidget(atual.widgets, id, { x, y, w: widget.w, h: widget.h }) };
     });
   };
   const soltarWidget = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    const id = (event.dataTransfer.getData("text/plain") || arrastado) as WidgetId | null;
-    if (!id || !WIDGET_IDS.includes(id)) { setArrastado(null); return; }
-    const grid = event.currentTarget;
-    const rect = grid.getBoundingClientRect();
-    const style = window.getComputedStyle(grid);
-    const gap = Number.parseFloat(style.columnGap) || 14;
-    const rowGap = Number.parseFloat(style.rowGap) || 14;
-    const cellW = (grid.clientWidth - gap * 11) / 12;
-    const cellH = Number.parseFloat(style.gridAutoRows) || 84;
-    const x = Math.max(0, Math.min(11, Math.floor((event.clientX - rect.left) / (cellW + gap))));
-    const y = Math.max(0, Math.floor((event.clientY - rect.top) / (cellH + rowGap)));
-    moverWidget(id, x, y);
-    setArrastado(null);
+    const id = (event.dataTransfer.getData("text/plain") || arraste.current.id || arrastado) as WidgetId | null;
+    const alvo = id && WIDGET_IDS.includes(id) ? destinoDoPonteiro(event, id) : null;
+    if (!id || !alvo) { finalizarArraste(); return; }
+    moverWidget(id, alvo.x, alvo.y);
+    finalizarArraste();
   };
   const salvarLayout = () => {
     try { localStorage.setItem(STORAGE_LAYOUT, JSON.stringify(layout)); setLayoutSalvo(true); }
@@ -595,22 +659,22 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
       </div>
     </div>}
     <section aria-label="Dashboard personalizável" className="dashboard-layout">
-      <div className="dashboard-grid" onDragOver={(event) => { if (editMode) { event.preventDefault(); event.dataTransfer.dropEffect = "move"; } }}
+      <div className="dashboard-grid" onDragOver={prevendoDestino}
         onDrop={editMode ? soltarWidget : undefined}>
         {todos.filter((card) => editMode || layout.widgets[card.id].visible)
           .sort((a, b) => layout.widgets[a.id].y - layout.widgets[b.id].y || layout.widgets[a.id].x - layout.widgets[b.id].x)
           .map((card) => <Cartao key={card.id} card={card} disponivel={Boolean(dash)} onClick={() => setSelecionado(card.id)}
             editando={editMode} layout={layout.widgets[card.id]} onResize={(w, h) => redimensionar(card.id, w, h)}
             onToggleVisibility={() => alternarVisibilidade(card.id)}
-            onDragStart={(id) => setArrastado(id)} onDragEnd={() => setArrastado(null)} />)}
+            onDragStart={iniciarArraste} onDragEnd={finalizarArraste} />)}
         {(editMode || layout.widgets.grafico.visible) && <WidgetFrame id="grafico" layout={layout.widgets.grafico} editando={editMode}
           onToggleVisibility={() => alternarVisibilidade("grafico")} onResize={(w, h) => redimensionar("grafico", w, h)}
-          onDragStart={(id) => setArrastado(id)} onDragEnd={() => setArrastado(null)}>
+          onDragStart={iniciarArraste} onDragEnd={finalizarArraste}>
           <Grafico dias={diasGrafico} periodo={periodo} loading={loading} />
         </WidgetFrame>}
         {(editMode || layout.widgets.ranking.visible) && <WidgetFrame id="ranking" layout={layout.widgets.ranking} editando={editMode}
           onToggleVisibility={() => alternarVisibilidade("ranking")} onResize={(w, h) => redimensionar("ranking", w, h)}
-          onDragStart={(id) => setArrastado(id)} onDragEnd={() => setArrastado(null)}>
+          onDragStart={iniciarArraste} onDragEnd={finalizarArraste}>
           <section aria-label="Mais pedidos" className="dash-panel dash-ranking">
             <div className="dash-panel__head"><div><p className="dash-kicker">DESTAQUES DO PERÍODO</p><h3>Mais pedidos</h3><p>Itens não cancelados por quantidade</p></div><span className="dash-panel__icon dash-panel__icon--lima"><Trophy size={19} weight="duotone" /></span></div>
             {!dash ? <p className="dash-ranking__empty">{carregando}</p> : !top.length ? <p className="dash-ranking__empty">Nenhum item pedido no período.</p> : <ul>
@@ -626,6 +690,8 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
             <ControlesPaginacao {...topVisiveis} className="dash-ranking__pagination" />
           </section>
         </WidgetFrame>}
+        {editMode && previa && <div className="dashboard-grid__preview" aria-hidden="true" data-dashboard-drop-preview=""
+          style={{ gridColumn: `${previa.x + 1} / span ${previa.w}`, gridRow: `${previa.y + 1} / span ${previa.h}` }} />}
       </div>
     </section>
     <p className="dashboard-footnote"><Sparkle size={15} /> Valores do período usam a data de fechamento. Indicadores marcados “agora” são independentes do filtro.</p>

@@ -436,3 +436,21 @@
 .card-neon--editing:active { cursor: grabbing; }
 .card-neon--editing .card-neon__open { cursor: grab; }
 .card-neon--editing:active .card-neon__open { cursor: grabbing; }
+
+
+/* Prévia do encaixe durante o arraste: mostra na grade a célula exata onde o
+   widget será solto — inclusive quando outro widget precisa ceder o lugar. */
+.dashboard-grid__preview {
+  position: relative;
+  z-index: 6;
+  border: 2px dashed color-mix(in srgb, var(--stage-violet) 90%, transparent);
+  border-radius: 17px;
+  background: color-mix(in srgb, var(--stage-violet) 16%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--stage-violet) 24%, transparent), 0 12px 30px var(--stage-shadow-2);
+  pointer-events: none;
+}
+@media (max-width: 1050px) {
+  /* No layout empilhado as posições salvas não são aplicadas, então a prévia
+     não corresponde ao encaixe e fica oculta. */
+  .dashboard-grid__preview { display: none; }
+}
