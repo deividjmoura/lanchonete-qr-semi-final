@@ -16,10 +16,10 @@ test("sidebar desktop permanece como dock de ícones e não expande no hover", (
 
 test("nomes aparecem como tooltip sem fundo ou placa no hover/foco", () => {
   assert.match(css, /content:\s*attr\(data-label\)/);
-  assert.match(css, /transform:\s*scale\(1\.6\)/);
+  assert.match(css, /\.ops-nav-item:hover::after,[\s\S]*?\.ops-nav-item:focus-visible::after/);
   assert.match(css, /background:\s*transparent/);
   assert.match(css, /box-shadow:\s*none/);
-  assert.match(css, /transform:\s*scale\(1\.6\)/);
+  assert.match(css, /\.ops-nav-item:hover,[\s\S]*?background:\s*transparent\s*!important/);
 });
 
 test("divisórias internas decorativas são removidas sem apagar contornos dos cartões e controles", () => {
