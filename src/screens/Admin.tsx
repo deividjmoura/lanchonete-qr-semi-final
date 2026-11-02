@@ -2234,12 +2234,13 @@ function Funcoes() {
       reportarErro("Informe a data limite.");
       return;
     }
-    if (
-      !confirm(
-        `Apagar DEFINITIVAMENTE contas fechadas antes de ${purgeBefore}? Não dá para desfazer.`,
-      )
-    )
-      return;
+    const confirmado = await confirmarAcao({
+      titulo: "Apagar histórico definitivamente?",
+      mensagem: `Serão removidas as contas fechadas antes de ${purgeBefore}, incluindo os registros históricos vinculados. Mesas abertas e pedidos em andamento não entram nesta operação. Esta exclusão não pode ser desfeita.`,
+      confirmar: "Apagar histórico",
+      perigo: true,
+    });
+    if (!confirmado) return;
     setBusy(true);
     try {
       const out = await api.purgeHistorico({ before: purgeBefore, dryRun: false, confirm: true });
