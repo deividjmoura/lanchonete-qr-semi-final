@@ -248,3 +248,12 @@
     z-index: 5 !important;
   }
 }
+
+
+@media (prefers-reduced-motion: reduce) {
+  .ops-nav-item:hover,
+  .ops-nav-item:focus-visible {
+    transform: none !important;
+    transition: none !important;
+  }
+}
