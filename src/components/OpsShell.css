@@ -226,3 +226,16 @@
   width: 21px;
   height: 21px;
 }
+
+
+@media (max-width: 420px) {
+  .ops-topbar .ops-toolbar-dock { gap: 1px; }
+  .ops-topbar .ops-toolbar-dock button {
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    padding: 0 !important;
+  }
+  .ops-topbar .ops-toolbar-dock button svg { width: 18px; height: 18px; }
+}
