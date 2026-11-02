@@ -21,7 +21,10 @@ test("cards podem ser reordenados e redimensionados em largura e altura", () => 
   assert.match(dashboard, /draggable=\{editando\}/);
   assert.match(dashboard, /onDragStart/);
   assert.match(dashboard, /onDrop/);
-  assert.match(dashboard, /onResize=\{\(key, delta\) => redimensionar/);
+  assert.match(dashboard, /onPointerDown=\{iniciarResize\}/);
+  assert.match(dashboard, /onPointerMove=\{moverResize\}/);
+  assert.match(dashboard, /card-neon__resize-handle/);
+  assert.doesNotMatch(dashboard, /Diminuir largura|Aumentar largura/);
   assert.match(dashboard, /gridColumn:\s*\`span \$\{layout\.w\}\`/);
   assert.match(dashboard, /gridRow:\s*\`span \$\{layout\.h\}\`/);
   assert.match(dashboardCss, /grid-auto-rows:\s*minmax/);
@@ -35,6 +38,11 @@ test("ordem, dimensões, títulos e legendas são persistidos no navegador", () 
   assert.match(dashboard, /Tamanho da legenda/);
   assert.match(dashboard, /Tamanho do título/);
   assert.match(dashboard, /Restaurar padrão/);
+  assert.match(dashboard, /Salvar layout/);
+  assert.match(dashboard, /onToggleVisibility/);
+  assert.match(dashboard, /visible:\s*true/);
+  assert.match(dashboard, /dashboard-group--movement/);
+  assert.match(dashboard, /dashboard-group--operation/);
 });
 
 test("header e controles ficam transparentes e o dock horizontal usa magnificação", () => {
