@@ -167,16 +167,30 @@ async function main() {
     await page.getByRole('button', { name: 'Editar dashboard' }).click();
     const cardFaturamento = page.locator('[data-dashboard-card="faturamento"]');
     const alca = page.getByRole('button', { name: 'Arraste para redimensionar Faturamento' });
-    // Posicionamento explícito por setas, sem drag-and-drop dependente de ponteiro.
-    await page.getByRole('button', { name: 'Mover Faturamento para direita' }).click();
-    await page.waitForFunction(() => {
-      const card = document.querySelector('[data-dashboard-card="faturamento"]');
-      return card && (card.style.gridColumn !== '1 / span 3' || Number(card.style.gridRow.split('/')[0]) !== 1);
+    // Arraste livre com o mouse: o destino é definido pelo ponto de soltura.
+    const grade = page.locator('.dashboard-grid');
+    const caixaGrade = await grade.boundingBox();
+    assert.ok(caixaGrade, 'grade do dashboard está visível');
+    const posicaoInicial = await cardFaturamento.evaluate((el) => ({ column: el.style.gridColumn, row: el.style.gridRow }));
+    await cardFaturamento.dragTo(grade, {
+      targetPosition: { x: Math.round(caixaGrade.width * 0.22), y: Math.max(10, caixaGrade.height - 20) },
     });
+    await page.waitForFunction((antes) => {
+      const card = document.querySelector('[data-dashboard-card="faturamento"]');
+      return card && (card.style.gridColumn !== antes.column || card.style.gridRow !== antes.row);
+    }, posicaoInicial);
     const posicaoMovida = await cardFaturamento.evaluate((el) => ({ column: el.style.gridColumn, row: el.style.gridRow }));
-    assert.notEqual(posicaoMovida.row, '1 / span 2', 'o card foi retirado da posição inicial');
-    assert.ok(Number.parseInt(posicaoMovida.row, 10) > 1, 'o motor encontrou uma linha livre sem sobrepor os demais widgets');
-    assert.notEqual(posicaoMovida.column, '1 / span 3', 'o card foi reposicionado no canvas');
+    assert.notDeepEqual(posicaoMovida, posicaoInicial, 'o card foi movido para o ponto escolhido com o mouse');
+
+    // O gráfico e o ranking usam o mesmo arraste livre e a mesma proteção contra colisão.
+    const rankingWidget = page.locator('[data-dashboard-widget="ranking"]');
+    const caixaGradeAtual = await grade.boundingBox();
+    await rankingWidget.dragTo(grade, {
+      targetPosition: { x: Math.round(caixaGradeAtual.width * 0.68), y: Math.max(10, caixaGradeAtual.height - 20) },
+    });
+    const rankingPosicionado = await rankingWidget.evaluate((el) => ({ column: el.style.gridColumn, row: el.style.gridRow }));
+    assert.ok(rankingPosicionado.row !== '7 / span 4' || rankingPosicionado.column !== '8 / span 5',
+      'o ranking também pode ser movido com o mouse');
 
     const caixaAlca = await alca.boundingBox();
     assert.ok(caixaAlca, 'alça de redimensionamento está visível');
