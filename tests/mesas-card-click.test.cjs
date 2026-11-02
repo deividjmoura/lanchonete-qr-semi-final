@@ -27,10 +27,14 @@ test("a pesquisa de mapa/QR usa os cartões e abre o detalhe da mesa", () => {
   assert.doesNotMatch(mapa, />\s*Abrir\s*</);
 });
 
-test("no panorama os cartões são apenas informativos", () => {
-  // Sem onAbrir o cartão não ganha role/tabIndex/clique: só informação.
-  assert.match(panorama, /<CartaoMesa key=\{mesa\.id\} mesa=\{mesa\} faixas=\{dados\.config\.faixas\} agora=\{agora\} \/>/);
+test("o panorama não lista as mesas", () => {
+  // Listar as 70 mesas aqui criava um scroll enorme e não dava nenhuma
+  // operação a mais: os cartões vivem só na pesquisa de mapa/QR.
+  assert.doesNotMatch(panorama, /<CartaoMesa/);
   assert.doesNotMatch(panorama, /onAbrirMesa/);
-  // A tela avisa onde operar a mesa, para o cartão não parecer quebrado.
+  // A tela avisa onde ver e operar cada mesa.
   assert.match(panorama, /Mapa e QR Codes/);
+  assert.match(panorama, /As mesas não são listadas/);
+  // Cartão continua exportado (a pesquisa de mapa/QR é quem rende).
+  assert.match(mapa, /<CartaoMesa/);
 });
