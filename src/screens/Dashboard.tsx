@@ -507,7 +507,10 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
     setLayoutSalvo(false);
     setLayout((atual) => {
       const widget = atual.widgets[id];
-      const posicao = findAvailablePosition(atual.widgets, id, { ...widget, x, y });
+      const desejada = { ...widget, x, y };
+      const posicao = canPlaceWidget(atual.widgets, id, desejada)
+        ? desejada
+        : findAvailablePosition({ ...atual.widgets, [`__origem_${id}`]: widget }, id, desejada);
       return { widgets: { ...atual.widgets, [id]: { ...widget, ...posicao } } };
     });
   };
