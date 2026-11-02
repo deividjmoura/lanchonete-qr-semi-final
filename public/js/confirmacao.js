@@ -31,7 +31,7 @@
       const body=document.createElement('p');body.className='qr-confirm-message';body.textContent=message;
       dialog.append(head,body);
       let input=null;
-      if(inputLabel){const label=document.createElement('label');label.className='qr-confirm-message';label.textContent=inputLabel;input=document.createElement('input');input.className='qr-confirm-input';input.placeholder=placeholder;input.autocomplete='off';label.append(input);dialog.append(label)}
+      if(inputLabel){const label=document.createElement('label');label.className='qr-confirm-message';label.textContent=inputLabel;input=document.createElement('input');input.className='qr-confirm-input';input.placeholder=placeholder;input.autocomplete='off';input.addEventListener('input',()=>input.setCustomValidity(''));label.append(input);dialog.append(label)}
       const actions=document.createElement('div');actions.className='qr-confirm-actions';
       const cancel=document.createElement('button');cancel.type='button';cancel.textContent=cancelText;
       const yes=document.createElement('button');yes.type='button';yes.textContent=confirmText;yes.className=danger?'qr-confirm-danger':'qr-confirm-primary';
@@ -39,7 +39,7 @@
       const previous=document.activeElement;const overflow=document.body.style.overflow;document.body.style.overflow='hidden';
       let done=false;
       const finish=value=>{if(done)return;done=true;document.removeEventListener('keydown',key);document.body.style.overflow=overflow;overlay.remove();if(previous&&previous.focus)previous.focus();resolve(value)};
-      const key=e=>{if(e.key==='Escape'){e.preventDefault();finish(inputLabel?null:false)}else if(e.key==='Tab'){const nodes=[cancel,yes,...(input?[input]:[])];const first=nodes[0],last=nodes[nodes.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}};
+      const key=e=>{if(e.key==='Escape'){e.preventDefault();finish(inputLabel?null:false)}else if(e.key==='Tab'){const nodes=input?[input,cancel,yes]:[cancel,yes];const first=nodes[0],last=nodes[nodes.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}};
       cancel.addEventListener('click',()=>finish(inputLabel?null:false));
       yes.addEventListener('click',()=>{if(inputLabel){if(input.value!==expectedText){input.setCustomValidity('Digite exatamente '+expectedText+' para confirmar.');input.reportValidity();return}finish(input.value)}else finish(true)});
       overlay.addEventListener('click',e=>{if(e.target===overlay)finish(inputLabel?null:false)});
