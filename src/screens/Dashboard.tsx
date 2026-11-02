@@ -178,23 +178,29 @@ function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggl
   const resizeStart = useRef<{ x: number; y: number; w: number; h: number; cellW: number; cellH: number } | null>(null);
   const iniciarResize = (event: React.PointerEvent<HTMLButtonElement>) => {
     event.preventDefault(); event.stopPropagation();
-    const grid = event.currentTarget.closest(".dashboard-grid") as HTMLElement | null; if (!grid) return;
+    const grid = event.currentTarget.closest(".dashboard-grid") as HTMLElement | null;
+    const card = event.currentTarget.closest(".card-neon") as HTMLElement | null;
+    if (!grid || !card) return;
     const style = window.getComputedStyle(grid); const gap = Number.parseFloat(style.columnGap) || 14;
-    const rowGap = Number.parseFloat(style.rowGap) || 14; const cellW = (grid.clientWidth - gap * 11) / 12;
+    const rowGap = Number.parseFloat(style.rowGap) || 14; const columns = 12;
+    const cellW = (grid.clientWidth - gap * (columns - 1)) / columns;
     const cellH = Number.parseFloat(style.gridAutoRows) || 84;
     resizeStart.current = { x: event.clientX, y: event.clientY, w: layout.w, h: layout.h, cellW: cellW + gap, cellH: cellH + rowGap };
-    event.currentTarget.setPointerCapture(event.pointerId);
+    card.setPointerCapture(event.pointerId);
   };
-  const moverResize = (event: React.PointerEvent<HTMLButtonElement>) => {
+  const moverResize = (event: React.PointerEvent<HTMLElement>) => {
     const start = resizeStart.current; if (!start) return; event.preventDefault();
-    onResize(Math.max(1, Math.min(12 - layout.x, start.w + Math.round((event.clientX - start.x) / start.cellW))),
-      Math.max(1, Math.min(100, start.h + Math.round((event.clientY - start.y) / start.cellH))));
+    const nextW = Math.max(1, Math.min(12 - layout.x, start.w + Math.round((event.clientX - start.x) / start.cellW)));
+    const nextH = Math.max(1, Math.min(100, start.h + Math.round((event.clientY - start.y) / start.cellH)));
+    onResize(nextW, nextH);
   };
-  const finalizarResize = (event: React.PointerEvent<HTMLButtonElement>) => {
-    resizeStart.current = null; if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  const finalizarResize = (event: React.PointerEvent<HTMLElement>) => {
+    resizeStart.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
   return <article className={`card-neon card-neon--${card.cor} ${editando ? "card-neon--editing" : ""} ${layout.visible ? "" : "card-neon--hidden"}`}
     style={{ gridColumn: `${layout.x + 1} / span ${layout.w}`, gridRow: `${layout.y + 1} / span ${layout.h}`, order: layout.y * 12 + layout.x }}
+    onPointerMove={moverResize} onPointerUp={finalizarResize} onPointerCancel={finalizarResize}
     draggable={editando}
     onDragStart={(event) => { if (!editando || (event.target as HTMLElement).closest(".card-neon__resize-handle, .card-neon__visibility")) { event.preventDefault(); return; } onDragStart(card.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", card.id); }} onDragEnd={onDragEnd}
     data-dashboard-card={card.id} data-visible={layout.visible ? "true" : "false"}>
@@ -213,8 +219,7 @@ function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggl
         aria-label={layout.visible ? `Ocultar ${card.label}` : `Exibir ${card.label}`} aria-pressed={layout.visible}
         title={layout.visible ? "Ocultar card" : "Exibir card"}>{layout.visible ? <Eye size={17} weight="bold" /> : <EyeSlash size={17} weight="bold" />}</button>
       <button type="button" className="card-neon__resize-handle" aria-label={`Arraste para redimensionar ${card.label}`}
-        title="Arraste para ajustar largura e altura" onPointerDown={iniciarResize} onPointerMove={moverResize}
-        onPointerUp={finalizarResize} onPointerCancel={finalizarResize}><ArrowsOut size={15} weight="bold" /></button>
+        title="Arraste para ajustar largura e altura" onPointerDown={iniciarResize}><ArrowsOut size={15} weight="bold" /></button>
     </>}
   </article>;
 }
@@ -509,9 +514,10 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
     setLayout((atual) => {
       const widget = atual.widgets[id];
       const desejada = { ...widget, x, y };
-      const posicao = canPlaceWidget(atual.widgets, id, desejada)
+      const { [id]: _origem, ...outrosWidgets } = atual.widgets;
+      const posicao = canPlaceWidget(outrosWidgets, id, desejada)
         ? desejada
-        : findAvailablePosition({ ...atual.widgets, [`__origem_${id}`]: widget }, id, desejada);
+        : findAvailablePosition(outrosWidgets, id, desejada);
       return { widgets: { ...atual.widgets, [id]: { ...widget, ...posicao } } };
     });
   };
