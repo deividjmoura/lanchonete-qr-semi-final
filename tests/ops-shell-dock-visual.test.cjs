@@ -46,6 +46,8 @@ test("sidebar minimalista fica transparente e usa ícones maiores sem trilho ati
   assert.match(shell, /<Icon size=\{24\}/);
   assert.doesNotMatch(shell, /ops-active-rail|layoutId="ops-active-rail"/);
   assert.match(css, /\.ops-sidebar\s*\{[^}]*background:\s*transparent\s*!important/s);
+  assert.match(css, /\.ops-nav-item:hover,[\\s\\S]*?transform:\\s*scale\\(1\\.6\\)/);
+  assert.match(dock, /1 \\+ 0\\.6 \\* t \\* t/);
 });
 
 test("contornos decorativos da fila e do dashboard não reaparecem", () => {
