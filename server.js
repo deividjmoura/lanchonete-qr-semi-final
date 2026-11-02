@@ -814,6 +814,9 @@ const server = http.createServer(async (req, res) => {
         const operador = await getStaffDaRequisicao(req);
         const out = await registrarPagamento(Number(m[1]), await body(req), operador?.nome || null, null, {
           atorTipo: 'staff', atorId: Number.isInteger(operador?.id) ? operador.id : null, requestId: reqId,
+          // O caixa exibe e recebe consumo + serviço padrão; o teto do backend
+          // precisa usar a mesma composição para não rejeitar os 10% como excesso.
+          incluirServico: true,
         });
         if (!out.idempotentReplay) broadcast('update', { type: 'pagamento_parcial', sessaoId: Number(m[1]) });
         return json(res, 201, out);
