@@ -1060,9 +1060,12 @@ $('#requestNotificationPermission').addEventListener('click',async()=>{
  try{
    const result=await Notification.requestPermission();
    if(result==='denied'){
+     // Feche o diálogo nativo antes do modal customizado: a top layer do navegador
+     // bloqueia os cliques no overlay enquanto notificationConsent permanece aberto.
+     if(consentDialog.open)consentDialog.close();
      const confirmed=await window.confirmarQR('Confirmar recusa das notificações?', 'Você não receberá avisos por este navegador. A permissão poderá ser alterada novamente nas configurações do site e neste painel.', { confirmText: 'Confirmar escolha' });
      if(confirmed){localStorage.setItem('garcom-notifications-declined-'+waiterToken,'1');$('#consentStatus').textContent='Escolha salva. Você não receberá notificações enquanto a permissão estiver negada. Para reativar, altere a permissão nas configurações do navegador.';decidiu=true}
-     else $('#consentStatus').textContent='A permissão foi negada pelo navegador. Para tentar novamente, altere-a nas configurações do site.';
+     else {$('#consentStatus').textContent='A permissão foi negada pelo navegador. Para tentar novamente, altere-a nas configurações do site.';openNotificationSetup();}
    }else if(result==='granted'){
      localStorage.setItem('garcom-ready-alerts-'+waiterToken,'1');readyAlertsEnabled=true;
      $('#consentStatus').textContent='Permissão concedida. Isso não ativa push em segundo plano: o servidor ainda não implementa subscrição nem envio Web Push.';
