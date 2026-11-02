@@ -177,3 +177,58 @@
 @media (prefers-reduced-motion: reduce) {
   .card-neon, .card-neon::after { transform: none !important; }
 }
+
+
+/* Editor visual do dashboard: cards em uma única grade, com tamanho e ordem
+   persistidos localmente para cada navegador/dispositivo. */
+.dashboard-layout { display: grid; gap: 14px; min-width: 0; }
+.dashboard-layout > .dash-section-heading { margin: 0; }
+.dashboard-grid { grid-auto-rows: minmax(176px, auto); align-items: stretch; }
+.card-neon { padding: 0; cursor: grab; }
+.card-neon:active { cursor: grabbing; }
+.card-neon__open {
+  display: flex; flex-direction: column; align-items: stretch; width: 100%; height: 100%;
+  min-height: 176px; padding: 17px 18px 15px; border: 0; border-radius: inherit;
+  color: inherit; background: transparent; text-align: left; cursor: pointer;
+}
+.card-neon__open:disabled { cursor: default; }
+.card-neon__open:focus-visible { outline: 3px solid var(--stage-focus); outline-offset: -4px; }
+.card-neon__resize {
+  position: relative; z-index: 2; display: flex; flex-wrap: wrap; align-items: center;
+  justify-content: space-between; gap: 8px; padding: 9px 12px;
+  border-top: 1px dashed color-mix(in srgb, var(--neon) 45%, transparent);
+  background: color-mix(in srgb, var(--stage-inset-deep) 88%, transparent);
+  color: var(--stage-ink-muted-2); font-size: 10px;
+}
+.card-neon__resize > div { display: flex; align-items: center; gap: 5px; }
+.card-neon__resize button {
+  display: grid; place-items: center; width: 25px; height: 25px; border: 1px solid var(--stage-line-4);
+  border-radius: 7px; background: var(--stage-card); color: var(--stage-ink); font-size: 15px;
+}
+.card-neon__resize button:disabled { opacity: .35; cursor: not-allowed; }
+.card-neon__resize small { min-width: 32px; text-align: center; font-size: 9px; }
+.card-neon--editing { outline: 1px dashed color-mix(in srgb, var(--neon) 65%, transparent); outline-offset: 3px; }
+.dashboard-edit-banner {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 15px; border: 1px solid var(--stage-violet-soft); border-radius: 12px;
+  background: var(--stage-panel); color: var(--stage-ink-muted); font-size: 12px;
+}
+.dashboard-edit-banner strong { color: var(--stage-violet-text); }
+.dashboard-edit-banner button {
+  padding: 7px 10px; border: 1px solid var(--stage-line-4); border-radius: 8px;
+  color: var(--stage-ink); font-weight: 700;
+}
+.dash-heading-input {
+  display: block; width: min(100%, 560px); border: 1px solid var(--stage-line-4);
+  border-radius: 7px; background: var(--stage-inset); color: var(--stage-ink);
+  padding: 5px 8px; outline-offset: 2px;
+}
+.dash-heading-input--label { margin-bottom: 5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.dash-heading-input--title { font-family: var(--font-display), serif; font-weight: 700; letter-spacing: -.02em; }
+.dash-heading-sizes { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+.dash-heading-sizes label { display: flex; align-items: center; gap: 6px; color: var(--stage-ink-muted-2); font-size: 10px; }
+.dash-heading-sizes input { width: 82px; accent-color: var(--stage-violet); }
+.dash-heading-sizes output { min-width: 34px; font-variant-numeric: tabular-nums; }
+@media (max-width: 1050px) {
+  .dashboard-grid .card-neon { grid-column: span 1 !important; grid-row: span 1 !important; }
+}
