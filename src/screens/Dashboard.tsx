@@ -201,6 +201,14 @@ function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggl
   };
   return <article className={`card-neon card-neon--${card.cor} ${editando ? "card-neon--editing" : ""} ${layout.visible ? "" : "card-neon--hidden"}`}
     style={{ gridColumn: `${layout.x + 1} / span ${layout.w}`, gridRow: `${layout.y + 1} / span ${layout.h}`, order: layout.y * 12 + layout.x }}
+    draggable={editando}
+    onDragStart={(event) => {
+      if (!editando || (event.target as HTMLElement).closest(".card-neon__resize-handle, .card-neon__visibility")) { event.preventDefault(); return; }
+      onDragStart(card.id);
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", card.id);
+    }}
+    onDragEnd={onDragEnd}
     onPointerMove={moverResize} onPointerUp={finalizarResize} onPointerCancel={finalizarResize}
     data-dashboard-card={card.id} data-visible={layout.visible ? "true" : "false"}>
     <button type="button" className="card-neon__open" onClick={() => { if (!editando) onClick(); }}
