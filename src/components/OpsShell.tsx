@@ -281,7 +281,7 @@ export function OpsShell({
 
             <div className="flex flex-wrap items-center gap-2 ml-auto">
               {extra && <div className="flex flex-wrap items-center gap-1.5 mr-1">{extra}</div>}
-              <div
+              <nav
                 className="ops-toolbar-dock"
                 ref={toolbarDock.navListRef}
                 onMouseMove={toolbarDock.onMouseMove}
@@ -304,7 +304,7 @@ export function OpsShell({
                 {role && <span className="ops-toolbar-dock-item" ref={toolbarDock.setItemRef(toolbarCount - 1)} style={toolbarDock.itemStyle(toolbarCount - 1)}>
                   <IconBtn label="Sair" onClick={() => { logout(); ir("/login"); }}><SignOut size={20} /></IconBtn>
                 </span>}
-              </div>
+              </nav>
             </div>
           </div>
           {subhead && (
