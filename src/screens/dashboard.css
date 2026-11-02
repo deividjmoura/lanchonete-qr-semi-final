@@ -380,10 +380,3 @@
   .dashboard-grid .card-neon { grid-column: span 1 !important; }
 }
 
-@media (max-width: 1050px) {
-  .dashboard-grid .card-neon[style*="span 3"],
-  .dashboard-grid .card-neon[style*="span 4"] { grid-column: span 2 !important; }
-}
-@media (max-width: 420px) {
-  .dashboard-grid .card-neon { grid-column: span 1 !important; }
-}
