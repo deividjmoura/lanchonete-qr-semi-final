@@ -4,272 +4,278 @@
 
 **Sistema de pedidos e operação por QR Code para um único estabelecimento**
 
-O QR Admin é apresentado como uma solução genérica de pedidos e operação por QR Code. A personalização visual e comercial de cada estabelecimento será feita posteriormente.
+Pedido por QR Code, produção por setor, entrega progressiva, cobrança e gestão administrativa em um fluxo único.
 
 [![Produção](https://img.shields.io/badge/Deploy-Railway-7B61FF?style=for-the-badge)](https://qradminn.up.railway.app/)
+
+**[Abrir o guia visual interativo do sistema](./guia-sistema.html)** · [Documentação técnica](#documentação-técnica)
 
 </div>
 
 ---
 
-## Objetivo e escopo
+## 1. Visão geral
 
-O QR Admin é uma aplicação **single-tenant**: uma instalação representa um único estabelecimento. O foco atual é colocar o produto em operação em uma lanchonete real, com fluxo simples e dados consistentes.
+O QR Admin é uma aplicação *single-tenant*: uma instalação representa um único estabelecimento. O sistema conecta cliente, cozinha, bar, garçom, caixa e administração.
 
-- Não é, neste momento, um SaaS multi-loja.
-- Não existe isolamento de dados por estabelecimento em todas as consultas da aplicação; não reutilize esta instalação para outra empresa esperando separação automática.
-- Não há gateway bancário integrado nem confirmação automática de recebimento PIX.
-- O sistema registra pedidos, preparo, entrega e lançamentos de pagamento; a confirmação do dinheiro/PIX recebido continua sendo responsabilidade da equipe.
+### Limites da versão atual
+- Não é um SaaS multi-loja. Não há isolamento de dados entre vários estabelecimentos.
+- Não existe gateway bancário nem confirmação automática de recebimento PIX.
+- O QR PIX é estático/configurado por chave. A equipe precisa conferir o recebimento no aplicativo bancário.
+- O comprovante emitido é de consumo, não fiscal.
+- Notificações Web Push com o aplicativo fechado ainda não estão implementadas.
+- A PWA precisa de validação adicional em aparelhos físicos Android e iOS.
 
-## Fluxo operacional
+## 2. Fluxo operacional
 
-```text
-Cliente escaneia o QR da mesa (ou o garçom lança o pedido)
-        ↓
-Cardápio → carrinho → pedido
-        ↓
-Cada ITEM cai direto na fila do seu setor (cozinha ou bar)
-        ↓
-Setor inicia o preparo e conclui item por item
-        ↓
-Item pronto fica disponível ao garçom NA HORA
-        ↓
-Garçom aceita → retira → entrega aquele item
-        ↓
-Caixa cobra só os itens entregues e fecha a comanda
-```
+    Cliente escaneia o QR da mesa (ou garçom lança o pedido)
+                         |
+                         v
+                Cardápio -> Carrinho -> Comanda
+                         |
+               +---------+---------+
+               |                   |
+               v                   v
+            COZINHA               BAR
+          itens de comida     itens de bebida
+               |                   |
+               +---------+---------+
+                         v
+             Item fica pronto individualmente
+                         |
+                         v
+          Garçom: aceitar -> retirar -> entregar
+                         |
+                         v
+          Caixa cobra itens entregues e fecha
 
-**Liberação progressiva:** a bebida que ficou pronta não espera o prato. Cada
-item tem estado, autor e horário próprios, e o status do pedido é apenas uma
-projeção dos itens. **Não existe etapa de aprovação:** o "aceite" da cozinha/bar
-só indica que a produção começou.
+A comanda é acumulativa: a mesa pode receber vários pedidos durante a visita. Cada item possui estado, autoria e horários próprios. Um item pronto pode ser entregue sem esperar os outros itens do pedido. O status geral do pedido é uma projeção dos estados dos itens.
 
-A comanda da mesa é acumulativa: a mesa pode receber vários pedidos durante a visita. O total cobrável é calculado no servidor a partir dos itens entregues, não do total enviado pelo navegador.
+**Regra de cobrança:** o servidor calcula o valor cobrável a partir dos itens entregues. Itens apenas recebidos ou em preparo não entram na cobrança.
 
-## Funcionalidades
+## 3. Funcionalidades por área
 
-### Cliente — QR da mesa
-- Abre o cardápio no navegador, sem instalar aplicativo.
-- Pesquisa produtos, escolhe adicionais/removíveis disponíveis e monta o carrinho.
-- Informa o nome e envia pedidos para a comanda da mesa.
+### Cliente · cardápio pelo QR
+- Acessa o cardápio pelo navegador, sem instalar aplicativo.
+- Pesquisa produtos e visualiza descrição, preço e disponibilidade.
+- Escolhe adicionais e removíveis permitidos pelo produto.
+- Monta o carrinho, informa o nome e envia o pedido para a comanda da mesa.
 - Acompanha o andamento do pedido.
-- O cliente **não registra pagamento nem confirma recebimento PIX** pela tela pública nesta versão.
+- Não registra pagamento nem confirma recebimento PIX na tela pública.
 
-### Cozinha e bar
-- Filas separadas por setor: cada tela vê **apenas os itens do seu setor**.
-- Avanço de status **por item** (iniciar preparo / concluir), sem depender do
-  outro setor nem do pedido inteiro.
-- O setor é gravado no item no momento do pedido: reclassificar o produto no
-  admin não move item já lançado.
-- Atualização em tempo real via Server-Sent Events (SSE) e alertas sonoros/voz nas telas compatíveis.
+### Cozinha
+- Recebe apenas itens classificados para produção na cozinha.
+- Organiza itens aguardando início e itens em produção.
+- Inicia e conclui o preparo por item, sem depender do bar.
+- Recebe atualizações em tempo real e alertas sonoros/voz em telas compatíveis.
 
-### Garçom
-- Link individual por token, que pode ser desativado pelo administrador.
-- Fila **compartilhada** de itens prontos: nada fica escondido por causa do dono
-  da mesa ou de quem lançou o pedido.
-- Entrega em três etapas por item — **aceitar → retirar → entregar** — com autor
-  e horário registrados em cada uma. "Retirado" (a caminho da mesa) é distinto de
-  "entregue" (cobrável).
-- O primeiro aceite numa mesa sem responsável define o responsável no servidor.
-  Colegas podem ajudar em outros itens **sem** tomar a mesa.
-- Transferência explícita pelo responsável ou pelo administrador, sempre auditada.
-- Histórico de movimentação por item consultável na própria tela.
-- PWA em `/garcom-pwa/`, instalável, com fila persistente em IndexedDB: o pedido
-  sobrevive a fechar/reiniciar o app, reenvia sozinho quando a conexão volta e
-  nunca duplica (chave de idempotência por operação).
-- Preços, disponibilidade e estoque são sempre revalidados pelo servidor.
-  Conflito fica visível para revisão e **nunca** é tratado como pedido confirmado.
-- Validado ponta a ponta em Chromium real + PostgreSQL isolado (offline →
-  reinício → sincronização → aceite). **Ainda pendente:** validação em aparelho
-  físico Android/iOS e notificação com o app fechado (Web Push não implementado).
+### Bar
+- Possui fila independente da cozinha e recebe apenas itens classificados como bebidas/bar.
+- Inicia e conclui cada item individualmente.
+- A conclusão de uma bebida libera sua entrega sem aguardar a comida.
+
+### Garçom · PWA
+- Usa link individual por token, que pode ser desativado pelo administrador.
+- Consulta mesas, pedidos e fila compartilhada de itens prontos.
+- Executa o fluxo por item: **aceitar → retirar → entregar**.
+- Cada transição registra o responsável e o horário.
+- O primeiro aceite em mesa sem responsável define o responsável no servidor; colegas podem ajudar sem tomar a mesa.
+- Permite transferência explícita de responsabilidade, com auditoria.
+- Pode lançar pedidos e participar do fechamento/cobrança conforme as permissões concedidas.
+- A PWA em **/garcom-pwa/** pode ser instalada e mantém uma fila persistente em IndexedDB. Pedidos offline sobrevivem ao fechamento/reinício do app e são reenviados quando a conexão retorna, com chave de idempotência para evitar duplicação.
+- Preços, disponibilidade e estoque são revalidados pelo servidor. Conflitos ficam visíveis para revisão e não são tratados como pedidos confirmados.
 
 ### Caixa
-- Lista de comandas abertas e itens entregues; cobra **apenas o que foi entregue**.
-- Cancelamento de item com motivo obrigatório, devolvendo estoque uma única vez.
-  Item cancelado não é cobrado e não bloqueia o fechamento.
-- Comanda inteiramente cancelada fecha com total zero e libera a mesa.
-- Registro de pagamentos parciais, fechamento de comanda, desconto e taxa de serviço.
-- Formas de pagamento registradas: dinheiro, PIX, débito e crédito.
-- Comprovante de consumo **não fiscal**.
-- O QR PIX é estático/configurado por chave. A equipe deve verificar o recebimento no aplicativo bancário antes de considerar o valor pago; gerar QR ou receber aviso não prova liquidação bancária.
+- Lista comandas abertas e itens entregues.
+- Cobra somente itens entregues.
+- Registra pagamentos parciais em dinheiro, PIX, débito e crédito.
+- Controla saldo restante, desconto e taxa de serviço conforme regras e autorização.
+- Permite cancelar item com motivo obrigatório; o estoque é devolvido uma única vez.
+- Fecha comanda sem pendências e libera a mesa.
+- Emite comprovante de consumo não fiscal.
+- O PIX usa chave/QR estático: o operador deve verificar o crédito no banco antes de marcar o valor como recebido.
 
 ### Administração
-- Categorias, produtos, preços, disponibilidade, setor de produção, estoque e adicionais.
-- Configuração de mesas e geração de QR fixo por mesa (até 70 mesas habilitadas pela interface atual).
-- Panorama operacional com uma entrada por mesa (inclusive livres), praças internas
-  editáveis (Praia, Guarda-sol, Salão e “Sem praça”), consumo em aberto separado das
-  vendas do período e tempos reais do fluxo por setor (cozinha, bar e garçom).
-- Cadastro e ativação/desativação de garçons.
-- Transferência administrativa do responsável da mesa e devolução de aceite à fila.
-- Indicadores diários, relatórios por período, histórico e ferramenta de limpeza de histórico.
-- Upload/otimização de fotos para WebP.
+- **Dashboard:** indicadores de faturamento, pedidos, ticket médio, contas, pagamentos, produtos, entregas, mesas e garçons; filtros por hoje, semana e mês.
+- **Cardápio:** categorias, ordenação, produtos, preços, fotos, disponibilidade, estoque, adicionais e setor de produção.
+- **Mesas:** cadastro, praças, QR Codes fixos e panorama de ocupação, consumo e tempos operacionais.
+- **Garçons:** cadastro, ativação/desativação e gestão dos links individuais.
+- **Funções:** área de funções e controles administrativos disponíveis ao perfil administrador.
+- **Operação:** transferência de responsável, histórico, relatórios por período e ferramentas administrativas disponíveis na versão atual.
 
-## Telas e endereços
+## 4. Telas e endereços
 
-| Área | Endereço | Uso |
+| Área | Endereço | Finalidade |
 |---|---|---|
-| Início | `/` | Entrada do sistema |
-| Cliente | `/#/mesa/:token` | Cardápio e pedido da mesa |
-| Login | `/#/login` | Acesso da equipe |
-| Cozinha | `/#/cozinha` | Fila de preparo |
-| Bar | `/#/bar` | Fila de bebidas |
-| Garçom | `/#/garcom/:token` | Redireciona para a PWA |
-| PWA do garçom | `/garcom-pwa/?token=...` | Atendimento móvel e fila offline |
-| Caixa | `/#/caixa` | Pagamentos e fechamento |
-| Administração | `/#/admin` | Cardápio, mesas, equipe e relatórios |
+| Página inicial | / | Entrada do sistema |
+| Login | /#/login | Autenticação da equipe |
+| Cliente | /#/mesa/:token | Cardápio e pedido da mesa |
+| Cozinha | /#/cozinha | Fila de preparo da cozinha |
+| Bar | /#/bar | Fila de bebidas |
+| Garçom | /#/garcom/:token | Entrada do atendimento móvel |
+| PWA do garçom | /garcom-pwa/?token=... | Atendimento móvel e fila offline |
+| Caixa | /#/caixa | Pagamentos e fechamento |
+| Dashboard | /#/admin | Indicadores e visão geral |
+| Cardápio | /#/admin/cardapio | Categorias e produtos |
+| Mesas | /#/admin/mesas | Mesas, praças e QR Codes |
+| Garçons | /#/admin/garcons | Equipe de atendimento |
+| Funções | /#/admin/funcoes | Controles administrativos |
+| Guia interativo | /guia-sistema.html | Demonstração visual sem integração |
 
-Os tokens presentes nos links de mesa e garçom funcionam como credenciais de acesso. Não os publique em issues, prints públicos ou logs; desative o garçom se o link for exposto.
+Os tokens de mesa e garçom funcionam como credenciais de acesso. Não os publique em issues, prints públicos ou logs. Desative o link do garçom se ele for exposto.
 
-## Tecnologias
+## 5. Linguagens, formatos e tecnologias
 
-- **Frontend principal:** React 19, Vite, TypeScript, Tailwind CSS, Zustand e Framer Motion.
-- **PWA do garçom:** JavaScript, HTML/CSS, Service Worker e IndexedDB.
-- **Servidor/API:** Node.js com HTTP nativo.
-- **Banco:** PostgreSQL com migrations SQL versionadas.
-- **Tempo real:** Server-Sent Events (SSE).
-- **Fotos:** Sharp, conversão e redimensionamento WebP.
+O projeto usa linguagens diferentes porque frontend, servidor, banco e PWA têm responsabilidades distintas. A tabela separa **linguagens e formatos escritos no repositório** de **frameworks e bibliotecas**.
 
-O PostgreSQL é a fonte de verdade. `data/db.json` é um catálogo de demonstração usado pelo seed, não um banco operacional em produção.
+### Linguagens e formatos
 
-## Desenvolvimento local
+| Linguagem / formato | Onde é usada | Responsabilidade |
+|---|---|---|
+| **TypeScript (TS)** | Configurações e código tipado do frontend | Adiciona tipos estáticos, contratos de dados, interfaces e checagem antes do build. |
+| **TSX** | src/ (React) | TypeScript com JSX para construir telas, componentes, hooks e interfaces. |
+| **JavaScript (JS)** | server.js, db/, scripts/, public/js/ e PWA | API Node.js, regras de negócio, acesso ao banco, automações, testes e comportamento do atendimento móvel. |
+| **SQL** | db/migrations/ e consultas do backend | Estrutura relacional, índices, constraints, transações e consultas PostgreSQL. |
+| **HTML** | public/ e documentos web | Estrutura das páginas públicas, login, cardápio, pedido, PWA e guia visual. |
+| **CSS** | src/**/*.css, public/**/*.css e estilos embutidos | Layout, responsividade, temas, estados visuais, acessibilidade e identidade visual. |
+| **JSON** | package.json, tsconfig.json, manifests e dados de configuração | Dependências, scripts, opções de build, configuração e intercâmbio de dados. |
+| **Shell / Bash** | Scripts auxiliares e comandos de desenvolvimento/CI | Execução de tarefas de ambiente, instalação, validação e automação. |
 
-Esta seção pressupõe que você já tem o repositório disponível no ambiente de trabalho; não inclui passos de clone. Requisitos: Node.js 20 ou superior e um PostgreSQL de desenvolvimento/teste.
+### Frameworks, bibliotecas e infraestrutura
 
-1. Instale as dependências:
-
-   ```bash
-   npm ci
-   ```
-
-2. Copie `.env.example` para `.env` e configure `DATABASE_URL` para um **banco local/de teste**.
-
-3. Defina uma senha inicial forte em `STAFF_SEED_PASSWORD` (mínimo de 12 caracteres em produção). Configure também `PIX_CHAVE`, `PIX_NOME`, `PIX_CIDADE` e `APP_TIMEZONE` quando aplicável.
-
-4. Aplique as migrations e, somente se o banco for novo/de teste, carregue o catálogo de demonstração:
-
-   ```bash
-   npm run db:migrate
-   npm run db:seed
-   ```
-
-5. Gere o frontend e inicie o servidor:
-
-   ```bash
-   npm run build
-   npm start
-   ```
-
-6. Abra `http://localhost:3000`.
-
-O [dashboard administrativo](docs/engineering/dashboard-geral.md) documenta os períodos no fuso da casa, os indicadores em tempo real e a reconciliação dos pagamentos.
-
-**Cuidado com o seed:** `FORCE_SEED=1 npm run db:seed` é destrutivo. Ele apaga pedidos, sessões, pagamentos e cardápio antes de substituir os dados de demonstração. Nunca rode esse comando no banco de produção. A identidade visual atual é provisoriamente QR Admin. A personalização da marca de cada estabelecimento deve ser feita em etapa futura, após validação do produto.
-
-## Testes e validação
-
-Comandos disponíveis:
-
-```bash
-npm run typecheck
-npm run build
-npm run test:regression
-npm run test:smoke
-npm run test:full
-npm run test:seguranca
-npm run test:carga
-npm run test:carga70
-npm run test:dia
-```
-
-- `test:regression` (ou `npm test`): regressões automatizadas, contratos do backend, testes estáticos da PWA e testes comportamentais da fila offline em IndexedDB simulado (`fake-indexeddb`). Não precisa de banco.
-- `test:smoke` e `test:full`: precisam de servidor, PostgreSQL e usuários/cardápio preparados; criam ou alteram dados.
-- `test:seguranca`: testa autorização, IDOR, CSRF, limite de corpo e outras defesas contra um servidor real; cria/edita dados de teste e não deve apontar para produção.
-- `test:carga`, `test:carga70` e `test:dia`: cenários operacionais/concor­rentes que alteram dados. Rode-os **somente em ambiente isolado**, nunca no banco usado pela lanchonete.
-
-### Integração com PostgreSQL real e E2E em navegador
-
-Estes testes **exigem banco descartável** e recusam qualquer database que não se
-chame `qradmin_test`:
-
-```bash
-export DATABASE_URL=postgres://usuario:senha@host:5432/qradmin_test
-export NODE_ENV=test
-npm run db:migrate
-
-# Todas as suítes de PostgreSQL (7 suítes + drill de backup)
-npm run test:pg
-
-# Sem pg_dump/psql locais, o drill roda apenas no CI:
-npm run test:pg -- --sem-backup
-
-# E2E em Chromium real (os dois cenários)
-npm run test:e2e
-
-# Drill de backup/restore (exige pg_dump/pg_restore e banco isolado vazio)
-RESTORE_DRILL_CONFIRM=isolated-target npm run db:restore-drill
-```
-
-Os dois E2E cobrem, em Chromium real:
-
-- `garcom-offline.e2e.cjs` — pedido offline → reinício do app → sincronização
-  automática → item pronto → aceite pela interface;
-- `garcom-lote-cobranca.e2e.cjs` — diálogo de notificações fechando após o
-  aceite, lote de aceite/retirada/entrega em um clique, e recebimento pelo PWA
-  até encerrar a conta e liberar a mesa.
-
-O CI do GitHub executa instalação limpa, TypeScript, build, regressões,
-verificações de sintaxe, as suítes de PostgreSQL em `postgres:16` e o drill de
-backup/restore. **CI verde não substitui validação em aparelho físico nem no
-ambiente de operação.**
-
-### Documentação técnica
-
-- [`docs/CONTRATO-ATENDIMENTO-GARCOM.md`](docs/CONTRATO-ATENDIMENTO-GARCOM.md) —
-  contrato de API, estados por item, idempotência e erros.
-- [`docs/PWA-ATENDIMENTO-GARCOM.md`](docs/PWA-ATENDIMENTO-GARCOM.md) —
-  arquitetura do PWA, garantias e limites da fila offline.
-- [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md) — sistema visual vigente.
-- [`docs/REDEFINICAO-SENHA-ADMIN.md`](docs/REDEFINICAO-SENHA-ADMIN.md) —
-  redefinição de senha de staff pelo Admin.
-- [`docs/engineering/panorama-mesas.md`](docs/engineering/panorama-mesas.md) —
-  panorama de mesas, praças, faixas de tempo e tempos do fluxo.
-- [`docs/engineering/PRODUCTION_OPERATIONS_RUNBOOK.md`](docs/engineering/PRODUCTION_OPERATIONS_RUNBOOK.md) —
-  operação, incidentes, deploy e rollback.
-
-Documentos históricos de correções e auditorias datadas foram removidos na
-faxina de 2026-10-30; o histórico permanece no Git e nas PRs mergeadas.
-
-## Banco e deploy
-
-- As migrations ficam em `db/migrations/` e são aplicadas em ordem pelo runner `npm run db:migrate`.
-- O servidor tenta verificar/aplicar migrations ao iniciar, mas esse caminho é **best-effort**: pode iniciar mesmo se a migration falhar. Confira os logs do deploy e confirme que todas as migrations esperadas foram aplicadas antes de operar.
-- Não rode migrations, seed ou testes mutáveis sem confirmar qual banco está conectado.
-- Antes da primeira operação comercial, valide login/perfis, pedido até entrega, estoque, fechamento e pagamentos em banco isolado; teste também a restauração do **backup real** (o drill automatizado já roda no CI, mas com dados sintéticos).
-- A PWA foi validada em Chromium real (offline, reinício, sincronização e aceite). Ainda deve ser validada em Android/iOS físicos, incluindo instalação, suspensão prolongada e atualização do Service Worker.
-- A migration `0027_entregas_progressivas_offline.sql` é aditiva. Faça backup antes de aplicá-la em produção e rode o drill de restore em banco isolado.
-
-## Estado honesto do produto
-
-| Área | Situação |
+| Tecnologia | Uso no projeto |
 |---|---|
-| Fluxo base de QR, comanda, cozinha/bar e caixa | Implementado e coberto por integração em PostgreSQL real (CI verde em postgres:16); requer validação final no ambiente de operação |
-| Entrega progressiva por item, autoria e responsabilidade | Implementado; validado em PostgreSQL real, incluindo corrida de aceite entre garçons |
-| Segurança e concorrência do backend | Preços, permissões e transições revalidados no servidor sob lock; regressões + integração comportamental em PostgreSQL |
-| Fila offline do garçom | Persistência, reinício, reenvio automático, idempotência e conflito validados em Chromium real; pendente aparelho físico |
-| PWA de atendimento do garçom | Fluxo completo validado em navegador real; pendente Android/iOS físicos |
-| Notificação com app fechado (Web Push) | **Não implementado** — sem VAPID, subscrição ou serviço de envio |
-| Backup/restore | Drill (`pg_dump` + `pg_restore` em banco isolado) **executado com sucesso no CI**; o restore do dump real de produção ainda deve ser testado antes do deploy |
-| Comprovante de consumo não fiscal | Implementado; não substitui documento fiscal |
-| PIX | QR/chave estática e lançamento manual; sem gateway ou confirmação bancária automática |
-| Multi-loja / multi-tenant | Fora do escopo atual |
-| Deploy em produção (Railway) | **Não realizado nem validado nesta rodada** |
-| Pronto para venda/produção | **Não declarar pronto antes do drill de backup, do deploy validado e do teste em aparelho real** |
+| **Node.js 20.9+** | Runtime do servidor e dos scripts. |
+| **React 19** | Componentes e composição das telas do frontend. |
+| **Vite 7** | Servidor de desenvolvimento e empacotamento do frontend. |
+| **TypeScript 5.9** | Compilador e verificação estática do código TS/TSX. |
+| **Tailwind CSS 4** | Utilitários de estilo, integrado ao Vite. |
+| **Zustand 5** | Estado compartilhado entre telas e componentes. |
+| **Framer Motion 13** | Transições e animações respeitando redução de movimento. |
+| **Phosphor Icons** | Ícones da interface React. |
+| **PostgreSQL 16** | Banco relacional e fonte de verdade dos dados operacionais. |
+| **node-postgres (pg)** | Conexão e execução de consultas PostgreSQL pelo Node.js. |
+| **Server-Sent Events (SSE)** | Atualizações em tempo real do estado operacional. |
+| **IndexedDB** | Persistência local da fila offline da PWA. |
+| **Service Worker** | Recursos PWA e suporte ao comportamento offline. |
+| **Sharp** | Conversão, redimensionamento e otimização de imagens para WebP. |
+| **Playwright + Chromium** | Testes ponta a ponta em navegador real. |
+| **fake-indexeddb** | Simulação de IndexedDB em testes automatizados. |
+| **Railway** | Plataforma de hospedagem configurada para a aplicação. |
+
+### Organização do código
+
+| Diretório / arquivo | Conteúdo |
+|---|---|
+| src/screens/ | Telas React: Dashboard, Admin, Cozinha, Bar, Garçom, Caixa, Mesa, Login e página inicial. |
+| src/components/ | Componentes compartilhados, shell operacional, fila de produção, paginação, formulários e notificações. |
+| src/hooks/ | Hooks reutilizáveis de estado e comportamento da interface. |
+| src/store/ | Estado global Zustand e hidratação dos dados do frontend. |
+| src/lib/ | Cliente de API, tipos, regras de apresentação, tema, impressão, áudio e utilitários. |
+| server.js e server/ | Inicialização HTTP e módulos do servidor/API. |
+| db/ | Conexão PostgreSQL, migrações, seed e regras de persistência. |
+| public/ | Arquivos estáticos, páginas HTML/CSS/JS e PWA do garçom. |
+| tests/ | Testes de regressão, contratos e comportamento. |
+| scripts/ | Execução de testes, setup, smoke tests, carga e operações auxiliares. |
+| docs/ | Contratos, guias técnicos, operação e decisões de arquitetura. |
+
+O arquivo data/db.json é um catálogo de demonstração usado pelo seed, não o banco operacional de produção. O PostgreSQL é a fonte de verdade.
+
+## 6. Executar localmente
+
+### Requisitos
+- Node.js **20.9 ou superior**.
+- PostgreSQL para desenvolvimento/testes.
+- Git e npm.
+- Banco local ou descartável. Não use banco de produção para experimentar.
+
+### Instalação
+
+1. Instale dependências: **npm ci**.
+2. Copie **.env.example** para **.env** e configure **DATABASE_URL** para um banco local/de teste.
+3. Configure uma senha inicial forte em **STAFF_SEED_PASSWORD**. Quando aplicável, configure também **PIX_CHAVE**, **PIX_NOME**, **PIX_CIDADE** e **APP_TIMEZONE**.
+4. Aplique migrações e, somente em banco novo/de teste, carregue o catálogo de demonstração:
+   - **npm run db:migrate**
+   - **npm run db:seed**
+5. Gere o frontend e inicie o servidor:
+   - **npm run build**
+   - **npm start**
+6. Abra **http://localhost:3000**.
+
+**Atenção ao seed:** **FORCE_SEED=1 npm run db:seed** é destrutivo. Apaga pedidos, sessões, pagamentos e cardápio antes de substituir os dados de demonstração. Nunca execute no banco de produção.
+
+## 7. Testes e validação
+
+| Comando | O que valida | Observações |
+|---|---|---|
+| npm run typecheck | Tipos TypeScript | Não emite arquivos. |
+| npm run build | Build de produção do frontend | Gera assets em dist/. |
+| npm test | Regressões automatizadas | Inclui regressions.cjs e tests/*.test.cjs, exceto suítes PostgreSQL. |
+| npm run smoke:panorama | Renderização do panorama de mesas | Smoke SSR. |
+| npm run test:pg | Integração PostgreSQL | Exige banco descartável chamado qradmin_test. |
+| npm run test:e2e | Fluxos em Chromium real | Exige servidor e banco de teste. |
+| npm run test:seguranca | Autorização, IDOR, CSRF e limites | Altera dados; nunca usar produção. |
+| npm run test:carga / test:carga70 | Cenários concorrentes e de carga | Somente ambiente isolado. |
+| npm run test:smoke / test:full | Fluxos de API e operação | Exigem ambiente preparado. |
+| npm run test:dia | Simulação operacional prolongada | Somente ambiente isolado. |
+| npm run db:restore-drill | Ensaio de backup e restauração | Exige ferramentas PostgreSQL e destino isolado. |
+
+### Integração PostgreSQL e E2E
+
+As suítes PostgreSQL exigem banco descartável e recusam database que não se chame **qradmin_test**.
+
+1. Configure DATABASE_URL para um PostgreSQL de teste, com o database qradmin_test.
+2. Defina NODE_ENV=test.
+3. Execute **npm run db:migrate**.
+4. Execute **npm run test:pg** e **npm run test:e2e**.
+
+Para executar o drill sem ferramentas locais de backup, use **npm run test:pg -- --sem-backup**.
+
+O drill manual de backup/restore exige banco isolado vazio e confirmação explícita: **RESTORE_DRILL_CONFIRM=isolated-target npm run db:restore-drill**.
+
+**Nunca aponte testes mutáveis, carga, seed ou restore para produção.** CI verde não substitui validação em aparelho físico nem teste de operação no estabelecimento.
+
+## 8. Segurança e operação
+
+- A API valida novamente preço, disponibilidade, estoque, permissões e transições de estado no servidor.
+- Operações concorrentes usam transações e controles de consistência no PostgreSQL.
+- Tokens de mesa e garçom são credenciais: não compartilhar publicamente.
+- Não registrar senhas, tokens ou dados sensíveis em logs.
+- Antes de aplicar migrações em produção, confirmar o banco de destino e fazer backup.
+- O servidor pode tentar aplicar migrações na inicialização; esse caminho é best-effort. Conferir logs e validar a versão do schema antes de operar.
+- O drill automatizado usa dados sintéticos. Ainda é necessário testar restauração de backup real antes da operação comercial.
+
+## 9. Estado conhecido do produto
+
+| Recurso | Situação documentada |
+|---|---|
+| QR, cardápio, comanda e fluxo cozinha/bar/caixa | Implementado; coberto por testes automatizados e integração PostgreSQL. |
+| Produção e entrega progressiva por item | Implementado; autoria e horários registrados. |
+| Fila offline do garçom | Persistência, reinício, sincronização e idempotência validados em Chromium. |
+| PWA em Android/iOS físicos | Validação adicional pendente. |
+| Web Push com app fechado | Não implementado. |
+| PIX | QR/chave estática e lançamento manual; sem gateway ou confirmação bancária automática. |
+| Comprovante | Comprovante de consumo não fiscal. |
+| Multi-loja / multi-tenant | Fora do escopo atual. |
+| Produção | Validar deploy, backup real e operação em aparelho físico antes de declarar prontidão comercial. |
+
+## 10. Documentação técnica
+
+- [Contrato de atendimento do garçom](docs/CONTRATO-ATENDIMENTO-GARCOM.md) — estados por item, idempotência e erros.
+- [PWA de atendimento](docs/PWA-ATENDIMENTO-GARCOM.md) — arquitetura e garantias da fila offline.
+- [Design System](docs/DESIGN_SYSTEM.md) — tokens, componentes e identidade visual.
+- [Redefinição de senha](docs/REDEFINICAO-SENHA-ADMIN.md) — fluxo de senha da equipe.
+- [Panorama de mesas](docs/engineering/panorama-mesas.md) — praças, tempos e ocupação.
+- [Dashboard geral](docs/engineering/dashboard-geral.md) — indicadores, períodos e reconciliação.
+- [Runbook de produção](docs/engineering/PRODUCTION_OPERATIONS_RUNBOOK.md) — operação, incidentes, deploy e rollback.
+- [Guia visual interativo](public/guia-sistema.html) — demonstração sem integração; cada ícone abre uma explicação.
 
 ---
 
 <div align="center">
 
-**QR Admin** · sistema de pedidos por QR Code para um estabelecimento  
-[deividjmoura](https://github.com/deividjmoura)
+**QR Admin** · pedidos por QR Code, produção e atendimento para um estabelecimento
+
+[Repositório deividjmoura/lanchonete-qr-semi-final](https://github.com/deividjmoura/lanchonete-qr-semi-final)
 
 </div>
