@@ -162,6 +162,35 @@ async function main() {
     const transform2 = await page.locator('.card-neon').first().evaluate((e) => getComputedStyle(e).transform);
     assert.notEqual(primeiro, segundo, 'parallax acompanha o mouse fora dos cards');
     assert.notEqual(transform1, transform2, 'variáveis alteram o transform');
+
+    // Editor: resize por gesto no canto, visibilidade e persistência explícita.
+    await page.getByRole('button', { name: 'Editar dashboard' }).click();
+    const cardFaturamento = page.locator('[data-dashboard-card="faturamento"]');
+    const alca = page.getByRole('button', { name: 'Arraste para redimensionar Faturamento' });
+    const caixaAlca = await alca.boundingBox();
+    assert.ok(caixaAlca, 'alça de redimensionamento está visível');
+    await page.mouse.move(caixaAlca.x + caixaAlca.width / 2, caixaAlca.y + caixaAlca.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(caixaAlca.x + caixaAlca.width / 2 + 330, caixaAlca.y + caixaAlca.height / 2 + 190, { steps: 8 });
+    await page.mouse.up();
+    await page.waitForFunction(() => {
+      const card = document.querySelector('[data-dashboard-card="faturamento"]');
+      return card?.style.gridColumn === 'span 2' && card?.style.gridRow === 'span 2';
+    });
+    assert.equal(await page.locator('.dashboard-group--movement').evaluate((el) => el.compareDocumentPosition(document.querySelector('.dashboard-group--operation')) & Node.DOCUMENT_POSITION_FOLLOWING ? true : false), true, '01 Movimento permanece acima de 02 Operação');
+    await page.getByRole('button', { name: 'Ocultar Faturamento' }).click();
+    assert.equal(await cardFaturamento.getAttribute('data-visible'), 'false');
+    await page.getByRole('button', { name: 'Salvar layout do dashboard' }).click();
+    await page.reload();
+    await page.waitForFunction(() => document.querySelectorAll('.card-neon').length === 11);
+    assert.equal(await page.locator('[data-dashboard-card="faturamento"]').count(), 0, 'card oculto permanece oculto após recarregar');
+    await page.getByRole('button', { name: 'Editar dashboard' }).click();
+    await page.getByRole('button', { name: 'Exibir Faturamento' }).click();
+    await page.getByRole('button', { name: 'Salvar layout do dashboard' }).click();
+    await page.getByRole('button', { name: 'Restaurar padrão' }).click();
+    const confirmacao = page.getByRole('dialog').filter({ hasText: 'Restaurar o dashboard padrão?' });
+    await confirmacao.getByRole('button', { name: 'Restaurar padrão' }).click();
+    await page.waitForFunction(() => document.querySelectorAll('.card-neon').length === 12);
     assert.deepEqual(errors, []);
     await context.close();
 
