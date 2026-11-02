@@ -41,6 +41,10 @@ test("páginas estáticas e PWA carregam o mesmo modal de confirmação", () => 
   assert.match(ler("public/admin.html"), /src="\/js\/confirmacao\.js"/);
   assert.match(ler("public/caixa.html"), /src="\/js\/confirmacao\.js"/);
   assert.match(ler("public/garcom-pwa/index.html"), /src="\.\.\/js\/confirmacao\.js"/);
+  const sw = ler("public/garcom-pwa/sw.js");
+  assert.match(sw, /garcom-pwa-shell-v35/);
+  assert.match(sw, /\.\.\/js\/confirmacao\.js/);
+  assert.match(sw, /url\.pathname!==\x27\/js\/confirmacao\.js\x27/);
   const helper = ler("public/js/confirmacao.js");
   assert.match(helper, /role','alertdialog'/);
   assert.match(helper, /aria-modal/);
