@@ -366,7 +366,7 @@ function Grafico({ dias, periodo, loading }: { dias: DiaDashboard[]; periodo: Pe
   </section>;
 }
 
-function WidgetFrame({ id, layout, editando, onToggleVisibility, onResize, onDragStart, children }: {
+function WidgetFrame({ id, layout, editando, onToggleVisibility, onResize, onDragStart, onDragEnd, children }: {
   id: "grafico" | "ranking"; layout: WidgetLayout; editando: boolean;
   onToggleVisibility: () => void; onResize: (w: number, h: number) => void;
   onDragStart: (id: WidgetId) => void; onDragEnd: () => void; children: ReactNode;
