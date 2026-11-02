@@ -237,6 +237,8 @@ O drill manual de backup/restore exige banco isolado vazio e confirmação expl�
 
 ## 8. Segurança e operação
 
+- Confirmações de ações que alteram ou removem dados usam modais contextuais, com resumo do impacto e botões explícitos para cancelar ou confirmar. A exclusão do histórico exige uma confirmação textual adicional no próprio modal.
+
 - Confirmações de ações que alteram ou removem dados usam modais contextuais, com resumo do impacto e botões explícitos para cancelar ou confirmar. A exclusão do histórico também exige digitar `APAGAR` no modal final.
 
 - A API valida novamente preço, disponibilidade, estoque, permissões e transições de estado no servidor.
