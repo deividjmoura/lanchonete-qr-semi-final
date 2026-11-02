@@ -1,5 +1,5 @@
 import {
-  Armchair, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpRight, ArrowsOut, ChartBar, CookingPot, CreditCard,
+  Armchair, ArrowUpRight, ArrowsOut, ChartBar, CookingPot, CreditCard,
   CurrencyCircleDollar, Eye, EyeSlash, HandCoins, Receipt, ShoppingBagOpen, Sparkle,
   Timer, TrendUp, Trophy, Users, Wallet, X,
 } from "@phosphor-icons/react";
@@ -170,19 +170,10 @@ function useParallax(ref: React.RefObject<HTMLDivElement | null>) {
   }, [ref]);
 }
 
-function ControlesMovimento({ nome, onMove }: { nome: string; onMove: (dx: number, dy: number) => void }) {
-  return <div className="dashboard-move-controls" role="group" aria-label={`Posição de ${nome}`}>
-    <button type="button" aria-label={`Mover ${nome} para cima`} onClick={() => onMove(0, -1)}><ArrowUp size={14} /></button>
-    <button type="button" aria-label={`Mover ${nome} para esquerda`} onClick={() => onMove(-1, 0)}><ArrowLeft size={14} /></button>
-    <button type="button" aria-label={`Mover ${nome} para direita`} onClick={() => onMove(1, 0)}><ArrowRight size={14} /></button>
-    <button type="button" aria-label={`Mover ${nome} para baixo`} onClick={() => onMove(0, 1)}><ArrowDown size={14} /></button>
-  </div>;
-}
-
-function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggleVisibility, onMoveWidget }: {
+function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggleVisibility, onDragStart, onDragEnd }: {
   card: Card; disponivel: boolean; onClick: () => void; editando: boolean; layout: WidgetLayout;
-  onResize: (w: number, h: number) => void; onToggleVisibility: () => void; 
-  onMoveWidget: (id: WidgetId, x: number, y: number) => void;
+  onResize: (w: number, h: number) => void; onToggleVisibility: () => void;
+  onDragStart: (id: WidgetId) => void; onDragEnd: () => void;
 }) {
   const Icon = card.Icon;
   const resizeStart = useRef<{ x: number; y: number; w: number; h: number; cellW: number; cellH: number } | null>(null);
@@ -223,7 +214,6 @@ function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggl
       </span>
     </button>
     {editando && <>
-      <ControlesMovimento nome={card.label} onMove={(dx, dy) => onMoveWidget(card.id, layout.x + dx, layout.y + dy)} />
       <button type="button" className="card-neon__visibility" onClick={onToggleVisibility}
         aria-label={layout.visible ? `Ocultar ${card.label}` : `Exibir ${card.label}`} aria-pressed={layout.visible}
         title={layout.visible ? "Ocultar card" : "Exibir card"}>{layout.visible ? <Eye size={17} weight="bold" /> : <EyeSlash size={17} weight="bold" />}</button>
@@ -374,10 +364,10 @@ function Grafico({ dias, periodo, loading }: { dias: DiaDashboard[]; periodo: Pe
   </section>;
 }
 
-function WidgetFrame({ id, layout, editando, onToggleVisibility, onResize, onDragStart, onDragEnd, onMoveWidget, children }: {
+function WidgetFrame({ id, layout, editando, onToggleVisibility, onResize, onDragStart, onDragEnd, children }: {
   id: "grafico" | "ranking"; layout: WidgetLayout; editando: boolean;
   onToggleVisibility: () => void; onResize: (w: number, h: number) => void;
-  onDragStart: (id: WidgetId) => void; onDragEnd: () => void; onMoveWidget: (id: WidgetId, x: number, y: number) => void; children: ReactNode;
+  onDragStart: (id: WidgetId) => void; onDragEnd: () => void; children: ReactNode;
 }) {
   const resizeStart = useRef<{ x: number; y: number; w: number; h: number; cellW: number; cellH: number } | null>(null);
   const iniciarResize = (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -409,7 +399,6 @@ function WidgetFrame({ id, layout, editando, onToggleVisibility, onResize, onDra
     data-dashboard-widget={id} data-visible={layout.visible ? "true" : "false"}>
     {children}
     {editando && <>
-      <ControlesMovimento nome={id === "grafico" ? "Evolução da semana" : "Mais pedidos"} onMove={(dx, dy) => onMoveWidget(id, layout.x + dx, layout.y + dy)} />
       <button type="button" className="dashboard-widget__visibility" onClick={onToggleVisibility}
         aria-label={layout.visible ? `Ocultar ${id === "grafico" ? "Evolução da semana" : "Mais pedidos"}` : `Exibir ${id === "grafico" ? "Evolução da semana" : "Mais pedidos"}`}
         aria-pressed={layout.visible}>{layout.visible ? <Eye size={17} weight="bold" /> : <EyeSlash size={17} weight="bold" />}</button>
@@ -591,7 +580,7 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
     </div>}
 
     {editMode && <div className="dashboard-edit-banner" role="status">
-      <span><strong>Modo de edição</strong> · use as setas para posicionar cards e painéis; puxe a alça no canto inferior direito para redimensionar; use o olho para ocultar ou exibir. O sistema impede sobreposição.</span>
+      <span><strong>Modo de edição</strong> · arraste os cards e painéis com o mouse para posicioná-los livremente; puxe a alça no canto inferior direito para redimensionar; use o olho para ocultar ou exibir. O sistema impede sobreposição.</span>
       <div className="dashboard-edit-actions">
         <button type="button" onClick={salvarLayout} disabled={layoutSalvo} aria-label="Salvar layout do dashboard">{layoutSalvo ? "Layout salvo" : "Salvar layout"}</button>
         <button type="button" onClick={() => void restaurarLayout()}>Restaurar padrão</button>
@@ -605,7 +594,7 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
           .map((card) => <Cartao key={card.id} card={card} disponivel={Boolean(dash)} onClick={() => setSelecionado(card.id)}
             editando={editMode} layout={layout.widgets[card.id]} onResize={(w, h) => redimensionar(card.id, w, h)}
             onToggleVisibility={() => alternarVisibilidade(card.id)}
-            onMoveWidget={moverWidget} />)}
+            onDragStart={(id) => setArrastado(id)} onDragEnd={() => setArrastado(null)} />)}
         {(editMode || layout.widgets.grafico.visible) && <WidgetFrame id="grafico" layout={layout.widgets.grafico} editando={editMode}
           onToggleVisibility={() => alternarVisibilidade("grafico")} onResize={(w, h) => redimensionar("grafico", w, h)}
           onDragStart={(id) => setArrastado(id)} onDragEnd={() => setArrastado(null)} onMoveWidget={moverWidget}>
