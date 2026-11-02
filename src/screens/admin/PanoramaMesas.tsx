@@ -1,6 +1,6 @@
-import { Clock, Fire, WarningCircle, CaretRight, CheckCircle } from "@phosphor-icons/react";
+import { Clock, Fire, WarningCircle, CheckCircle } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
-import { Badge, Btn } from "../../components/ui";
+import { Badge } from "../../components/ui";
 import {
   FAIXAS_TEMPO,
   PERIODOS,
@@ -270,8 +270,17 @@ function CartaoMesa({
       aria-label={`Mesa ${String(mesa.numero).padStart(2, "0")}: ${ocupada ? "ocupada" : "livre"}${
         faixa ? `, ${faixa.rotulo.toLowerCase()}, ${formatarDuracao(tempo?.minutos)}` : ""
       }`}
+      role="button"
+      tabIndex={0}
+      onClick={onAbrir}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onAbrir();
+        }
+      }}
       className={cn(
-        "flex min-w-0 flex-col rounded-md border bg-surface-raised p-3.5 transition-colors",
+        "flex min-w-0 cursor-pointer flex-col rounded-md border bg-surface-raised p-3.5 text-left transition-colors hover:border-brand-border hover:bg-surface-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
         critica ? "border-status-danger-border" : ocupada ? "border-line-strong" : "border-line",
       )}
     >
@@ -345,9 +354,6 @@ function CartaoMesa({
                 {mesa.pago > 0 ? ` · já pago ${BRL(mesa.pago)}` : ""}
               </p>
             </div>
-            <Btn size="sm" variant="outline" onClick={onAbrir} className="shrink-0 px-2.5">
-              Abrir <CaretRight size={13} weight="bold" />
-            </Btn>
           </div>
         </>
       ) : (
@@ -359,9 +365,6 @@ function CartaoMesa({
             <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-text-muted">
               <CheckCircle size={13} weight="bold" /> sem consumo
             </span>
-            <Btn size="sm" variant="outline" onClick={onAbrir} className="shrink-0 px-2.5">
-              Abrir <CaretRight size={13} weight="bold" />
-            </Btn>
           </div>
         </>
       )}
