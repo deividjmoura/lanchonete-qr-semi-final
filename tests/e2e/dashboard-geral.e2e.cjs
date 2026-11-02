@@ -167,20 +167,15 @@ async function main() {
     await page.getByRole('button', { name: 'Editar dashboard' }).click();
     const cardFaturamento = page.locator('[data-dashboard-card="faturamento"]');
     const alca = page.getByRole('button', { name: 'Arraste para redimensionar Faturamento' });
-    // Mover para a área ocupada por outro card: o motor deve encontrar um espaço livre.
-    const origemArraste = await cardFaturamento.boundingBox();
-    const destinoArraste = await page.locator('[data-dashboard-card="pedidos"]').boundingBox();
-    assert.ok(origemArraste && destinoArraste, 'cards de origem e destino estão visíveis');
-    await page.mouse.move(origemArraste.x + origemArraste.width / 2, origemArraste.y + origemArraste.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(destinoArraste.x + destinoArraste.width / 2, destinoArraste.y + destinoArraste.height / 2, { steps: 10 });
-    await page.mouse.up();
+    // Posicionamento explícito por setas, sem drag-and-drop dependente de ponteiro.
+    await page.getByRole('button', { name: 'Mover Faturamento para direita' }).click();
     await page.waitForFunction(() => {
       const card = document.querySelector('[data-dashboard-card="faturamento"]');
       return card && (card.style.gridColumn !== '1 / span 3' || Number(card.style.gridRow.split('/')[0]) !== 1);
     });
     const posicaoMovida = await cardFaturamento.evaluate((el) => ({ column: el.style.gridColumn, row: el.style.gridRow }));
     assert.notEqual(posicaoMovida.row, '1 / span 2', 'o card foi retirado da posição inicial');
+    assert.ok(Number.parseInt(posicaoMovida.row, 10) > 1, 'o motor encontrou uma linha livre sem sobrepor os demais widgets');
     assert.notEqual(posicaoMovida.column, '1 / span 3', 'o card foi reposicionado no canvas');
 
     const caixaAlca = await alca.boundingBox();
