@@ -23,6 +23,7 @@ import { IconBtn, Logo, ThemeToggle } from "./ui";
 import { TrocarSenha } from "./TrocarSenha";
 import { audioMudo, beepAlerta, beepDuplo, falar, setMudo } from "../lib/sonus";
 import { FRASES_GARCOM } from "../lib/data";
+import "./OpsShell.css";
 
 const NAV_ALL = [
   { id: "cozinha", label: "Cozinha", Icon: CookingPot, to: "/cozinha", roles: ["admin", "cozinha"] as const },
@@ -209,7 +210,30 @@ export function OpsShell({
             </button>
           </div>
 
-          <nav aria-label="Navegação principal" className="ops-nav ops-nav-list flex-1">
+          <nav
+            aria-label="Navegação principal"
+            className="ops-nav ops-nav-list flex-1"
+            onPointerMove={(event) => {
+              if (event.pointerType !== "mouse") return;
+              const pointerY = event.clientY;
+              const itens = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(".ops-nav-item"));
+              itens.forEach((item) => {
+                const icon = item.querySelector<SVGElement>("svg");
+                if (!icon) return;
+                const rect = item.getBoundingClientRect();
+                const distance = Math.abs(pointerY - (rect.top + rect.height / 2));
+                const influence = Math.max(0, 1 - distance / 84);
+                const scale = 1 + 0.62 * influence * influence;
+                icon.style.transform = "scale(" + scale.toFixed(3) + ")";
+              });
+            }}
+            onPointerLeave={(event) => {
+              if (event.pointerType !== "mouse") return;
+              event.currentTarget.querySelectorAll<SVGElement>(".ops-nav-item svg").forEach((icon) => {
+                icon.style.transform = "scale(1)";
+              });
+            }}
+          >
             {nav.map((n) => {
               const active = ativo === n.id;
               const Icon = n.Icon;
@@ -219,6 +243,8 @@ export function OpsShell({
                   type="button"
                   data-active={active ? "true" : "false"}
                   aria-label={n.label}
+                  title={n.label}
+                  data-label={n.label}
                   aria-current={active ? "page" : undefined}
                   onClick={() => { ir(n.to); if (menuAberto) fecharMenu(); }}
                   className="ops-nav-item text-left"
