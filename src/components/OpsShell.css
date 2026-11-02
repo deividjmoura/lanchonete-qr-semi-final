@@ -110,3 +110,17 @@
     transition: none !important;
   }
 }
+
+/* Linhas internas redundantes: mantém cartões e estados, remove só os cortes
+   decorativos que fragmentavam dashboard e filas operacionais. */
+.dash-ranking__item,
+.dash-detail-list,
+.dash-mini,
+.dash-detail-row,
+.ops-sessao__corpo,
+.ops-card__topo,
+.ops-card__rodape,
+.ops-card__alerta {
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+}
