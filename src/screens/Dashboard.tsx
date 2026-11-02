@@ -177,9 +177,9 @@ function useParallax(ref: React.RefObject<HTMLDivElement | null>) {
   }, [ref]);
 }
 
-function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggleVisibility, onDragStart }: {
+function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggleVisibility, onDragStart, onDragEnd }: {
   card: Card; disponivel: boolean; onClick: () => void; editando: boolean; layout: WidgetLayout;
-  onResize: (w: number, h: number) => void; onToggleVisibility: () => void; onDragStart: (id: WidgetId) => void;
+  onResize: (w: number, h: number) => void; onToggleVisibility: () => void; onDragStart: (id: WidgetId) => void; onDragEnd: () => void;
 }) {
   const Icon = card.Icon;
   const resizeStart = useRef<{ x: number; y: number; w: number; h: number; cellW: number; cellH: number } | null>(null);
@@ -203,7 +203,7 @@ function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggl
   return <article className={`card-neon card-neon--${card.cor} ${editando ? "card-neon--editing" : ""} ${layout.visible ? "" : "card-neon--hidden"}`}
     style={{ gridColumn: `${layout.x + 1} / span ${layout.w}`, gridRow: `${layout.y + 1} / span ${layout.h}` }}
     draggable={editando}
-    onDragStart={(event) => { if (!editando || (event.target as HTMLElement).closest(".card-neon__resize-handle, .card-neon__visibility")) { event.preventDefault(); return; } onDragStart(card.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", card.id); }}
+    onDragStart={(event) => { if (!editando || (event.target as HTMLElement).closest(".card-neon__resize-handle, .card-neon__visibility")) { event.preventDefault(); return; } onDragStart(card.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", card.id); }} onDragEnd={onDragEnd}
     data-dashboard-card={card.id} data-visible={layout.visible ? "true" : "false"}>
     <button type="button" className="card-neon__open" onClick={onClick} disabled={!disponivel || editando || !layout.visible}
       aria-haspopup="dialog" aria-label={`Detalhar ${card.label}: ${card.valor}`}>
@@ -369,7 +369,7 @@ function Grafico({ dias, periodo, loading }: { dias: DiaDashboard[]; periodo: Pe
 function WidgetFrame({ id, layout, editando, onToggleVisibility, onResize, onDragStart, children }: {
   id: "grafico" | "ranking"; layout: WidgetLayout; editando: boolean;
   onToggleVisibility: () => void; onResize: (w: number, h: number) => void;
-  onDragStart: (id: WidgetId) => void; children: ReactNode;
+  onDragStart: (id: WidgetId) => void; onDragEnd: () => void; children: ReactNode;
 }) {
   const resizeStart = useRef<{ x: number; y: number; w: number; h: number; cellW: number; cellH: number } | null>(null);
   const iniciarResize = (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -388,7 +388,7 @@ function WidgetFrame({ id, layout, editando, onToggleVisibility, onResize, onDra
     const start = resizeStart.current; if (!start) return;
     event.preventDefault();
     onResize(Math.max(1, Math.min(12 - layout.x, start.w + Math.round((event.clientX - start.x) / start.cellW))),
-      Math.max(1, Math.min(20, start.h + Math.round((event.clientY - start.y) / start.cellH))));
+      Math.max(1, Math.min(100, start.h + Math.round((event.clientY - start.y) / start.cellH))));
   };
   const finalizarResize = (event: React.PointerEvent<HTMLButtonElement>) => {
     resizeStart.current = null;
@@ -397,7 +397,7 @@ function WidgetFrame({ id, layout, editando, onToggleVisibility, onResize, onDra
   return <div className={`dashboard-widget ${editando ? "dashboard-widget--editing" : ""} ${layout.visible ? "" : "dashboard-widget--hidden"}`}
     style={{ gridColumn: `${layout.x + 1} / span ${layout.w}`, gridRow: `${layout.y + 1} / span ${layout.h}` }}
     draggable={editando}
-    onDragStart={(event) => { if (!editando || (event.target as HTMLElement).closest(".dashboard-widget__resize, .dashboard-widget__visibility")) { event.preventDefault(); return; } onDragStart(id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", id); }}
+    onDragStart={(event) => { if (!editando || (event.target as HTMLElement).closest(".dashboard-widget__resize, .dashboard-widget__visibility")) { event.preventDefault(); return; } onDragStart(id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", id); }} onDragEnd={onDragEnd}
     data-dashboard-widget={id} data-visible={layout.visible ? "true" : "false"}>
     {children}
     {editando && <>
@@ -591,13 +591,13 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
           .sort((a, b) => layout.widgets[a.id].y - layout.widgets[b.id].y || layout.widgets[a.id].x - layout.widgets[b.id].x)
           .map((card) => <Cartao key={card.id} card={card} disponivel={Boolean(dash)} onClick={() => setSelecionado(card.id)}
             editando={editMode} layout={layout.widgets[card.id]} onResize={(w, h) => redimensionar(card.id, w, h)}
-            onToggleVisibility={() => alternarVisibilidade(card.id)} onDragStart={setArrastado} />)}
+            onToggleVisibility={() => alternarVisibilidade(card.id)} onDragStart={setArrastado} onDragEnd={() => setArrastado(null)} />)}
         {(editMode || layout.widgets.grafico.visible) && <WidgetFrame id="grafico" layout={layout.widgets.grafico} editando={editMode}
-          onToggleVisibility={() => alternarVisibilidade("grafico")} onResize={(w, h) => redimensionar("grafico", w, h)} onDragStart={setArrastado}>
+          onToggleVisibility={() => alternarVisibilidade("grafico")} onResize={(w, h) => redimensionar("grafico", w, h)} onDragStart={setArrastado} onDragEnd={() => setArrastado(null)}>
           <Grafico dias={diasGrafico} periodo={periodo} loading={loading} />
         </WidgetFrame>}
         {(editMode || layout.widgets.ranking.visible) && <WidgetFrame id="ranking" layout={layout.widgets.ranking} editando={editMode}
-          onToggleVisibility={() => alternarVisibilidade("ranking")} onResize={(w, h) => redimensionar("ranking", w, h)} onDragStart={setArrastado}>
+          onToggleVisibility={() => alternarVisibilidade("ranking")} onResize={(w, h) => redimensionar("ranking", w, h)} onDragStart={setArrastado} onDragEnd={() => setArrastado(null)}>
           <section aria-label="Mais pedidos" className="dash-panel dash-ranking">
             <div className="dash-panel__head"><div><p className="dash-kicker">DESTAQUES DO PERÍODO</p><h3>Mais pedidos</h3><p>Itens não cancelados por quantidade</p></div><span className="dash-panel__icon dash-panel__icon--lima"><Trophy size={19} weight="duotone" /></span></div>
             {!dash ? <p className="dash-ranking__empty">{carregando}</p> : !top.length ? <p className="dash-ranking__empty">Nenhum item pedido no período.</p> : <ul>
