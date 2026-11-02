@@ -591,7 +591,7 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
     </div>}
 
     {editMode && <div className="dashboard-edit-banner" role="status">
-      <span><strong>Modo de edição</strong> · arraste qualquer card ou painel para posicionar; puxe a alça no canto inferior direito para redimensionar; use o olho para ocultar ou exibir. O sistema impede sobreposição.</span>
+      <span><strong>Modo de edição</strong> · use as setas para posicionar cards e painéis; puxe a alça no canto inferior direito para redimensionar; use o olho para ocultar ou exibir. O sistema impede sobreposição.</span>
       <div className="dashboard-edit-actions">
         <button type="button" onClick={salvarLayout} disabled={layoutSalvo} aria-label="Salvar layout do dashboard">{layoutSalvo ? "Layout salvo" : "Salvar layout"}</button>
         <button type="button" onClick={() => void restaurarLayout()}>Restaurar padrão</button>
@@ -607,11 +607,13 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
             onToggleVisibility={() => alternarVisibilidade(card.id)}
             onMoveWidget={moverWidget} />)}
         {(editMode || layout.widgets.grafico.visible) && <WidgetFrame id="grafico" layout={layout.widgets.grafico} editando={editMode}
-          onToggleVisibility={() => alternarVisibilidade("grafico")} onResize={(w, h) => redimensionar("grafico", w, h)} onMoveWidget={moverWidget}>
+          onToggleVisibility={() => alternarVisibilidade("grafico")} onResize={(w, h) => redimensionar("grafico", w, h)}
+          onDragStart={(id) => setArrastado(id)} onDragEnd={() => setArrastado(null)} onMoveWidget={moverWidget}>
           <Grafico dias={diasGrafico} periodo={periodo} loading={loading} />
         </WidgetFrame>}
         {(editMode || layout.widgets.ranking.visible) && <WidgetFrame id="ranking" layout={layout.widgets.ranking} editando={editMode}
-          onToggleVisibility={() => alternarVisibilidade("ranking")} onResize={(w, h) => redimensionar("ranking", w, h)} onMoveWidget={moverWidget}>
+          onToggleVisibility={() => alternarVisibilidade("ranking")} onResize={(w, h) => redimensionar("ranking", w, h)}
+          onDragStart={(id) => setArrastado(id)} onDragEnd={() => setArrastado(null)} onMoveWidget={moverWidget}>
           <section aria-label="Mais pedidos" className="dash-panel dash-ranking">
             <div className="dash-panel__head"><div><p className="dash-kicker">DESTAQUES DO PERÍODO</p><h3>Mais pedidos</h3><p>Itens não cancelados por quantidade</p></div><span className="dash-panel__icon dash-panel__icon--lima"><Trophy size={19} weight="duotone" /></span></div>
             {!dash ? <p className="dash-ranking__empty">{carregando}</p> : !top.length ? <p className="dash-ranking__empty">Nenhum item pedido no período.</p> : <ul>
