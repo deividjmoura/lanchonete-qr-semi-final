@@ -43,7 +43,7 @@ const LAYOUT_PADRAO: DashboardLayout = { widgets: {
 } };
 function lerLayout(): DashboardLayout {
   try {
-    const raw = localStorage.getItem(STORAGE_LAYOUT); if (!raw) return LAYOUT_PADRAO;
+    const raw = localStorage.getItem(STORAGE_LAYOUT) || localStorage.getItem("qradmin-dashboard-layout-v1"); if (!raw) return LAYOUT_PADRAO;
     const parsed = JSON.parse(raw) as { widgets?: Partial<Record<WidgetId, Partial<WidgetLayout>>>; order?: CardId[]; sizes?: Partial<Record<CardId, { w?: number; h?: number; visible?: boolean }>> };
     const widgets = Object.fromEntries(WIDGET_IDS.map((id) => [id, { ...LAYOUT_PADRAO.widgets[id] }])) as Record<WidgetId, WidgetLayout>;
     if (parsed.widgets) {
@@ -52,7 +52,7 @@ function lerLayout(): DashboardLayout {
         const item = parsed.widgets[id];
         const padrao = LAYOUT_PADRAO.widgets[id];
         const desired = item ? { x: Math.max(0, Math.round(Number(item.x) || 0)), y: Math.max(0, Math.round(Number(item.y) || 0)),
-          w: Math.max(1, Math.min(12, Math.round(Number(item.w) || 1))), h: Math.max(1, Math.min(20, Math.round(Number(item.h) || 1))) } : padrao;
+          w: Math.max(1, Math.min(12, Math.round(Number(item.w) || 1))), h: Math.max(1, Math.min(100, Math.round(Number(item.h) || 1))) } : padrao;
         const livre = findAvailablePosition(ocupados, id, desired);
         widgets[id] = { ...livre, visible: typeof item?.visible === "boolean" ? item.visible : padrao.visible }; ocupados[id] = livre;
       }
@@ -195,7 +195,7 @@ function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggl
   const moverResize = (event: React.PointerEvent<HTMLButtonElement>) => {
     const start = resizeStart.current; if (!start) return; event.preventDefault();
     onResize(Math.max(1, Math.min(12 - layout.x, start.w + Math.round((event.clientX - start.x) / start.cellW))),
-      Math.max(1, Math.min(20, start.h + Math.round((event.clientY - start.y) / start.cellH))));
+      Math.max(1, Math.min(100, start.h + Math.round((event.clientY - start.y) / start.cellH))));
   };
   const finalizarResize = (event: React.PointerEvent<HTMLButtonElement>) => {
     resizeStart.current = null; if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
@@ -426,6 +426,14 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
   const dialogo = useRef<HTMLDialogElement>(null);
   useParallax(stage);
 
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem(STORAGE_LAYOUT) && localStorage.getItem("qradmin-dashboard-layout-v1")) {
+        localStorage.setItem(STORAGE_LAYOUT, JSON.stringify(layout));
+      }
+    } catch { /* a composição segue ativa mesmo sem persistência */ }
+  }, []);
+
   useEffect(() => { if (!editMode) setArrastado(null); }, [editMode]);
 
   useEffect(() => {
@@ -493,7 +501,7 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
     setLayoutSalvo(false);
     setLayout((atual) => {
       const atualWidget = atual.widgets[id];
-      const candidato = { ...atualWidget, w: Math.max(1, Math.min(12 - atualWidget.x, w)), h: Math.max(1, Math.min(20, h)) };
+      const candidato = { ...atualWidget, w: Math.max(1, Math.min(12 - atualWidget.x, w)), h: Math.max(1, Math.min(100, h)) };
       if (!canPlaceWidget(atual.widgets, id, candidato)) return atual;
       return { widgets: { ...atual.widgets, [id]: candidato } };
     });
