@@ -68,6 +68,10 @@ function lerLayout(): DashboardLayout {
       const livre = findAvailablePosition(ocupados, id, desired);
       widgets[id] = { ...livre, visible: typeof antigo?.visible === "boolean" ? antigo.visible : true }; ocupados[id] = livre;
     });
+    (["grafico", "ranking"] as const).forEach((id) => {
+      const livre = findAvailablePosition(ocupados, id, LAYOUT_PADRAO.widgets[id]);
+      widgets[id] = { ...livre, visible: true }; ocupados[id] = livre;
+    });
     return { widgets };
   } catch { return LAYOUT_PADRAO; }
 }
