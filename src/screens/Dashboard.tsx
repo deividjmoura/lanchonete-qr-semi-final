@@ -170,12 +170,39 @@ function useParallax(ref: React.RefObject<HTMLDivElement | null>) {
   }, [ref]);
 }
 
-function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggleVisibility, onDragStart, onDragEnd }: {
+function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggleVisibility, onDragStart, onDragEnd, onMoveWidget }: {
   card: Card; disponivel: boolean; onClick: () => void; editando: boolean; layout: WidgetLayout;
   onResize: (w: number, h: number) => void; onToggleVisibility: () => void; onDragStart: (id: WidgetId) => void; onDragEnd: () => void;
+  onMoveWidget: (id: WidgetId, x: number, y: number) => void;
 }) {
   const Icon = card.Icon;
+  const dragStart = useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const resizeStart = useRef<{ x: number; y: number; w: number; h: number; cellW: number; cellH: number } | null>(null);
+  const iniciarArraste = (event: React.PointerEvent<HTMLElement>) => {
+    if (!editando || (event.target as HTMLElement).closest(".card-neon__visibility, .card-neon__resize-handle")) return;
+    event.preventDefault();
+    dragStart.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    onDragStart(card.id);
+  };
+  const finalizarArraste = (event: React.PointerEvent<HTMLElement>) => {
+    const start = dragStart.current;
+    dragStart.current = null;
+    onDragEnd();
+    if (!start || start.pointerId !== event.pointerId || Math.hypot(event.clientX - start.x, event.clientY - start.y) < 6) return;
+    const grid = event.currentTarget.closest(".dashboard-grid") as HTMLElement | null;
+    if (!grid) return;
+    const rect = grid.getBoundingClientRect();
+    const style = window.getComputedStyle(grid);
+    const gap = Number.parseFloat(style.columnGap) || 14;
+    const rowGap = Number.parseFloat(style.rowGap) || 14;
+    const cellW = (grid.clientWidth - gap * 11) / 12;
+    const cellH = Number.parseFloat(style.gridAutoRows) || 84;
+    const x = Math.max(0, Math.min(11, Math.floor((event.clientX - rect.left) / (cellW + gap))));
+    const y = Math.max(0, Math.floor((event.clientY - rect.top) / (cellH + rowGap)));
+    onMoveWidget(card.id, x, y);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
   const iniciarResize = (event: React.PointerEvent<HTMLButtonElement>) => {
     event.preventDefault(); event.stopPropagation();
     const grid = event.currentTarget.closest(".dashboard-grid") as HTMLElement | null;
@@ -200,9 +227,8 @@ function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggl
   };
   return <article className={`card-neon card-neon--${card.cor} ${editando ? "card-neon--editing" : ""} ${layout.visible ? "" : "card-neon--hidden"}`}
     style={{ gridColumn: `${layout.x + 1} / span ${layout.w}`, gridRow: `${layout.y + 1} / span ${layout.h}`, order: layout.y * 12 + layout.x }}
-    onPointerMove={moverResize} onPointerUp={finalizarResize} onPointerCancel={finalizarResize}
-    draggable={editando}
-    onDragStart={(event) => { if (!editando || (event.target as HTMLElement).closest(".card-neon__resize-handle, .card-neon__visibility")) { event.preventDefault(); return; } onDragStart(card.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", card.id); }} onDragEnd={onDragEnd}
+    onPointerDown={iniciarArraste} onPointerMove={moverResize} onPointerUp={(event) => { finalizarResize(event); finalizarArraste(event); }}
+    onPointerCancel={(event) => { finalizarResize(event); finalizarArraste(event); }}
     data-dashboard-card={card.id} data-visible={layout.visible ? "true" : "false"}>
     <button type="button" className="card-neon__open" onClick={() => { if (!editando) onClick(); }}
       disabled={!disponivel || (!editando && !layout.visible)}
@@ -594,7 +620,8 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
           .sort((a, b) => layout.widgets[a.id].y - layout.widgets[b.id].y || layout.widgets[a.id].x - layout.widgets[b.id].x)
           .map((card) => <Cartao key={card.id} card={card} disponivel={Boolean(dash)} onClick={() => setSelecionado(card.id)}
             editando={editMode} layout={layout.widgets[card.id]} onResize={(w, h) => redimensionar(card.id, w, h)}
-            onToggleVisibility={() => alternarVisibilidade(card.id)} onDragStart={setArrastado} onDragEnd={() => setArrastado(null)} />)}
+            onToggleVisibility={() => alternarVisibilidade(card.id)} onDragStart={setArrastado} onDragEnd={() => setArrastado(null)}
+            onMoveWidget={moverWidget} />)}
         {(editMode || layout.widgets.grafico.visible) && <WidgetFrame id="grafico" layout={layout.widgets.grafico} editando={editMode}
           onToggleVisibility={() => alternarVisibilidade("grafico")} onResize={(w, h) => redimensionar("grafico", w, h)} onDragStart={setArrastado} onDragEnd={() => setArrastado(null)}>
           <Grafico dias={diasGrafico} periodo={periodo} loading={loading} />
