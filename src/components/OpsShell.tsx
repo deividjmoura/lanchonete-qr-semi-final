@@ -243,7 +243,6 @@ export function OpsShell({
                   type="button"
                   data-active={active ? "true" : "false"}
                   aria-label={n.label}
-                  title={n.label}
                   data-label={n.label}
                   aria-current={active ? "page" : undefined}
                   onClick={() => { ir(n.to); if (menuAberto) fecharMenu(); }}
