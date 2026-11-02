@@ -130,7 +130,6 @@ jobs:
       - name: E2E in real Chromium (offline, batch/billing, CSRF tabs, admin password reset, CSV cardápio, visual system)
         env:
           LD_LIBRARY_PATH: /tmp/al2023/lib:/tmp/al2023/usr/lib
-          E2E_DEBUG_LAYOUT: '1'
         run: |
           set -o pipefail
           if ! npm run test:e2e 2>&1 | tee /tmp/e2e.log; then
