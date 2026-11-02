@@ -28,9 +28,10 @@ test("provider React apresenta alerta modal contextual com cancelar e confirmar"
   const provider = ler("src/components/ConfirmacaoGlobal.tsx");
   const service = ler("src/lib/confirmacao.ts");
   const app = ler("src/App.tsx");
+  const ui = ler("src/components/ui.tsx");
   assert.match(app, /<ConfirmacaoGlobal>/);
-  assert.match(provider, /role="dialog"/);
-  assert.match(provider, /aria-modal="true"/);
+  assert.match(ui, /role="dialog"/);
+  assert.match(ui, /aria-modal="true"/);
   assert.match(provider, /Confirmação necessária/);
   assert.match(provider, /Cancelar/);
   assert.match(service, /confirmarAcao/);
