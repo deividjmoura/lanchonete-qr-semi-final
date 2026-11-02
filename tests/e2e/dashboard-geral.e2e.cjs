@@ -182,7 +182,7 @@ async function main() {
     const tamanhoAntes = await cardFaturamento.evaluate((el) => ({ column: el.style.gridColumn, row: el.style.gridRow }));
     await page.mouse.move(caixaAlca.x + caixaAlca.width / 2, caixaAlca.y + caixaAlca.height / 2);
     await page.mouse.down();
-    await page.mouse.move(caixaAlca.x + caixaAlca.width / 2 + 250, caixaAlca.y + caixaAlca.height / 2 + 190, { steps: 8 });
+    await page.mouse.move(caixaAlca.x + caixaAlca.width / 2 - 120, caixaAlca.y + caixaAlca.height / 2 - 100, { steps: 8 });
     await page.mouse.up();
     await page.waitForFunction((antes) => {
       const card = document.querySelector('[data-dashboard-card="faturamento"]');
