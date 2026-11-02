@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { confirmarAcao } from "../lib/confirmacao";
 import type {
   Categoria,
   Evento,
@@ -996,20 +997,23 @@ if (typeof window !== "undefined") {
     const cat = st.categorias.find((c) => c.id === id);
     if (!cat) return;
     const nProd = st.produtos.filter((p) => p.categoria === cat.nome).length;
-    const msg =
-      nProd > 0
-        ? `Excluir a categoria "${cat.nome}" e os ${nProd} produto(s) nela?\n\nIsso remove os itens do cardápio. Produtos que já aparecem em pedidos antigos não podem ser apagados — nesse caso a exclusão será bloqueada.`
-        : `Excluir a categoria vazia "${cat.nome}"?`;
-    if (!confirm(msg)) return;
     void (async () => {
+      const confirmado = await confirmarAcao({
+        titulo: `Excluir a categoria "${cat.nome}"?`,
+        mensagem: nProd > 0
+          ? `A categoria contém ${nProd} produto(s). A exclusão tentará remover esses itens do cardápio. Produtos que já aparecem em pedidos antigos não podem ser apagados e serão protegidos pelo servidor.`
+          : "A categoria está vazia e será removida do cardápio.",
+        confirmar: "Excluir categoria",
+        perigo: true,
+      });
+      if (!confirmado) return;
       try {
         const out = await api.removerCategoria(id);
         await get().hydrateCardapio();
         const n = out?.produtosRemovidos ?? nProd;
-        if (n > 0) alert(`Categoria "${cat.nome}" e ${n} produto(s) excluídos.`);
+        if (n > 0) set({ lastError: null });
       } catch (e: any) {
         set({ lastError: e.message || "Erro ao excluir categoria" });
-        alert(e.message || "Erro ao excluir categoria");
         void get().hydrateCardapio();
       }
     })();
