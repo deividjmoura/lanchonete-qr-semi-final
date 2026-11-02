@@ -182,8 +182,9 @@
 
 /* Editor visual do dashboard: cards em uma única grade, com tamanho e ordem
    persistidos localmente para cada navegador/dispositivo. */
-.dashboard-layout { display: grid; gap: 14px; min-width: 0; }
-.dashboard-layout > .dash-section-heading { margin: 0; }
+.dashboard-layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; min-width: 0; }
+.dashboard-layout > .dash-section-heading { margin: 0; min-width: 0; }
+.dashboard-layout > .dashboard-grid { grid-column: 1 / -1; }
 .dashboard-grid { grid-auto-rows: minmax(176px, auto); align-items: stretch; }
 .card-neon { padding: 0; cursor: grab; }
 .card-neon:active { cursor: grabbing; }
@@ -230,6 +231,9 @@
 .dash-heading-sizes label { display: flex; align-items: center; gap: 6px; color: var(--stage-ink-muted-2); font-size: 10px; }
 .dash-heading-sizes input { width: 82px; accent-color: var(--stage-violet); }
 .dash-heading-sizes output { min-width: 34px; font-variant-numeric: tabular-nums; }
+@media (max-width: 700px) {
+  .dashboard-layout { grid-template-columns: minmax(0, 1fr); }
+}
 @media (max-width: 1050px) {
   .dashboard-grid .card-neon { grid-column: span 1 !important; grid-row: span 1 !important; }
 }
