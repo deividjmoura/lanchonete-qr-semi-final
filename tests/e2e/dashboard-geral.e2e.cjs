@@ -182,12 +182,15 @@ async function main() {
     const tamanhoAntes = await cardFaturamento.evaluate((el) => ({ column: el.style.gridColumn, row: el.style.gridRow }));
     await page.mouse.move(caixaAlca.x + caixaAlca.width / 2, caixaAlca.y + caixaAlca.height / 2);
     await page.mouse.down();
-    await page.mouse.move(caixaAlca.x + caixaAlca.width / 2 - 120, caixaAlca.y + caixaAlca.height / 2 - 100, { steps: 8 });
+    await page.mouse.move(caixaAlca.x + caixaAlca.width / 2 + 120, caixaAlca.y + caixaAlca.height / 2 + 100, { steps: 8 });
     await page.mouse.up();
     await page.waitForFunction((antes) => {
       const card = document.querySelector('[data-dashboard-card="faturamento"]');
       return card && (card.style.gridColumn !== antes.column || card.style.gridRow !== antes.row);
     }, tamanhoAntes);
+    const tamanhoDepois = await cardFaturamento.evaluate((el) => ({ column: el.style.gridColumn, row: el.style.gridRow }));
+    assert.notEqual(tamanhoDepois.column, tamanhoAntes.column, 'a largura muda ao arrastar a alça');
+    assert.notEqual(tamanhoDepois.row, tamanhoAntes.row, 'a altura muda ao arrastar a alça');
     const semSobreposicao = await page.locator('.dashboard-grid').evaluate((grid) => {
       const nodes = [...grid.querySelectorAll('[data-dashboard-card], [data-dashboard-widget]')];
       const rects = nodes.map((node) => node.getBoundingClientRect());
