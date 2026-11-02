@@ -1,5 +1,5 @@
 import {
-  Armchair, ArrowUpRight, ArrowsOut, ChartBar, CookingPot, CreditCard,
+  Armchair, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpRight, ArrowsOut, ChartBar, CookingPot, CreditCard,
   CurrencyCircleDollar, Eye, EyeSlash, HandCoins, Receipt, ShoppingBagOpen, Sparkle,
   Timer, TrendUp, Trophy, Users, Wallet, X,
 } from "@phosphor-icons/react";
@@ -170,39 +170,22 @@ function useParallax(ref: React.RefObject<HTMLDivElement | null>) {
   }, [ref]);
 }
 
-function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggleVisibility, onDragStart, onDragEnd, onMoveWidget }: {
+function ControlesMovimento({ nome, onMove }: { nome: string; onMove: (dx: number, dy: number) => void }) {
+  return <div className="dashboard-move-controls" role="group" aria-label={`Posição de ${nome}`}>
+    <button type="button" aria-label={`Mover ${nome} para cima`} onClick={() => onMove(0, -1)}><ArrowUp size={14} /></button>
+    <button type="button" aria-label={`Mover ${nome} para esquerda`} onClick={() => onMove(-1, 0)}><ArrowLeft size={14} /></button>
+    <button type="button" aria-label={`Mover ${nome} para direita`} onClick={() => onMove(1, 0)}><ArrowRight size={14} /></button>
+    <button type="button" aria-label={`Mover ${nome} para baixo`} onClick={() => onMove(0, 1)}><ArrowDown size={14} /></button>
+  </div>;
+}
+
+function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggleVisibility, onMoveWidget }: {
   card: Card; disponivel: boolean; onClick: () => void; editando: boolean; layout: WidgetLayout;
-  onResize: (w: number, h: number) => void; onToggleVisibility: () => void; onDragStart: (id: WidgetId) => void; onDragEnd: () => void;
+  onResize: (w: number, h: number) => void; onToggleVisibility: () => void; 
   onMoveWidget: (id: WidgetId, x: number, y: number) => void;
 }) {
   const Icon = card.Icon;
-  const dragStart = useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const resizeStart = useRef<{ x: number; y: number; w: number; h: number; cellW: number; cellH: number } | null>(null);
-  const iniciarArraste = (event: React.PointerEvent<HTMLElement>) => {
-    if (!editando || (event.target as HTMLElement).closest(".card-neon__visibility, .card-neon__resize-handle")) return;
-    event.preventDefault();
-    dragStart.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
-    event.currentTarget.setPointerCapture(event.pointerId);
-    onDragStart(card.id);
-  };
-  const finalizarArraste = (event: React.PointerEvent<HTMLElement>) => {
-    const start = dragStart.current;
-    dragStart.current = null;
-    onDragEnd();
-    if (!start || start.pointerId !== event.pointerId || Math.hypot(event.clientX - start.x, event.clientY - start.y) < 6) return;
-    const grid = event.currentTarget.closest(".dashboard-grid") as HTMLElement | null;
-    if (!grid) return;
-    const rect = grid.getBoundingClientRect();
-    const style = window.getComputedStyle(grid);
-    const gap = Number.parseFloat(style.columnGap) || 14;
-    const rowGap = Number.parseFloat(style.rowGap) || 14;
-    const cellW = (grid.clientWidth - gap * 11) / 12;
-    const cellH = Number.parseFloat(style.gridAutoRows) || 84;
-    const x = Math.max(0, Math.min(11, Math.floor((event.clientX - rect.left) / (cellW + gap))));
-    const y = Math.max(0, Math.floor((event.clientY - rect.top) / (cellH + rowGap)));
-    onMoveWidget(card.id, x, y);
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-  };
   const iniciarResize = (event: React.PointerEvent<HTMLButtonElement>) => {
     event.preventDefault(); event.stopPropagation();
     const grid = event.currentTarget.closest(".dashboard-grid") as HTMLElement | null;
@@ -227,8 +210,7 @@ function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggl
   };
   return <article className={`card-neon card-neon--${card.cor} ${editando ? "card-neon--editing" : ""} ${layout.visible ? "" : "card-neon--hidden"}`}
     style={{ gridColumn: `${layout.x + 1} / span ${layout.w}`, gridRow: `${layout.y + 1} / span ${layout.h}`, order: layout.y * 12 + layout.x }}
-    onPointerDownCapture={iniciarArraste} onPointerMove={moverResize} onPointerUp={(event) => { finalizarArraste(event); finalizarResize(event); }}
-    onPointerCancel={(event) => { finalizarArraste(event); finalizarResize(event); }}
+    onPointerMove={moverResize} onPointerUp={finalizarResize} onPointerCancel={finalizarResize}
     data-dashboard-card={card.id} data-visible={layout.visible ? "true" : "false"}>
     <button type="button" className="card-neon__open" onClick={() => { if (!editando) onClick(); }}
       disabled={!disponivel || (!editando && !layout.visible)}
@@ -241,6 +223,7 @@ function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggl
       </span>
     </button>
     {editando && <>
+      <ControlesMovimento nome={card.label} onMove={(dx, dy) => onMoveWidget(card.id, layout.x + dx, layout.y + dy)} />
       <button type="button" className="card-neon__visibility" onClick={onToggleVisibility}
         aria-label={layout.visible ? `Ocultar ${card.label}` : `Exibir ${card.label}`} aria-pressed={layout.visible}
         title={layout.visible ? "Ocultar card" : "Exibir card"}>{layout.visible ? <Eye size={17} weight="bold" /> : <EyeSlash size={17} weight="bold" />}</button>
@@ -391,7 +374,7 @@ function Grafico({ dias, periodo, loading }: { dias: DiaDashboard[]; periodo: Pe
   </section>;
 }
 
-function WidgetFrame({ id, layout, editando, onToggleVisibility, onResize, onDragStart, onDragEnd, children }: {
+function WidgetFrame({ id, layout, editando, onToggleVisibility, onResize, onDragStart, onDragEnd, onMoveWidget, children }: {
   id: "grafico" | "ranking"; layout: WidgetLayout; editando: boolean;
   onToggleVisibility: () => void; onResize: (w: number, h: number) => void;
   onDragStart: (id: WidgetId) => void; onDragEnd: () => void; children: ReactNode;
@@ -426,6 +409,7 @@ function WidgetFrame({ id, layout, editando, onToggleVisibility, onResize, onDra
     data-dashboard-widget={id} data-visible={layout.visible ? "true" : "false"}>
     {children}
     {editando && <>
+      <ControlesMovimento nome={id === "grafico" ? "Evolução da semana" : "Mais pedidos"} onMove={(dx, dy) => onMoveWidget(id, layout.x + dx, layout.y + dy)} />
       <button type="button" className="dashboard-widget__visibility" onClick={onToggleVisibility}
         aria-label={layout.visible ? `Ocultar ${id === "grafico" ? "Evolução da semana" : "Mais pedidos"}` : `Exibir ${id === "grafico" ? "Evolução da semana" : "Mais pedidos"}`}
         aria-pressed={layout.visible}>{layout.visible ? <Eye size={17} weight="bold" /> : <EyeSlash size={17} weight="bold" />}</button>
@@ -620,14 +604,14 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
           .sort((a, b) => layout.widgets[a.id].y - layout.widgets[b.id].y || layout.widgets[a.id].x - layout.widgets[b.id].x)
           .map((card) => <Cartao key={card.id} card={card} disponivel={Boolean(dash)} onClick={() => setSelecionado(card.id)}
             editando={editMode} layout={layout.widgets[card.id]} onResize={(w, h) => redimensionar(card.id, w, h)}
-            onToggleVisibility={() => alternarVisibilidade(card.id)} onDragStart={setArrastado} onDragEnd={() => setArrastado(null)}
+            onToggleVisibility={() => alternarVisibilidade(card.id)}
             onMoveWidget={moverWidget} />)}
         {(editMode || layout.widgets.grafico.visible) && <WidgetFrame id="grafico" layout={layout.widgets.grafico} editando={editMode}
-          onToggleVisibility={() => alternarVisibilidade("grafico")} onResize={(w, h) => redimensionar("grafico", w, h)} onDragStart={setArrastado} onDragEnd={() => setArrastado(null)}>
+          onToggleVisibility={() => alternarVisibilidade("grafico")} onResize={(w, h) => redimensionar("grafico", w, h)} onMoveWidget={moverWidget}>
           <Grafico dias={diasGrafico} periodo={periodo} loading={loading} />
         </WidgetFrame>}
         {(editMode || layout.widgets.ranking.visible) && <WidgetFrame id="ranking" layout={layout.widgets.ranking} editando={editMode}
-          onToggleVisibility={() => alternarVisibilidade("ranking")} onResize={(w, h) => redimensionar("ranking", w, h)} onDragStart={setArrastado} onDragEnd={() => setArrastado(null)}>
+          onToggleVisibility={() => alternarVisibilidade("ranking")} onResize={(w, h) => redimensionar("ranking", w, h)} onMoveWidget={moverWidget}>
           <section aria-label="Mais pedidos" className="dash-panel dash-ranking">
             <div className="dash-panel__head"><div><p className="dash-kicker">DESTAQUES DO PERÍODO</p><h3>Mais pedidos</h3><p>Itens não cancelados por quantidade</p></div><span className="dash-panel__icon dash-panel__icon--lima"><Trophy size={19} weight="duotone" /></span></div>
             {!dash ? <p className="dash-ranking__empty">{carregando}</p> : !top.length ? <p className="dash-ranking__empty">Nenhum item pedido no período.</p> : <ul>
