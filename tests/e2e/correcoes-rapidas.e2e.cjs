@@ -112,12 +112,16 @@ async function chartAndStock(browser, scheme) {
         };
       });
     });
-    if (process.env.E2E_DEBUG_LAYOUT && !measurements.every((m) => m.inside)) {
+    if (process.env.E2E_DEBUG_LAYOUT) {
       const diagnostico = await page.evaluate(() => {
         const w = (sel) => { const el = document.querySelector(sel); return el ? Math.round(el.getBoundingClientRect().width * 100) / 100 : null; };
         const grid = document.querySelector('.dashboard-grid');
         return {
           innerWidth, clientWidth: document.documentElement.clientWidth, dpr: devicePixelRatio,
+          visualViewport: window.visualViewport && Math.round(window.visualViewport.width),
+          bodyWidth: Math.round(document.body.getBoundingClientRect().width),
+          bodyZoom: getComputedStyle(document.body).zoom,
+          raizFont: getComputedStyle(document.documentElement).fontSize,
           gridWidth: w('.dashboard-grid'), gridCols: grid && getComputedStyle(grid).gridTemplateColumns,
           stageWidth: w('.dashboard-stage'), panelWidth: w('.dash-chart'),
           barsWidth: w('.dash-chart__bars'), scrollWidth: w('.dash-chart__scroll'),
