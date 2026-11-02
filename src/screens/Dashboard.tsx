@@ -227,8 +227,8 @@ function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggl
   };
   return <article className={`card-neon card-neon--${card.cor} ${editando ? "card-neon--editing" : ""} ${layout.visible ? "" : "card-neon--hidden"}`}
     style={{ gridColumn: `${layout.x + 1} / span ${layout.w}`, gridRow: `${layout.y + 1} / span ${layout.h}`, order: layout.y * 12 + layout.x }}
-    onPointerDown={iniciarArraste} onPointerMove={moverResize} onPointerUp={(event) => { finalizarResize(event); finalizarArraste(event); }}
-    onPointerCancel={(event) => { finalizarResize(event); finalizarArraste(event); }}
+    onPointerDownCapture={iniciarArraste} onPointerMove={moverResize} onPointerUp={(event) => { finalizarArraste(event); finalizarResize(event); }}
+    onPointerCancel={(event) => { finalizarArraste(event); finalizarResize(event); }}
     data-dashboard-card={card.id} data-visible={layout.visible ? "true" : "false"}>
     <button type="button" className="card-neon__open" onClick={() => { if (!editando) onClick(); }}
       disabled={!disponivel || (!editando && !layout.visible)}
