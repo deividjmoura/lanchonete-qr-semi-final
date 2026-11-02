@@ -188,7 +188,7 @@ async function main() {
     await page.getByRole('button', { name: 'Exibir Faturamento' }).click();
     await page.getByRole('button', { name: 'Salvar layout do dashboard' }).click();
     await page.getByRole('button', { name: 'Restaurar padrão' }).click();
-    const confirmacao = page.getByRole('dialog').filter({ hasText: 'Restaurar o dashboard padrão?' });
+    const confirmacao = page.getByRole('alertdialog').filter({ hasText: 'Restaurar o dashboard padrão?' });
     await confirmacao.getByRole('button', { name: 'Restaurar padrão' }).click();
     await page.waitForFunction(() => document.querySelectorAll('.card-neon').length === 12);
     assert.deepEqual(errors, []);
