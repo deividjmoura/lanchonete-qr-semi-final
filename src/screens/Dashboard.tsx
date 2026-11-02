@@ -499,7 +499,8 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
     setLayout((atual) => ({ ...atual, sizes: { ...atual.sizes, [id]: { ...atual.sizes[id], visible: !atual.sizes[id].visible } } }));
   };
   const reordenar = (destino: CardId) => {
-    if (!arrastado || arrastado === destino || idsMovimento.has(arrastado) !== idsMovimento.has(destino)) return;
+    if (!arrastado) return;
+    if (arrastado === destino || idsMovimento.has(arrastado) !== idsMovimento.has(destino)) { setArrastado(null); return; }
     setLayoutSalvo(false);
     setLayout((atual) => { const order = [...atual.order]; const from = order.indexOf(arrastado); const to = order.indexOf(destino); if (from < 0 || to < 0) return atual; order.splice(from, 1); order.splice(to, 0, arrastado); return { ...atual, order }; });
     setArrastado(null);
