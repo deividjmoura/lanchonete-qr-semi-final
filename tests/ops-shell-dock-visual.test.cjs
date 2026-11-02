@@ -5,6 +5,7 @@ const fs = require("node:fs");
 
 const shell = fs.readFileSync("src/components/OpsShell.tsx", "utf8");
 const css = fs.readFileSync("src/components/OpsShell.css", "utf8");
+const dock = fs.readFileSync("src/hooks/useDockMagnify.ts", "utf8");
 
 test("sidebar desktop permanece como dock de ícones e não expande no hover", () => {
   assert.match(shell, /import "\.\/OpsShell\.css"/);
