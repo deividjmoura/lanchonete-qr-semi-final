@@ -49,11 +49,12 @@ function lerLayout(): DashboardLayout {
     if (parsed.widgets) {
       const ocupados: Record<string, DashboardRect> = {};
       for (const id of WIDGET_IDS) {
-        const item = parsed.widgets[id]; if (!item) continue;
-        const desired = { x: Math.max(0, Math.round(Number(item.x) || 0)), y: Math.max(0, Math.round(Number(item.y) || 0)),
-          w: Math.max(1, Math.min(12, Math.round(Number(item.w) || 1))), h: Math.max(1, Math.min(20, Math.round(Number(item.h) || 1))) };
+        const item = parsed.widgets[id];
+        const padrao = LAYOUT_PADRAO.widgets[id];
+        const desired = item ? { x: Math.max(0, Math.round(Number(item.x) || 0)), y: Math.max(0, Math.round(Number(item.y) || 0)),
+          w: Math.max(1, Math.min(12, Math.round(Number(item.w) || 1))), h: Math.max(1, Math.min(20, Math.round(Number(item.h) || 1))) } : padrao;
         const livre = findAvailablePosition(ocupados, id, desired);
-        widgets[id] = { ...livre, visible: typeof item.visible === "boolean" ? item.visible : true }; ocupados[id] = livre;
+        widgets[id] = { ...livre, visible: typeof item?.visible === "boolean" ? item.visible : padrao.visible }; ocupados[id] = livre;
       }
       return { widgets };
     }
