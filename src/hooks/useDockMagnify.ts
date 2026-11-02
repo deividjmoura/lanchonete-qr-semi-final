@@ -57,7 +57,7 @@ export function useDockMagnify(itemCount: number, reduceMotion: boolean | null, 
         zIndex: scale > 1.05 ? 2 : 1,
       };
     },
-    [scales, reduceMotion],
+    [scales, reduceMotion, axis],
   );
 
   return { navListRef, setItemRef, itemStyle, onMouseMove, onMouseLeave, scales };
