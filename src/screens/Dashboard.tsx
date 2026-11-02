@@ -208,7 +208,7 @@ function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggl
       className={`card-neon card-neon--${card.cor} ${editando ? "card-neon--editing" : ""} ${layout.visible ? "" : "card-neon--hidden"}`}
       style={{ gridColumn: `span ${layout.w}`, gridRow: `span ${layout.h}` }}
       draggable={editando}
-      onDragStart={(event) => { if (!editando) { event.preventDefault(); return; } onDragStart(card.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", card.id); }}
+      onDragStart={(event) => { if (!editando || (event.target as HTMLElement).closest(".card-neon__resize-handle, .card-neon__visibility")) { event.preventDefault(); return; } onDragStart(card.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", card.id); }}
       onDragOver={(event) => { if (editando) { event.preventDefault(); event.dataTransfer.dropEffect = "move"; } }}
       onDrop={(event) => { if (editando) { event.preventDefault(); onDrop(card.id); } }}
       onDragEnd={() => onDrop(card.id)}
