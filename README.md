@@ -96,7 +96,7 @@ A comanda é acumulativa: a mesa pode receber vários pedidos durante a visita. 
 - O PIX usa chave/QR estático: o operador deve verificar o crédito no banco antes de marcar o valor como recebido.
 
 ### Administração
-- **Dashboard:** indicadores de faturamento, pedidos, ticket médio, contas, pagamentos, produtos, entregas, mesas e garçons; filtros por hoje, semana e mês. O administrador pode ativar o modo de edição pelo ícone de lápis no header, reordenar e redimensionar os cards, personalizar títulos/legendas e salvar o layout localmente no navegador.
+- **Dashboard:** indicadores de faturamento, pedidos, ticket médio, contas, pagamentos, produtos, entregas, mesas e garçons; filtros por hoje, semana e mês. O administrador pode ativar o modo de edição pelo ícone de lápis no header, reordenar cards por arraste, redimensionar puxando a alça do canto inferior direito, ocultar/exibir indicadores, personalizar títulos/legendas e salvar ou restaurar o layout localmente no navegador. As áreas 01 / Movimento e 02 / Operação permanecem separadas.
 - **Cardápio:** categorias, ordenação, produtos, preços, fotos, disponibilidade, estoque, adicionais e setor de produção.
 - **Mesas:** cadastro, praças, QR Codes fixos e panorama de ocupação, consumo e tempos operacionais.
 - **Garçons:** cadastro, ativação/desativação e gestão dos links individuais.
@@ -236,6 +236,8 @@ O drill manual de backup/restore exige banco isolado vazio e confirmação expl�
 **Nunca aponte testes mutáveis, carga, seed ou restore para produção.** CI verde não substitui validação em aparelho físico nem teste de operação no estabelecimento.
 
 ## 8. Segurança e operação
+
+- Confirmações de ações que alteram ou removem dados usam modais contextuais, com resumo do impacto e botões explícitos para cancelar ou confirmar. A exclusão do histórico também exige digitar `APAGAR` no modal final.
 
 - A API valida novamente preço, disponibilidade, estoque, permissões e transições de estado no servidor.
 - Operações concorrentes usam transações e controles de consistência no PostgreSQL.
