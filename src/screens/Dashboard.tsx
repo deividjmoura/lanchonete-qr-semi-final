@@ -188,7 +188,7 @@ function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggl
     const rowGap = Number.parseFloat(style.rowGap) || 14;
     const cellW = (grid.clientWidth - columnGap * (columns - 1)) / columns;
     const cellH = Number.parseFloat(style.gridAutoRows) || 176;
-    resizeStart.current = { x: event.clientX, y: event.clientY, w: layout.w, h: layout.h, cellW: cellW + columnGap, cellH: cellH + rowGap, maxW: columns };
+    resizeStart.current = { x: event.clientX, y: event.clientY, w: Math.min(layout.w, columns), h: layout.h, cellW: cellW + columnGap, cellH: cellH + rowGap, maxW: columns };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   const moverResize = (event: React.PointerEvent<HTMLButtonElement>) => {
