@@ -112,6 +112,23 @@ async function chartAndStock(browser, scheme) {
         };
       });
     });
+    if (process.env.E2E_DEBUG_LAYOUT && !measurements.every((m) => m.inside)) {
+      const diagnostico = await page.evaluate(() => {
+        const w = (sel) => { const el = document.querySelector(sel); return el ? Math.round(el.getBoundingClientRect().width * 100) / 100 : null; };
+        const grid = document.querySelector('.dashboard-grid');
+        return {
+          innerWidth, clientWidth: document.documentElement.clientWidth, dpr: devicePixelRatio,
+          gridWidth: w('.dashboard-grid'), gridCols: grid && getComputedStyle(grid).gridTemplateColumns,
+          stageWidth: w('.dashboard-stage'), panelWidth: w('.dash-chart'),
+          barsWidth: w('.dash-chart__bars'), scrollWidth: w('.dash-chart__scroll'),
+          widgetStyle: (document.querySelector('[data-dashboard-widget="grafico"]') || {}).getAttribute
+            ? document.querySelector('[data-dashboard-widget="grafico"]').getAttribute('style') : null,
+          widgetWidth: w('[data-dashboard-widget="grafico"]'),
+          compacto: matchMedia('(max-width: 700px)').matches,
+        };
+      });
+      console.log(`DEBUG ${scheme}/${width}: ${JSON.stringify(diagnostico)}`);
+    }
     for (const [i, m] of measurements.entries()) {
       assert.ok(m.inside, `${scheme}/${width}: valor ${i} cabe na barra: ${JSON.stringify(m)}`);
       assert.ok(m.contrast >= 4.5, `${scheme}/${width}: contraste do valor ${i}: ${m.contrast}`);
