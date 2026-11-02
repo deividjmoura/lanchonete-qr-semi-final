@@ -145,6 +145,26 @@ async function chartAndStock(browser, scheme) {
             }
             return saida;
           })(),
+          mq: {
+            m1024: matchMedia('(min-width: 1024px)').matches,
+            m48rem: matchMedia('(min-width: 48rem)').matches,
+            m80rem: matchMedia('(min-width: 80rem)').matches,
+            m96rem: matchMedia('(min-width: 96rem)').matches,
+            max700: matchMedia('(max-width: 700px)').matches,
+            rem: (() => { const d = document.createElement('div'); d.style.width = '1rem'; document.body.append(d); const w = d.getBoundingClientRect().width; d.remove(); return w; })(),
+          },
+          opsMain: (() => {
+            const el = document.querySelector('.ops-main');
+            if (!el) return null;
+            const cs = getComputedStyle(el);
+            return { marginLeft: cs.marginLeft, width: Math.round(el.getBoundingClientRect().width), display: cs.display };
+          })(),
+          mainPad: (() => {
+            const el = document.querySelector('.ops-main > main') || document.querySelector('main');
+            if (!el) return null;
+            const cs = getComputedStyle(el);
+            return { left: cs.paddingLeft, right: cs.paddingRight, classes: el.className };
+          })(),
           sidebar: (() => {
             const el = document.querySelector('.ops-sidebar');
             if (!el) return null;
