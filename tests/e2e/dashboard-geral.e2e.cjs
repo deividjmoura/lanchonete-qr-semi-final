@@ -168,7 +168,13 @@ async function main() {
     const cardFaturamento = page.locator('[data-dashboard-card="faturamento"]');
     const alca = page.getByRole('button', { name: 'Arraste para redimensionar Faturamento' });
     // Mover para a área ocupada por outro card: o motor deve encontrar um espaço livre.
-    await cardFaturamento.dragTo(page.locator('[data-dashboard-card="pedidos"]'));
+    const origemArraste = await cardFaturamento.boundingBox();
+    const destinoArraste = await page.locator('[data-dashboard-card="pedidos"]').boundingBox();
+    assert.ok(origemArraste && destinoArraste, 'cards de origem e destino estão visíveis');
+    await page.mouse.move(origemArraste.x + origemArraste.width / 2, origemArraste.y + origemArraste.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(destinoArraste.x + destinoArraste.width / 2, destinoArraste.y + destinoArraste.height / 2, { steps: 10 });
+    await page.mouse.up();
     await page.waitForFunction(() => {
       const card = document.querySelector('[data-dashboard-card="faturamento"]');
       return card && (card.style.gridColumn !== '1 / span 3' || Number(card.style.gridRow.split('/')[0]) !== 1);
