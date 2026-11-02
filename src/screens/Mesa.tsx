@@ -1,5 +1,6 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
+  ArrowsLeftRight,
   BeerStein,
   CallBell as ConciergeBell,
   CaretRight,
@@ -13,7 +14,9 @@ import {
   Plus,
   Receipt,
   ShoppingBag,
+  SunHorizon,
   Trash,
+  Waves,
   X,
 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState, type ReactNode, type SyntheticEvent } from "react";
@@ -26,6 +29,7 @@ import { connectEvents } from "../lib/api";
 import { BRL } from "../lib/utils";
 import { confirmarAcao } from "../lib/confirmacao";
 import { cn } from "../utils/cn";
+import "./mesa-praia.css";
 
 interface CartItem {
   uid: string;
@@ -56,6 +60,127 @@ const STATUS_ORDEM: { id: Pedido["status"]; label: string }[] = [
   { id: "pronto", label: "Pronto" },
   { id: "entregue", label: "Na mesa" },
 ];
+
+/** Acompanha o breakpoint do cardápio (2 colunas no celular, 3 a partir de 640px). */
+function useTelaLarga() {
+  const [largo, setLargo] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(min-width: 640px)").matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 640px)");
+    const aoMudar = () => setLargo(mq.matches);
+    mq.addEventListener("change", aoMudar);
+    return () => mq.removeEventListener("change", aoMudar);
+  }, []);
+  return largo;
+}
+
+/** Onda de praia com período fixo de 150 unidades do viewBox: deslocar uma
+ *  volta inteira mantém o desenho idêntico e a animação sem emenda. */
+function caminhoOnda(base: number, amplitude: number): string {
+  const inicio = -300;
+  const passo = 75;
+  let d = `M${inicio} ${base}`;
+  for (let i = 0; i < 16; i += 1) {
+    const cx = inicio + i * passo + passo / 2;
+    const cy = i % 2 === 0 ? base - amplitude : base + amplitude;
+    d += ` Q${cx} ${cy} ${inicio + (i + 1) * passo} ${base}`;
+  }
+  return `${d} V80 H${inicio} Z`;
+}
+
+function OndasPraia() {
+  return (
+    <svg
+      className="mesa-praia-hero__ondas"
+      viewBox="0 0 600 80"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path className="mesa-onda mesa-onda--3" d={caminhoOnda(38, 16)} />
+      <path className="mesa-onda mesa-onda--2" d={caminhoOnda(48, 18)} />
+      <path className="mesa-onda mesa-onda--1" d={caminhoOnda(58, 13)} />
+    </svg>
+  );
+}
+
+/** Vela ao longe e gaivotas: dois traços, muito carinho de praia. */
+function DetalhesPraia() {
+  return (
+    <>
+      <svg className="mesa-praia-hero__gaivotas" viewBox="0 0 60 24" aria-hidden="true" focusable="false">
+        <path d="M2 14q6-7 12 0" />
+        <path d="M18 6q5-6 10 0" />
+        <path d="M34 17q4-5 8 0" />
+      </svg>
+      <svg className="mesa-praia-hero__barco" viewBox="0 0 64 60" aria-hidden="true" focusable="false">
+        <path className="mesa-vela" d="M31 4 31 38 12 38Z" />
+        <path className="mesa-vela mesa-vela--jib" d="M35 16 35 38 51 38Z" />
+        <path className="mesa-casco" d="M7 42h50l-8 11H16z" />
+      </svg>
+    </>
+  );
+}
+
+/**
+ * Trilho horizontal de no máximo duas linhas. Só entra em cena quando a
+ * categoria tem itens demais para caber nas duas linhas da grade — daí o
+ * scroll lateral, com desvanecido nas bordas e dica acessível.
+ */
+function TrilhoCardapio({
+  rotulo,
+  chave,
+  className,
+  children,
+}: {
+  rotulo: string;
+  chave: number;
+  className?: string;
+  children: ReactNode;
+}) {
+  const trilho = useRef<HTMLDivElement>(null);
+  const [bordas, setBordas] = useState({ overflow: false, inicio: true, fim: false });
+
+  useEffect(() => {
+    const el = trilho.current;
+    if (!el) return;
+    const medir = () => {
+      setBordas({
+        overflow: el.scrollWidth - el.clientWidth > 4,
+        inicio: el.scrollLeft <= 2,
+        fim: el.scrollLeft + el.clientWidth >= el.scrollWidth - 2,
+      });
+    };
+    medir();
+    el.addEventListener("scroll", medir, { passive: true });
+    const observador = new ResizeObserver(medir);
+    observador.observe(el);
+    return () => {
+      el.removeEventListener("scroll", medir);
+      observador.disconnect();
+    };
+  }, [chave]);
+
+  return (
+    <div
+      className={cn("mesa-trilho-wrap", className)}
+      data-overflow={bordas.overflow}
+      data-inicio={bordas.inicio}
+      data-fim={bordas.fim}
+    >
+      <div ref={trilho} className="mesa-trilho grid-cardapio" role="group" aria-label={rotulo} tabIndex={0}>
+        {children}
+      </div>
+      {bordas.overflow && (
+        <p className="mesa-trilho__dica">
+          <ArrowsLeftRight size={12} weight="bold" aria-hidden="true" />
+          deslize para ver mais
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function Mesa({ token }: { token: string }) {
   const mesas = usePub((s) => s.mesas);
@@ -116,6 +241,19 @@ export default function Mesa({ token }: { token: string }) {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // Escopa a paleta de praia (src/screens/mesa-praia.css) só nesta rota.
+  useEffect(() => {
+    document.body.dataset.mesaPraia = "praia";
+    return () => {
+      delete document.body.dataset.mesaPraia;
+    };
+  }, []);
+
+  const telaLarga = useTelaLarga();
+  // Duas linhas de cards = 4 itens no celular e 6 a partir de 640px.
+  const limiteGrade = telaLarga ? 6 : 4;
+  const usaTrilho = (quantidade: number) => quantidade > limiteGrade;
 
   const irParaLista = () => {
     requestAnimationFrame(() => {
@@ -187,7 +325,7 @@ export default function Mesa({ token }: { token: string }) {
     return (
       <div
         data-regime="expressive"
-        className="paper-grain min-h-dvh bg-surface text-text grid place-items-center p-6 text-center"
+        className="mesa-praia-superficie paper-grain min-h-dvh bg-surface text-text grid place-items-center p-6 text-center"
       >
         <div className="rounded-md border border-line bg-surface-raised px-8 py-10 max-w-sm w-full">
           <div className="mx-auto size-12 rounded-sm border border-line-strong bg-surface-sunken grid place-items-center text-brand-ink">
@@ -206,7 +344,7 @@ export default function Mesa({ token }: { token: string }) {
     return (
       <div
         data-regime="expressive"
-        className="paper-grain min-h-dvh bg-surface text-text grid place-items-center p-6 text-center"
+        className="mesa-praia-superficie paper-grain min-h-dvh bg-surface text-text grid place-items-center p-6 text-center"
       >
         <div className="rounded-md border border-line bg-surface-raised px-6 py-8 max-w-sm w-full">
           <div className="mx-auto size-12 rounded-sm border border-status-danger-border bg-status-danger-surface grid place-items-center text-status-danger-ink">
@@ -230,6 +368,27 @@ export default function Mesa({ token }: { token: string }) {
   }
 
   const addCart = (item: CartItem) => setCart((c) => [...c, item]);
+
+  const adicionarRapido = (produto: Produto) =>
+    addCart({
+      uid: Math.random().toString(36).slice(2),
+      produto,
+      qtd: 1,
+      adicionais: [],
+      removidos: [],
+      escolha: null,
+      obs: "",
+    });
+
+  const cartoesDe = (itens: Produto[]) =>
+    itens.map((produto) => (
+      <ItemCard
+        key={produto.id}
+        produto={produto}
+        onOpen={setProdutoModal}
+        onAdd={() => adicionarRapido(produto)}
+      />
+    ));
 
   const enviar = () => {
     if (!cart.length) return;
@@ -556,10 +715,10 @@ export default function Mesa({ token }: { token: string }) {
   return (
     <div
       data-regime="expressive"
-      className="paper-grain relative min-h-dvh bg-surface text-text pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] lg:pb-12 overflow-x-clip"
+      className="mesa-praia-superficie paper-grain relative min-h-dvh bg-surface text-text pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] lg:pb-12 overflow-x-clip"
     >
       {/* Cabeçalho compacto da mesa (sem sidebar em /mesa/:token) */}
-      <header className="sticky top-0 z-40 border-b border-line-strong bg-surface-raised">
+      <header className="mesa-praia-topo sticky top-0 z-40 border-b border-line-strong bg-surface-raised">
         <div className="mx-auto max-w-6xl px-3.5 sm:px-6 h-14 flex items-center gap-2 min-w-0">
           <Logo size="sm" />
           <Badge tone="brand">{mesa.nome}</Badge>
@@ -599,13 +758,22 @@ export default function Mesa({ token }: { token: string }) {
         <div className="lg:grid lg:grid-cols-12 lg:gap-8">
           {/* Coluna do Cardápio */}
           <section className="lg:col-span-8">
-            <div className="pt-6 pb-4 border-b border-dashed border-line-strong mb-3">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <div>
-                  <p className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-brand-ink">
+            <div className="mesa-praia-hero mb-3">
+              <div className="mesa-praia-hero__ceu" aria-hidden="true">
+                <span className="mesa-praia-hero__halo" />
+                <span className="mesa-praia-hero__sol" />
+                <DetalhesPraia />
+                <OndasPraia />
+              </div>
+              <div className="mesa-praia-hero__conteudo">
+                <div className="min-w-0">
+                  <span className="mesa-praia-hero__marca" aria-hidden="true">
+                    <SunHorizon size={20} weight="duotone" />
+                  </span>
+                  <p className="mesa-praia-kicker font-mono text-[11px] font-bold uppercase tracking-[0.14em]">
                     Comanda digital · {mesa.nome}
                   </p>
-                  <h1 className="font-display text-[clamp(1.85rem,6vw,2.75rem)] font-bold tracking-tight leading-tight text-text mt-1">
+                  <h1 className="mesa-praia-hero__titulo font-display text-[clamp(1.85rem,6vw,2.75rem)] font-bold tracking-tight leading-tight mt-1">
                     Cardápio da casa
                   </h1>
                 </div>
@@ -638,9 +806,9 @@ export default function Mesa({ token }: { token: string }) {
                         irParaLista();
                       }}
                       className={cn(
-                        "relative shrink-0 h-10 px-4 rounded-full text-xs font-semibold tracking-wide transition-colors border",
+                        "mesa-chip relative shrink-0 h-10 px-4 rounded-full text-xs font-semibold tracking-wide transition-[background-color,border-color,color,box-shadow] duration-150 border",
                         ativa
-                          ? "bg-brand text-brand-contrast border-brand"
+                          ? "mesa-chip--ativo bg-brand text-brand-contrast border-brand"
                           : "bg-surface-raised text-text-muted border-line hover:border-line-strong hover:text-text",
                       )}
                     >
@@ -662,7 +830,7 @@ export default function Mesa({ token }: { token: string }) {
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder="Buscar no cardápio…"
-                  className="w-full h-11 rounded-full bg-surface-raised border border-line pl-10 pr-10 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:border-brand transition-colors"
+                  className="mesa-busca w-full h-11 rounded-full bg-surface-raised border border-line pl-10 pr-10 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:border-brand transition-colors"
                 />
                 {busca && (
                   <button
@@ -691,56 +859,39 @@ export default function Mesa({ token }: { token: string }) {
             {gruposCardapio ? (
               <div className="space-y-8 pt-2 pb-24 lg:pb-10 w-full min-w-0">
                 {gruposCardapio.map((g) => (
-                  <section key={g.nome}>
-                    <div className="mb-3.5 pb-2 border-b border-line flex items-baseline justify-between">
+                  <section key={g.nome} data-categoria-cardapio={g.nome} className="min-w-0">
+                    <div className="mesa-categoria__cabeca">
+                      <span className="mesa-categoria__marca" aria-hidden="true">
+                        <Waves size={16} weight="bold" />
+                      </span>
                       <h3 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-text">
                         {g.nome}
                       </h3>
-                      <span className="font-mono text-[11px] text-text-muted">{g.itens.length}</span>
+                      <span className="mesa-categoria__contagem">{g.itens.length}</span>
                     </div>
-                    <div className="grid-cardapio grid grid-cols-2 sm:grid-cols-3 gap-3.5 w-full min-w-0">
-                      {g.itens.map((p) => (
-                        <ItemCard
-                          key={p.id}
-                          produto={p}
-                          onOpen={setProdutoModal}
-                          onAdd={(prod) =>
-                            addCart({
-                              uid: Math.random().toString(36).slice(2),
-                              produto: prod,
-                              qtd: 1,
-                              adicionais: [],
-                              removidos: [],
-                              escolha: null,
-                              obs: "",
-                            })
-                          }
-                        />
-                      ))}
-                    </div>
+                    {usaTrilho(g.itens.length) ? (
+                      <TrilhoCardapio rotulo={`${g.nome}: deslize para ver todos os itens`} chave={g.itens.length}>
+                        {cartoesDe(g.itens)}
+                      </TrilhoCardapio>
+                    ) : (
+                      <div className="grid-cardapio grid grid-cols-2 sm:grid-cols-3 gap-3.5 w-full min-w-0">
+                        {cartoesDe(g.itens)}
+                      </div>
+                    )}
                   </section>
                 ))}
               </div>
+            ) : usaTrilho(lista.length) ? (
+              <TrilhoCardapio
+                rotulo="Itens encontrados: deslize para ver todos"
+                chave={lista.length}
+                className="pb-24 lg:pb-10"
+              >
+                {cartoesDe(lista)}
+              </TrilhoCardapio>
             ) : (
               <div className="grid-cardapio grid grid-cols-2 sm:grid-cols-3 gap-3 pb-24 lg:pb-10 w-full min-w-0">
-                {lista.map((p) => (
-                  <ItemCard
-                    key={p.id}
-                    produto={p}
-                    onOpen={setProdutoModal}
-                    onAdd={(prod) =>
-                      addCart({
-                        uid: Math.random().toString(36).slice(2),
-                        produto: prod,
-                        qtd: 1,
-                        adicionais: [],
-                        removidos: [],
-                        escolha: null,
-                        obs: "",
-                      })
-                    }
-                  />
-                ))}
+                {cartoesDe(lista)}
               </div>
             )}
           </section>
@@ -767,7 +918,7 @@ export default function Mesa({ token }: { token: string }) {
             animate={{ y: 0, opacity: 1 }}
             exit={reduceMotion ? { opacity: 0 } : { y: 40, opacity: 0 }}
             transition={{ duration: 0.16 }}
-            className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-3 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-surface-sidebar border-t border-sidebar-line"
+            className="mesa-praia-barra lg:hidden fixed bottom-0 inset-x-0 z-40 px-3 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-surface-sidebar border-t border-sidebar-line"
           >
             <div className="flex gap-2 max-w-md mx-auto">
               <button
@@ -865,7 +1016,7 @@ function ItemCard({
       <button
         type="button"
         onClick={() => onOpen(p)}
-        className="relative block w-full shrink-0 aspect-[4/3] overflow-hidden text-left bg-surface-sunken border-b border-line"
+        className="relative block w-full shrink-0 aspect-[4/3] overflow-hidden text-left bg-surface-sunken"
         aria-label={`Ver ${p.nome}`}
       >
         <img
@@ -876,13 +1027,15 @@ function ItemCard({
           className="card-produto-foto transition-transform duration-200 group-hover:scale-[1.03]"
           onError={(e) => fallbackFoto(e, p.nome, p.categoria)}
         />
+        {/* A superfície do card sobe por cima da foto em degradê: nada de faixa sólida. */}
+        <span className="card-produto__fusao" aria-hidden="true" />
         <div className="absolute top-2.5 left-2.5 right-2.5 flex flex-wrap gap-1 pointer-events-none">
           {p.estoque !== null && p.estoque > 0 && p.estoque <= 8 && (
             <Badge tone="rose">{p.estoque} un</Badge>
           )}
           {esgotado && <Badge tone="neutral">Esgotado</Badge>}
         </div>
-        <span className="absolute bottom-2.5 left-2.5 rounded-full bg-surface-raised/95 border border-line px-2.5 py-0.5 font-display text-xs font-bold tnum text-text pointer-events-none">
+        <span className="card-produto__preco absolute bottom-2.5 left-2.5 rounded-full bg-surface-raised/95 border border-line px-2.5 py-0.5 font-display text-xs font-bold tnum text-text pointer-events-none">
           {BRL(p.preco)}
         </span>
       </button>
@@ -1034,13 +1187,14 @@ function ProdutoModal({
   return (
     <Modal open onClose={onClose} wide closeOnBackdrop={false}>
       <div className="overflow-hidden">
-        <div className="relative w-full aspect-[16/10] bg-surface-sunken border-b border-line">
+        <div className="relative w-full aspect-[16/10] bg-surface-sunken">
           <img
             src={fotoSrc(produto.foto) || FOTO_PLACEHOLDER}
             alt={produto.nome}
             className="absolute inset-0 h-full w-full object-cover"
             onError={(e) => fallbackFoto(e, produto.nome, produto.categoria)}
           />
+          <span className="card-produto__fusao card-produto__fusao--hero" aria-hidden="true" />
           <div className="absolute top-3 left-3">
             <Badge tone="brass">{produto.categoria}</Badge>
           </div>

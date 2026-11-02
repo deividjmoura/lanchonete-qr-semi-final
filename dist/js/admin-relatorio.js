@@ -106,11 +106,13 @@ async function executarPurge() {
     'Isso some do Histórico de pedidos, do Relatório PDF e dos totais antigos do Dashboard.\n\n' +
     'NÃO apaga: mesas abertas, pedidos em andamento, cardápio, staff.\n\n' +
     'Esta ação NÃO pode ser desfeita. Continuar?';
-  if (!confirm(aviso1)) return;
+  const confirmado = await window.confirmarQR('Apagar histórico permanentemente?', aviso1, { confirmText: 'Continuar', danger: true });
+  if (!confirmado) return;
 
-  const digite = prompt(
-    'Para confirmar, digite APAGAR (em maiúsculas):\n\n' +
-      'Tudo antes de ' + before + ' será removido de todos os lugares.'
+  const digite = await window.solicitarTextoQR(
+    'Confirmação final de exclusão',
+    'Tudo antes de ' + before + ' será removido de todos os lugares. Esta operação não pode ser desfeita.',
+    { inputLabel: 'Digite APAGAR em maiúsculas', placeholder: 'APAGAR', expectedText: 'APAGAR', confirmText: 'Apagar histórico' }
   );
   if (digite !== 'APAGAR') {
     toast('Purge cancelado — texto de confirmação não confere');
