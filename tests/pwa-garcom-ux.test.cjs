@@ -15,7 +15,8 @@ test('Consentimento explica requisitos e só solicita permissão por ação expl
  assert.match(js,/addEventListener\('click',async\(\)=>\{/);
  assert.match(js,/Notification\.requestPermission\(\)/);
  assert.match(js,/garcom-notification-intro-v1-/);
- assert.match(js,/Você recusou as notificações e não receberá avisos/);
+ assert.match(js,/Você não receberá avisos por este navegador/);
+ assert.match(js,/window\.confirmarQR\('Confirmar recusa das notificações/);
  assert.match(js,/garcom-notifications-declined-/);
 });
 test('Instalação contextual preserva instruções manuais e detecta PWA instalado',()=>{
