@@ -60,7 +60,7 @@ function lerLayout(): DashboardLayout {
     }
     // Migra o layout v1 preservando a ordem, dimensões aproximadas e visibilidade.
     const ocupados: Record<string, DashboardRect> = {};
-    const ordem = Array.isArray(parsed.order) ? parsed.order.filter((id): id is CardId => CARD_IDS.includes(id)) : CARD_IDS;
+    const ordem = Array.isArray(parsed.order) ? [...new Set(parsed.order.filter((id): id is CardId => CARD_IDS.includes(id))), ...CARD_IDS.filter((id) => !parsed.order!.includes(id))] : CARD_IDS;
     ordem.forEach((id, index) => {
       const antigo = parsed.sizes?.[id];
       const desired = { x: (index % 4) * 3, y: Math.floor(index / 4) * 2,
@@ -490,11 +490,11 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
   ];
   const todos = [...metricas, ...operacao];
   const redimensionar = (id: WidgetId, w: number, h: number) => {
+    setLayoutSalvo(false);
     setLayout((atual) => {
       const atualWidget = atual.widgets[id];
       const candidato = { ...atualWidget, w: Math.max(1, Math.min(12 - atualWidget.x, w)), h: Math.max(1, Math.min(20, h)) };
       if (!canPlaceWidget(atual.widgets, id, candidato)) return atual;
-      setLayoutSalvo(false);
       return { widgets: { ...atual.widgets, [id]: candidato } };
     });
   };
@@ -503,10 +503,10 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
     setLayout((atual) => ({ widgets: { ...atual.widgets, [id]: { ...atual.widgets[id], visible: !atual.widgets[id].visible } } }));
   };
   const moverWidget = (id: WidgetId, x: number, y: number) => {
+    setLayoutSalvo(false);
     setLayout((atual) => {
       const widget = atual.widgets[id];
       const posicao = findAvailablePosition(atual.widgets, id, { ...widget, x, y });
-      setLayoutSalvo(false);
       return { widgets: { ...atual.widgets, [id]: { ...widget, ...posicao } } };
     });
   };
