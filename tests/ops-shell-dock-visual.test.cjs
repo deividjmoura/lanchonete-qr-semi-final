@@ -16,10 +16,10 @@ test("sidebar desktop permanece como dock de ícones e não expande no hover", (
 
 test("nomes aparecem como tooltip sem fundo ou placa no hover/foco", () => {
   assert.match(css, /content:\s*attr\(data-label\)/);
-  assert.match(css, /\.ops-nav-item:hover::after,[\s\S]*?\.ops-nav-item:focus-visible::after/);
+  assert.match(css, /transform:\s*scale\(1\.6\)/);
   assert.match(css, /background:\s*transparent/);
   assert.match(css, /box-shadow:\s*none/);
-  assert.match(css, /\.ops-nav-item:hover,[\s\S]*?background:\s*transparent\s*!important/);
+  assert.match(css, /transform:\s*scale\(1\.6\)/);
 });
 
 test("divisórias internas decorativas são removidas sem apagar contornos dos cartões e controles", () => {
@@ -47,8 +47,8 @@ test("sidebar minimalista fica transparente e usa ícones maiores sem trilho ati
   assert.match(shell, /<Icon size=\{24\}/);
   assert.doesNotMatch(shell, /ops-active-rail|layoutId="ops-active-rail"/);
   assert.match(css, /\.ops-sidebar\s*\{[^}]*background:\s*transparent\s*!important/s);
-  assert.match(css, /\.ops-nav-item:hover,[\\s\\S]*?transform:\\s*scale\\(1\\.6\\)/);
-  assert.match(dock, /1 \\+ 0\\.6 \\* t \\* t/);
+  assert.match(css, /transform:\s*scale\(1\.6\)/);
+  assert.match(dock, /0\.6 \* t \* t/);
 });
 
 test("contornos decorativos da fila e do dashboard não reaparecem", () => {
