@@ -96,7 +96,7 @@ A comanda é acumulativa: a mesa pode receber vários pedidos durante a visita. 
 - O PIX usa chave/QR estático: o operador deve verificar o crédito no banco antes de marcar o valor como recebido.
 
 ### Administração
-- **Dashboard:** indicadores de faturamento, pedidos, ticket médio, contas, pagamentos, produtos, entregas, mesas e garçons; filtros por hoje, semana e mês.
+- **Dashboard:** indicadores de faturamento, pedidos, ticket médio, contas, pagamentos, produtos, entregas, mesas e garçons; filtros por hoje, semana e mês. O administrador pode ativar o modo de edição pelo ícone de lápis no header, reordenar e redimensionar os cards, personalizar títulos/legendas e salvar o layout localmente no navegador.
 - **Cardápio:** categorias, ordenação, produtos, preços, fotos, disponibilidade, estoque, adicionais e setor de produção.
 - **Mesas:** cadastro, praças, QR Codes fixos e panorama de ocupação, consumo e tempos operacionais.
 - **Garçons:** cadastro, ativação/desativação e gestão dos links individuais.
