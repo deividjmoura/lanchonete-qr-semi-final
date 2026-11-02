@@ -156,6 +156,37 @@ Servida localmente em `public/garcom-pwa/fonts/` sob CSP `'self'`, totalizando *
 - **Sem coluna de prontos:** o item concluído sai da fila do setor e aparece imediatamente na fila do garçom (`concluido`), mantendo retirada direta, aceite, entregas parciais e notificações.
 - **Feedback imediato:** um `role="status"` anuncia "iniciado/liberado — já aparece para o garçom" porque o cartão troca de seção (que pode estar recolhida).
 
+### 6.4 Cardápio do Cliente — Tema Praia (`#/mesa/:token`)
+
+A exceção declarada no topo deste documento ganhou uma identidade própria, **escopada na rota**:
+`src/screens/mesa-praia.css` reescreve os tokens semânticos somente sob `body[data-mesa-praia]`
+(atributo ligado/desligado no ciclo de vida de `src/screens/Mesa.tsx`). Fora dessa rota nada muda —
+o palco azul/violeta e os testes de identidade seguem valendo para o resto do sistema.
+
+- **Paleta:** areia (`#f4ecda`), espuma (`#fffdf6`), maré (`#2fb3ba`), mar fundo (`#0b6b74`),
+  sol (`#ffc861`) e coral (`#f2724a`) como primitivos `--praia-*`; eles alimentam os mesmos nomes
+  semânticos (`--surface`, `--text`, `--brand`, `--line`…), sem hex nos componentes.
+- **Tema escuro = noite na praia:** `html[data-theme="escuro"]` (e `prefers-color-scheme`) trocam a
+  areia por maré profunda (`#08222a`) e o sol por um pôr do sol (`#ffb072`). Nada de preto/branco puros.
+- **Ponte do `@theme` (armadilha documentada):** `src/index.css` declara `--color-*: var(--surface)` no
+  `:root`; como custom properties são substituídas **onde são declaradas**, esse snapshot ignora o
+  override feito no `body`. Por isso `mesa-praia.css` repete a ponte `--color-*` dentro de
+  `body[data-mesa-praia]` — sem ela as utilities do Tailwind (`bg-surface`, `text-text`, `border-line`)
+  ficariam presas na paleta global.
+- **Categoria longa = trilho de duas linhas:** `.mesa-trilho` usa `grid-auto-flow: column` com
+  `grid-template-rows: repeat(2, …)` e `overflow-x: auto` (mais `scroll-snap` e
+  `overscroll-behavior-x: contain`). A grade fixa (`grid-cardapio`) continua valendo para categorias
+  curtas: o corte é 2 linhas × colunas visíveis (4 itens no celular, 6 a partir de `640px`).
+  A página nunca ganha rolagem horizontal própria, o trilho é focável (`role="group"` + `tabIndex`)
+  e o desvanecido das bordas + a dica "deslize para ver mais" só aparecem quando há excedente.
+- **Foto que se dissolve no card:** `.card-produto__fusao` substitui a faixa sólida por um degradê
+  multi-parada da cor do card sobre a base da imagem (vale para o card e para o herói do modal).
+- **Detalhes de praia em CSS/SVG (sem novas imagens):** sol com halo, três camadas de onda animadas
+  (`@keyframes mesa-ondular`, período fixo para laço sem emenda), vela ao longe e gaivotas — todas
+  neutralizadas em `prefers-reduced-motion`.
+- **Conteúdo intocado:** nomes, descrições, preços, fotos e regras de pedido continuam vindo
+  exclusivamente dos dados; a mudança é só de camada visual.
+
 ---
 
 ## 7. Navegação e Shell
