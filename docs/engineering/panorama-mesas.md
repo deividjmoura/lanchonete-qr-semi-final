@@ -2,8 +2,13 @@
 
 A aba **Mesas** do Admin (`/#/admin` → Mesas) tem duas visões sobre os mesmos
 dados: o **panorama** operacional e o **mapa de mesas e QR Codes**. Ambas leem
-`GET /api/admin/mesas/panorama` (somente admin) e abrem o mesmo modal de
-operações, `GET /api/admin/mesas/:numero`.
+`GET /api/admin/mesas/panorama` (somente admin) e usam a mesma moldura de
+cartão. A diferença é o que cada cartão faz:
+
+- **Panorama:** só informação. O cartão não é clicável — ele existe para ler a
+  casa de relance.
+- **Mapa e QR Codes:** os cartões encontrados na pesquisa abrem o modal de
+  operações, `GET /api/admin/mesas/:numero`, por clique ou teclado.
 
 ## Uma entrada por mesa
 
@@ -96,9 +101,14 @@ Regras de honestidade dos dados:
 
 O mapa mantém o que já existia: ativação de mesas, link e QR de cada mesa
 (SVG gerado sob demanda), liberação de mesa e transferência de responsável.
-Digitar um número abre o modal com os dados da mesa, a praça editável, o
-histórico de pedidos da sessão, os pagamentos parciais e os botões compactos
-de copiar link, baixar QR, transferir e liberar.
+A pesquisa devolve **cartões** — os mesmos do panorama, agora clicáveis — em
+grade; cada cartão traz situação, tempo de permanência, garçom, cliente,
+consumo e as ações de copiar link, baixar QR e liberar. As ações ficam no
+rodapé do cartão e não disparam a abertura do detalhe.
+
+Digitar um número e clicar no cartão abre o modal com os dados da mesa, a praça
+editável, o histórico de pedidos da sessão, os pagamentos parciais e os botões
+compactos de copiar link, baixar QR, transferir e liberar.
 
 Permissões não mudaram: tudo aqui passa pelo gate `/api/admin` (sessão de staff
 com papel `admin`); o token da mesa continua funcionando como credencial do

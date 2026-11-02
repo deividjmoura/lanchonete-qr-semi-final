@@ -158,7 +158,6 @@ export default function MesasAdmin() {
           onFiltro={setFiltro}
           periodo={periodo}
           onPeriodo={setPeriodo}
-          onAbrirMesa={setMesaAberta}
           agora={agora}
         />
       ) : (

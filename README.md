@@ -212,6 +212,7 @@ O arquivo data/db.json é um catálogo de demonstração usado pelo seed, não o
 | npm run build | Build de produção do frontend | Gera assets em dist/. |
 | npm test | Regressões automatizadas | Inclui regressions.cjs e tests/*.test.cjs, exceto suítes PostgreSQL. |
 | npm run smoke:panorama | Renderização do panorama de mesas | Smoke SSR. |
+| npm run smoke:mesas | Renderização do modal de mesas abertas do dashboard | Smoke SSR. |
 | npm run test:pg | Integração PostgreSQL | Exige banco descartável chamado qradmin_test. |
 | npm run test:e2e | Fluxos em Chromium real | Exige servidor e banco de teste. |
 | npm run test:seguranca | Autorização, IDOR, CSRF e limites | Altera dados; nunca usar produção. |

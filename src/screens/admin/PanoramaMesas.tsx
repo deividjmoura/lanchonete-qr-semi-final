@@ -30,11 +30,12 @@ type Props = {
   onFiltro: (filtro: FiltroPraca) => void;
   periodo: PeriodoPanorama;
   onPeriodo: (periodo: PeriodoPanorama) => void;
-  onAbrirMesa: (numero: number) => void;
   agora: number;
 };
 
-export function PanoramaMesas({ dados, filtro, onFiltro, periodo, onPeriodo, onAbrirMesa, agora }: Props) {
+/** Visão informativa: os cartões do panorama não abrem o detalhe da mesa.
+ *  Quem abre o modal de operações é a pesquisa de mapa/QR Codes. */
+export function PanoramaMesas({ dados, filtro, onFiltro, periodo, onPeriodo, agora }: Props) {
   const mesas = filtrarMesas(dados.mesas, filtro);
   const resumo = resumirMesas(mesas);
   const vendas = resumirVendas(dados.vendas, mesas);
@@ -49,6 +50,8 @@ export function PanoramaMesas({ dados, filtro, onFiltro, periodo, onPeriodo, onA
             <h3 className="font-display text-xl font-bold tracking-tight text-text">Panorama de mesas</h3>
             <p className="mt-0.5 text-xs text-text-muted">
               Uma entrada por mesa habilitada, inclusive as livres. Tempo contado desde a abertura da sessão.
+              Os cartões são apenas informativos: para operar uma mesa (QR, link, transferência, liberação) use a
+              pesquisa em <strong className="font-semibold text-text">Mapa e QR Codes</strong>.
             </p>
           </div>
           <p className="font-mono text-[10px] uppercase tracking-wider text-text-subtle">
@@ -161,13 +164,7 @@ export function PanoramaMesas({ dados, filtro, onFiltro, periodo, onPeriodo, onA
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {mesas.map((mesa) => (
-            <CartaoMesa
-              key={mesa.id}
-              mesa={mesa}
-              faixas={dados.config.faixas}
-              agora={agora}
-              onAbrir={() => onAbrirMesa(mesa.numero)}
-            />
+            <CartaoMesa key={mesa.id} mesa={mesa} faixas={dados.config.faixas} agora={agora} />
           ))}
         </div>
       )}
@@ -248,16 +245,27 @@ function FiltroPraça({
   );
 }
 
-function CartaoMesa({
+/**
+ * Cartão de mesa usado pelo panorama e pela pesquisa de mapa/QR.
+ *
+ * A mesma moldura vale para as duas telas: no panorama o cartão é apenas
+ * informativo (sem `onAbrir`), e na pesquisa de mapa/QR ele continua abrindo
+ * o detalhe da mesa por clique e teclado. `acoes` recebe os botões da mesa
+ * (link, QR, liberação), que não devem propagar o clique do cartão.
+ */
+export function CartaoMesa({
   mesa,
   faixas,
   agora,
   onAbrir,
+  acoes,
 }: {
   mesa: MesaPanorama;
   faixas: { atencaoMinutos: number; criticoMinutos: number };
   agora: number;
-  onAbrir: () => void;
+  /** Sem esta prop o cartão não é clicável: só informação. */
+  onAbrir?: (numero: number) => void;
+  acoes?: ReactNode;
 }) {
   const tempo = mesa.abertaEm ? faixaOcupacao(mesa.abertaEm, agora, faixas) : null;
   const faixa = tempo ? FAIXAS_TEMPO[tempo.id] : null;
@@ -267,20 +275,25 @@ function CartaoMesa({
   return (
     <article
       data-glass-card
+      data-mesa-numero={mesa.numero}
       aria-label={`Mesa ${String(mesa.numero).padStart(2, "0")}: ${ocupada ? "ocupada" : "livre"}${
         faixa ? `, ${faixa.rotulo.toLowerCase()}, ${formatarDuracao(tempo?.minutos)}` : ""
       }`}
-      role="button"
-      tabIndex={0}
-      onClick={onAbrir}
+      role={onAbrir ? "button" : undefined}
+      tabIndex={onAbrir ? 0 : undefined}
+      onClick={onAbrir ? () => onAbrir(mesa.numero) : undefined}
       onKeyDown={(event) => {
+        if (!onAbrir) return;
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          onAbrir();
+          onAbrir(mesa.numero);
         }
       }}
       className={cn(
-        "flex min-w-0 cursor-pointer flex-col rounded-md border bg-surface-raised p-3.5 text-left transition-colors hover:border-brand-border hover:bg-surface-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+        "flex min-w-0 flex-col rounded-md border bg-surface-raised p-3.5 text-left transition-colors",
+        onAbrir
+          ? "cursor-pointer hover:border-brand-border hover:bg-surface-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+          : "",
         critica ? "border-status-danger-border" : ocupada ? "border-line-strong" : "border-line",
       )}
     >
@@ -367,6 +380,18 @@ function CartaoMesa({
             </span>
           </div>
         </>
+      )}
+
+      {acoes && (
+        <div
+          role="group"
+          aria-label={`Ações da mesa ${String(mesa.numero).padStart(2, "0")}`}
+          className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-line pt-2.5"
+          // As ações (link, QR, liberar) não podem abrir o detalhe junto.
+          onClick={(event) => event.stopPropagation()}
+        >
+          {acoes}
+        </div>
       )}
     </article>
   );
