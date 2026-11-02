@@ -34,12 +34,14 @@ async function carregarCardapio() {
     temOrdem
       ? `SELECT id, categoria_id, nome, descricao, preco, foto_url, pede_ponto_carne, ordem
          FROM produtos
-         WHERE disponivel = TRUE
+         WHERE arquivado = FALSE
+           AND disponivel = TRUE
            AND (controla_estoque = false OR estoque IS NULL OR estoque > 0)
          ORDER BY ordem ASC NULLS LAST, id ASC`
       : `SELECT id, categoria_id, nome, descricao, preco, foto_url, pede_ponto_carne
          FROM produtos
-         WHERE disponivel = TRUE
+         WHERE arquivado = FALSE
+           AND disponivel = TRUE
            AND (controla_estoque = false OR estoque IS NULL OR estoque > 0)
          ORDER BY id ASC`
   );

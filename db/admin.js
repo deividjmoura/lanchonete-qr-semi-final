@@ -253,15 +253,27 @@ function mapProdutoRow(p) {
 }
 
 async function getCardapioAdmin() {
+  /* Categorias montadas só por produtos arquivados (sobra de importação) não
+     aparecem; categorias vazias criadas à mão continuam visíveis. */
   const { rows: categorias } = await pool.query(
-    'SELECT id, nome, ordem FROM categorias ORDER BY ordem, id'
+    `SELECT c.id, c.nome, c.ordem
+       FROM categorias c
+      WHERE NOT EXISTS (
+              SELECT 1 FROM produtos p
+               WHERE p.categoria_id = c.id AND p.arquivado = FALSE
+            )
+         OR NOT EXISTS (
+              SELECT 1 FROM produtos p WHERE p.categoria_id = c.id
+            )
+      ORDER BY c.ordem, c.id`
   );
   let produtos;
   try {
     ({ rows: produtos } = await pool.query(
       `SELECT id, categoria_id, nome, descricao, preco, foto_url, disponivel, pede_ponto_carne,
               controla_estoque, estoque, estoque_minimo, ordem, setor
-       FROM produtos ORDER BY ordem ASC NULLS LAST, id ASC`
+       FROM produtos WHERE arquivado = FALSE
+       ORDER BY ordem ASC NULLS LAST, id ASC`
     ));
   } catch (e) {
     /* migration 0012/0013 ainda não aplicada — tenta sem ordem/setor */
@@ -360,6 +372,7 @@ async function criarProduto(body) {
   }
   if (!setor) {
     // default inteligente pela categoria
+    // (a importação CSV tem a sua própria regra, em db/cardapio-import.js)
     const { rows: catRows } = await pool.query('SELECT nome FROM categorias WHERE id = $1', [categoriaId]);
     const catNome = (catRows[0] && catRows[0].nome) || '';
     const n = String(catNome).toLowerCase();

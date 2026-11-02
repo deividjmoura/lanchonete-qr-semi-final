@@ -9,6 +9,7 @@ import {
   Eye,
   EyeSlash,
   FileText,
+  FileArrowUp,
   Key,
   LinkSimple,
   Package,
@@ -24,6 +25,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { OpsShell } from "../components/OpsShell";
 import Dashboard from "./Dashboard";
 import MesasAdmin from "./admin/MesasAdmin";
+import { ImportarCardapio } from "./admin/ImportarCardapio";
 import { ControlesPaginacao, ListaLimitada, useLimiteLocal } from "../components/Paginacao";
 import { Badge, Btn, IconBtn, Input, Modal } from "../components/ui";
 import { usePaginacaoCursor } from "../hooks/usePaginacaoCursor";
@@ -140,6 +142,8 @@ function Cardapio() {
   const [novaCat, setNovaCat] = useState("");
   const [abertas, setAbertas] = useState<Set<number>>(() => new Set());
   const [orfaosAberto, setOrfaosAberto] = useState(true);
+  const [importarAberto, setImportarAberto] = useState(false);
+  const hydrateCardapio = usePub((s) => s.hydrateCardapio);
 
   const catsOrdenadas = [...categorias].sort((a, b) => a.ordem - b.ordem);
   const nomesCat = new Set(catsOrdenadas.map((c) => c.nome));
@@ -257,6 +261,10 @@ function Cardapio() {
               <Plus size={15} weight="bold" /> Categoria
             </Btn>
           </form>
+          {/* Importação em massa: substitui (ou atualiza) o cardápio por CSV. */}
+          <Btn size="sm" variant="secondary" onClick={() => setImportarAberto(true)}>
+            <FileArrowUp size={15} weight="bold" /> Importar CSV
+          </Btn>
           <Btn size="sm" onClick={() => setNovoAberto(true)}>
             <Plus size={15} weight="bold" /> Produto
           </Btn>
@@ -426,6 +434,11 @@ function Cardapio() {
 
       <ProdutoForm produto={editando} onClose={() => setEditando(null)} />
       <ProdutoForm novo={novoAberto} onClose={() => setNovoAberto(false)} />
+      <ImportarCardapio
+        open={importarAberto}
+        onClose={() => setImportarAberto(false)}
+        onImportado={() => void hydrateCardapio()}
+      />
     </div>
   );
 }

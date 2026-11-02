@@ -157,6 +157,58 @@ export async function apiSend<T = unknown>(
   return data as T;
 }
 
+/* ------------------------------------------------------------------------- */
+/* Importação de cardápio por CSV                                             */
+/* ------------------------------------------------------------------------- */
+
+export type ModoImportCardapio = "substituir" | "atualizar";
+
+export type ErroImportCardapio = {
+  linha: number;
+  coluna: string | null;
+  mensagem: string;
+};
+
+export type ProdutoImportado = {
+  linha: number;
+  categoria: string;
+  nome: string;
+  descricao: string | null;
+  preco: number;
+  imagemUrl: string | null;
+  disponivel: boolean;
+  ordem: number;
+};
+
+export type PreviaImportCardapio = {
+  ok: boolean;
+  resumo: {
+    produtos: number;
+    categorias: number;
+    disponiveis: number;
+    indisponiveis: number;
+    comImagem: number;
+    linhas: number;
+    linhasIgnoradas: number;
+  };
+  categorias: { nome: string; ordem: number; produtos: number }[];
+  produtos: ProdutoImportado[];
+  erros: ErroImportCardapio[];
+  avisos: string[];
+};
+
+export type ResumoImportCardapio = {
+  ok: true;
+  modo: ModoImportCardapio;
+  produtos: number;
+  categorias: number;
+  produtosInseridos: number;
+  produtosAtualizados: number;
+  produtosArquivados: number;
+  categoriasCriadas: number;
+  categoriasRemovidas: number;
+};
+
 export const api = {
   cardapio: () => apiGet<any[]>("/api/cardapio"),
   login: (usuario: string, senha: string) =>
@@ -259,6 +311,16 @@ export const api = {
       { pracaId }
     ),
   adminCardapio: () => apiGet<any[]>("/api/admin/cardapio"),
+  /** Etapa 1 da importação: só lê e valida o CSV. Nada é gravado. */
+  previaImportCardapio: (csv: string) =>
+    apiSend<PreviaImportCardapio>("/api/admin/cardapio/importar/previa", "POST", { csv }),
+  /** Etapa 2: aplica o CSV (transação no servidor). Sem `confirmar`, não grava. */
+  importarCardapio: (csv: string, modo: ModoImportCardapio) =>
+    apiSend<ResumoImportCardapio>("/api/admin/cardapio/importar", "POST", {
+      csv,
+      modo,
+      confirmar: true,
+    }),
   // (duplicata removida — ver adminDashboard(params) mais abaixo, que substituía
   // esta silenciosamente em runtime; TS só acusa o conflito com checagem estrita)
   reorderCategorias: (ids: number[]) =>
