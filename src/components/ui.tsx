@@ -208,12 +208,18 @@ export function Modal({
   children,
   wide,
   closeOnBackdrop = true,
+  alert = false,
+  labelledBy,
+  describedBy,
 }: {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
   wide?: boolean;
   closeOnBackdrop?: boolean;
+  alert?: boolean;
+  labelledBy?: string;
+  describedBy?: string;
 }) {
   const reduceMotion = useReducedMotion();
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
@@ -257,8 +263,10 @@ export function Modal({
         >
           <div className="fixed inset-0 bg-surface-overlay" />
           <motion.div
-            role="dialog"
+            role={alert ? "alertdialog" : "dialog"}
             aria-modal="true"
+            aria-labelledby={labelledBy}
+            aria-describedby={describedBy}
             initial={reduceMotion ? { opacity: 0 } : { y: 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={reduceMotion ? { opacity: 0 } : { y: 8, opacity: 0 }}
