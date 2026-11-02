@@ -10,10 +10,11 @@ import type { DashboardGeral, DiaDashboard, PeriodoDashboard } from "../lib/dash
 import { BRL } from "../lib/utils";
 import { usePub } from "../store/usePub";
 import { confirmarAcao } from "../lib/confirmacao";
+import { canPlaceWidget, findAvailablePosition, type DashboardRect } from "../lib/dashboard-layout";
 import "./dashboard.css";
 
 const STORAGE_PERIODO = "qradmin-dashboard-periodo";
-const STORAGE_LAYOUT = "qradmin-dashboard-layout-v1";
+const STORAGE_LAYOUT = "qradmin-dashboard-layout-v2";
 const PERIODOS: { id: PeriodoDashboard; label: string }[] = [
   { id: "hoje", label: "Hoje" }, { id: "semana", label: "Semana" }, { id: "mes", label: "Mês" },
 ];
@@ -26,46 +27,47 @@ type Card = {
   variacao?: string; atual?: boolean;
 };
 
-type CardLayout = { w: number; h: number; visible: boolean };
-type HeadingLayout = { label: string; title: string; labelSize: number; titleSize: number };
-type DashboardLayout = {
-  order: CardId[];
-  sizes: Record<CardId, CardLayout>;
-  headings: { movimento: HeadingLayout; operacao: HeadingLayout };
-};
+type WidgetId = CardId | "grafico" | "ranking";
+type WidgetLayout = DashboardRect & { visible: boolean };
+type DashboardLayout = { widgets: Record<WidgetId, WidgetLayout> };
 const CARD_IDS: CardId[] = ["faturamento", "pedidos", "ticket", "contas", "servico", "pagamentos", "produtos", "entrega", "consumo", "mesas", "garcons", "fila"];
-const LAYOUT_PADRAO: DashboardLayout = {
-  order: CARD_IDS,
-  sizes: Object.fromEntries(CARD_IDS.map((id) => [id, { w: 1, h: 1, visible: true }])) as Record<CardId, CardLayout>,
-  headings: {
-    movimento: { label: "01 / MOVIMENTO", title: "Visão do período", labelSize: 10, titleSize: 23 },
-    operacao: { label: "02 / OPERAÇÃO", title: "A casa agora", labelSize: 10, titleSize: 23 },
-  },
-};
+const WIDGET_IDS: WidgetId[] = [...CARD_IDS, "grafico", "ranking"];
+const LAYOUT_PADRAO: DashboardLayout = { widgets: {
+  faturamento: { x: 0, y: 0, w: 3, h: 2, visible: true }, pedidos: { x: 3, y: 0, w: 3, h: 2, visible: true },
+  ticket: { x: 6, y: 0, w: 3, h: 2, visible: true }, contas: { x: 9, y: 0, w: 3, h: 2, visible: true },
+  servico: { x: 0, y: 2, w: 3, h: 2, visible: true }, pagamentos: { x: 3, y: 2, w: 3, h: 2, visible: true },
+  produtos: { x: 6, y: 2, w: 3, h: 2, visible: true }, entrega: { x: 9, y: 2, w: 3, h: 2, visible: true },
+  consumo: { x: 0, y: 4, w: 3, h: 2, visible: true }, mesas: { x: 3, y: 4, w: 3, h: 2, visible: true },
+  garcons: { x: 6, y: 4, w: 3, h: 2, visible: true }, fila: { x: 9, y: 4, w: 3, h: 2, visible: true },
+  grafico: { x: 0, y: 6, w: 7, h: 4, visible: true }, ranking: { x: 7, y: 6, w: 5, h: 4, visible: true },
+} };
 function lerLayout(): DashboardLayout {
   try {
-    const raw = localStorage.getItem(STORAGE_LAYOUT);
-    if (!raw) return LAYOUT_PADRAO;
-    const parsed = JSON.parse(raw) as Partial<DashboardLayout>;
-    const order = Array.isArray(parsed.order)
-      ? [...new Set(parsed.order.filter((id): id is CardId => CARD_IDS.includes(id as CardId))), ...CARD_IDS.filter((id) => !parsed.order!.includes(id))]
-      : CARD_IDS;
-    const sizes = { ...LAYOUT_PADRAO.sizes };
-    for (const id of CARD_IDS) {
-      const size = parsed.sizes?.[id];
-      if (size) sizes[id] = { w: Math.max(1, Math.min(4, Number(size.w) || 1)), h: Math.max(1, Math.min(3, Number(size.h) || 1)), visible: typeof size.visible === "boolean" ? size.visible : true };
+    const raw = localStorage.getItem(STORAGE_LAYOUT); if (!raw) return LAYOUT_PADRAO;
+    const parsed = JSON.parse(raw) as { widgets?: Partial<Record<WidgetId, Partial<WidgetLayout>>>; order?: CardId[]; sizes?: Partial<Record<CardId, { w?: number; h?: number; visible?: boolean }>> };
+    const widgets = Object.fromEntries(WIDGET_IDS.map((id) => [id, { ...LAYOUT_PADRAO.widgets[id] }])) as Record<WidgetId, WidgetLayout>;
+    if (parsed.widgets) {
+      const ocupados: Record<string, DashboardRect> = {};
+      for (const id of WIDGET_IDS) {
+        const item = parsed.widgets[id]; if (!item) continue;
+        const desired = { x: Math.max(0, Math.round(Number(item.x) || 0)), y: Math.max(0, Math.round(Number(item.y) || 0)),
+          w: Math.max(1, Math.min(12, Math.round(Number(item.w) || 1))), h: Math.max(1, Math.min(20, Math.round(Number(item.h) || 1))) };
+        const livre = findAvailablePosition(ocupados, id, desired);
+        widgets[id] = { ...livre, visible: typeof item.visible === "boolean" ? item.visible : true }; ocupados[id] = livre;
+      }
+      return { widgets };
     }
-    const headings = { ...LAYOUT_PADRAO.headings };
-    for (const key of ["movimento", "operacao"] as const) {
-      const h = parsed.headings?.[key];
-      if (h) headings[key] = {
-        label: typeof h.label === "string" ? h.label.slice(0, 60) : headings[key].label,
-        title: typeof h.title === "string" ? h.title.slice(0, 80) : headings[key].title,
-        labelSize: Math.max(8, Math.min(18, Number(h.labelSize) || 10)),
-        titleSize: Math.max(16, Math.min(40, Number(h.titleSize) || 23)),
-      };
-    }
-    return { order, sizes, headings };
+    // Migra o layout v1 preservando a ordem, dimensões aproximadas e visibilidade.
+    const ocupados: Record<string, DashboardRect> = {};
+    const ordem = Array.isArray(parsed.order) ? parsed.order.filter((id): id is CardId => CARD_IDS.includes(id)) : CARD_IDS;
+    ordem.forEach((id, index) => {
+      const antigo = parsed.sizes?.[id];
+      const desired = { x: (index % 4) * 3, y: Math.floor(index / 4) * 2,
+        w: Math.max(3, Math.min(12, Number(antigo?.w || 1) * 3)), h: Math.max(2, Math.min(8, Number(antigo?.h || 1) * 2)) };
+      const livre = findAvailablePosition(ocupados, id, desired);
+      widgets[id] = { ...livre, visible: typeof antigo?.visible === "boolean" ? antigo.visible : true }; ocupados[id] = livre;
+    });
+    return { widgets };
   } catch { return LAYOUT_PADRAO; }
 }
 
@@ -170,103 +172,54 @@ function useParallax(ref: React.RefObject<HTMLDivElement | null>) {
   }, [ref]);
 }
 
-function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggleVisibility, onDragStart, onDrop }: {
-  card: Card; disponivel: boolean; onClick: () => void; editando: boolean;
-  layout: CardLayout; onResize: (w: number, h: number) => void; onToggleVisibility: () => void;
-  onDragStart: (id: CardId) => void; onDrop: (id: CardId) => void;
+function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggleVisibility, onDragStart }: {
+  card: Card; disponivel: boolean; onClick: () => void; editando: boolean; layout: WidgetLayout;
+  onResize: (w: number, h: number) => void; onToggleVisibility: () => void; onDragStart: (id: WidgetId) => void;
 }) {
   const Icon = card.Icon;
-  const resizeStart = useRef<{ x: number; y: number; w: number; h: number; cellW: number; cellH: number; maxW: number } | null>(null);
+  const resizeStart = useRef<{ x: number; y: number; w: number; h: number; cellW: number; cellH: number } | null>(null);
   const iniciarResize = (event: React.PointerEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const grid = event.currentTarget.closest(".dashboard-grid") as HTMLElement | null;
-    if (!grid) return;
-    const style = window.getComputedStyle(grid);
-    const columns = Math.max(1, style.gridTemplateColumns.split(" ").filter(Boolean).length);
-    const columnGap = Number.parseFloat(style.columnGap) || 14;
-    const rowGap = Number.parseFloat(style.rowGap) || 14;
-    const cellW = (grid.clientWidth - columnGap * (columns - 1)) / columns;
-    const cellH = Number.parseFloat(style.gridAutoRows) || 176;
-    resizeStart.current = { x: event.clientX, y: event.clientY, w: Math.min(layout.w, columns), h: layout.h, cellW: cellW + columnGap, cellH: cellH + rowGap, maxW: columns };
+    event.preventDefault(); event.stopPropagation();
+    const grid = event.currentTarget.closest(".dashboard-grid") as HTMLElement | null; if (!grid) return;
+    const style = window.getComputedStyle(grid); const gap = Number.parseFloat(style.columnGap) || 14;
+    const rowGap = Number.parseFloat(style.rowGap) || 14; const cellW = (grid.clientWidth - gap * 11) / 12;
+    const cellH = Number.parseFloat(style.gridAutoRows) || 84;
+    resizeStart.current = { x: event.clientX, y: event.clientY, w: layout.w, h: layout.h, cellW: cellW + gap, cellH: cellH + rowGap };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   const moverResize = (event: React.PointerEvent<HTMLButtonElement>) => {
-    const start = resizeStart.current;
-    if (!start) return;
-    event.preventDefault();
-    const w = Math.max(1, Math.min(start.maxW, start.w + Math.round((event.clientX - start.x) / start.cellW)));
-    const h = Math.max(1, Math.min(3, start.h + Math.round((event.clientY - start.y) / start.cellH)));
-    onResize(w, h);
+    const start = resizeStart.current; if (!start) return; event.preventDefault();
+    onResize(Math.max(1, Math.min(12 - layout.x, start.w + Math.round((event.clientX - start.x) / start.cellW))),
+      Math.max(1, Math.min(20, start.h + Math.round((event.clientY - start.y) / start.cellH))));
   };
   const finalizarResize = (event: React.PointerEvent<HTMLButtonElement>) => {
-    resizeStart.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    resizeStart.current = null; if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
-  return (
-    <article
-      className={`card-neon card-neon--${card.cor} ${editando ? "card-neon--editing" : ""} ${layout.visible ? "" : "card-neon--hidden"}`}
-      style={{ gridColumn: `span ${layout.w}`, gridRow: `span ${layout.h}` }}
-      draggable={editando}
-      onDragStart={(event) => { if (!editando || (event.target as HTMLElement).closest(".card-neon__resize-handle, .card-neon__visibility")) { event.preventDefault(); return; } onDragStart(card.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", card.id); }}
-      onDragOver={(event) => { if (editando) { event.preventDefault(); event.dataTransfer.dropEffect = "move"; } }}
-      onDrop={(event) => { if (editando) { event.preventDefault(); onDrop(card.id); } }}
-      onDragEnd={() => onDrop(card.id)}
-      data-dashboard-card={card.id}
-      data-visible={layout.visible ? "true" : "false"}
-    >
-      <button type="button" className="card-neon__open" onClick={onClick} disabled={!disponivel || editando || !layout.visible}
-        aria-haspopup="dialog" aria-label={`Detalhar ${card.label}: ${card.valor}`}>
-        <span className="card-neon__top">
-          <span className="card-neon__icon"><Icon size={22} weight="duotone" /></span>
-          <ArrowUpRight className="card-neon__arrow" size={18} />
-        </span>
-        <span className="card-neon__label">{card.label}</span>
-        <span className="metric-value num-extruded">{card.valor}</span>
-        <span className="card-neon__bottom">
-          <span className="card-neon__sub">{card.sub}</span>
-          {card.variacao && <span className="card-neon__change">{card.variacao}</span>}
-          {card.atual && <span className="card-neon__live"><span /> Agora</span>}
-        </span>
-      </button>
-      {editando && <>
-        <button type="button" className="card-neon__visibility" onClick={onToggleVisibility}
-          aria-label={layout.visible ? `Ocultar ${card.label}` : `Exibir ${card.label}`}
-          aria-pressed={layout.visible} title={layout.visible ? "Ocultar card" : "Exibir card"}>
-          {layout.visible ? <Eye size={17} weight="bold" /> : <EyeSlash size={17} weight="bold" />}
-        </button>
-        <button type="button" className="card-neon__resize-handle" aria-label={`Arraste para redimensionar ${card.label}`}
-          title="Arraste para ajustar largura e altura"
-          onPointerDown={iniciarResize} onPointerMove={moverResize}
-          onPointerUp={finalizarResize} onPointerCancel={finalizarResize}>
-          <ArrowsOut size={15} weight="bold" />
-        </button>
-      </>}
-    </article>
-  );
+  return <article className={`card-neon card-neon--${card.cor} ${editando ? "card-neon--editing" : ""} ${layout.visible ? "" : "card-neon--hidden"}`}
+    style={{ gridColumn: `${layout.x + 1} / span ${layout.w}`, gridRow: `${layout.y + 1} / span ${layout.h}` }}
+    draggable={editando}
+    onDragStart={(event) => { if (!editando || (event.target as HTMLElement).closest(".card-neon__resize-handle, .card-neon__visibility")) { event.preventDefault(); return; } onDragStart(card.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", card.id); }}
+    data-dashboard-card={card.id} data-visible={layout.visible ? "true" : "false"}>
+    <button type="button" className="card-neon__open" onClick={onClick} disabled={!disponivel || editando || !layout.visible}
+      aria-haspopup="dialog" aria-label={`Detalhar ${card.label}: ${card.valor}`}>
+      <span className="card-neon__top"><span className="card-neon__icon"><Icon size={22} weight="duotone" /></span><ArrowUpRight className="card-neon__arrow" size={18} /></span>
+      <span className="card-neon__label">{card.label}</span><span className="metric-value num-extruded">{card.valor}</span>
+      <span className="card-neon__bottom"><span className="card-neon__sub">{card.sub}</span>
+        {card.variacao && <span className="card-neon__change">{card.variacao}</span>}
+        {card.atual && <span className="card-neon__live"><span /> Agora</span>}
+      </span>
+    </button>
+    {editando && <>
+      <button type="button" className="card-neon__visibility" onClick={onToggleVisibility}
+        aria-label={layout.visible ? `Ocultar ${card.label}` : `Exibir ${card.label}`} aria-pressed={layout.visible}
+        title={layout.visible ? "Ocultar card" : "Exibir card"}>{layout.visible ? <Eye size={17} weight="bold" /> : <EyeSlash size={17} weight="bold" />}</button>
+      <button type="button" className="card-neon__resize-handle" aria-label={`Arraste para redimensionar ${card.label}`}
+        title="Arraste para ajustar largura e altura" onPointerDown={iniciarResize} onPointerMove={moverResize}
+        onPointerUp={finalizarResize} onPointerCancel={finalizarResize}><ArrowsOut size={15} weight="bold" /></button>
+    </>}
+  </article>;
 }
 
-function CabecalhoEditavel({ tipo, config, editando, onChange, meta }: {
-  tipo: "movimento" | "operacao"; config: HeadingLayout; editando: boolean;
-  onChange: (key: keyof HeadingLayout, value: string | number) => void; meta: ReactNode;
-}) {
-  return <div className="dash-section-heading" data-dashboard-heading={tipo}>
-    <div>
-      {editando ? <>
-        <input aria-label={`Legenda ${tipo}`} value={config.label} onChange={(e) => onChange("label", e.target.value)} className="dash-heading-input dash-heading-input--label" style={{ fontSize: config.labelSize }} />
-        <input aria-label={`Título ${tipo}`} value={config.title} onChange={(e) => onChange("title", e.target.value)} className="dash-heading-input dash-heading-input--title" style={{ fontSize: config.titleSize }} />
-        <div className="dash-heading-sizes">
-          <label>Legenda <input aria-label={`Tamanho da legenda ${tipo}`} type="range" min="8" max="18" value={config.labelSize} onChange={(e) => onChange("labelSize", Number(e.target.value))} /><output>{config.labelSize}px</output></label>
-          <label>Título <input aria-label={`Tamanho do título ${tipo}`} type="range" min="16" max="40" value={config.titleSize} onChange={(e) => onChange("titleSize", Number(e.target.value))} /><output>{config.titleSize}px</output></label>
-        </div>
-      </> : <>
-        <p className="dash-kicker" style={{ fontSize: config.labelSize }}>{config.label}</p>
-        <h3 style={{ fontSize: config.titleSize }}>{config.title}{tipo === "operacao" && <span className="dash-now"><span /> AGORA</span>}</h3>
-      </>}
-    </div>
-    <span className="dash-section-meta">{meta}</span>
-  </div>;
-}
 function Linha({ nome, valor }: { nome: string; valor: ReactNode }) {
   return <div className="dash-detail-row"><span>{nome}</span><strong>{valor}</strong></div>;
 }
