@@ -40,3 +40,16 @@ test("divisórias internas decorativas são removidas sem apagar contornos dos c
 test("redução de movimento continua respeitada", () => {
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
 });
+
+
+test("sidebar minimalista fica transparente e usa ícones maiores sem trilho ativo", () => {
+  assert.match(shell, /<Icon size=\{24\}/);
+  assert.doesNotMatch(shell, /ops-active-rail|layoutId="ops-active-rail"/);
+  assert.match(css, /\.ops-sidebar\s*\{[^}]*background:\s*transparent\s*!important/s);
+});
+
+test("contornos decorativos da fila e do dashboard não reaparecem", () => {
+  assert.match(css, /\.ops-stage,\s*\.dashboard-stage\s*\{\s*border:\s*0\s*!important/);
+  assert.match(css, /\.ops-pill,\s*\.ops-sessao__contagem\s*\{\s*border:\s*0\s*!important/);
+  assert.doesNotMatch(css, /\.ops-card\s*\{[^}]*border:\s*0/);
+});

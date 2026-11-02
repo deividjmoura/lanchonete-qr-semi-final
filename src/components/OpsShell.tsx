@@ -1,4 +1,4 @@
-import { motion, useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "framer-motion";
 import {
   BeerStein,
   CashRegister,
@@ -233,19 +233,7 @@ export function OpsShell({
                   onClick={() => { ir(n.to); if (menuAberto) fecharMenu(); }}
                   className="ops-nav-item text-left"
                 >
-                  {active && (
-                    <motion.span
-                      layoutId="ops-active-rail"
-                      transition={
-                        reduceMotion
-                          ? { duration: 0 }
-                          : { type: "spring", stiffness: 520, damping: 38, mass: 0.7 }
-                      }
-                      className="absolute left-0 top-2 bottom-2 w-1 bg-brand rounded-r-xs"
-                      aria-hidden="true"
-                    />
-                  )}
-                  <Icon size={20} weight={active ? "fill" : "regular"} className="shrink-0" />
+                  <Icon size={24} weight={active ? "fill" : "regular"} className="shrink-0" />
                   <span className="ops-sidebar-label">{n.label}</span>
                 </button>
               );
