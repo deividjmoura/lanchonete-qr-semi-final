@@ -24,6 +24,7 @@ import { IconBtn, Logo, ThemeToggle } from "./ui";
 import { TrocarSenha } from "./TrocarSenha";
 import { audioMudo, beepAlerta, beepDuplo, falar, setMudo } from "../lib/sonus";
 import { FRASES_GARCOM } from "../lib/data";
+import "./OpsShell.css";
 
 const NAV_ALL = [
   { id: "cozinha", label: "Cozinha", Icon: CookingPot, to: "/cozinha", roles: ["admin", "cozinha"] as const },
@@ -227,6 +228,7 @@ export function OpsShell({
                   type="button"
                   data-active={active ? "true" : "false"}
                   aria-label={n.label}
+                  data-label={n.label}
                   aria-current={active ? "page" : undefined}
                   onClick={() => { ir(n.to); if (menuAberto) fecharMenu(); }}
                   className="ops-nav-item text-left"
