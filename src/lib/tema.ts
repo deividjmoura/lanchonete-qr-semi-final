@@ -11,32 +11,32 @@ export const EVENTO_TEMA = "qradmin-tema";
 
 export const TOKENS_TEMA: Record<Tema, Record<string, string>> = {
   claro: {
-    "--surface": "#EEF1F8",
-    "--surface-raised": "#F8FAFF",
-    "--surface-sunken": "#E0E5F1",
-    "--surface-sidebar": "#0B101B",
+    "--surface": "#eef1f8",
+    "--surface-raised": "#f8faff",
+    "--surface-sunken": "#e0e5f1",
+    "--surface-sidebar": "#0b101b",
     "--text": "#121829",
-    "--text-muted": "#48536D",
-    "--brand": "#5B3FC4",
-    "--brand-contrast": "#F8FAFF",
-    "--brand-ink": "#4A32A6",
-    "--accent": "#0A5A63",
-    "--line": "#C7CFE0",
-    "--line-strong": "#A5B0C8",
+    "--text-muted": "#48536d",
+    "--brand": "#5b3fc4",
+    "--brand-contrast": "#f8faff",
+    "--brand-ink": "#4a32a6",
+    "--accent": "#0a5a63",
+    "--line": "#c7cfe0",
+    "--line-strong": "#a5b0c8",
   },
   escuro: {
-    "--surface": "#0B101B",
-    "--surface-raised": "#141B29",
-    "--surface-sunken": "#080D16",
-    "--surface-sidebar": "#080D16",
-    "--text": "#EEF1FB",
-    "--text-muted": "#A9B4CC",
-    "--brand": "#8B6FFF",
-    "--brand-contrast": "#0B101B",
-    "--brand-ink": "#B7A5FF",
-    "--accent": "#83EDEE",
-    "--line": "#2A3348",
-    "--line-strong": "#3B4660",
+    "--surface": "#0b101b",
+    "--surface-raised": "#141b29",
+    "--surface-sunken": "#080d16",
+    "--surface-sidebar": "#080d16",
+    "--text": "#eef1fb",
+    "--text-muted": "#a9b4cc",
+    "--brand": "#8b6fff",
+    "--brand-contrast": "#0b101b",
+    "--brand-ink": "#b7a5ff",
+    "--accent": "#4fd1e0",
+    "--line": "#2a3348",
+    "--line-strong": "#3b4660",
   },
 };
 
@@ -88,8 +88,8 @@ export function aplicarTema(tema: Tema): Tema {
 }
 
 export const QR_SVG_COLORS = {
-  fg: "#0B101B",
-  bg: "#F8FAFF",
+  fg: "#0b101b",
+  bg: "#f8faff",
 } as const;
 
 export function alternarTema(): Tema {
