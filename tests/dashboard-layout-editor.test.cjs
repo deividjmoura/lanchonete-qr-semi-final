@@ -20,6 +20,7 @@ test("dashboard tem edição habilitada pelo lápis do header administrativo", (
 test("cards podem ser reordenados e redimensionados em largura e altura", () => {
   assert.match(dashboard, /draggable=\{editando\}/);
   assert.match(dashboard, /onDragStart/);
+  assert.match(dashboard, /event\.target as HTMLElement\)\.closest\("\.card-neon__resize-handle, \.card-neon__visibility"\)/, "controles internos não podem iniciar o drag nativo do card");
   assert.match(dashboard, /onDrop/);
   assert.match(dashboard, /onPointerDown=\{iniciarResize\}/);
   assert.match(dashboard, /onPointerMove=\{moverResize\}/);
