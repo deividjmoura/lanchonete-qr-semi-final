@@ -58,7 +58,6 @@ export default function Caixa() {
   const pedidos = usePub((s) => s.pedidos);
   const [selId, setSelId] = useState<number | null>(null);
   const abertas = sessoes.filter((s) => s.status === "aberta");
-  const abertasVisiveis = useLimiteLocal(abertas, 10);
   const selecionada = abertas.find((s) => s.id === selId) || abertas[0] || null;
 
   const totalSalao = abertas.reduce((a, s) => {
@@ -96,7 +95,7 @@ export default function Caixa() {
     >
       <div className="grid gap-5 lg:grid-cols-12">
         {/* Lista de comandas abertas */}
-        <section aria-label="Comandas abertas" className="lg:col-span-5 xl:col-span-4">
+        <section aria-label="Comandas abertas" className="lg:col-span-5 xl:col-span-4 caixa-comandas">
           <div className="flex items-center justify-between mb-3 pb-2 border-b border-line">
             <h2 className="flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted">
               <Receipt size={15} className="text-brand-ink" /> Comandas abertas
@@ -115,75 +114,78 @@ export default function Caixa() {
               </p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {abertasVisiveis.itens.map((s) => {
-                const consumoBruto = consumoSessao(s, pedidos);
-                const servicoLista = s.taxa > 0 ? s.taxa : (s.taxaServicoSugerida ?? 0);
-                const consumo = consumoBruto - s.desconto + servicoLista;
-                const pago = s.valorPago != null ? s.valorPago : pagoSessao(s);
-                const falta = Math.max(0, consumo - pago);
-                const pct = consumo > 0 ? Math.min(100, (pago / consumo) * 100) : 0;
-                const ativo = selecionada?.id === s.id;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    aria-pressed={ativo}
-                    onClick={() => setSelId(s.id)}
-                    className={cn(
-                      "ops-card-surface w-full text-left rounded-md p-4 border transition-colors duration-150",
-                      ativo
-                        ? "border-brand"
-                        : "border-line hover:border-line-strong hover:bg-surface-hover",
-                    )}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-display text-2xl font-bold tracking-tight text-text leading-tight">
-                        {s.mesaNome}
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        {s.pixAvisos > 0 && <Badge tone="brass">PIX {s.pixAvisos}×</Badge>}
-                        <Badge tone="neutral">
-                          <Clock size={12} /> {elapsed(s.abertaEm)}
-                        </Badge>
+            /* Rolagem interna: a lista acompanha a altura do cartão de
+               pagamento ao lado em vez de esticar a página inteira. */
+            <div className="caixa-comandas__rolagem">
+              <div className="space-y-2">
+                {abertas.map((s) => {
+                  const consumoBruto = consumoSessao(s, pedidos);
+                  const servicoLista = s.taxa > 0 ? s.taxa : (s.taxaServicoSugerida ?? 0);
+                  const consumo = consumoBruto - s.desconto + servicoLista;
+                  const pago = s.valorPago != null ? s.valorPago : pagoSessao(s);
+                  const falta = Math.max(0, consumo - pago);
+                  const pct = consumo > 0 ? Math.min(100, (pago / consumo) * 100) : 0;
+                  const ativo = selecionada?.id === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      aria-pressed={ativo}
+                      onClick={() => setSelId(s.id)}
+                      className={cn(
+                        "ops-card-surface w-full text-left rounded-md p-4 border transition-colors duration-150",
+                        ativo
+                          ? "border-brand"
+                          : "border-line hover:border-line-strong hover:bg-surface-hover",
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-display text-2xl font-bold tracking-tight text-text leading-tight">
+                          {s.mesaNome}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {s.pixAvisos > 0 && <Badge tone="brass">PIX {s.pixAvisos}×</Badge>}
+                          <Badge tone="neutral">
+                            <Clock size={12} /> {elapsed(s.abertaEm)}
+                          </Badge>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="mt-3 pt-2.5 border-t border-dashed border-line flex items-end justify-between">
-                      <div>
-                        <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
-                          Consumo
-                        </p>
-                        <p className="font-mono text-base font-bold text-text">{BRL(consumo)}</p>
+                      <div className="mt-3 pt-2.5 border-t border-dashed border-line flex items-end justify-between">
+                        <div>
+                          <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                            Consumo
+                          </p>
+                          <p className="font-mono text-base font-bold text-text">{BRL(consumo)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                            Restante
+                          </p>
+                          <p
+                            className={cn(
+                              "font-mono text-base font-bold",
+                              falta <= 0.005 ? "text-status-success-ink" : "text-accent-ink",
+                            )}
+                          >
+                            {BRL(falta)}
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
-                          Restante
-                        </p>
-                        <p
-                          className={cn(
-                            "font-mono text-base font-bold",
-                            falta <= 0.005 ? "text-status-success-ink" : "text-accent-ink",
-                          )}
-                        >
-                          {BRL(falta)}
-                        </p>
-                      </div>
-                    </div>
 
-                    <div className="mt-2.5 h-1.5 rounded-xs bg-surface-sunken overflow-hidden">
-                      <div
-                        className="h-full w-full origin-left bg-status-success transition-transform duration-150"
-                        style={{ transform: `scaleX(${Math.max(0, Math.min(1, pct / 100))})` }}
-                      />
-                    </div>
-                    <p className="mt-1.5 font-mono text-[10px] text-text-muted">
-                      Pago {BRL(pago)} · {pct.toFixed(0)}%
-                    </p>
-                  </button>
-                );
-              })}
-              <ControlesPaginacao {...abertasVisiveis} className="pt-2" />
+                      <div className="mt-2.5 h-1.5 rounded-xs bg-surface-sunken overflow-hidden">
+                        <div
+                          className="h-full w-full origin-left bg-status-success transition-transform duration-150"
+                          style={{ transform: `scaleX(${Math.max(0, Math.min(1, pct / 100))})` }}
+                        />
+                      </div>
+                      <p className="mt-1.5 font-mono text-[10px] text-text-muted">
+                        Pago {BRL(pago)} · {pct.toFixed(0)}%
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </section>

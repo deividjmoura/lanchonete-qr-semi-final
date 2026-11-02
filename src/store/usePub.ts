@@ -313,9 +313,10 @@ export const usePub = create<PubState>((set, get) => ({
         }
       }
       anuncioBarPronto = true;
-      const ativosIds = new Set(fila.map((p) => p.id));
-      const rest = prev.filter((p) => !ativosIds.has(p.id) && p.status === "entregue");
-      const next = [...fila, ...rest];
+      /* Só o que o bar produz agora. Nada de herdar comandas "entregues" que o
+         caixa ou o garçom colocaram no store: elas voltavam com itens de outros
+         setores e reapareciam aqui depois de navegar para outra tela. */
+      const next = fila;
       if (filaSig(next) === filaSig(prev)) {
         set({ lastError: null, apiReady: true });
         return;
@@ -352,13 +353,10 @@ export const usePub = create<PubState>((set, get) => ({
         }
       }
       anuncioCozinhaPronto = true;
-      const ativosIds = new Set(cozinha.map((p) => p.id));
-      /* API agora traz na_fila + em_producao + pronto.
-         Preserva só entregues (e outros que não sejam da fila ativa da cozinha). */
-      const rest = prev.filter(
-        (p) => !ativosIds.has(p.id) && p.status === "entregue"
-      );
-      const next = [...cozinha, ...rest];
+      /* Só o que a cozinha produz agora. Nada de herdar comandas "entregues"
+         que o caixa ou o garçom colocaram no store: elas voltavam com itens de
+         outros setores e reapareciam aqui depois de navegar para outra tela. */
+      const next = cozinha;
       if (filaSig(next) === filaSig(prev)) {
         set({ lastError: null, apiReady: true });
         return;

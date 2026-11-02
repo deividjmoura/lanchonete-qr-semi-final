@@ -68,3 +68,13 @@ test('listas longas não derrubam o modal: paginação e filtros', () => {
   assert.match(modal, /Mais tempo aberta/);
   assert.match(modal, /Críticas/);
 });
+
+test('pagamentos parciais usam as formas normalizadas pelo mapper', () => {
+  // formaFromApi devolve "credito"/"debito": chavear o rótulo por
+  // "cartao_credito" mostrava o valor cru na tela.
+  assert.match(modal, /credito: "Cartão de crédito"/);
+  assert.match(modal, /debito: "Cartão de débito"/);
+  assert.match(modal, /pix: "Pix"/);
+  assert.match(modal, /dinheiro: "Dinheiro"/);
+  assert.doesNotMatch(modal, /cartao_credito|cartao_debito/);
+});

@@ -9,6 +9,9 @@ import type { ItemPedido, Pedido } from "./types";
 
 export type EtapaFilaId = "em_producao" | "na_fila";
 
+/** Setores que produzem: cada um enxerga só os itens que fabrica. */
+export type SetorFila = "cozinha" | "bar";
+
 /** Estado do item na etapa: o que a seção mostra e o que o botão grava. */
 export type StatusEtapa = "recebido" | "em_producao";
 
@@ -51,10 +54,14 @@ export const ETAPAS_FILA: {
 /** 15 minutos na fila: mesmo alerta operacional já usado na tela. */
 export const LIMITE_ATRASO_MINUTOS = 15;
 
-export function itensDaEtapa(pedidos: Pedido[], etapa: EtapaFilaId): ItemPedido[] {
+export function itensDaEtapa(
+  pedidos: Pedido[],
+  etapa: EtapaFilaId,
+  setor?: SetorFila,
+): ItemPedido[] {
   const alvo = etapa === "na_fila" ? "recebido" : "em_producao";
   const itens: ItemPedido[] = [];
-  for (const pedido of pedidos) {
+  for (const pedido of pedidosDoSetor(pedidos, setor)) {
     for (const item of pedido.itens || []) {
       if (item.status === alvo) itens.push(item);
     }
@@ -63,13 +70,35 @@ export function itensDaEtapa(pedidos: Pedido[], etapa: EtapaFilaId): ItemPedido[
 }
 
 /**
+ * Recorta a comanda para o setor: um pedido com burger e caipirinha aparece
+ * COM o burger na cozinha e COM a caipirinha no bar — nunca inteiro nos dois.
+ * Comanda sem nenhum item do setor sai da lista (não vira cartão vazio).
+ *
+ * Sem setor informado nada é filtrado: quem chama assim assume a lista já
+ * recortada (garçom, caixa, mesa).
+ */
+export function pedidosDoSetor(pedidos: Pedido[], setor?: SetorFila): Pedido[] {
+  if (!setor) return pedidos;
+  const recortados: Pedido[] = [];
+  for (const pedido of pedidos) {
+    const itens = (pedido.itens || []).filter((item) => item.setor === setor);
+    if (itens.length) recortados.push({ ...pedido, itens });
+  }
+  return recortados;
+}
+
+/**
  * Um cartão por comanda, contendo apenas os itens daquela etapa.
  * Ordena pela criação do pedido (mais antigo primeiro) e mantém a ordem dos
  * itens como vieram do servidor.
  */
-export function cardsDaEtapa(pedidos: Pedido[], etapa: EtapaFilaId): CardComanda[] {
+export function cardsDaEtapa(
+  pedidos: Pedido[],
+  etapa: EtapaFilaId,
+  setor?: SetorFila,
+): CardComanda[] {
   const alvo = etapa === "na_fila" ? "recebido" : "em_producao";
-  return pedidos
+  return pedidosDoSetor(pedidos, setor)
     .slice()
     .sort((a, b) => a.criadoEm - b.criadoEm || a.id - b.id)
     .map((pedido) => ({
@@ -79,10 +108,13 @@ export function cardsDaEtapa(pedidos: Pedido[], etapa: EtapaFilaId): CardComanda
     .filter((card) => card.itens.length > 0);
 }
 
-export function contarItensPorEtapa(pedidos: Pedido[]): Record<EtapaFilaId, number> {
+export function contarItensPorEtapa(
+  pedidos: Pedido[],
+  setor?: SetorFila,
+): Record<EtapaFilaId, number> {
   return {
-    em_producao: itensDaEtapa(pedidos, "em_producao").length,
-    na_fila: itensDaEtapa(pedidos, "na_fila").length,
+    em_producao: itensDaEtapa(pedidos, "em_producao", setor).length,
+    na_fila: itensDaEtapa(pedidos, "na_fila", setor).length,
   };
 }
 

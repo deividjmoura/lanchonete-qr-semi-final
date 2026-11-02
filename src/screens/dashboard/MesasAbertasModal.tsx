@@ -517,10 +517,12 @@ const STATUS_PEDIDO: Record<string, string> = {
   cancelado: "Cancelado",
 };
 
+/* Mesmas chaves de FormaPagamento/formaFromApi (pix, dinheiro, credito,
+   debito): o cartão chega com o nome curto, e usar o nome antigo do banco
+   aqui fazia o rótulo cair no valor cru. */
 const FORMA_PAGAMENTO: Record<string, string> = {
   dinheiro: "Dinheiro",
   pix: "Pix",
-  cartao_debito: "Cartão de débito",
-  cartao_credito: "Cartão de crédito",
-  outro: "Outra forma",
+  credito: "Cartão de crédito",
+  debito: "Cartão de débito",
 };

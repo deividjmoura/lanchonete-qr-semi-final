@@ -249,6 +249,43 @@
   text-transform: uppercase;
 }
 
+/* --------------------------------------------- comandas abertas (caixa) */
+
+/* Com muitas mesas abertas a lista empurrava a página inteira para baixo e o
+   operador perdia o cartão de pagamento de vista. Agora a coluna rola por
+   dentro e limita a altura ao cartão da comanda ao lado.
+
+   O `height: 0` tira a lista do cálculo da linha do grid: quem decide a altura
+   é o cartão de pagamento (coluna da direita). O `min-height` devolve a altura
+   da linha à coluna e ainda garante um piso de 24rem quando o cartão do lado
+   está baixo (nenhuma comanda selecionada, por exemplo). */
+@media (min-width: 1024px) {
+  .caixa-comandas {
+    display: flex;
+    flex-direction: column;
+    height: 0;
+    min-height: max(100%, 24rem);
+  }
+
+  .caixa-comandas__rolagem {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--stage-ink-faint) transparent;
+  }
+
+  /* Último cartão não cola na borda quando a lista está no fim. */
+  .caixa-comandas__rolagem > :last-child {
+    margin-bottom: 2px;
+  }
+}
+
+/* Abaixo de 1024px a coluna empilha: nada de rolagem presa, a página rola
+   inteira como antes (alvo de toque grande, sem scroll aninhado no celular). */
+
 /* --------------------------------------------------- grade das comandas */
 
 .fila-grade {

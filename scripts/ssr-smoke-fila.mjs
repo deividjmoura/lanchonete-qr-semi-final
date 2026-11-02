@@ -18,7 +18,10 @@ const raiz = path.resolve(import.meta.dirname, '..');
 // lido pelo store de operação no import — fora do navegador basta o global.
 const armazenamento = (valor) => ({ getItem: () => valor, setItem: () => {}, removeItem: () => {} });
 globalThis.localStorage = {
-  getItem: (chave) => (chave.endsWith(':cozinha') ? '{"em_producao":true,"na_fila":true}' : null),
+  // Sessões abertas nos dois setores: sem isso o componente renderiza
+  // recolhido e o smoke não vê os cartões.
+  getItem: (chave) =>
+    /:(cozinha|bar)$/.test(chave) ? '{"em_producao":true,"na_fila":true}' : null,
   setItem: () => {},
   removeItem: () => {},
 };
@@ -65,6 +68,26 @@ const pedidos = [
   pedido(5, 10, 'Turma da 10', 2, 'recebido'),
 ];
 
+// Comanda mista:burger e batata são da cozinha, chopp e caipirinha são do bar.
+// Cada setor precisa ver SÓ os seus itens — nunca a comanda inteira.
+const mista = {
+  id: 90,
+  sessaoId: 990,
+  mesaId: 12,
+  mesaNome: 'Mesa 12',
+  clienteNome: 'Comanda mista',
+  garcomNome: 'Bruno Tavares',
+  status: 'em_producao',
+  criadoEm: min(4),
+  total: 100,
+  itens: [
+    item(901, 'Burger da casa', 'recebido', { setor: 'cozinha' }),
+    item(902, 'Batata rústica', 'em_producao', { setor: 'cozinha' }),
+    item(903, 'Chopp gelado', 'recebido', { setor: 'bar' }),
+    item(904, 'Caipirinha de limão', 'recebido', { setor: 'bar' }),
+  ],
+};
+
 const cache = path.join(raiz, 'node_modules', '.cache');
 await mkdir(cache, { recursive: true });
 const dir = await mkdtemp(path.join(cache, 'fila-ssr-'));
@@ -90,15 +113,20 @@ await build({
 
 const { FilaProducao } = await import(pathToFileURL(saida).href);
 
-const html = renderToString(
-  React.createElement(FilaProducao, {
-    setor: 'cozinha',
-    pedidos,
-    imprimir: () => {},
-    IconeProducao: (props) => React.createElement('span', props),
-    descricoes: { em_producao: 'Na chapa agora', na_fila: 'Aguardando a chapa' },
-  }),
-);
+const render = (setor, lista) =>
+  renderToString(
+    React.createElement(FilaProducao, {
+      setor,
+      pedidos: lista,
+      imprimir: () => {},
+      IconeProducao: (props) => React.createElement('span', props),
+      descricoes: { em_producao: 'Na chapa agora', na_fila: 'Aguardando a chapa' },
+    }),
+  );
+
+const html = render('cozinha', pedidos);
+const htmlCozinhaMista = render('cozinha', [mista]);
+const htmlBarMista = render('bar', [mista]);
 
 let falhas = 0;
 const checar = (nome, ok, detalhe = '') => {
@@ -130,6 +158,22 @@ checar(
   html.includes('Item A 1') && html.includes('Item A 4') && !html.includes('Item B 1'),
 );
 checar('ações por item e por comanda', html.includes('Liberar este item') && html.includes('Iniciar este item'));
+
+// Separação por setor: a cozinha não vê drinks e o bar não vê comida.
+checar(
+  'cozinha mostra só os itens da cozinha',
+  htmlCozinhaMista.includes('Burger da casa') &&
+    htmlCozinhaMista.includes('Batata rústica') &&
+    !htmlCozinhaMista.includes('Chopp gelado') &&
+    !htmlCozinhaMista.includes('Caipirinha de limão'),
+);
+checar(
+  'bar mostra só os itens do bar',
+  htmlBarMista.includes('Chopp gelado') &&
+    htmlBarMista.includes('Caipirinha de limão') &&
+    !htmlBarMista.includes('Burger da casa') &&
+    !htmlBarMista.includes('Batata rústica'),
+);
 
 if (falhas) {
   console.error(`\n${falhas} verificação(ões) falharam.`);
