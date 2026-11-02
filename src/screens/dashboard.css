@@ -427,3 +427,18 @@
   .dashboard-grid > .dashboard-widget { grid-column: auto / span 4 !important; grid-row: auto !important; min-height: 176px; }
   .dashboard-widget > .dash-panel { min-height: 260px; }
 }
+
+
+.dashboard-move-controls {
+  position: absolute; z-index: 9; top: 9px; left: 9px;
+  display: flex; align-items: center; gap: 3px; padding: 3px;
+  border: 1px solid var(--stage-line-4); border-radius: 10px;
+  background: var(--stage-inset-deep); box-shadow: 0 3px 12px var(--stage-shadow-2);
+}
+.dashboard-move-controls button {
+  display: grid; place-items: center; width: 28px; height: 28px;
+  padding: 0; border: 0; border-radius: 6px;
+  color: var(--stage-ink); background: transparent; cursor: pointer;
+}
+.dashboard-move-controls button:hover { background: var(--stage-violet-soft); color: var(--stage-violet-text); }
+.dashboard-move-controls button:focus-visible { outline: 2px solid var(--stage-focus); outline-offset: 1px; }
