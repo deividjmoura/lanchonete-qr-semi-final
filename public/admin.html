@@ -163,6 +163,7 @@
 <script src="/js/realtime.js"></script>
 <script src="/js/admin-relatorio.js"></script>
 <script src="/garcom-pwa/qrcode-generator.js"></script>
+<script src="/js/confirmacao.js"></script>
 <script>
 (function(){const _f=window.fetch;window.fetch=async function(...a){const r=await _f(...a);if(r.status===401)location.href='/login?next='+encodeURIComponent(location.pathname);return r;};})();
 document.getElementById('btnSair').addEventListener('click',async()=>{try{await fetch('/api/logout',{method:'POST'});}catch(e){}location.href='/login';});
@@ -303,7 +304,7 @@ async function toggleGarcom(id, ativo){
   loadGarcons();
 }
 async function excluirGarcom(id){
-  if(!confirm('Excluir este garçom? O link dele deixa de funcionar.'))return;
+  if(!await window.confirmarQR('Excluir garçom?', 'O link de acesso deste garçom deixará de funcionar.', { confirmText: 'Excluir garçom', danger: true }))return;
   const r=await fetch('/api/admin/garcons/'+id,{method:'DELETE'});
   const d=await r.json().catch(()=>({}));
   if(!r.ok)return toast(d.error||'Erro ao excluir');
