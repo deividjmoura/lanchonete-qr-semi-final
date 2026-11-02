@@ -218,12 +218,21 @@ checar('Panorama', html.panorama, [
   'Consumo em aberto',
   'Vendas hoje',
   'Tempos do fluxo',
-  'Mesa 70',
-  'Indisponível',
-  'aprox.',
+  'As mesas não são listadas',
+  'Mapa e QR Codes',
   'Sem praça',
-  'data-glass-card',
+  '70 mesas',
 ]);
+// O panorama é só painel de números: nenhum cartão de mesa (70 viravam um
+// scroll enorme). Os cartões aparecem na pesquisa de mapa/QR.
+const indesejados = ['data-glass-card', 'Mesa 70', 'Abrir mesa'];
+const sobrando = indesejados.filter((texto) => html.panorama.includes(texto));
+if (sobrando.length) {
+  falhas += 1;
+  console.error(`✗ Panorama: não deveria conter ${JSON.stringify(sobrando)}`);
+} else {
+  console.log('✓ Panorama: sem cartões de mesa');
+}
 checar('Mapa/QR', html.mapa, ['Mapa de mesas e QR Codes', 'Pesquisar nº da mesa', 'Digite o número de uma ou mais mesas para exibi-las.']);
 
 // Modais fechados não podem renderizar nada (AnimatePresence).

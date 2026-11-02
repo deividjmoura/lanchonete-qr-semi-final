@@ -91,6 +91,20 @@ test("SPA oferece superfície e cartão de palco reutilizáveis, sem recriar som
   assert.match(spaCss, /inset 0 1px 0 var\(--glass-border\)/);
 });
 
+test("a marca entra sem fundo (igual ao PWA) e clareia sobre superfície escura", () => {
+  // O PNG já tem canal alpha: placa branca/borda aqui era o que destoava do
+  // Atendimento. A marca assenta direto na superfície.
+  const bloco = spaCss.match(/\.brand-mark \{([\s\S]*?)\}/);
+  assert.ok(bloco, "regra .brand-mark precisa existir");
+  assert.doesNotMatch(bloco[1], /background/, ".brand-mark não pode ter placa de fundo");
+  assert.doesNotMatch(bloco[1], /border/, ".brand-mark não pode ter borda");
+  // A tinta do arquivo é escura: sem placa ela sumiria na barra lateral (fundo
+  // escuro nos dois temas) e no tema escuro — o filtro só troca a tinta.
+  assert.match(spaCss, /\.ops-sidebar \.brand-mark img[\s\S]{0,120}\[data-theme="escuro"\] \.brand-mark img \{\s*filter: brightness\(0\) invert\(1\);/);
+  // Segue sendo a mesma arte, servida como PNG transparente.
+  assert.match(read("src/components/ui.tsx"), /src="\/logo\/qradmin-mark\.png"/);
+});
+
 test("PWA consome a mesma fonte de tokens e mantém a imagem no shell offline", () => {
   assert.match(read("public/garcom-pwa/styles.css"), /@import "\.\/design-tokens\.css"/);
   assert.match(read("public/garcom-pwa/index.html"), /design-tokens\.css/);

@@ -188,15 +188,21 @@
   border-top: 1px dashed var(--line-strong);
 }
 
+/* A marca é um PNG com canal alpha: ela assenta direto na superfície, sem
+   placa branca nem borda — mesmo tratamento do Atendimento (PWA). */
 .brand-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--qr-paper);
-  border: 1px solid var(--sidebar-line);
-  border-radius: var(--radius-sm);
-  padding: 3px;
   flex-shrink: 0;
+}
+
+/* A tinta do arquivo é escura: na barra lateral (fundo escuro nos dois temas)
+   e no tema escuro ela desapareceria, então é renderizada em tinta clara —
+   o filtro preserva o alpha, a marca continua sem fundo. */
+.ops-sidebar .brand-mark img,
+[data-theme="escuro"] .brand-mark img {
+  filter: brightness(0) invert(1);
 }
 
 .qr-quiet-zone {

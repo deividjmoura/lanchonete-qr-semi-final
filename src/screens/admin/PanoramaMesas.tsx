@@ -30,12 +30,16 @@ type Props = {
   onFiltro: (filtro: FiltroPraca) => void;
   periodo: PeriodoPanorama;
   onPeriodo: (periodo: PeriodoPanorama) => void;
-  agora: number;
 };
 
-/** Visão informativa: os cartões do panorama não abrem o detalhe da mesa.
- *  Quem abre o modal de operações é a pesquisa de mapa/QR Codes. */
-export function PanoramaMesas({ dados, filtro, onFiltro, periodo, onPeriodo, agora }: Props) {
+/**
+ * Painel informativo do salão — sem lista de mesas.
+ *
+ * Os cartões de mesa (mesma moldura usada pela pesquisa) ficam só em
+ * Mapa e QR Codes: replicar 70 mesas aqui criava um scroll enorme e nenhuma
+ * operação a mais. O filtro de praça continua valendo para os indicadores.
+ */
+export function PanoramaMesas({ dados, filtro, onFiltro, periodo, onPeriodo }: Props) {
   const mesas = filtrarMesas(dados.mesas, filtro);
   const resumo = resumirMesas(mesas);
   const vendas = resumirVendas(dados.vendas, mesas);
@@ -49,9 +53,9 @@ export function PanoramaMesas({ dados, filtro, onFiltro, periodo, onPeriodo, ago
           <div className="min-w-0">
             <h3 className="font-display text-xl font-bold tracking-tight text-text">Panorama de mesas</h3>
             <p className="mt-0.5 text-xs text-text-muted">
-              Uma entrada por mesa habilitada, inclusive as livres. Tempo contado desde a abertura da sessão.
-              Os cartões são apenas informativos: para operar uma mesa (QR, link, transferência, liberação) use a
-              pesquisa em <strong className="font-semibold text-text">Mapa e QR Codes</strong>.
+              Painel de números do salão: consumo, vendas, ocupação e tempos do fluxo. As mesas não são listadas
+              aqui — para ver e operar uma mesa (QR, link, transferência, liberação) use a pesquisa em{" "}
+              <strong className="font-semibold text-text">Mapa e QR Codes</strong>.
             </p>
           </div>
           <p className="font-mono text-[10px] uppercase tracking-wider text-text-subtle">
@@ -156,18 +160,6 @@ export function PanoramaMesas({ dados, filtro, onFiltro, periodo, onPeriodo, ago
       </div>
 
       <TemposDoFluxo fluxo={dados.fluxo} />
-
-      {mesas.length === 0 ? (
-        <p className="rounded-md border border-dashed border-line-strong bg-surface-raised p-8 text-center text-sm text-text-muted">
-          Nenhuma mesa nesta praça.
-        </p>
-      ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {mesas.map((mesa) => (
-            <CartaoMesa key={mesa.id} mesa={mesa} faixas={dados.config.faixas} agora={agora} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -246,12 +238,10 @@ function FiltroPraça({
 }
 
 /**
- * Cartão de mesa usado pelo panorama e pela pesquisa de mapa/QR.
- *
- * A mesma moldura vale para as duas telas: no panorama o cartão é apenas
- * informativo (sem `onAbrir`), e na pesquisa de mapa/QR ele continua abrindo
- * o detalhe da mesa por clique e teclado. `acoes` recebe os botões da mesa
- * (link, QR, liberação), que não devem propagar o clique do cartão.
+ * Cartão de mesa usado pela pesquisa de mapa/QR (o panorama deixou de listar
+ * mesas). Sem `onAbrir` o cartão é só informativo; a pesquisa passa o callback
+ * e o cartão passa a abrir o detalhe da mesa por clique e teclado. `acoes`
+ * recebe os botões da mesa (link, QR, liberação), que não propagam o clique.
  */
 export function CartaoMesa({
   mesa,
