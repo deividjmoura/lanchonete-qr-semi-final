@@ -107,11 +107,13 @@ async function chartAndStock(browser, scheme) {
           contrast: (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05),
           accessible: el.parentElement.getAttribute('aria-label'),
           text: el.textContent,
+          labelRect: { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height },
+          trackRect: { left: track.left, right: track.right, top: track.top, bottom: track.bottom, width: track.width, height: track.height },
         };
       });
     });
     for (const [i, m] of measurements.entries()) {
-      assert.ok(m.inside, `${scheme}/${width}: valor ${i} cabe na barra`);
+      assert.ok(m.inside, `${scheme}/${width}: valor ${i} cabe na barra: ${JSON.stringify(m)}`);
       assert.ok(m.contrast >= 4.5, `${scheme}/${width}: contraste do valor ${i}: ${m.contrast}`);
       assert.equal(m.accessible, `${dias[i]}: ${dinheiro(valores[i])}`);
     }
