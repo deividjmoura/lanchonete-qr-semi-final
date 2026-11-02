@@ -118,12 +118,19 @@ async function main() {
 
     await page.goto(base + '/#/caixa');
     const abertas = page.getByRole('region', { name: 'Comandas abertas' });
-    await abertas.locator('button[aria-pressed]').nth(9).waitFor();
-    assert.equal(await abertas.locator('button[aria-pressed]').count(), 10);
-    await abertas.getByRole('button', { name: 'Carregar mais' }).click();
+    /* A lista não pagina mais: todas as comandas entram na rolagem interna da
+       coluna, que para na altura do cartão de pagamento ao lado. */
+    await abertas.locator('button[aria-pressed]').nth(15).waitFor();
     assert.equal(await abertas.locator('button[aria-pressed]').count(), 16);
-    await abertas.getByRole('button', { name: 'Mostrar menos' }).click();
-    assert.equal(await abertas.locator('button[aria-pressed]').count(), 10);
+    const rolagem = await abertas.evaluate((el) => {
+      const caixa = el.querySelector('.caixa-comandas__rolagem');
+      return caixa ? { visivel: caixa.clientHeight, conteudo: caixa.scrollHeight } : null;
+    });
+    assert.ok(rolagem, 'as comandas ficam dentro de .caixa-comandas__rolagem');
+    assert.ok(
+      rolagem.conteudo > rolagem.visivel,
+      `com 16 comandas a coluna rola por dentro (${rolagem.conteudo} > ${rolagem.visivel})`,
+    );
     const consumo = page.getByRole('region', { name: 'Consumo lançado' });
     const primeiroPedido = consumo.getByRole('group', { name: 'Pedido 100' });
     await primeiroPedido.getByText('Item 0-0').waitFor();
