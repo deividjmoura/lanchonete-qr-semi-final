@@ -125,6 +125,29 @@ async function chartAndStock(browser, scheme) {
             ? document.querySelector('[data-dashboard-widget="grafico"]').getAttribute('style') : null,
           widgetWidth: w('[data-dashboard-widget="grafico"]'),
           compacto: matchMedia('(max-width: 700px)').matches,
+          regime: (document.querySelector('.ops-shell') || { dataset: {} }).dataset
+            ? (document.querySelector('.ops-shell') || { dataset: {} }).dataset.regime : null,
+          cadeia: (() => {
+            const saida = [];
+            let el = document.querySelector('.dashboard-stage');
+            while (el && el !== document.documentElement) {
+              const cs = getComputedStyle(el);
+              saida.push([
+                el.tagName.toLowerCase() + (el.className && typeof el.className === 'string' ? '.' + el.className.split(/\s+/).slice(0, 3).join('.') : ''),
+                Math.round(el.getBoundingClientRect().width * 10) / 10,
+                cs.display, cs.position, cs.paddingLeft + '/' + cs.paddingRight,
+              ].join(' '));
+              el = el.parentElement;
+            }
+            return saida;
+          })(),
+          sidebar: (() => {
+            const el = document.querySelector('.ops-sidebar');
+            if (!el) return null;
+            const cs = getComputedStyle(el);
+            const r = el.getBoundingClientRect();
+            return { width: Math.round(r.width), left: Math.round(r.left), position: cs.position, visibility: cs.visibility, open: el.dataset.open };
+          })(),
         };
       });
       console.log(`DEBUG ${scheme}/${width}: ${JSON.stringify(diagnostico)}`);
