@@ -84,6 +84,7 @@ export function OpsShell({
   titulo,
   kicker,
   extra,
+  toolbarAction,
   subhead,
   regime = "operational",
 }: {
@@ -92,6 +93,7 @@ export function OpsShell({
   titulo: ReactNode;
   kicker?: string;
   extra?: ReactNode;
+  toolbarAction?: ReactNode;
   subhead?: ReactNode;
   regime?: "expressive" | "operational";
 }) {
@@ -116,6 +118,8 @@ export function OpsShell({
     ? NAV_ALL.filter((n) => (n.roles as readonly string[]).includes(role))
     : [];
   const dock = useDockMagnify(nav.length, reduceMotion);
+  const toolbarCount = 3 + (toolbarAction ? 1 : 0) + (role ? 1 : 0) + (role && role !== "admin" ? 1 : 0);
+  const toolbarDock = useDockMagnify(toolbarCount, reduceMotion, "x");
 
   useEffect(() => {
     setMudo(!somLigado);
@@ -243,7 +247,7 @@ export function OpsShell({
       )}
 
       <div className={temNav ? "ops-main flex flex-col" : "min-h-dvh flex flex-col"}>
-        <header className="ops-topbar sticky top-0 z-30 bg-surface">
+        <header className="ops-topbar sticky top-0 z-30 bg-transparent">
           <div className="w-full px-4 sm:px-6 xl:px-10 2xl:px-12 py-3 flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0 flex items-center gap-3">
               {temNav ? (
@@ -277,36 +281,29 @@ export function OpsShell({
 
             <div className="flex flex-wrap items-center gap-2 ml-auto">
               {extra && <div className="flex flex-wrap items-center gap-1.5 mr-1">{extra}</div>}
-              <div className="flex items-center gap-1.5">
-                <ThemeToggle />
-                <IconBtn
-                  active={somLigado}
-                  label={somLigado ? "Silenciar alertas de voz" : "Ativar alertas de voz"}
-                  onClick={toggleSom}
-                >
-                  {somLigado ? <SpeakerHigh size={18} weight="fill" /> : <SpeakerSlash size={18} />}
-                </IconBtn>
-                <IconBtn label="Página inicial" onClick={() => ir("/")}>
-                  <House size={18} />
-                </IconBtn>
-                {role && (
-                  <>
-                    {role !== "admin" && (
-                      <IconBtn label="Alterar senha" onClick={() => setTrocando(true)}>
-                        <Key size={18} />
-                      </IconBtn>
-                    )}
-                    <IconBtn
-                      label="Sair"
-                      onClick={() => {
-                        logout();
-                        ir("/login");
-                      }}
-                    >
-                      <SignOut size={18} />
-                    </IconBtn>
-                  </>
-                )}
+              <div
+                className="ops-toolbar-dock"
+                ref={toolbarDock.navListRef}
+                onMouseMove={toolbarDock.onMouseMove}
+                onMouseLeave={toolbarDock.onMouseLeave}
+                aria-label="Ações rápidas"
+              >
+                <span className="ops-toolbar-dock-item" ref={toolbarDock.setItemRef(0)} style={toolbarDock.itemStyle(0)}><ThemeToggle /></span>
+                {toolbarAction && <span className="ops-toolbar-dock-item" ref={toolbarDock.setItemRef(1)} style={toolbarDock.itemStyle(1)}>{toolbarAction}</span>}
+                <span className="ops-toolbar-dock-item" ref={toolbarDock.setItemRef(toolbarAction ? 2 : 1)} style={toolbarDock.itemStyle(toolbarAction ? 2 : 1)}>
+                  <IconBtn active={somLigado} label={somLigado ? "Silenciar alertas de voz" : "Ativar alertas de voz"} onClick={toggleSom}>
+                    {somLigado ? <SpeakerHigh size={20} weight="fill" /> : <SpeakerSlash size={20} />}
+                  </IconBtn>
+                </span>
+                <span className="ops-toolbar-dock-item" ref={toolbarDock.setItemRef(toolbarAction ? 3 : 2)} style={toolbarDock.itemStyle(toolbarAction ? 3 : 2)}>
+                  <IconBtn label="Página inicial" onClick={() => ir("/")}><House size={20} /></IconBtn>
+                </span>
+                {role && role !== "admin" && <span className="ops-toolbar-dock-item" ref={toolbarDock.setItemRef(toolbarAction ? 4 : 3)} style={toolbarDock.itemStyle(toolbarAction ? 4 : 3)}>
+                  <IconBtn label="Alterar senha" onClick={() => setTrocando(true)}><Key size={20} /></IconBtn>
+                </span>}
+                {role && <span className="ops-toolbar-dock-item" ref={toolbarDock.setItemRef(toolbarCount - 1)} style={toolbarDock.itemStyle(toolbarCount - 1)}>
+                  <IconBtn label="Sair" onClick={() => { logout(); ir("/login"); }}><SignOut size={20} /></IconBtn>
+                </span>}
               </div>
             </div>
           </div>
