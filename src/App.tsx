@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useRota } from "./router";
 import { Toasts } from "./components/Toasts";
+import { ConfirmacaoGlobal } from "./components/ConfirmacaoGlobal";
 import { desbloquearAudio } from "./lib/sonus";
 import Landing from "./screens/Landing";
 import Login from "./screens/Login";
@@ -25,7 +26,8 @@ export default function App() {
   }, []);
 
   return (
-    <>
+    <ConfirmacaoGlobal>
+      <>
       <Toasts />
       {rota.path === "home" && <Landing />}
       {rota.path === "login" && <Login />}
@@ -36,6 +38,7 @@ export default function App() {
       {rota.path === "caixa" && <Caixa />}
       {rota.path === "admin" && <Admin secao={rota.params.secao} />}
       {!["home", "login", "mesa", "cozinha", "bar", "garcom", "caixa", "admin"].includes(rota.path) && <Landing />}
-    </>
+      </>
+    </ConfirmacaoGlobal>
   );
 }

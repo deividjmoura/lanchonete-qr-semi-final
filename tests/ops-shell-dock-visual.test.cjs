@@ -5,6 +5,7 @@ const fs = require("node:fs");
 
 const shell = fs.readFileSync("src/components/OpsShell.tsx", "utf8");
 const css = fs.readFileSync("src/components/OpsShell.css", "utf8");
+const dock = fs.readFileSync("src/hooks/useDockMagnify.ts", "utf8");
 
 test("sidebar desktop permanece como dock de ícones e não expande no hover", () => {
   assert.match(shell, /import "\.\/OpsShell\.css"/);
@@ -46,6 +47,8 @@ test("sidebar minimalista fica transparente e usa ícones maiores sem trilho ati
   assert.match(shell, /<Icon size=\{24\}/);
   assert.doesNotMatch(shell, /ops-active-rail|layoutId="ops-active-rail"/);
   assert.match(css, /\.ops-sidebar\s*\{[^}]*background:\s*transparent\s*!important/s);
+  assert.match(css, /transform:\s*scale\(1\.6\)/);
+  assert.match(dock, /0\.6 \* t \* t/);
 });
 
 test("contornos decorativos da fila e do dashboard não reaparecem", () => {

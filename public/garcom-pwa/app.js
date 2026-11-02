@@ -338,9 +338,9 @@ function setConnection(state){
 async function reviewConflict(localId){
  const order=await offlineStore.get(localId);if(!order)return;
  if(order.errorCode==='RESPONSAVEL_EXISTENTE'){
-  if(!confirm((order.lastError||'Mesa com outro responsável')+'\nEnviar exatamente este pedido como colaborador?'))return;
+  if(!await window.confirmarQR('Enviar pedido como colaborador?', (order.lastError||'Mesa com outro responsável')+'\nO pedido original será enviado exatamente como está, sem alterar itens ou chave.', { confirmText: 'Enviar pedido' }))return;
   order.collaborationApproved=true;
- }else if(!confirm('Reenviar o pedido original sem alterar produtos ou chave? Isso não cria uma cópia se o servidor já tiver confirmado.'))return;
+ }else if(!await window.confirmarQR('Reenviar pedido original?', 'O pedido será reenviado sem alterar produtos ou chave. Se o servidor já o confirmou, a chave de idempotência impede criar uma cópia.', { confirmText: 'Reenviar pedido' }))return;
  order.status='offline';order.nextAttemptAt=0;await putOrder(order);await renderOrders();await syncOne(localId,true);
 }
 function exportPending(){
@@ -449,7 +449,7 @@ async function deliveryAction(orderId,action,itemIds){
  const plural=qtd>1;
  // Retirar já expressa a intenção de assumir o item; não pedir aceite nem
  // confirmação extra. A entrega ao cliente continua exigindo confirmação.
- if(action==='entregar'&&!confirm(plural?'Confirmar que entregou estes '+qtd+' itens ao cliente?':'Confirmar que entregou este item ao cliente?'))return false;
+ if(action==='entregar'&&!await window.confirmarQR('Confirmar entrega ao cliente?',plural?'Você está confirmando a entrega de '+qtd+' itens ao cliente.':'Você está confirmando a entrega deste item ao cliente.',{confirmText:'Confirmar entrega'}))return false;
  const out=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/pedidos/'+orderId+'/'+action,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({itemIds,etapa:action})});
  if(out.aviso)$('#alertMessage').textContent=out.aviso;
  await refreshLiveData();
@@ -879,7 +879,7 @@ $('#copyPixPayload').addEventListener('click',async()=>{
 if(window.LQRPix){void LQRPix.loadConfig().then(()=>{updateBillingConfirmation();}).catch(()=>updateBillingConfirmation());}
 async function transferTable(table,targetId,targetName){
  if(!Number.isSafeInteger(targetId)||targetId<1){alert('Escolha um garçom ativo para receber a mesa.');return;}
- if(!confirm('Transferir a mesa '+table+' para '+targetName+'? Pedidos já prontos continuarão prontos e passarão para a fila do novo responsável.'))return;
+ if(!await window.confirmarQR('Transferir mesa '+table+'?', 'A responsabilidade será transferida para '+targetName+'. Pedidos já prontos continuarão prontos e passarão para a fila do novo responsável.',{confirmText:'Transferir mesa'}))return;
  try{
    await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/mesas/'+table+'/transferir',{
      method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({garcomDestinoId:targetId})
@@ -1060,9 +1060,12 @@ $('#requestNotificationPermission').addEventListener('click',async()=>{
  try{
    const result=await Notification.requestPermission();
    if(result==='denied'){
-     const confirmed=window.confirm('Você recusou as notificações e não receberá avisos por este navegador. Deseja confirmar essa escolha? Você poderá configurar novamente depois nas configurações do site e neste painel.');
+     // Feche o diálogo nativo antes do modal customizado: a top layer do navegador
+     // bloqueia os cliques no overlay enquanto notificationConsent permanece aberto.
+     if(consentDialog.open)consentDialog.close();
+     const confirmed=await window.confirmarQR('Confirmar recusa das notificações?', 'Você não receberá avisos por este navegador. A permissão poderá ser alterada novamente nas configurações do site e neste painel.', { confirmText: 'Confirmar escolha' });
      if(confirmed){localStorage.setItem('garcom-notifications-declined-'+waiterToken,'1');$('#consentStatus').textContent='Escolha salva. Você não receberá notificações enquanto a permissão estiver negada. Para reativar, altere a permissão nas configurações do navegador.';decidiu=true}
-     else $('#consentStatus').textContent='A permissão foi negada pelo navegador. Para tentar novamente, altere-a nas configurações do site.';
+     else {$('#consentStatus').textContent='A permissão foi negada pelo navegador. Para tentar novamente, altere-a nas configurações do site.';openNotificationSetup();}
    }else if(result==='granted'){
      localStorage.setItem('garcom-ready-alerts-'+waiterToken,'1');readyAlertsEnabled=true;
      $('#consentStatus').textContent='Permissão concedida. Isso não ativa push em segundo plano: o servidor ainda não implementa subscrição nem envio Web Push.';
@@ -1094,7 +1097,7 @@ function openOrdersModal(table){
 }
 async function leaveTable(table){
  if(!navigator.onLine){alert('Para deixar a mesa, conecte-se à internet.');return}
- if(!confirm('Deixar a mesa '+table+'? A conta do cliente continuará aberta.'))return;
+ if(!await window.confirmarQR('Deixar a mesa '+table+'?', 'Você deixará de ser responsável pelo atendimento. A conta do cliente continuará aberta.',{confirmText:'Deixar mesa'}))return;
  try{
    await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/mesas/'+table+'/deixar',{method:'POST'});
    await loadMesas();await loadOrderStatuses();

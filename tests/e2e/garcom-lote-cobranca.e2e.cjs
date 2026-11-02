@@ -181,6 +181,8 @@ async function main() {
       null, { timeout: 20000 }
     );
     await page.click('#readyOrders button:has-text("Confirmar entrega de todos")');
+    const confirmarEntrega = page.getByRole('alertdialog').filter({ hasText: 'Confirmar entrega ao cliente?' });
+    await confirmarEntrega.getByRole('button', { name: 'Confirmar entrega' }).click();
     await esperarBanco(async () => {
       const r = await pool.query('SELECT status,entregue_por_id FROM itens_pedido WHERE pedido_id=$1', [ids.pedido]);
       return r.rows.every((x) => x.status === 'entregue' && Number(x.entregue_por_id) === Number(ids.garcom));

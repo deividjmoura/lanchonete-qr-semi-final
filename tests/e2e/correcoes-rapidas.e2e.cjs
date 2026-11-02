@@ -259,10 +259,11 @@ async function deniedPermission(browser) {
   });
   await context.route('**/api/**', mockApi(criarMenu()));
   const page = await context.newPage();
-  page.on('dialog', (dialog) => dialog.accept());
   await page.goto(base + '/garcom-pwa/?token=recusa');
   await page.locator('#openNotificationSettings').click();
   await page.locator('#requestNotificationPermission').click();
+  const confirmacao = page.getByRole('alertdialog').filter({ hasText: 'Confirmar recusa das notificações?' });
+  await confirmacao.getByRole('button', { name: 'Confirmar escolha' }).click();
   await page.waitForFunction(() => !document.querySelector('#notificationConsent').open);
   assert.equal(await page.evaluate(() => localStorage.getItem('garcom-notifications-declined-recusa')), '1');
   await page.locator('#openNotificationSettings').click();

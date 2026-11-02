@@ -1,6 +1,6 @@
 import {
-  Armchair, ArrowUpRight, ChartBar, CookingPot, CreditCard,
-  CurrencyCircleDollar, HandCoins, Receipt, ShoppingBagOpen, Sparkle,
+  Armchair, ArrowUpRight, ArrowsOut, ChartBar, CookingPot, CreditCard,
+  CurrencyCircleDollar, Eye, EyeSlash, HandCoins, Receipt, ShoppingBagOpen, Sparkle,
   Timer, TrendUp, Trophy, Users, Wallet, X,
 } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
@@ -9,6 +9,7 @@ import { api } from "../lib/api";
 import type { DashboardGeral, DiaDashboard, PeriodoDashboard } from "../lib/dashboard";
 import { BRL } from "../lib/utils";
 import { usePub } from "../store/usePub";
+import { confirmarAcao } from "../lib/confirmacao";
 import "./dashboard.css";
 
 const STORAGE_PERIODO = "qradmin-dashboard-periodo";
@@ -25,7 +26,7 @@ type Card = {
   variacao?: string; atual?: boolean;
 };
 
-type CardLayout = { w: number; h: number };
+type CardLayout = { w: number; h: number; visible: boolean };
 type HeadingLayout = { label: string; title: string; labelSize: number; titleSize: number };
 type DashboardLayout = {
   order: CardId[];
@@ -35,7 +36,7 @@ type DashboardLayout = {
 const CARD_IDS: CardId[] = ["faturamento", "pedidos", "ticket", "contas", "servico", "pagamentos", "produtos", "entrega", "consumo", "mesas", "garcons", "fila"];
 const LAYOUT_PADRAO: DashboardLayout = {
   order: CARD_IDS,
-  sizes: Object.fromEntries(CARD_IDS.map((id) => [id, { w: 1, h: 1 }])) as Record<CardId, CardLayout>,
+  sizes: Object.fromEntries(CARD_IDS.map((id) => [id, { w: 1, h: 1, visible: true }])) as Record<CardId, CardLayout>,
   headings: {
     movimento: { label: "01 / MOVIMENTO", title: "Visão do período", labelSize: 10, titleSize: 23 },
     operacao: { label: "02 / OPERAÇÃO", title: "A casa agora", labelSize: 10, titleSize: 23 },
@@ -52,7 +53,7 @@ function lerLayout(): DashboardLayout {
     const sizes = { ...LAYOUT_PADRAO.sizes };
     for (const id of CARD_IDS) {
       const size = parsed.sizes?.[id];
-      if (size) sizes[id] = { w: Math.max(1, Math.min(4, Number(size.w) || 1)), h: Math.max(1, Math.min(3, Number(size.h) || 1)) };
+      if (size) sizes[id] = { w: Math.max(1, Math.min(4, Number(size.w) || 1)), h: Math.max(1, Math.min(3, Number(size.h) || 1)), visible: typeof size.visible === "boolean" ? size.visible : true };
     }
     const headings = { ...LAYOUT_PADRAO.headings };
     for (const key of ["movimento", "operacao"] as const) {
@@ -169,24 +170,52 @@ function useParallax(ref: React.RefObject<HTMLDivElement | null>) {
   }, [ref]);
 }
 
-function Cartao({ card, disponivel, onClick, editando, layout, onResize, onDragStart, onDrop }: {
+function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggleVisibility, onDragStart, onDrop }: {
   card: Card; disponivel: boolean; onClick: () => void; editando: boolean;
-  layout: CardLayout; onResize: (key: "w" | "h", delta: number) => void;
+  layout: CardLayout; onResize: (w: number, h: number) => void; onToggleVisibility: () => void;
   onDragStart: (id: CardId) => void; onDrop: (id: CardId) => void;
 }) {
   const Icon = card.Icon;
+  const resizeStart = useRef<{ x: number; y: number; w: number; h: number; cellW: number; cellH: number; maxW: number } | null>(null);
+  const iniciarResize = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const grid = event.currentTarget.closest(".dashboard-grid") as HTMLElement | null;
+    if (!grid) return;
+    const style = window.getComputedStyle(grid);
+    const columns = Math.max(1, style.gridTemplateColumns.split(" ").filter(Boolean).length);
+    const columnGap = Number.parseFloat(style.columnGap) || 14;
+    const rowGap = Number.parseFloat(style.rowGap) || 14;
+    const cellW = (grid.clientWidth - columnGap * (columns - 1)) / columns;
+    const cellH = Number.parseFloat(style.gridAutoRows) || 176;
+    resizeStart.current = { x: event.clientX, y: event.clientY, w: Math.min(layout.w, columns), h: layout.h, cellW: cellW + columnGap, cellH: cellH + rowGap, maxW: columns };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const moverResize = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const start = resizeStart.current;
+    if (!start) return;
+    event.preventDefault();
+    const w = Math.max(1, Math.min(start.maxW, start.w + Math.round((event.clientX - start.x) / start.cellW)));
+    const h = Math.max(1, Math.min(3, start.h + Math.round((event.clientY - start.y) / start.cellH)));
+    onResize(w, h);
+  };
+  const finalizarResize = (event: React.PointerEvent<HTMLButtonElement>) => {
+    resizeStart.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
   return (
     <article
-      className={`card-neon card-neon--${card.cor} ${editando ? "card-neon--editing" : ""}`}
+      className={`card-neon card-neon--${card.cor} ${editando ? "card-neon--editing" : ""} ${layout.visible ? "" : "card-neon--hidden"}`}
       style={{ gridColumn: `span ${layout.w}`, gridRow: `span ${layout.h}` }}
       draggable={editando}
-      onDragStart={(event) => { if (!editando) { event.preventDefault(); return; } onDragStart(card.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", card.id); }}
+      onDragStart={(event) => { if (!editando || (event.target as HTMLElement).closest(".card-neon__resize-handle, .card-neon__visibility")) { event.preventDefault(); return; } onDragStart(card.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", card.id); }}
       onDragOver={(event) => { if (editando) { event.preventDefault(); event.dataTransfer.dropEffect = "move"; } }}
       onDrop={(event) => { if (editando) { event.preventDefault(); onDrop(card.id); } }}
       onDragEnd={() => onDrop(card.id)}
       data-dashboard-card={card.id}
+      data-visible={layout.visible ? "true" : "false"}
     >
-      <button type="button" className="card-neon__open" onClick={onClick} disabled={!disponivel || editando}
+      <button type="button" className="card-neon__open" onClick={onClick} disabled={!disponivel || editando || !layout.visible}
         aria-haspopup="dialog" aria-label={`Detalhar ${card.label}: ${card.valor}`}>
         <span className="card-neon__top">
           <span className="card-neon__icon"><Icon size={22} weight="duotone" /></span>
@@ -200,16 +229,19 @@ function Cartao({ card, disponivel, onClick, editando, layout, onResize, onDragS
           {card.atual && <span className="card-neon__live"><span /> Agora</span>}
         </span>
       </button>
-      {editando && <div className="card-neon__resize" aria-label={`Redimensionar ${card.label}`}>
-        <span>Posição: arraste o cartão</span>
-        <div><button type="button" aria-label={`Diminuir largura de ${card.label}`} onClick={() => onResize("w", -1)} disabled={layout.w <= 1}>−</button>
-          <small>{layout.w} col.</small>
-          <button type="button" aria-label={`Aumentar largura de ${card.label}`} onClick={() => onResize("w", 1)} disabled={layout.w >= 4}>+</button>
-          <button type="button" aria-label={`Diminuir altura de ${card.label}`} onClick={() => onResize("h", -1)} disabled={layout.h <= 1}>−</button>
-          <small>{layout.h} alt.</small>
-          <button type="button" aria-label={`Aumentar altura de ${card.label}`} onClick={() => onResize("h", 1)} disabled={layout.h >= 3}>+</button>
-        </div>
-      </div>}
+      {editando && <>
+        <button type="button" className="card-neon__visibility" onClick={onToggleVisibility}
+          aria-label={layout.visible ? `Ocultar ${card.label}` : `Exibir ${card.label}`}
+          aria-pressed={layout.visible} title={layout.visible ? "Ocultar card" : "Exibir card"}>
+          {layout.visible ? <Eye size={17} weight="bold" /> : <EyeSlash size={17} weight="bold" />}
+        </button>
+        <button type="button" className="card-neon__resize-handle" aria-label={`Arraste para redimensionar ${card.label}`}
+          title="Arraste para ajustar largura e altura"
+          onPointerDown={iniciarResize} onPointerMove={moverResize}
+          onPointerUp={finalizarResize} onPointerCancel={finalizarResize}>
+          <ArrowsOut size={15} weight="bold" />
+        </button>
+      </>}
     </article>
   );
 }
@@ -385,12 +417,12 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
   const [tentativa, setTentativa] = useState(0);
   const [selecionado, setSelecionado] = useState<CardId | null>(null);
   const [layout, setLayout] = useState<DashboardLayout>(lerLayout);
+  const [layoutSalvo, setLayoutSalvo] = useState(true);
   const [arrastado, setArrastado] = useState<CardId | null>(null);
   const stage = useRef<HTMLDivElement>(null);
   const dialogo = useRef<HTMLDialogElement>(null);
   useParallax(stage);
 
-  useEffect(() => { try { localStorage.setItem(STORAGE_LAYOUT, JSON.stringify(layout)); } catch { /* preferências continuam na sessão */ } }, [layout]);
   useEffect(() => { if (!editMode) setArrastado(null); }, [editMode]);
 
   useEffect(() => {
@@ -454,15 +486,45 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
     { id: "fila", label: "Itens em operação", valor: valor(qtdFila, (n) => numero(n, 0)), sub: agora ? `${agora.itens.preparo} em preparo · ${agora.itens.prontos} prontos` : carregando, Icon: CookingPot, cor: "laranja", atual: true },
   ];
   const todos = [...metricas, ...operacao];
-  const cardsOrdenados = layout.order.map((id) => todos.find((card) => card.id === id)).filter((card): card is Card => Boolean(card));
-  const redimensionar = (id: CardId, key: "w" | "h", delta: number) => setLayout((atual) => ({ ...atual, sizes: { ...atual.sizes, [id]: { ...atual.sizes[id], [key]: Math.max(1, Math.min(key === "w" ? 4 : 3, atual.sizes[id][key] + delta)) } } }));
+  const idsMovimento = new Set<CardId>(metricas.map((card) => card.id));
+  const ordenarGrupo = (grupo: Card[]) => layout.order.map((id) => grupo.find((card) => card.id === id)).filter((card): card is Card => Boolean(card));
+  const cardsMovimento = ordenarGrupo(metricas);
+  const cardsOperacao = ordenarGrupo(operacao);
+  const redimensionar = (id: CardId, w: number, h: number) => {
+    setLayoutSalvo(false);
+    setLayout((atual) => ({ ...atual, sizes: { ...atual.sizes, [id]: { ...atual.sizes[id], w, h } } }));
+  };
+  const alternarVisibilidade = (id: CardId) => {
+    setLayoutSalvo(false);
+    setLayout((atual) => ({ ...atual, sizes: { ...atual.sizes, [id]: { ...atual.sizes[id], visible: !atual.sizes[id].visible } } }));
+  };
   const reordenar = (destino: CardId) => {
-    if (!arrastado || arrastado === destino) return;
+    if (!arrastado) return;
+    if (arrastado === destino || idsMovimento.has(arrastado) !== idsMovimento.has(destino)) { setArrastado(null); return; }
+    setLayoutSalvo(false);
     setLayout((atual) => { const order = [...atual.order]; const from = order.indexOf(arrastado); const to = order.indexOf(destino); if (from < 0 || to < 0) return atual; order.splice(from, 1); order.splice(to, 0, arrastado); return { ...atual, order }; });
     setArrastado(null);
   };
-  const alterarCabecalho = (tipo: "movimento" | "operacao", key: keyof HeadingLayout, value: string | number) => setLayout((atual) => ({ ...atual, headings: { ...atual.headings, [tipo]: { ...atual.headings[tipo], [key]: value } } }));
-  const restaurarLayout = () => setLayout(LAYOUT_PADRAO);
+  const alterarCabecalho = (tipo: "movimento" | "operacao", key: keyof HeadingLayout, value: string | number) => {
+    setLayoutSalvo(false);
+    setLayout((atual) => ({ ...atual, headings: { ...atual.headings, [tipo]: { ...atual.headings[tipo], [key]: value } } }));
+  };
+  const salvarLayout = () => {
+    try { localStorage.setItem(STORAGE_LAYOUT, JSON.stringify(layout)); setLayoutSalvo(true); }
+    catch { setLayoutSalvo(false); }
+  };
+  const restaurarLayout = async () => {
+    const confirmado = await confirmarAcao({
+      titulo: "Restaurar o dashboard padrão?",
+      mensagem: "A organização, os tamanhos, a visibilidade dos cards e os títulos personalizados serão substituídos pelo layout original. Essa alteração também será salva neste navegador.",
+      confirmar: "Restaurar padrão",
+      perigo: true,
+    });
+    if (!confirmado) return;
+    setLayout(LAYOUT_PADRAO);
+    try { localStorage.setItem(STORAGE_LAYOUT, JSON.stringify(LAYOUT_PADRAO)); setLayoutSalvo(true); }
+    catch { setLayoutSalvo(false); }
+  };
   const atualSelecionado = todos.find((c) => c.id === selecionado);
   const top = dash?.topProdutos || [];
   const topVisiveis = useLimiteLocal(top, 5, periodo);
@@ -491,17 +553,27 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
     </div>}
 
     {editMode && <div className="dashboard-edit-banner" role="status">
-      <span><strong>Modo de edição</strong> · arraste os cards para reorganizar, ajuste largura/altura e edite os títulos e legendas.</span>
-      <button type="button" onClick={restaurarLayout}>Restaurar padrão</button>
+      <span><strong>Modo de edição</strong> · arraste os cards para mover; puxe a alça no canto inferior direito para redimensionar; use o olho para ocultar ou exibir.</span>
+      <div className="dashboard-edit-actions">
+        <button type="button" onClick={salvarLayout} disabled={layoutSalvo} aria-label="Salvar layout do dashboard">{layoutSalvo ? "Layout salvo" : "Salvar layout"}</button>
+        <button type="button" onClick={() => void restaurarLayout()}>Restaurar padrão</button>
+      </div>
     </div>}
     <section aria-label="Indicadores do dashboard" className="dashboard-layout">
-      <CabecalhoEditavel tipo="movimento" config={layout.headings.movimento} editando={editMode} onChange={(key, value) => alterarCabecalho("movimento", key, value)}
-        meta={<>{dash ? intervalo(dash.periodo.from, dash.periodo.to) : "—"} <span>·</span> {dash?.periodo.timezone || "fuso da casa"}</>} />
-      <CabecalhoEditavel tipo="operacao" config={layout.headings.operacao} editando={editMode} onChange={(key, value) => alterarCabecalho("operacao", key, value)}
-        meta={dash ? `Atualizado às ${horario(dash)} · a cada 30 s` : "Retrato atual"} />
-      <div className="dashboard-grid">{cardsOrdenados.map((card) => <Cartao key={card.id} card={card} disponivel={Boolean(dash)} onClick={() => setSelecionado(card.id)}
-        editando={editMode} layout={layout.sizes[card.id]} onResize={(key, delta) => redimensionar(card.id, key, delta)}
-        onDragStart={setArrastado} onDrop={reordenar} />)}</div>
+      <div className="dashboard-group dashboard-group--movement">
+        <CabecalhoEditavel tipo="movimento" config={layout.headings.movimento} editando={editMode} onChange={(key, value) => alterarCabecalho("movimento", key, value)}
+          meta={<>{dash ? intervalo(dash.periodo.from, dash.periodo.to) : "—"} <span>·</span> {dash?.periodo.timezone || "fuso da casa"}</>} />
+        <div className="dashboard-grid">{cardsMovimento.filter((card) => editMode || layout.sizes[card.id].visible).map((card) => <Cartao key={card.id} card={card} disponivel={Boolean(dash)} onClick={() => setSelecionado(card.id)}
+          editando={editMode} layout={layout.sizes[card.id]} onResize={(w, h) => redimensionar(card.id, w, h)}
+          onToggleVisibility={() => alternarVisibilidade(card.id)} onDragStart={setArrastado} onDrop={reordenar} />)}</div>
+      </div>
+      <div className="dashboard-group dashboard-group--operation">
+        <CabecalhoEditavel tipo="operacao" config={layout.headings.operacao} editando={editMode} onChange={(key, value) => alterarCabecalho("operacao", key, value)}
+          meta={dash ? `Atualizado às ${horario(dash)} · a cada 30 s` : "Retrato atual"} />
+        <div className="dashboard-grid">{cardsOperacao.filter((card) => editMode || layout.sizes[card.id].visible).map((card) => <Cartao key={card.id} card={card} disponivel={Boolean(dash)} onClick={() => setSelecionado(card.id)}
+          editando={editMode} layout={layout.sizes[card.id]} onResize={(w, h) => redimensionar(card.id, w, h)}
+          onToggleVisibility={() => alternarVisibilidade(card.id)} onDragStart={setArrastado} onDrop={reordenar} />)}</div>
+      </div>
     </section>
 
     <div className="dashboard-bottom">

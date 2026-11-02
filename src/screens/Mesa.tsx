@@ -24,6 +24,7 @@ import { FOTO_PLACEHOLDER, fotoDemo, fotoSrc } from "../lib/mappers";
 import { descricaoExibida, isDoseProduto } from "../lib/descricao";
 import { connectEvents } from "../lib/api";
 import { BRL } from "../lib/utils";
+import { confirmarAcao } from "../lib/confirmacao";
 import { cn } from "../utils/cn";
 
 interface CartItem {
@@ -522,14 +523,14 @@ export default function Mesa({ token }: { token: string }) {
                       size="sm"
                       variant="danger"
                       className="flex-1"
-                      onClick={() => {
-                        if (
-                          confirm(
-                            `Cancelar o pedido #${p.id}? Disponível apenas antes do início do preparo.`,
-                          )
-                        ) {
-                          cancelarPedido(p.id);
-                        }
+                      onClick={async () => {
+                        const confirmado = await confirmarAcao({
+                          titulo: `Cancelar pedido #${p.id}?`,
+                          mensagem: "O pedido só pode ser cancelado antes do início do preparo. Depois de confirmar, ele será removido do fluxo ativo.",
+                          confirmar: "Cancelar pedido",
+                          perigo: true,
+                        });
+                        if (confirmado) cancelarPedido(p.id);
                       }}
                     >
                       <Trash size={14} /> Cancelar

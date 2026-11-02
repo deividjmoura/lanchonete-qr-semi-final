@@ -233,7 +233,8 @@ test('aba Mesas usa o panorama novo e preserva as operações existentes', () =>
   assert.match(modal, /Consumo em aberto/);
   assert.match(modal, /STATUS_ITEM/);
   // Nenhuma operação destrutiva silenciosa: transferência pede confirmação.
-  assert.match(modal, /confirm\(/);
+  assert.match(modal, /confirmarAcao/);
+  assert.match(modal, /Transferir a mesa/);
 });
 
 test('QR e links continuam usando o token fixo da mesa', () => {

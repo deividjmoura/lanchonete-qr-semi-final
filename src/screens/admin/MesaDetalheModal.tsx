@@ -1,4 +1,5 @@
 import { Copy, MapPin, Receipt, UserSwitch, WarningCircle } from "@phosphor-icons/react";
+import { confirmarAcao } from "../../lib/confirmacao";
 import { useEffect, useMemo, useState } from "react";
 import { Badge, Btn, Modal } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -110,13 +111,12 @@ export function MesaDetalheModal({ numero, pracas, garcons, agora, onClose, onAl
     const destinoId = Number(destino);
     if (!destinoId) return;
     const nome = garcons.find((g) => g.id === destinoId)?.nome || "garçom";
-    if (
-      !confirm(
-        `Transferir a responsabilidade da mesa ${numero} para ${nome}? Retiradas já assumidas continuam com seus garçons.`,
-      )
-    ) {
-      return;
-    }
+    const confirmado = await confirmarAcao({
+      titulo: `Transferir a mesa ${numero}?`,
+      mensagem: `A responsabilidade da mesa será transferida para ${nome}. As retiradas já assumidas continuam com seus garçons.`,
+      confirmar: "Transferir mesa",
+    });
+    if (!confirmado) return;
     setTransferindo(true);
     setErro(null);
     try {

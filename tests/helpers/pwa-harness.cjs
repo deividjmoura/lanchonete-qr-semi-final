@@ -152,6 +152,8 @@ function contexto({ ids = {}, globais = {} } = {}) {
     money: (n) => 'R$ ' + Number(n || 0).toFixed(2).replace('.', ','),
     ...globais,
   };
+  sandbox.window ||= {};
+  if (!sandbox.window.confirmarQR) sandbox.window.confirmarQR = (...args) => Promise.resolve((sandbox.window.confirm || sandbox.confirm)(...args));
   vm.createContext(sandbox);
   return sandbox;
 }

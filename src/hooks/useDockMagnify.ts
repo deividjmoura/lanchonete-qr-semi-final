@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 function escalaDock(distanciaPx: number, maxDist = 88): number {
   if (distanciaPx >= maxDist) return 1;
   const t = 1 - distanciaPx / maxDist;
-  return 1 + 0.35 * t * t;
+  return 1 + 0.6 * t * t;
 }
 
 /**

@@ -42,7 +42,8 @@ test('pedido de permissão existe uma única vez e fica dentro de ação explíc
 });
 
 test('recusa informa consequência, pede confirmação e não tenta reabrir permissão negada', () => {
-  assert.match(js, /window\.confirm\('Você recusou as notificações e não receberá avisos por este navegador/);
+  assert.match(js, /window\.confirmarQR\('Confirmar recusa das notificações/);
+  assert.match(js, /Você não receberá avisos por este navegador/);
   assert.ok(js.includes("garcom-notifications-declined-'+waiterToken"));
   assert.match(js, /Permissão negada nas configurações do navegador/);
   assert.match(js, /button\.disabled=permission==='unavailable'\|\|permission==='denied'/);

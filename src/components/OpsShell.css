@@ -239,3 +239,21 @@
   }
   .ops-topbar .ops-toolbar-dock button svg { width: 18px; height: 18px; }
 }
+
+
+@media (min-width: 1024px) {
+  .ops-nav-item:hover,
+  .ops-nav-item:focus-visible {
+    transform: scale(1.6) !important;
+    z-index: 5 !important;
+  }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .ops-nav-item:hover,
+  .ops-nav-item:focus-visible {
+    transform: none !important;
+    transition: none !important;
+  }
+}

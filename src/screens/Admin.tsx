@@ -41,6 +41,7 @@ import type { ItemPedido, Pedido, Produto, TipoProduto } from "../lib/types";
 import { CATEGORIAS } from "../lib/data";
 import { usePub } from "../store/usePub";
 import { BRL } from "../lib/utils";
+import { confirmarAcao } from "../lib/confirmacao";
 import { cn } from "../utils/cn";
 
 const ABAS = [
@@ -879,7 +880,8 @@ function Garcons() {
   };
 
   const remover = async (g: GarcomRow) => {
-    if (!confirm(`Remover "${g.nome}" definitivamente da lista? O link será invalidado e não poderá ser reativado. O histórico será preservado.`)) return;
+    const confirmado = await confirmarAcao({ titulo: "Remover garçom?", mensagem: `O garçom "${g.nome}" será removido da lista. O link de acesso será invalidado e não poderá ser reativado. O histórico será preservado.`, confirmar: "Remover garçom", perigo: true });
+    if (!confirmado) return;
     setBusy(true);
     setErro(null);
     setMensagem(null);
@@ -2232,12 +2234,13 @@ function Funcoes() {
       reportarErro("Informe a data limite.");
       return;
     }
-    if (
-      !confirm(
-        `Apagar DEFINITIVAMENTE contas fechadas antes de ${purgeBefore}? Não dá para desfazer.`,
-      )
-    )
-      return;
+    const confirmado = await confirmarAcao({
+      titulo: "Apagar histórico definitivamente?",
+      mensagem: `Serão removidas as contas fechadas antes de ${purgeBefore}, incluindo os registros históricos vinculados. Mesas abertas e pedidos em andamento não entram nesta operação. Esta exclusão não pode ser desfeita.`,
+      confirmar: "Apagar histórico",
+      perigo: true,
+    });
+    if (!confirmado) return;
     setBusy(true);
     try {
       const out = await api.purgeHistorico({ before: purgeBefore, dryRun: false, confirm: true });

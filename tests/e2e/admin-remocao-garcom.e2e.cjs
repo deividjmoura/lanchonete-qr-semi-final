@@ -96,7 +96,12 @@ async function main() {
     const page = await context.newPage();
     const erros = [], confirmacoes = [];
     page.on('pageerror', (e) => erros.push(String(e)));
-    page.on('dialog', async (dialog) => { confirmacoes.push(dialog.message()); await dialog.accept(); });
+    const confirmarRemocao = async () => {
+      const modal = page.getByRole('alertdialog').filter({ hasText: 'Remover garçom?' });
+      await modal.waitFor();
+      confirmacoes.push(await modal.innerText());
+      await modal.getByRole('button', { name: 'Remover garçom' }).click();
+    };
     await page.goto(base + '/#/admin/garcons', { waitUntil: 'load' });
     await page.getByRole('heading', { name: 'Garçons', level: 1 }).waitFor();
     const secao = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Credenciais de garçom' }) });
@@ -113,6 +118,7 @@ async function main() {
     })).status, livre.id);
     assert.equal(csrfInvalido, 403, 'CSRF inválido é bloqueado mesmo com origem same-origin');
     await secao.getByRole('button', { name: `Remover ${ocupado.nome}` }).click();
+    await confirmarRemocao();
     await secao.getByRole('alert').getByText(/atendimento aberto nas mesas/i).waitFor();
     assert.equal(await secao.getByRole('button', { name: `Remover ${ocupado.nome}` }).count(), 1);
     await secao.getByRole('button', { name: `Desativar ${ocupado.nome}` }).click();
@@ -126,9 +132,10 @@ async function main() {
     await secao.getByRole('button', { name: `Ativar ${livre.nome}` }).click();
     await secao.getByRole('button', { name: `Desativar ${livre.nome}` }).waitFor();
     await secao.getByRole('button', { name: `Remover ${livre.nome}` }).click();
+    await confirmarRemocao();
     await secao.getByRole('status').getByText(/link foi invalidado/i).waitFor();
     await secao.getByRole('button', { name: `Remover ${livre.nome}` }).waitFor({ state: 'hidden' });
-    assert.match(confirmacoes.at(-1), /definitivamente.*histórico será preservado/i);
+    assert.match(confirmacoes.at(-1), /link de acesso será invalidado.*histórico será preservado/i);
     // Sem cookie staff: com sessão admin o SSE é autorizado independentemente
     // do token do garçom, o que não exercitaria a revogação do link.
     const linkRevogado = await fetch(`${base}/api/garcom/${livre.token}/me`);
@@ -148,6 +155,7 @@ async function main() {
     }, { numero: ids.mesa.numero, destino: destino.id });
     assert.equal(transferida.status, 200, JSON.stringify(transferida.body));
     await secao.getByRole('button', { name: `Remover ${ocupado.nome}` }).click();
+    await confirmarRemocao();
     await secao.getByRole('status').getByText(/histórico foi preservado/i).waitFor();
     await secao.getByRole('button', { name: `Remover ${ocupado.nome}` }).waitFor({ state: 'hidden' });
     const auditoria = (await pool.query(
