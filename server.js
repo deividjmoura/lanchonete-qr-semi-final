@@ -1488,7 +1488,11 @@ const server = http.createServer(async (req, res) => {
       if (p === '/') {
         try {
           const data = await fs.promises.readFile(spaIndexPath);
-          return send(res, 200, 'text/html; charset=utf-8', data);
+          return send(res, 200, 'text/html; charset=utf-8', data, {
+          // O link inicial da PWA ainda pode conter ?token=. Não propagar essa URL
+          // bearer como Referer para scripts, estilos ou chamadas same-origin.
+          'Referrer-Policy': 'no-referrer',
+        });
         } catch {
           /* fall through to legacy */
         }
