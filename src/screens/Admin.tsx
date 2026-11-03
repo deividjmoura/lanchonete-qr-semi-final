@@ -360,11 +360,13 @@ function Cardapio() {
                     if (event.pointerType !== "touch") return;
                     limparToque();
                     toqueOrigem.current = c.id;
+                    const handle = event.currentTarget;
+                    const pointerId = event.pointerId;
                     toqueTimer.current = setTimeout(() => {
                       toqueAtivo.current = true;
                       toqueDestino.current = c.id;
                       setCategoriaArrastada(c.id);
-                      try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* captura pode não estar disponível */ }
+                      try { handle.setPointerCapture(pointerId); } catch { /* captura pode não estar disponível */ }
                     }, 450);
                   }}
                   onPointerMove={(event) => {
