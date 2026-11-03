@@ -9,7 +9,7 @@ const vm = require('node:vm');
 const ts = require('typescript');
 const { EventEmitter } = require('node:events');
 const { eventAccess } = require('../db/event-access');
-const { subscribe, broadcast, clientCount } = require('../db/events');
+const { subscribe, broadcast, closeAccess, clientCount } = require('../db/events');
 const { validarDestinoRemoto } = require('../db/foto');
 const { verificarOrigemRequisicao, csrfTokenParaSessao, verificarProtecaoCSRF } = require('../db/auth');
 const { ErroValidacao, numeroFinito, numeroInteiroPositivo } = require('../db/validacao');
@@ -129,19 +129,79 @@ test('SSE público não divulga nome, token ou pagamento de outra mesa', () => {
   staff.emit('close'); publicRes.emit('close');
   assert.equal(clientCount(), 0);
 });
-test('cliente SSE envia token e encerra conexão no cleanup', () => {
-  let url; let closed = false;
-  const context = { exports: {}, URLSearchParams, setTimeout, clearTimeout, EventSource: class {
-    constructor(value) { url = value; } addEventListener() {} close() { closed = true; }
-  } };
+test('revogação fecha somente streams SSE vinculados à identidade revogada', () => {
+  const staff = new EventEmitter();
+  const garcom = new EventEmitter();
+  let staffEnded = false;
+  let garcomEnded = false;
+  staff.write = () => {};
+  staff.end = () => { staffEnded = true; };
+  garcom.write = () => {};
+  garcom.end = () => { garcomEnded = true; };
+  subscribe(staff, { accessType: 'staff', accessId: 17 });
+  subscribe(garcom, { publicClient: true, accessType: 'garcom', accessId: 17 });
+  assert.equal(closeAccess('staff', 17), 1);
+  assert.equal(staffEnded, true);
+  assert.equal(garcomEnded, false);
+  assert.equal(clientCount(), 1);
+  garcom.emit('close');
+  assert.equal(clientCount(), 0);
+});
+
+test('cliente SSE envia bearer no POST e usa apenas ticket temporário na URL', async () => {
+  let url; let options; let closed = false;
+  const context = {
+    exports: {}, URLSearchParams, setTimeout, clearTimeout,
+    fetch: async (path, init) => {
+      assert.equal(path, '/api/events/ticket');
+      options = init;
+      return { ok: true, json: async () => ({ ticket: 'temporary-ticket-value' }) };
+    },
+    EventSource: class {
+      constructor(value) { url = value; }
+      addEventListener() {}
+      close() { closed = true; }
+    },
+  };
   vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/api.ts', 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS },
   }).outputText, context);
   const stop = context.exports.connectEvents(() => {}, { mesa: 'a&b' });
-  assert.equal(url, '/api/events?mesa=a%26b'); stop(); assert.equal(closed, true);
-  context.exports.connectEvents(() => {}, { garcom: 'abc' })();
-  assert.equal(url, '/api/events?garcom=abc');
-  context.exports.connectEvents(() => {})(); assert.equal(url, '/api/events');
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(url, '/api/events?ticket=temporary-ticket-value');
+  assert.deepEqual(JSON.parse(options.body), { mesa: 'a&b' });
+  assert.equal(options.credentials, 'include');
+  assert.equal(options.cache, 'no-store');
+  stop();
+  assert.equal(closed, true);
+});
+
+test('LQRRealtime troca token de garçom por ticket antes de abrir EventSource', async () => {
+  let url; let options; let closed = false;
+  const window = { innerWidth: 1000, addEventListener() {} };
+  const document = { documentElement: { clientWidth: 1000, style: { setProperty() {} } } };
+  const context = {
+    window, document, URLSearchParams, setTimeout, clearTimeout, setInterval, clearInterval,
+    fetch: async (path, init) => {
+      assert.equal(path, '/api/events/ticket');
+      options = init;
+      return { ok: true, json: async () => ({ ticket: 'one-time-sse-ticket' }) };
+    },
+    EventSource: class {
+      constructor(value) { url = value; }
+      addEventListener() {}
+      close() { closed = true; }
+    },
+    console,
+  };
+  vm.runInNewContext(fs.readFileSync('public/js/realtime.js', 'utf8'), context);
+  const connection = window.LQRRealtime.connect(() => {}, { garcom: 'permanent-waiter-bearer', fallbackMs: 0 });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(url, '/api/events?ticket=one-time-sse-ticket');
+  assert.deepEqual(JSON.parse(options.body), { garcom: 'permanent-waiter-bearer' });
+  assert.equal(url.includes('permanent-waiter-bearer'), false);
+  connection.close();
+  assert.equal(closed, true);
 });
 
 test('logs HTTP omitem tokens bearer de caminho, query e mensagens de erro', () => {
