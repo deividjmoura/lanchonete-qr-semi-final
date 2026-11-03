@@ -12,6 +12,8 @@
 | Cancelamento pelo cliente | `auditoria_eventos` (`pedido_cancelado`) gravado **antes** dos `DELETE`s, com número da mesa e motivo opcional; ator `cliente_mesa` (token da mesa) | Sim — se a exclusão falha, o evento desfaz junto | `tests/postgres-integration.test.cjs`, `tests/auditoria.test.cjs` |
 | Transferência/assunção de mesa | `mesa_atendimento_historico` com `alterado_por_id`, anterior e novo (migrations 0019/0023) | Sim | `tests/postgres-waiter-integration.test.cjs` |
 | Pedido lançado por garçom | `pedidos.garcom_registrou_id` e `origem_pedido`; entrega em `garcom_entregou_id` (0019) | Sim | `tests/garcom-responsavel-mesa.test.cjs` |
+| Edição de pedido (QR cliente/garçom) | `auditoria_eventos` (`pedido_editado`) com ator, origem, totais e quantidades antes/depois; histórico `item_status` por linha | Sim, junto da substituição dos itens | `tests/postgres-integration.test.cjs` (PR #224) |
+| Entrega progressiva por garçom | `auditoria_eventos` (`entrega_assumida`, `itens_retirados`, `itens_entregues`) + histórico `item_status` por item | Sim, junto da transição dos itens | `tests/postgres-entregas-progressivas.test.cjs` |
 | Troca de senha | `staff_credencial_eventos` (sem segredos) + nº de sessões revogadas (0024) | Sim | `tests/postgres-password-change.test.cjs` |
 | Ações de cardápio/categorias/garçons (admin) | Autenticadas por sessão staff; ainda **sem** evento dedicado na tabela de auditoria | — | Pendência listada abaixo |
 
