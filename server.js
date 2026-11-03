@@ -1094,7 +1094,8 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/admin/mesas/ativar' && req.method === 'POST') {
       try {
         const payload = await body(req);
-        const out = await ativarMesas(payload.quantidade);
+        const staff = await exigirAcesso(req, 'admin');
+        const out = await ativarMesas(payload.quantidade, staff, reqId);
         broadcast('update', { type: 'mesas_ativadas' });
         return json(res, 200, out);
       } catch (e) {
