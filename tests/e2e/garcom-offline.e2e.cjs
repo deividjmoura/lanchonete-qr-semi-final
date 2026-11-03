@@ -100,8 +100,15 @@ async function main() {
     const context = await browser.newContext({ viewport: { width: 420, height: 900 } });
     const page = await context.newPage();
     const errosPagina = [];
+    const eventRequests = [];
+    const ticketPosts = [];
     page.on('pageerror', (e) => errosPagina.push(String(e)));
     page.on('dialog', (d) => d.accept());
+    page.on('request', (request) => {
+      const requestUrl = new URL(request.url());
+      if (requestUrl.pathname === '/api/events') eventRequests.push(requestUrl);
+      if (requestUrl.pathname === '/api/events/ticket') ticketPosts.push(request.postData() || '');
+    });
 
     // Simula uma entrada antiga no Cache Storage para provar que a ativação
     // da versão nova remove o cache anterior, inclusive a chave com bearer.
@@ -119,6 +126,22 @@ async function main() {
     assert.equal(await page.evaluate(() => new URL(location.href).searchParams.has('token')), false, 'query bearer deve ser removida do histórico atual');
     assert.equal(await page.evaluate(() => localStorage.getItem('waiter-token')), token, 'token capturado deve continuar persistido para retomada offline');
     ok('PWA remove o token da URL, mantém a sessão local e lista as mesas do garçom autenticado');
+
+    // O bearer permanente deve ir somente no POST de troca por ticket; a URL
+    // EventSource recebe apenas o ticket temporário e nunca o token do garçom.
+    const sseDeadline = Date.now() + 10000;
+    while (!eventRequests.some((value) => value.searchParams.has('ticket')) && Date.now() < sseDeadline) {
+      await page.waitForTimeout(100);
+    }
+    const sseUrl = eventRequests.find((value) => value.searchParams.has('ticket'));
+    assert.ok(sseUrl, 'PWA deve abrir EventSource usando ticket de curta duração');
+    assert.equal(sseUrl.searchParams.has('garcom'), false, 'URL SSE não pode conter bearer de garçom');
+    assert.equal(sseUrl.searchParams.has('mesa'), false, 'URL SSE não pode conter bearer de mesa');
+    assert.equal(sseUrl.toString().includes(token), false, 'URL SSE não pode conter o token permanente');
+    assert.ok(ticketPosts.some((value) => {
+      try { return JSON.parse(value).garcom === token; } catch (_) { return false; }
+    }), 'credencial permanente deve ser enviada no corpo POST, não na URL');
+    ok('SSE usa ticket temporário na URL e mantém o bearer no corpo POST');
 
     // Confirma que o Service Worker ativo também não persiste a URL bearer
     // quando um link legado é aberto novamente sob controle do cache.
