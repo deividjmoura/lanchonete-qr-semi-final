@@ -4,7 +4,7 @@
 // O vínculo é feito exclusivamente por e-mail verificado e único no cadastro.
 const crypto = require('crypto');
 const pool = require('./pool');
-const { criarSessao, homeDoPapel } = require('./auth');
+const { criarSessao, homeDoPapel, exigeTrocaDeSenha } = require('./auth');
 
 const STATE_COOKIE = 'qr_google_oauth';
 const GOOGLE_AUTH = 'https://accounts.google.com/o/oauth2/v2/auth';
@@ -147,9 +147,11 @@ async function concluirOAuth(req, code, state) {
   }
 
   const { rows } = await pool.query(
-    `SELECT id, nome, login, papel, ativo
-       FROM staff
-      WHERE lower(email) = $1
+    `SELECT s.id, s.nome, s.login, s.papel, s.ativo,
+            COALESCE((to_jsonb(s)->>'deve_trocar_senha')::boolean, FALSE) AS deve_trocar_senha,
+            (SELECT COUNT(*) FROM staff o WHERE o.ativo AND o.senha_hash = s.senha_hash) > 1 AS senha_compartilhada
+       FROM staff s
+      WHERE lower(s.email) = $1
       LIMIT 2`,
     [email]
   );
@@ -160,10 +162,19 @@ async function concluirOAuth(req, code, state) {
   }
   const staff = rows[0];
   const linked = await pool.query(
+    'SELECT id FROM staff WHERE google_sub = $1 AND id <> $2 LIMIT 1',
+    [profile.sub, staff.id]
+  );
+  if (linked.rowCount) {
+    const error = new Error('Esta conta Google já está vinculada a outro funcionário.');
+    error.status = 403;
+    throw error;
+  }
+  const currentLink = await pool.query(
     'SELECT google_sub FROM staff WHERE id = $1',
     [staff.id]
   );
-  if (linked.rows[0].google_sub && linked.rows[0].google_sub !== profile.sub) {
+  if (currentLink.rows[0].google_sub && currentLink.rows[0].google_sub !== profile.sub) {
     const error = new Error('Esta conta de funcionário já está vinculada a outra conta Google.');
     error.status = 403;
     throw error;
@@ -173,7 +184,7 @@ async function concluirOAuth(req, code, state) {
     [staff.id, profile.sub]
   );
   const token = await criarSessao(staff.id);
-  return { staff: { id: staff.id, nome: staff.nome, login: staff.login, papel: staff.papel, deveTrocarSenha: false }, token, home: homeDoPapel(staff.papel) };
+  return { staff: { id: staff.id, nome: staff.nome, login: staff.login, papel: staff.papel, deveTrocarSenha: exigeTrocaDeSenha(staff) }, token, home: homeDoPapel(staff.papel) };
 }
 
 function statusOAuth() {
