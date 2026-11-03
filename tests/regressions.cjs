@@ -795,6 +795,10 @@ test('CSRF integra emissao de token, validacao de rotas staff e cliente HTTP', (
   assert.match(serverSource, /csrfToken: csrfTokenParaSessao\(token\)/);
   assert.match(serverSource, /csrfToken: csrfTokenParaSessao\(sessionToken\)/);
   assert.match(serverSource, /verificarProtecaoCSRF\(req\);/);
+  const inicioTicketSse = serverSource.indexOf("if (p === '/api/events/ticket'");
+  const fimTicketSse = serverSource.indexOf('\n    let m;', inicioTicketSse);
+  assert.ok(inicioTicketSse >= 0 && fimTicketSse > inicioTicketSse, 'rota de emissão SSE deve existir');
+  assert.match(serverSource.slice(inicioTicketSse, fimTicketSse), /verificarOrigemRequisicao\\(req\\)/, 'emissão de ticket SSE deve rejeitar origem cross-site');
   assert.match(apiSource, /headers\["X-CSRF-Token"\] = csrfToken/);
   assert.match(apiSource, /await apiGet\("\/api\/me"\)/);
 });
