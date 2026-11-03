@@ -820,7 +820,7 @@ export default function Mesa({ token }: { token: string }) {
             </div>
 
             {/* Busca sticky */}
-            <div className="sticky top-14 z-30 py-2 bg-surface/95">
+            <div className="sticky top-14 z-30 py-2 bg-surface/0">
               <div className="relative">
                 <MagnifyingGlass
                   size={16}
