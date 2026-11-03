@@ -11,6 +11,7 @@ const path = require('node:path');
 
 const { resolverFotoUrl, parseDataUrl, carregarFotoProduto } = require('../db/foto-serve');
 const pool = require('../db/pool');
+const { getCardapioAdmin } = require('../db/admin');
 
 test('data-URL vira URL de mesma origem; URLs externas e legadas ficam intactas', () => {
   assert.equal(resolverFotoUrl('data:image/webp;base64,AAAA', 12), '/api/cardapio/fotos/12');
@@ -108,4 +109,33 @@ test('cardápio público usa o resolvedor e o servidor expõe o endpoint read-on
   assert.ok(inicio > 0);
   const bloco = server.slice(inicio, inicio + 900);
   assert.doesNotMatch(bloco, /INSERT|UPDATE|DELETE/);
+});
+
+
+test('listagem administrativa também devolve URL de foto, nunca Base64', async () => {
+  const queryOriginal = pool.query;
+  const foto = 'data:image/webp;base64,AAAA';
+  pool.query = async (sql) => {
+    if (sql.includes('FROM categorias c')) {
+      return { rows: [{ id: 2, nome: 'Categoria CI', ordem: 0 }] };
+    }
+    if (sql.includes('FROM produtos WHERE arquivado = FALSE')) {
+      return { rows: [{
+        id: 12, categoria_id: 2, nome: 'Produto CI', descricao: null,
+        preco: '10.00', foto_url: foto, disponivel: true,
+        pede_ponto_carne: false, setor: 'cozinha', controla_estoque: false,
+        estoque: null, estoque_minimo: 0, ordem: 0,
+      }] };
+    }
+    if (sql.includes('FROM adicionais')) return { rows: [] };
+    if (sql.includes('FROM produtos_ingredientes_removiveis')) return { rows: [] };
+    throw new Error('Consulta inesperada em getCardapioAdmin: ' + sql);
+  };
+  try {
+    const cardapio = await getCardapioAdmin();
+    assert.equal(cardapio[0].produtos[0].fotoUrl, '/api/cardapio/fotos/12');
+    assert.doesNotMatch(JSON.stringify(cardapio), /data:image\\/webp;base64/);
+  } finally {
+    pool.query = queryOriginal;
+  }
 });
