@@ -1,6 +1,6 @@
 # Estado em memória e requisito de deploy single-instance
 
-## Status atual observado no commit de referência
+## Status atual observado no código e na infraestrutura de produção (2026-11-03)
 
 O backend mantém dois estados operacionais dentro do processo Node:
 
@@ -26,10 +26,10 @@ Até que exista uma implementação compartilhada e testada para rate limit e pu
 1. Produção deve operar com **uma única réplica do backend**.
 2. Não habilitar scale-out horizontal como medida de capacidade.
 3. Não considerar sticky sessions substituto de store compartilhado ou pub/sub.
-4. Qualquer alteração no número de réplicas deve ser tratada como mudança de arquitetura e revisada pela Frente 1 antes de ser aplicada no Railway.
+4. Qualquer alteração no número de réplicas deve ser tratada como mudança de arquitetura e revisada antes de ser aplicada no Railway, com validação da configuração real do serviço.
 5. Registrar esta restrição no runbook de operação e nos critérios de release.
 
-Este documento registra um requisito operacional; **não altera a configuração do Railway**.
+A configuração de produção consultada em 2026-11-03 confirma uma única réplica (`iad.numReplicas = 1`). Este documento registra o requisito; não altera a configuração do Railway.
 
 ## Critérios para remover o gate
 
@@ -41,7 +41,7 @@ O gate só pode ser removido quando todos os itens abaixo forem concluídos:
 - [ ] Teste de integração que conecta cliente em A, publica evento em B e comprova recebimento.
 - [ ] Reconexão, limpeza de assinaturas e comportamento em falha do broker testados.
 - [ ] Runbook e monitoramento atualizados.
-- [ ] Frente 1 valida a topologia real do Railway e remove o gate de forma explícita.
+- [ ] A configuração real do Railway é validada e o gate é removido explicitamente após os testes.
 
 ## Relação com a revisão independente
 
