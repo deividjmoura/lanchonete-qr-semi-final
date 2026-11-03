@@ -108,6 +108,30 @@ async function main() {
     await page.waitForFunction(() => document.querySelectorAll('#modalTable option').length > 0, null, { timeout: 20000 });
     ok('PWA carregou e listou mesas do garçom autenticado');
 
+    // A mensagem de erro da API também é dado não confiável e precisa ser texto.
+    const errorContext = await browser.newContext({ viewport: { width: 420, height: 900 } });
+    try {
+      const errorPage = await errorContext.newPage();
+      const errorPayload = '<img src="/xss-probe" onerror="window.__pwaXss=1">';
+      await errorPage.route('**/api/cardapio', (route) => route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: errorPayload }),
+      }));
+      await errorPage.goto(`${base}/garcom-pwa/?token=${token}`, { waitUntil: 'domcontentloaded' });
+      await errorPage.waitForFunction(
+        () => document.querySelector('#products')?.textContent?.includes('<img src='),
+        null,
+        { timeout: 20000 },
+      );
+      assert.equal(await errorPage.locator('#products img').count(), 0, 'mensagem de erro não pode criar HTML');
+      assert.equal(await errorPage.evaluate(() => window.__pwaXss), undefined, 'handler da mensagem não pode executar');
+      assert.ok((await errorPage.locator('#products').textContent()).includes(errorPayload));
+      ok('erro malicioso da API é exibido como texto, sem execução de HTML');
+    } finally {
+      await errorContext.close();
+    }
+
     // O primeiro acesso não bloqueia o atendimento; avisos são configurados
     // voluntariamente pelo sino (cobertos em garcom-lote-cobranca.e2e.cjs).
     assert.equal(await page.locator('#notificationConsent[open]').count(), 0);
