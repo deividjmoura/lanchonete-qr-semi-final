@@ -329,10 +329,27 @@ semanal não é roadmap.
   Ou seja: o `dist/` **versionado é, na prática, o que o servidor serve** quando o
   processo sobe sem etapa de build.
 
-  Risco concreto: se o build de produção reaproveitar `dist/` e a limpeza apagar os
-  assets, um deploy sem `npm run build` responde 502/404 nas telas. Por isso **não**
-  removi nem atualizei `dist/` nesta etapa. A decisão (versionar de propósito ×
-  construir no deploy × publicar artefato) é operacional e pertence à frente da
+  **Risco medido, não hipotético.** Rodei o `server.js` real numa cópia da árvore
+  (`server.js db security server public package.json` + `node_modules` linkado) com
+  `dist/` **ausente**, na mesma `DATABASE_URL` de teste:
+
+  | Rota | Com `dist/` | **Sem `dist/`** | O que acontece |
+  | --- | --- | --- | --- |
+  | `/` | 200 (SPA) | **302 → `/login`** | cai no fallback legado |
+  | `/admin` | 302 → `/login?next=%2Fadmin` | 302 → `/login?next=%2Fadmin` | igual, sem diferença |
+  | `/login` | 200 (SPA) | **200, mas HTML legado** | sem `src="/assets/index-*.js"` |
+  | `/cardapio` | 200 (SPA) | **404** | rota da SPA sem correspondência |
+  | `/pedido/1` | 200 (SPA) | 200 (HTML legado) | não é a mesma aplicação |
+  | `/cozinha.html`, `/garcom.html`, `/admin.html` | 200 | 200 (legado) | |
+  | `/assets/index-DqNdm0iB.js` | 200 | **404** | |
+
+  Ou seja: o modo de falha **não** é 502/404 generalizado — é pior de diagnosticar.
+  O servidor sobe, responde 2xx e serve silenciosamente as **páginas legadas de
+  `public/`**, que são outra aplicação (sem o bundle React, escrita com `src/js/*.js`).
+  Um deploy assim "passa" em smoke test de status code e quebra nas telas que só
+  existem na SPA (`/cardapio` responde 404). Por isso **não** removi nem atualizei
+  `dist/` nesta etapa, e por isso a decisão (versionar de propósito × construir no
+  deploy × publicar artefato) é operacional e pertence à frente da
   **PR #197** (single-instance/validação de topologia real), não ao saneamento.
   **Não executar antes da revisão humana.**
 - **Páginas legadas de `public/*.html`** (grupo A, 500 linhas duplicadas) só são servidas
@@ -371,3 +388,28 @@ cd .. && ./.tools-audit/node_modules/.bin/madge --extensions js,cjs,mjs,ts,tsx \
 while read -r f; do [ -f "public/${f#dist/}" ] && diff -q "$f" "public/${f#dist/}" \
   >/dev/null && echo "DUP $f"; done < <(git ls-files dist/)
 ```
+
+### 9.1 Reproduzir o risco de deploy sem `dist/` (§8)
+
+Copia a árvore necessária para fora do repo, **sem** `dist/`, e sobe o servidor real:
+
+```bash
+mkdir -p /tmp/nodist && cd /tmp/nodist
+cp -r "$OLDPWD"/{server.js,db,security,server,public,package.json} .
+ln -s "$OLDPWD/node_modules" node_modules
+[ -d dist ] && echo "dist presente (abortar)" || echo "dist ausente, ok"
+
+DATABASE_URL=postgres://postgres:postgres@127.0.0.1:55432/qradmin_test \
+  NODE_ENV=test PORT=3996 node server.js &
+for p in / /admin /login /cardapio /pedido/1 /cozinha.html /garcom-pwa/ \
+         /assets/index-DqNdm0iB.js; do
+  printf '%-28s %s -> %s\n' "$p" \
+    "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:3996$p")" \
+    "$(curl -s -o /dev/null -w '%{redirect_url}' "http://127.0.0.1:3996$p")"
+done
+kill %1; cd - && rm -rf /tmp/nodist
+```
+
+Resultado obtido em 2026-11-03 (`Node v22.22.3`): `/` 302→`/login`, `/admin` 302→`/login`,
+`/login` 200 com HTML legado, `/cardapio` **404**, `/assets/index-DqNdm0iB.js` **404**,
+`/cozinha.html` e `/garcom-pwa/` 200 — ver tabela em §8.
