@@ -70,9 +70,11 @@ adicionar infraestrutura nem mudar o armazenamento durável:
   é público), serve a imagem com `Cache-Control` e `nosniff`, responde 404
   para id inválido/foto ausente e 302 para representações externas. Não
   expõe preço, estoque nem qualquer metadado.
-- O cardápio público (`db/cardapio.js`) não transporta mais bytes em Base64.
-  O admin (`/api/admin/cardapio`) mantém a data-URL para prévia imediata no
-  editor; é uma rota autenticada e de baixo volume.
+- O cardápio público (`db/cardapio.js`) e a listagem do admin
+  (`/api/admin/cardapio`) não transportam mais bytes em Base64: ambos usam
+  URLs same-origin para data-URLs persistidas. A resposta do upload pode
+  devolver uma data-URL temporária para prévia imediata no editor; ela não é
+  uma resposta de listagem e não persiste Base64 no JSON do cardápio.
 - Medida com fixture sintética de 40 fotos no tote de 320 KiB
   (`tests/cardapio-foto-url.test.cjs`): o JSON legado supera 12 MB e a nova
   representação fica em poucos KB (redução acima de 99,9%).
