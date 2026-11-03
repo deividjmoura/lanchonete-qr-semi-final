@@ -103,10 +103,46 @@ async function main() {
     page.on('pageerror', (e) => errosPagina.push(String(e)));
     page.on('dialog', (d) => d.accept());
 
+    // Simula uma entrada antiga no Cache Storage para provar que a ativação
+    // da versão nova remove o cache anterior, inclusive a chave com bearer.
+    await page.goto(`${base}/healthz`, { waitUntil: 'domcontentloaded' });
+    await page.evaluate(async (tokenAntigo) => {
+      const cache = await caches.open('garcom-pwa-shell-v36');
+      const urlAntiga = new URL('/garcom-pwa/?token=' + encodeURIComponent(tokenAntigo), location.origin);
+      await cache.put(new Request(urlAntiga.href), new Response('stale bearer URL'));
+    }, token);
+
     // O SSE fica aberto de propósito: 'networkidle' nunca aconteceria.
-    await page.goto(`${base}/garcom-pwa/?token=${token}`, { waitUntil: 'domcontentloaded' });
+    const respostaPwa = await page.goto(`${base}/garcom-pwa/?token=${token}`, { waitUntil: 'domcontentloaded' });
+    assert.equal(respostaPwa.headers()['referrer-policy'], 'no-referrer', 'shell PWA não deve propagar a URL bearer como Referer');
     await page.waitForFunction(() => document.querySelectorAll('#modalTable option').length > 0, null, { timeout: 20000 });
-    ok('PWA carregou e listou mesas do garçom autenticado');
+    assert.equal(await page.evaluate(() => new URL(location.href).searchParams.has('token')), false, 'query bearer deve ser removida do histórico atual');
+    assert.equal(await page.evaluate(() => localStorage.getItem('waiter-token')), token, 'token capturado deve continuar persistido para retomada offline');
+    ok('PWA remove o token da URL, mantém a sessão local e lista as mesas do garçom autenticado');
+
+    // Confirma que o Service Worker ativo também não persiste a URL bearer
+    // quando um link legado é aberto novamente sob controle do cache.
+    await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+    const cachesDepoisDaAtivacao = await page.evaluate(() => caches.keys());
+    assert.equal(cachesDepoisDaAtivacao.includes('garcom-pwa-shell-v36'), false, 'ativação deve expurgar cache antigo que podia conter query bearer');
+    const cachePage = await context.newPage();
+    await cachePage.goto(`${base}/garcom-pwa/?token=${token}`, { waitUntil: 'domcontentloaded' });
+    await cachePage.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 15000 });
+    await cachePage.waitForFunction(() => document.querySelectorAll('#modalTable option').length > 0, null, { timeout: 20000 });
+    const urlsComToken = await cachePage.evaluate(async () => {
+      const urls = [];
+      for (const nome of await caches.keys()) {
+        const cache = await caches.open(nome);
+        for (const request of await cache.keys()) {
+          if (new URL(request.url).searchParams.has('token')) urls.push(request.url);
+        }
+      }
+      return urls;
+    });
+    assert.deepEqual(urlsComToken, [], 'Cache Storage não pode reter URLs com token bearer');
+    assert.equal(await cachePage.evaluate(() => new URL(location.href).searchParams.has('token')), false);
+    await cachePage.close();
+    ok('Service Worker não armazena links PWA que contenham token bearer');
 
     // O primeiro acesso não bloqueia o atendimento; avisos são configurados
     // voluntariamente pelo sino (cobertos em garcom-lote-cobranca.e2e.cjs).
@@ -138,7 +174,7 @@ async function main() {
     const lerFila = () => page.evaluate(async () => {
       const { openOfflineDb, OfflineStore } = await import('./offline.js');
       const db = await openOfflineDb();
-      const token = new URLSearchParams(location.search).get('token');
+      const token = localStorage.getItem('waiter-token');
       const linhas = await new OfflineStore(db, token).all();
       db.close();
       return linhas.map((o) => ({
@@ -220,7 +256,7 @@ async function main() {
     const interrompido = await page.evaluate(async () => {
       const { openOfflineDb, OfflineStore } = await import('./offline.js');
       const db = await openOfflineDb();
-      const token = new URLSearchParams(location.search).get('token');
+      const token = localStorage.getItem('waiter-token');
       const store = new OfflineStore(db, token);
       const novo = {
         ownerToken: token, localId: 'interrompido-' + Date.now(),
@@ -253,7 +289,7 @@ async function main() {
     await page.evaluate(async () => {
       const { openOfflineDb } = await import('./offline.js');
       const db = await openOfflineDb();
-      const token = new URLSearchParams(location.search).get('token');
+      const token = localStorage.getItem('waiter-token');
       await new Promise((resolve, reject) => {
         const tx = db.transaction('leases', 'readwrite');
         tx.objectStore('leases').put({ key: 'sync:' + token, holder: 'aba-que-morreu', expiresAt: Date.now() - 1 });
