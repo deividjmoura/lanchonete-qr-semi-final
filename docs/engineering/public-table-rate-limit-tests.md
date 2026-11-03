@@ -148,8 +148,8 @@ passa** (22/22 em 5 execuções seguidas sobre base usada); o que quebra em base
 suja são suítes antigas, que não foram alteradas.
 
 Este sandbox não tem Docker nem `psql`/`pg_dump`: o PostgreSQL usado foi o
-`embedded-postgres` das devDependencies (mesma receita de
-`docs/engineering/prompt-frente-b-agente-2.md`). Por isso o drill de
+`embedded-postgres` das devDependencies (receita reproduzível na seção
+"PostgreSQL descartável com embedded-postgres" abaixo). Por isso o drill de
 backup/restore (`postgres-backup-restore.test.cjs`) foi executado com
 `--sem-backup`; ele roda no job do CI com `pg_dump`/`pg_restore` 16.
 
