@@ -144,36 +144,12 @@ function erroAuthJson(e) {
   return e.code ? { error: e.message, code: e.code } : { error: e.message };
 }
 
-function applySecurityHeaders(res) {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  if (process.env.NODE_ENV === 'production') {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  }
-  if (!res.getHeader('Content-Security-Policy')) {
-    res.setHeader(
-      'Content-Security-Policy',
-      [
-        "default-src 'self'",
-        "img-src 'self' data: blob: https:",
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-        "font-src 'self' https://fonts.gstatic.com data:",
-        "script-src 'self' 'unsafe-inline'",
-        "connect-src 'self'",
-        "frame-src 'self' blob:",
-        "child-src 'self' blob:",
-        "frame-ancestors 'none'",
-        "base-uri 'self'",
-        "form-action 'self'",
-      ].join('; ')
-    );
-  }
-}
+
 
 const { compressResponse, cacheControlForStaticAsset } = require('./server/http-response');
 const { requestIdDaRequisicao, linhaDeLog } = require('./server/request-context');
+const { applySecurityHeaders } = require('./server/security-headers');
+const { normalizarRelatoriosCsp, formatarMensagemCsp } = require('./server/csp-report');
 
 function send(res, status, type, body, extraHeaders) {
   applySecurityHeaders(res);
@@ -291,6 +267,40 @@ const server = http.createServer(async (req, res) => {
     // Intencionalmente não consulta o banco nem expõe versão/configuração.
     if (p === '/healthz' && req.method === 'GET') {
       return json(res, 200, { status: 'ok' });
+    }
+
+    // CSP reports são opt-in e só ficam ativos quando o proprietário habilitar
+    // CSP_REPORT_ONLY=1 em ambiente de teste/staging. O corpo nunca é logado.
+    if (p === '/api/csp-report' && req.method === 'POST') {
+      if (process.env.CSP_REPORT_ONLY !== '1') {
+        req.resume();
+        return send(res, 404, 'text/plain; charset=utf-8', 'Not found');
+      }
+      const contentType = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+      if (!['application/csp-report', 'application/reports+json', 'application/json'].includes(contentType)) {
+        req.resume();
+        return json(res, 415, { error: 'Tipo de relatório inválido' });
+      }
+      let payload;
+      try {
+        payload = await body(req, { maxBytes: 16 * 1024 });
+      } catch (e) {
+        return json(res, e.status === 413 ? 413 : 400, { error: 'Relatório CSP inválido' });
+      }
+      const reports = normalizarRelatoriosCsp(payload);
+      if (!golpePermitido(`csp-report:${clientIp(req)}`, { janelaMs: 60_000, max: 60 })) {
+        return send(res, 204, 'text/plain; charset=utf-8', '');
+      }
+      for (const report of reports) {
+        console.warn(linhaDeLog('warn', {
+          reqId,
+          method: 'POST',
+          alvo: '/api/csp-report',
+          status: 204,
+          mensagem: formatarMensagemCsp(report),
+        }));
+      }
+      return send(res, 204, 'text/plain; charset=utf-8', '');
     }
 
     // Login Google: o callback cria a mesma sessão persistente do login por senha.
