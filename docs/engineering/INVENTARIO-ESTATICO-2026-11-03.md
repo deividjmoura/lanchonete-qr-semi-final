@@ -364,7 +364,8 @@ semanal não é roadmap.
 
 ```bash
 # linha de base
-git checkout chore/codebase-cleanup-baseline && npm ci
+# todo o inventário foi medido sobre 88fa7be (ponta de main quando começou)
+git checkout 88fa7be && npm ci
 node -v && npm -v
 npm run typecheck && npm run build && npm test
 
