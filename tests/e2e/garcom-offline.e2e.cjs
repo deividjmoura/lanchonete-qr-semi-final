@@ -144,6 +144,48 @@ async function main() {
     await cachePage.close();
     ok('Service Worker não armazena links PWA que contenham token bearer');
 
+    // A mensagem de erro da API também é dado não confiável e precisa ser texto.
+    // Reutiliza a aba atual para não criar um segundo contexto/Service Worker no teste offline.
+    const errorPayload = '<img src="/xss-probe" onerror="window.__pwaXss=1">';
+    await page.evaluate(async (ownerToken) => {
+      const db = await new Promise((resolve, reject) => {
+        const request = indexedDB.open('garcom-pwa-v1', 2);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction('meta', 'readwrite');
+        tx.objectStore('meta').delete(ownerToken + ':cardapio');
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error);
+      });
+      db.close();
+    }, token);
+    let erroCardapioInterceptado = false;
+    await page.route('**/api/cardapio*', (route) => {
+      erroCardapioInterceptado = true;
+      return route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: errorPayload }),
+      });
+    });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(
+      () => document.querySelector('#products')?.textContent?.includes('<img src='),
+      null,
+      { timeout: 20000 },
+    );
+    assert.equal(erroCardapioInterceptado, true, 'API de cardápio deve ter sido simulada');
+    assert.equal(await page.locator('#products img').count(), 0, 'mensagem de erro não pode criar HTML');
+    assert.equal(await page.evaluate(() => window.__pwaXss), undefined, 'handler da mensagem não pode executar');
+    assert.ok((await page.locator('#products').textContent()).includes(errorPayload));
+    ok('erro malicioso da API é exibido como texto, sem execução de HTML');
+    await page.unroute('**/api/cardapio*');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => document.querySelectorAll('#products button').length > 0, null, { timeout: 20000 });
+
     // O primeiro acesso não bloqueia o atendimento; avisos são configurados
     // voluntariamente pelo sino (cobertos em garcom-lote-cobranca.e2e.cjs).
     assert.equal(await page.locator('#notificationConsent[open]').count(), 0);
