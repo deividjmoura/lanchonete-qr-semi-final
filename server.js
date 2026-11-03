@@ -127,6 +127,17 @@ function clientIp(req) {
   return resolveClientIp(req, { trustedProxyHops, clientIpHeader });
 }
 
+/**
+ * Limita mutações públicas autenticadas pelo token opaco da mesa.
+ * A chave inclui IP e token, seguindo o mesmo modelo já usado na criação
+ * de pedidos. O limite é por operação para não bloquear fluxos legítimos
+ * diferentes da mesma mesa.
+ */
+function mesaMutationPermitida(req, token, operacao, max) {
+  const chave = `mesa-mut:${operacao}:${clientIp(req)}:${String(token)}`;
+  return golpePermitido(chave, { janelaMs: 5 * 60 * 1000, max });
+}
+
 /** Corpo JSON de um ErroAuth; inclui `code` quando existe (ex.: SENHA_TROCA_OBRIGATORIA). */
 function erroAuthJson(e) {
   return e.code ? { error: e.message, code: e.code } : { error: e.message };
@@ -377,6 +388,9 @@ const server = http.createServer(async (req, res) => {
       }
     }
     if ((m = p.match(/^\/api\/mesas\/([^/]+)\/checkin$/)) && req.method === 'POST') {
+      if (!mesaMutationPermitida(req, m[1], 'checkin', 5)) {
+        return json(res, 429, { error: 'Muitas tentativas de check-in. Aguarde alguns minutos.' });
+      }
       try {
         const out = await checkinCliente(m[1], await body(req));
         broadcast('update', { type: 'checkin', mesaToken: m[1], clienteNome: out.clienteNome });
@@ -395,6 +409,9 @@ const server = http.createServer(async (req, res) => {
       }
     }
     if ((m = p.match(/^\/api\/mesas\/([^/]+)\/pix-informado$/)) && req.method === 'POST') {
+      if (!mesaMutationPermitida(req, m[1], 'pix', 6)) {
+        return json(res, 429, { error: 'Muitos avisos de PIX. Aguarde alguns minutos.' });
+      }
       try {
         /* JSON malformado é erro do cliente: sem este catch voraz a rota
            executava a lógica de PIX com payload inventado ({}). */
@@ -417,6 +434,9 @@ const server = http.createServer(async (req, res) => {
       }
     }
     if ((m = p.match(/^\/api\/mesas\/([^/]+)\/pedidos\/(\d+)$/)) && req.method === 'DELETE') {
+      if (!mesaMutationPermitida(req, m[1], 'cancelar-pedido', 5)) {
+        return json(res, 429, { error: 'Muitas tentativas de cancelamento. Aguarde alguns minutos.' });
+      }
       try {
         const out = await cancelarPedidoCliente(m[1], Number(m[2]), null, { requestId: reqId });
         broadcast('update', { type: 'pedido_cancelado', pedidoId: Number(m[2]), mesaToken: m[1] });
@@ -427,6 +447,9 @@ const server = http.createServer(async (req, res) => {
       }
     }
     if ((m = p.match(/^\/api\/mesas\/([^/]+)\/pedidos\/(\d+)$/)) && req.method === 'PUT') {
+      if (!mesaMutationPermitida(req, m[1], 'editar-pedido', 10)) {
+        return json(res, 429, { error: 'Muitas tentativas de edição. Aguarde alguns minutos.' });
+      }
       try {
         const out = await editarPedidoCliente(m[1], Number(m[2]), await body(req));
         broadcast('update', { type: 'pedido_editado', pedidoId: Number(m[2]), mesaToken: m[1] });
