@@ -129,6 +129,19 @@ test('cancelamento, PIX e fechamento estão ligados à trilha no código de prod
   assert.match(server, /cancelarPedidoCliente\(m\[1\], Number\(m\[2\]\), null, \{ requestId: reqId \}\)/);
 });
 
+test('criação de garçom exige ator admin na rota e grava evento com request ID na transação', () => {
+  const garcons = fs.readFileSync(path.join(__dirname, '..', 'db', 'garcons.js'), 'utf8');
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const criar = garcons.indexOf('async function criarGarcom(');
+  const evento = garcons.indexOf("acao: 'garcom_criado'", criar);
+  const commit = garcons.indexOf("await client.query('COMMIT')", evento);
+  assert.ok(criar >= 0 && evento > criar && commit > evento);
+  assert.match(garcons.slice(criar, commit), /SELECT id, nome, papel, ativo FROM staff WHERE id=\$1 FOR SHARE/);
+  assert.match(garcons.slice(criar, commit), /registrarEvento\(client, \{/);
+  assert.match(garcons.slice(criar, commit), /requestId,/);
+  assert.match(server, /const staff = await exigirAcesso\(req, 'admin'\);[\s\S]*?criarGarcom\(await body\(req\), staff, reqId\)/);
+});
+
 test('migration 0025 cria a tabela sem colunas de segredo e com índices de consulta', () => {
   const sql = fs.readFileSync(
     path.join(__dirname, '..', 'db', 'migrations', '0025_auditoria_eventos.sql'),
