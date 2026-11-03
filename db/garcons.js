@@ -117,15 +117,47 @@ async function removerGarcom(id, ator = null, requestId = null) {
   );
 }
 
-async function criarGarcom(body) {
+async function criarGarcom(body, ator = null, requestId = null) {
   const nome = String(body.nome || '').trim().slice(0, 80);
   if (!nome) throw new ErroGarcom(400, 'Informe o nome do garçom');
-  const { rows } = await pool.query(
-    `INSERT INTO garcons (nome) VALUES ($1)
-     RETURNING id, nome, token, ativo, criado_em`,
-    [nome]
-  );
-  return rows[0];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    let admin = null;
+    if (ator) {
+      const result = await client.query(
+        'SELECT id, nome, papel, ativo FROM staff WHERE id=$1 FOR SHARE',
+        [ator.id]
+      );
+      admin = result.rows[0];
+      if (!admin?.ativo || admin.papel !== 'admin') {
+        throw new ErroGarcom(403, 'Apenas um administrador ativo pode criar garçons.');
+      }
+    }
+    const { rows } = await client.query(
+      `INSERT INTO garcons (nome) VALUES ($1)
+       RETURNING id, nome, token, ativo, criado_em`,
+      [nome]
+    );
+    const garcom = rows[0];
+    await registrarEvento(client, {
+      atorTipo: admin ? 'staff' : 'sistema',
+      atorId: admin ? Number(admin.id) : null,
+      atorNome: admin?.nome || null,
+      acao: 'garcom_criado',
+      alvoTipo: 'garcom',
+      alvoId: String(garcom.id),
+      requestId,
+      contexto: { garcomNome: garcom.nome },
+    });
+    await client.query('COMMIT');
+    return garcom;
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
 async function setGarcomAtivo(id, ativo, ator = null, requestId = null) {
