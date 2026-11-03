@@ -67,6 +67,10 @@ jobs:
         run: node --test tests/postgres-financial-concurrency.test.cjs
       - name: Staff password change PostgreSQL integration tests
         run: node --test tests/postgres-password-change.test.cjs
+      - name: Staff session token hash and legacy compatibility
+        run: node --test tests/postgres-staff-session-token-hash.test.cjs
+      - name: SSE ticket expiry and single-use integration
+        run: node --test tests/postgres-sse-tickets.test.cjs
       - name: Tables panorama and praças PostgreSQL integration tests
         run: node --test tests/postgres-mesas-panorama.test.cjs
       - name: Waiter billing with service fee PostgreSQL integration tests
