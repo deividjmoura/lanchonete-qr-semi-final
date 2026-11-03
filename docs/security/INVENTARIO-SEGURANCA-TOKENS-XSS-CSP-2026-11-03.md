@@ -64,14 +64,14 @@ Esta etapa é estática. Não houve execução de navegador, PostgreSQL, teste E
 
 ## Plano de implementação em PRs pequenas
 
-1. **PWA URL hygiene (PR #206):** limpar query após captura, política Referrer-Policy específica, não cachear URLs bearer no service worker e versionar o cache para remover entradas antigas; preservar formato dos links. CI passou; integração PostgreSQL/E2E ainda em validação.
-2. **XSS no acompanhamento legado (PR #207):** helper compartilhado de escape e E2E Chromium; 13/13 E2E passaram. Confirmar exposição do fallback com/sem `dist/`.
-3. **Templates JavaScript inline (PR #208):** removíveis usam `data-rem-index` e listener; 13/13 E2E passaram. Auditar `SafeDOM.html` e chamadores.
-4. **Admin/PWA XSS (PRs #210 e #211):** escape de removíveis no card legado e mensagens de erro da PWA via `textContent`; aguarda CI Chromium/PostgreSQL.
+1. **PWA URL hygiene (PR #206):** limpar query após captura, política Referrer-Policy específica, não cachear URLs bearer no service worker e versionar o cache para remover entradas antigas; preservar formato dos links. CI e integração PostgreSQL/E2E passaram.
+2. **XSS no acompanhamento legado (PR #207):** helper compartilhado de escape e E2E Chromium; CI e integração PostgreSQL/E2E passaram, incluindo 13/13 suítes E2E. Confirmar exposição do fallback com/sem `dist/`.
+3. **Templates JavaScript inline (PR #208):** removíveis usam `data-rem-index` e listener; CI e integração PostgreSQL/E2E passaram, incluindo 13/13 suítes E2E. Auditar `SafeDOM.html` e chamadores.
+4. **Admin/PWA XSS (PRs #210 e #211):** escape de removíveis no card legado e mensagens de erro da PWA via `textContent`. PR #210: CI e integração PostgreSQL/E2E passaram. PR #211: CI passou; integração PostgreSQL/E2E está em execução após uma primeira tentativa falhar no teste offline da PWA; aguardar a repetição antes de aceitar.
 5. **SSE ticket:** desenhar ticket curto, uso único, escopo mesa/garçom e reconexão antes de remover tokens bearer das URLs do EventSource.
 6. **Token de garçom:** definir comportamento de rotação em desativação/reativação e testes de revogação. Preservar fila offline.
 7. **Token de mesa:** desenhar rotação administrativa auditada, sem rotação automática; testar QR antigo/novo e sessões abertas.
-8. **CSP Report-Only (PR #212):** suporte opt-in e collector sanitizado; flag desligada por padrão. CI unitário passou; integração PostgreSQL ainda em validação. O proprietário decide se habilita em staging/teste. Classificar violações por rota e migrar scripts/handlers/styles gradualmente; só depois propor política efetiva restritiva.
+8. **CSP Report-Only (PR #212):** suporte opt-in e collector sanitizado; flag desligada por padrão. CI e integração PostgreSQL passaram. O proprietário decide se habilita em staging/teste. Classificar violações por rota e migrar scripts/handlers/styles gradualmente; só depois propor política efetiva restritiva.
 9. **Cobertura:** ampliar testes de segurança para `public/`, adicionar matriz Chromium de login, dashboard, cardápio, QR/mesa, garçom/PWA, cozinha, bar, caixa e pagamento, além de PostgreSQL descartável.
 
 ## Critérios de aceite transversais
