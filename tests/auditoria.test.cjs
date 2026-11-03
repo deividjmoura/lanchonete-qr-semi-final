@@ -127,6 +127,11 @@ test('cancelamento, PIX e fechamento estão ligados à trilha no código de prod
   assert.match(server, /fecharSessao\(Number\(m\[1\]\), dados, operador\?\.nome \|\| null, \{[\s\S]*?requestId: reqId/);
   assert.match(server, /registrarPagamento\(Number\(m\[1\]\), await body\(req\), operador\?\.nome \|\| null, null, \{[\s\S]*?requestId: reqId/);
   assert.match(server, /cancelarPedidoCliente\(m\[1\], Number\(m\[2\]\), null, \{ requestId: reqId \}\)/);
+
+  // Edição do pedido-pai precisa identificar também o cliente QR, não apenas o garçom.
+  assert.match(pedidos, /atorTipo: garcomResponsavelId \? 'garcom' : 'cliente_mesa'/);
+  assert.match(pedidos, /acao: 'pedido_editado'/);
+  assert.match(pedidos, /origem: garcomResponsavelId \? 'pwa_garcom' : 'qr_cliente'/);
 });
 
 test('migration 0025 cria a tabela sem colunas de segredo e com índices de consulta', () => {
