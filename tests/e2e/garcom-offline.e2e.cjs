@@ -111,6 +111,28 @@ async function main() {
     assert.equal(await page.evaluate(() => localStorage.getItem('waiter-token')), token, 'token capturado deve continuar persistido para retomada offline');
     ok('PWA remove o token da URL, mantém a sessão local e lista as mesas do garçom autenticado');
 
+    // Confirma que o Service Worker ativo também não persiste a URL bearer
+    // quando um link legado é aberto novamente sob controle do cache.
+    await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+    const cachePage = await context.newPage();
+    await cachePage.goto(`${base}/garcom-pwa/?token=${token}`, { waitUntil: 'domcontentloaded' });
+    await cachePage.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 15000 });
+    await cachePage.waitForFunction(() => document.querySelectorAll('#modalTable option').length > 0, null, { timeout: 20000 });
+    const urlsComToken = await cachePage.evaluate(async () => {
+      const urls = [];
+      for (const nome of await caches.keys()) {
+        const cache = await caches.open(nome);
+        for (const request of await cache.keys()) {
+          if (new URL(request.url).searchParams.has('token')) urls.push(request.url);
+        }
+      }
+      return urls;
+    });
+    assert.deepEqual(urlsComToken, [], 'Cache Storage não pode reter URLs com token bearer');
+    assert.equal(await cachePage.evaluate(() => new URL(location.href).searchParams.has('token')), false);
+    await cachePage.close();
+    ok('Service Worker não armazena links PWA que contenham token bearer');
+
     // O primeiro acesso não bloqueia o atendimento; avisos são configurados
     // voluntariamente pelo sino (cobertos em garcom-lote-cobranca.e2e.cjs).
     assert.equal(await page.locator('#notificationConsent[open]').count(), 0);
