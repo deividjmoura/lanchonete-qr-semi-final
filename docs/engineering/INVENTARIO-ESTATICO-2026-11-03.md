@@ -215,12 +215,42 @@ Comparação: 37.152 linhas de `dist/` contra 1.327 linhas de duplicação em c�
 **28× maior**. Todas as 7 páginas legadas (`admin`, `bar`, `caixa`, `cozinha`, `garcom`,
 `mesa`, `pedido`) existem duas vezes, byte a byte (`diff -q` = idêntico).
 
-**Achado correlato, inconclusivo:** `dist/assets` commitado **não** corresponde ao build
-atual. Rodando `npm run build` neste ambiente (Node 22): nomes de hash diferentes
-(`index-DqNdm0iB.js` → `index-BFLpq2r1.js`) e bundle **12 KB menor** no commitado.
-Não há mudança em `src/` desde `7f18dca` (último commit de `dist/`), então a divergência
-é do toolchain (Node 20 no CI vs 22 aqui) ou de build não commitado — **não afirmo qual**
-sem reproduzir com Node 20. Ver §7 F2.
+**O `dist/` versionado é de uma versão anterior do código — agora confirmado.**
+
+Primeiro descartei a hipótese de toolchain, que era a suspeita original:
+
+| Teste | Resultado |
+|---|---|
+| Build 2× sob Node 22.22.3 | hashes **idênticos** entre si (`index-BFLpq2r1.js`) → build é determinístico, não é ruído |
+| Build sob **Node 20.19.0** (mesmo major do CI) | **mesmo hash** `index-BFLpq2r1.js` → **toolchain não é a causa** |
+| `package.json` / `package-lock.json` desde `7f18dca` | **nenhuma mudança** → dependências não são a causa |
+| Chunks de vendor (`motion`, `react`, fontes, imagens) | **byte a byte idênticos** → não é ruído de bundler |
+
+Restava uma explicação: o bundle commitado veio de **outro estado do código**. Confirmei
+por conteúdo, não por hash:
+
+| Evidência | Valor |
+|---|---|
+| Strings de `src/` presentes no build novo e **ausentes** do `dist/` commitado | **20** |
+| Dessas, quantas pertencem a um único componente | **17 de `src/screens/dashboard/MesasAbertasModal.tsx`** |
+| Ocorrências de `MesasAbertasModal` (e das suas strings) em **todo** o `dist/` | **0** |
+| O componente é renderizado em produção? | **Sim** — `src/screens/Dashboard.tsx:712`, importado em `:8`, aberto pelo card "Mesas ocupadas" (`:670`) |
+
+Ou seja: o `dist/` versionado **não contém a modal "Mesas ocupadas"**, uma tela que o
+código-fonte renderiza. Não é "bundle defasado por alguns KB" — é uma **feature inteira
+ausente** do artefato que o servidor entrega (`dist/index.html` carrega
+`/assets/index-DqNdm0iB.js`).
+
+**Causa provável (não provada):** `7f18dca` é o **commit raiz** do repositório — um único
+commit de 588 arquivos (`git rev-list --max-parents=0` → só ele; 10 commits no total). O
+histórico efetivamente começa em 2026-11-02, então **não existe commit anterior** a que se
+possa atribuir o bundle. Um import desse tipo costuma trazer `dist/` de um checkout
+anterior, junto com o `src/` novo. Ver §7 F2.
+
+**Consequência prática:** toda alteração de UI feita depois do build que gerou esse
+`dist/` **não chega à produção** enquanto o deploy não construir de novo. A modal de
+mesas abertas é um exemplo confirmado, não o único provável. É por isso que o achado sobe
+de "inconclusivo" para **alta prioridade com impacto em produção**.
 
 ## 5. Código morto e exports (Knip)
 
@@ -305,15 +335,18 @@ semanal não é roadmap.
 - **PostgreSQL**: sem Docker/`psql`/`pg_dump`; uso de `embedded-postgres` (18.4). O drill
   de backup/restore rodou com `--sem-backup` e roda no CI com `pg_dump` 16.
 - **E2E em Chromium**: não executado nesta etapa (não é o alvo do inventário); coberto no CI.
-- **Node 22 local vs Node 20 no CI**: relevante para o achado de `dist/` (§4), que
-  permanece inconclusivo por isso.
+- **Node 22 local vs Node 20 no CI**: **deixou de ser limitação** para F2. Rodei o build
+  sob Node **20.19.0** (via pacote npm `node@20.19.0`, já que `nodejs.org` não é acessível
+  neste sandbox) e o hash saiu **idêntico** ao do Node 22 — o toolchain não explica a
+  divergência do `dist/`. Continua valendo como limitação para os demais números de
+  performance, se algum dia forem medidos.
 
 ## 7. Achados priorizados
 
 | # | Achado | Evidência | Impacto | Prioridade | Ação |
 |---|---|---|---|---|---|
 | **F1** | `dist/` versionado duplica ~37 mil linhas e toda página legada existe 2× | 150 de 159 arquivos idênticos a `public/` | Drift entre bundle e fonte; PRs de UI não refletem em produção | **Alta** | Precisa de decisão humana sobre o contrato de deploy (§8) |
-| **F2** | `dist/` commitado ≠ build atual | hashes divergentes, bundle 12 KB menor | Pode servir bundle defasado | **Alta** | Reproduzir com Node 20 antes de concluir |
+| **F2** | `dist/` commitado é de **outro estado do código**: falta a modal `MesasAbertasModal` | 17 strings do componente com **0 ocorrências** no artefato; `dist/index.html` carrega esse bundle | **Feature ausente em produção** | **Alta** | Defeito confirmado (não é toolchain); correção é operacional, depende de F1/§8 |
 | **F3** | `README.md` sem "TypeScript" quebra `guia-sistema.test.cjs` | `npm test` = 474/475 | CI vermelho na suíte `verify` | **Alta** | ✅ **Corrigido nesta PR** (commit `docs(readme)`) |
 | **F4** | `postgres-pracas-remocao` depende de seed e não roda no CI | mesas 1–2; ausente dos workflows | Suíte verde esconde teste nunca executado | Média | ✅ **Corrigido nesta PR** (commit `test(pracas)`) |
 | **F5** | `src/store/usePub.ts` (1150 linhas) é o 2º maior acoplamento | fan-in 16 | Risco de refatoração, sem ação segura agora | Média | Documentar; não cortar |
@@ -324,6 +357,11 @@ semanal não é roadmap.
 ## 8. O que depende de outra frente
 
 - **F1/F2 (`dist/`)** dependem da definição do contrato de build/deploy do Railway.
+  F1 é decisão de arquitetura. **F2 já não é pergunta**: é defeito confirmado — o
+  artefato servido não tem a modal `MesasAbertasModal`. A correção *também* é
+  operacional (rebuild? build no deploy? Parar de versionar?), então fica aqui e
+  **não** foi feita nesta etapa: substituir o `dist/` por um build novo é uma mudança
+  de produção, e o resultado do build depende de qual Node o contrato fixar.
   Evidência levantada: **não existe** `railway.json`, `nixpacks.toml`, `Procfile` nem
   `Dockerfile` no repositório, e `scripts/start-production.js` **não** executa build —
   ele só roda migrations antes de carregar o `server.js`. O `package.json` tem `build`
@@ -416,3 +454,27 @@ kill %1; cd - && rm -rf /tmp/nodist
 Resultado obtido em 2026-11-03 (`Node v22.22.3`): `/` 302→`/login`, `/admin` 302→`/login`,
 `/login` 200 com HTML legado, `/cardapio` **404**, `/assets/index-DqNdm0iB.js` **404**,
 `/cozinha.html` e `/garcom-pwa/` 200 — ver tabela em §8.
+
+### 9.2 Reproduzir a conclusão de F2 (dist/ não corresponde ao código)
+
+```bash
+# 1) build limpo a partir do mesmo commit, sem tocar no repo
+rm -rf /tmp/f2 && mkdir -p /tmp/f2
+git archive 7f18dca | tar -x -C /tmp/f2
+ln -s "$PWD/node_modules" /tmp/f2/node_modules
+( cd /tmp/f2 && rm -rf dist && node ../path/to/vite/bin/vite.js build )
+
+# 2) determinismo: rode 2x — os hashes são iguais
+# 3) toolchain: rode também com Node 20.19+ — o hash NÃO muda
+
+# 4) o teste que decide: uma string que só existe na modal de mesas abertas
+grep -c "Atualizar mesas abertas" /tmp/f2/dist/assets/index-*.js   # build novo -> 1
+grep -c "Atualizar mesas abertas" dist/assets/index-DqNdm0iB.js   # commitado   -> 0
+grep -r  "MesasAbertasModal"     dist/                            # commitado   -> nada
+
+# 5) o componente é usado de verdade?
+grep -n "MesasAbertasModal" src/screens/Dashboard.tsx            # :8 import, :712 render
+```
+
+Resultado em 2026-11-03: `2` ocorrências no build novo contra **`0`** no commitado,
+nenhuma ocorrência em todo o `dist/`, e o componente renderizado em `Dashboard.tsx:712`.
