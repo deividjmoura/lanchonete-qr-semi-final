@@ -4,7 +4,17 @@ const $=s=>document.querySelector(s);
 const money=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(n)||0);
 let products=[],cart=new Map(),mesas=[],activeWaiters=[],currentWaiterId=null,liveOrders=[];
 const tables=[];
-let waiterToken=new URLSearchParams(location.search).get('token')||localStorage.getItem('waiter-token')||'';
+const pwaUrl = new URL(location.href);
+const tokenFromUrl = pwaUrl.searchParams.get('token') || '';
+if (tokenFromUrl) {
+  // Compatibilidade com links existentes: captura e persiste o bearer e remove
+  // somente o parâmetro sensível, preservando outros parâmetros e o fragmento.
+  pwaUrl.searchParams.delete('token');
+  try {
+    history.replaceState(history.state, '', pwaUrl.pathname + pwaUrl.search + pwaUrl.hash);
+  } catch (_) { /* a PWA continua operando mesmo se o navegador bloquear replaceState */ }
+}
+let waiterToken=tokenFromUrl||localStorage.getItem('waiter-token')||'';
 let waiterAuthInvalid=false,offlineStore=null,syncEngine=null,realtimeOff=null;
 let editingDraftId=null,editingServerId=null,pendingParentOrderId=null,selectedOrdersTable=null;
 let firstLiveLoad=true,savingOrder=false,deferredInstall=null,syncResetTimer=null;
