@@ -381,6 +381,9 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p === '/api/events/ticket' && req.method === 'POST') {
+      // Emissão de ticket é mutação autenticada: rejeita origem cross-site,
+      // inclusive POST simples que tente abusar do cookie HttpOnly de staff.
+      verificarOrigemRequisicao(req);
       const payload = await body(req, { maxBytes: 4096 });
       const staff = await getStaffDaRequisicao(req);
       let grant;
