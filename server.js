@@ -1488,11 +1488,7 @@ const server = http.createServer(async (req, res) => {
       if (p === '/') {
         try {
           const data = await fs.promises.readFile(spaIndexPath);
-          return send(res, 200, 'text/html; charset=utf-8', data, {
-          // O link inicial da PWA ainda pode conter ?token=. Não propagar essa URL
-          // bearer como Referer para scripts, estilos ou chamadas same-origin.
-          'Referrer-Policy': 'no-referrer',
-        });
+          return send(res, 200, 'text/html; charset=utf-8', data);
         } catch {
           /* fall through to legacy */
         }
@@ -1565,7 +1561,10 @@ const server = http.createServer(async (req, res) => {
     if (p === '/garcom-pwa' || p === '/garcom-pwa/') {
       try {
         const data = await fs.promises.readFile(path.join(ROOT, 'public', 'garcom-pwa', 'index.html'));
-        return send(res, 200, 'text/html; charset=utf-8', data);
+        return send(res, 200, 'text/html; charset=utf-8', data, {
+          // Links legados podem conter o bearer do garçom em ?token=.
+          'Referrer-Policy': 'no-referrer',
+        });
       } catch (_) {
         return send(res, 404, 'text/plain', 'PWA indisponível');
       }
