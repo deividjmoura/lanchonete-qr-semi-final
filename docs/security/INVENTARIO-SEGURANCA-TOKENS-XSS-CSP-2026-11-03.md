@@ -68,10 +68,11 @@ Esta etapa é estática. Não houve execução de navegador, PostgreSQL, teste E
 2. **XSS no acompanhamento legado (PR #207):** helper compartilhado de escape e E2E Chromium; 13/13 E2E passaram. Confirmar exposição do fallback com/sem `dist/`.
 3. **Templates JavaScript inline (PR #208):** removíveis usam `data-rem-index` e listener; 13/13 E2E passaram. Auditar `SafeDOM.html` e chamadores.
 4. **Admin/PWA XSS (PRs #210 e #211):** escape de removíveis no card legado e mensagens de erro da PWA via `textContent`; aguarda CI Chromium/PostgreSQL.
-5. **Token de garçom:** definir comportamento de rotação em desativação/reativação e testes de revogação. Preservar fila offline.
-6. **Token de mesa:** desenhar rotação administrativa auditada, sem rotação automática; testar QR antigo/novo e sessões abertas.
-7. **CSP Report-Only:** adicionar relatório sanitizado em ambiente de teste; classificar violações por rota e migrar scripts/handlers/styles gradualmente. Só depois propor política efetiva restritiva.
-8. **Cobertura:** ampliar testes de segurança para `public/`, adicionar matriz Chromium de login, dashboard, cardápio, QR/mesa, garçom/PWA, cozinha, bar, caixa e pagamento, além de PostgreSQL descartável.
+5. **SSE ticket:** desenhar ticket curto, uso único, escopo mesa/garçom e reconexão antes de remover tokens bearer das URLs do EventSource.
+6. **Token de garçom:** definir comportamento de rotação em desativação/reativação e testes de revogação. Preservar fila offline.
+7. **Token de mesa:** desenhar rotação administrativa auditada, sem rotação automática; testar QR antigo/novo e sessões abertas.
+8. **CSP Report-Only:** adicionar relatório sanitizado em ambiente de teste; classificar violações por rota e migrar scripts/handlers/styles gradualmente. Só depois propor política efetiva restritiva.
+9. **Cobertura:** ampliar testes de segurança para `public/`, adicionar matriz Chromium de login, dashboard, cardápio, QR/mesa, garçom/PWA, cozinha, bar, caixa e pagamento, além de PostgreSQL descartável.
 
 ## Critérios de aceite transversais
 
