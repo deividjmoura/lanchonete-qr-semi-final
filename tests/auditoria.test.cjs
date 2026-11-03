@@ -161,6 +161,20 @@ test('criação de garçom exige ator admin na rota e grava evento com request I
   assert.match(server, /const staff = await exigirAcesso\(req, 'admin'\);[\s\S]*?criarGarcom\(await body\(req\), staff, reqId\)/);
 });
 
+test('habilitação de mesas registra admin e mudança de quantidade antes do commit', () => {
+  const admin = fs.readFileSync(path.join(__dirname, '..', 'db', 'admin.js'), 'utf8');
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const inicio = admin.indexOf('async function ativarMesas(');
+  const evento = admin.indexOf("acao: 'mesas_habilitadas'", inicio);
+  const commit = admin.indexOf("await client.query('COMMIT')", inicio);
+  assert.ok(inicio >= 0 && evento > inicio && commit > evento);
+  assert.match(admin.slice(inicio, commit), /SELECT id, nome, papel, ativo FROM staff WHERE id=\$1 FOR SHARE/);
+  assert.match(admin.slice(inicio, commit), /registrarEvento\(client, \{/);
+  assert.match(admin.slice(inicio, commit), /requestId,/);
+  assert.match(admin.slice(inicio, commit), /quantidadeAnterior: atual, quantidadeNova: quantidade/);
+  assert.match(server, /ativarMesas\(payload\.quantidade, staff, reqId\)/);
+});
+
 test('migration 0025 cria a tabela sem colunas de segredo e com índices de consulta', () => {
   const sql = fs.readFileSync(
     path.join(__dirname, '..', 'db', 'migrations', '0025_auditoria_eventos.sql'),
