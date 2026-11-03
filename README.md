@@ -125,6 +125,26 @@ A comanda é acumulativa: novos pedidos podem ser adicionados durante o atendime
 
 ---
 
+## Linguagens e tecnologias
+
+O sistema é uma aplicação única: um servidor de API em Node.js que também serve a interface, e a interface construída como SPA.
+
+| Camada | Tecnologias |
+|---|---|
+| Interface (SPA) | **TypeScript** e **React** em arquivos **TSX**, compilados por **Vite** |
+| Estilo | **CSS** com tokens de design e Tailwind CSS |
+| Páginas e PWA | **HTML**, **JSON** (manifesto PWA) e JavaScript no PWA do garçom, com service worker para uso offline |
+| API e regras de negócio | **JavaScript** (Node.js), sem framework HTTP |
+| Banco de dados | **PostgreSQL**, com **SQL** versionado em migrations |
+| Testes | `node:test` para regressão e integração; Playwright/Chromium para E2E |
+
+As decisões de arquitetura e os runbooks operacionais ficam em
+[`docs/engineering/`](docs/engineering/), e o
+[**guia visual interativo**](https://qradminn.up.railway.app/guia-sistema.html)
+apresenta cada área do sistema com uma demonstração navegável.
+
+---
+
 ## Roadmap e progresso
 
 <text>Atualizado em 03/11/2026. O status abaixo representa o que está integrado, o que está em validação e o que ainda depende de trabalho. Não é um percentual artificial de conclusão.</text>
