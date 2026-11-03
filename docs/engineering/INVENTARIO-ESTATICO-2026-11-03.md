@@ -354,7 +354,7 @@ semanal não é roadmap.
 | **F7** | Ciclo `garcons ⇄ entregas` | Madge | **Nenhum** — deliberado e testado | Baixa | Não tocar |
 | **F8** | 5 devDependencies "não usadas" | Knip | **Nenhum** — falsos positivos | — | Não remover |
 
-## 8. O que depende de outra frente
+## 8. Decisões que dependem do proprietário
 
 - **F1/F2 (`dist/`)** dependem da definição do contrato de build/deploy do Railway.
   F1 é decisão de arquitetura. **F2 já não é pergunta**: é defeito confirmado — o
@@ -389,8 +389,9 @@ semanal não é roadmap.
   Um deploy assim "passa" em smoke test de status code e quebra nas telas que só
   existem na SPA (`/cardapio` responde 404). Por isso **não** removi nem atualizei
   `dist/` nesta etapa, e por isso a decisão (versionar de propósito × construir no
-  deploy × publicar artefato) é operacional e pertence à frente da
-  **PR #197** (single-instance/validação de topologia real), não ao saneamento.
+  deploy × publicar artefato) é uma decisão operacional do proprietário, a ser registrada após revisar o contrato de build/deploy.
+  A **PR #197** formalizou o gate de operação single-instance, mas não resolveu o contrato de
+  build/publicação do artefato.
   **Não executar antes da revisão humana.**
 - **Páginas legadas de `public/*.html`** (grupo A, 500 linhas duplicadas) só são servidas
   quando `dist/` **não existe** (`server.js:1361,1433,1451`) e já são redirecionadas para

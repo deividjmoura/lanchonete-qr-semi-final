@@ -15,7 +15,7 @@
 | #43 | **Parcial**: 5 de 7 critérios | comentar marcando 5 caixas, manter aberta |
 | #55 | **Parcial**: troca de senha pronta; 2FA fora de escopo | corrigir checklist, manter aberta |
 | #41, #44, #45 | Pendentes de verdade | não mexer |
-| #171, #173, #175 | Em execução na Frente B | não mexer |
+| #171, #173, #175 | Estado registrado em 2026-11-01; revalidar nas issues/PRs atuais | não usar esta atribuição histórica como estado atual |
 
 ---
 

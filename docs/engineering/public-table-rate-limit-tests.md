@@ -152,3 +152,24 @@ Este sandbox não tem Docker nem `psql`/`pg_dump`: o PostgreSQL usado foi o
 `docs/engineering/prompt-frente-b-agente-2.md`). Por isso o drill de
 backup/restore (`postgres-backup-restore.test.cjs`) foi executado com
 `--sem-backup`; ele roda no job do CI com `pg_dump`/`pg_restore` 16.
+
+
+## PostgreSQL descartável com embedded-postgres
+
+Quando Docker e `psql` não estiverem disponíveis, as suítes de integração podem usar a dependência `embedded-postgres` já declarada no projeto. Execute somente em ambiente local descartável; não reutilize URL de produção.
+
+```bash
+cat > /tmp/startpg.cjs <<'EOF'
+const mod = require('embedded-postgres');
+const EmbeddedPostgres = mod.default || mod;
+const pg = new EmbeddedPostgres({ databaseDir: '/tmp/qradmin-pgdata', user: 'postgres', password: 'postgres', port: 55432, persistent: true });
+pg.start().then(() => console.log('PG_STARTED')).catch((e) => { console.error('PG_FAIL', e.message); process.exit(1); });
+EOF
+node /tmp/startpg.cjs
+
+node -e "const {Client}=require('pg');(async()=>{const c=new Client('postgres://postgres:postgres@127.0.0.1:55432/postgres');await c.connect();await c.query('CREATE DATABASE qradmin_test').catch(()=>{});await c.end();})()"
+DATABASE_URL="postgres://postgres:postgres@127.0.0.1:55432/qradmin_test" npm run db:migrate
+DATABASE_URL="postgres://postgres:postgres@127.0.0.1:55432/qradmin_test" NODE_ENV=test node --test tests/postgres-waiter-integration.test.cjs
+```
+
+Mantenha o processo do PostgreSQL em execução durante os testes e encerre-o ao terminar. A trava das suítes exige o nome de banco `qradmin_test`; não contorne essa proteção.

@@ -166,7 +166,7 @@ PR #174 (`0c0944b`): portal em `document.body`, `z-[100]`, `max-h-[calc(100dvh-2
 `closeOnBackdrop`, teste estrutural novo. Verificado aqui: **typecheck OK, build OK, `design-system`
 8/8, checks do GitHub todos verdes** (`verify`, `postgres-migrations`, `postgres-integration`).
 
-Lacunas conhecidas do PR (a completar em PR posterior, mesma frente):
+Lacunas conhecidas do PR (a completar em implementação posterior independente):
 - **não há focus trap, nem reposicionamento de foco inicial, nem retorno de foco ao elemento de origem**;
 - **nenhum E2E de viewport** (320/375/tablet/desktop, página rolada, lista longa, tema claro/escuro) — o
   teste adicionado é estrutural (regex no fonte), não comportamental;
@@ -448,3 +448,10 @@ Nota de histórico: `main` teve merges recentes relevantes (#145, #146, #159, #1
 - Responsividade real em 320/375 px e comportamento de arraste por toque em iOS/Android.
 - Se o incidente `15539b40…` foi encerrado: o GitHub mostra deploy posterior com `success`, mas o
   documento do incidente não foi atualizado.
+
+
+## Diagnóstico histórico do E2E visual-system (2026-11-01)
+
+O teste de acordeão falhava de forma intermitente porque o mock de `EventSource('/api/events')` encerrava o stream imediatamente. O cliente realtime reconectava em aproximadamente 1 segundo; cada reconexão acionava `refreshLiveData()\u2192loadDeliveries()`, que substituía os nós com `root.replaceChildren()`. A interação podia ocorrer durante essa substituição e o teste consultar um elemento já desconectado.
+
+A correção aplicada no teste foi neutralizar `EventSource` via `addInitScript`, pois aquela suíte verifica layout, tema e shell offline, não o comportamento de tempo real. O registro histórico mediu 2 falhas em 5 execuções antes da correção e 8/8 execuções verdes depois; a suíte E2E completa passou 11/11. O aprendizado permanece: investigar substituição concorrente do DOM antes de classificar uma falha como flake de CDP.
