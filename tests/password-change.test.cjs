@@ -181,6 +181,8 @@ test('UI: admin confirma senha atual na própria conta e pode redefinir outras; 
   assert.match(ui, /autoComplete="current-password"/);
   assert.match(ui, /confirme a senha atual/);
   assert.match(ui, /não é necessário informar a senha antiga/);
+  assert.match(ui, /if \(obrigatorio\) setAlvo\(loginSessao\)/);
+  assert.match(ui, /disabled=\{carregandoContas \|\| busy \|\| obrigatorio\}/);
   assert.doesNotMatch(ui, /localStorage|sessionStorage|console\./);
 });
 
