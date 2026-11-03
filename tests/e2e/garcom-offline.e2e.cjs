@@ -129,7 +129,10 @@ async function main() {
 
     // O bearer permanente deve ir somente no POST de troca por ticket; a URL
     // EventSource recebe apenas o ticket temporário e nunca o token do garçom.
-    await page.waitForTimeout(700);
+    const sseDeadline = Date.now() + 10000;
+    while (!eventRequests.some((value) => value.searchParams.has('ticket')) && Date.now() < sseDeadline) {
+      await page.waitForTimeout(100);
+    }
     const sseUrl = eventRequests.find((value) => value.searchParams.has('ticket'));
     assert.ok(sseUrl, 'PWA deve abrir EventSource usando ticket de curta duração');
     assert.equal(sseUrl.searchParams.has('garcom'), false, 'URL SSE não pode conter bearer de garçom');
