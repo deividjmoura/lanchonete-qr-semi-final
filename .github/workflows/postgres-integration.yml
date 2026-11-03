@@ -43,6 +43,8 @@ jobs:
         run: npm ci
       - name: Apply migrations to disposable PostgreSQL
         run: npm run db:migrate
+      - name: Google OAuth PostgreSQL integration tests
+        run: node --test tests/postgres-google-oauth.test.cjs tests/postgres-google-oauth-flow.test.cjs
       - name: Run real PostgreSQL integration tests
         run: node --test tests/postgres-integration.test.cjs
       - name: Run financial PostgreSQL integration tests

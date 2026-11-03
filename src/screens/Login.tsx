@@ -9,7 +9,7 @@ import {
   SquaresFour,
   WarningCircle,
 } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Logo, ThemeToggle } from "../components/ui";
 import { ir } from "../router";
 import { usePub } from "../store/usePub";
@@ -28,6 +28,31 @@ export default function Login() {
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fragmentQuery = window.location.hash.split("?")[1] || "";
+    const params = new URLSearchParams(fragmentQuery);
+    const codigo = params.get("google_error");
+    if (codigo) {
+      const mensagens: Record<string, string> = {
+        access_denied: "O acesso com Google foi cancelado.",
+        login_failed: "Não foi possível entrar com esta conta Google. Confira se o e-mail está cadastrado para um funcionário ativo.",
+      };
+      setGoogleError(mensagens[codigo] || "Falha na autenticação com Google. Tente novamente.");
+      window.history.replaceState({}, document.title, window.location.pathname + "#/login");
+    }
+  }, []);
+
+  useEffect(() => {
+    let ativo = true;
+    fetch("/api/auth/google/status")
+      .then((r) => r.ok ? r.json() : { enabled: false })
+      .then((data) => { if (ativo) setGoogleEnabled(data.enabled === true); })
+      .catch(() => { if (ativo) setGoogleEnabled(false); });
+    return () => { ativo = false; };
+  }, []);
   const reduceMotion = useReducedMotion();
 
   const entrar = async () => {
@@ -211,6 +236,24 @@ export default function Login() {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {googleError && <p role="alert" className="mt-4 rounded-sm border border-status-danger-border bg-status-danger-surface px-3 py-2 text-xs font-semibold text-status-danger-ink">{googleError}</p>}
+
+            {googleEnabled && (
+              <div className="mt-5 pt-5 border-t border-line">
+                <button
+                  type="button"
+                  onClick={() => { window.location.assign("/api/auth/google"); }}
+                  className="w-full min-h-12 rounded-sm border border-line-strong bg-surface text-text font-semibold text-sm inline-flex items-center justify-center gap-2 hover:bg-surface-hover transition-colors"
+                >
+                  <span aria-hidden="true" className="font-bold text-base">G</span>
+                  Continuar com Google
+                </button>
+                <p className="mt-2 text-center text-[11px] text-text-muted">
+                  Disponível somente para contas de funcionários previamente vinculadas.
+                </p>
+              </div>
+            )}
           </div>
         </motion.section>
       </main>

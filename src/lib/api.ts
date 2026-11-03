@@ -228,7 +228,11 @@ export const api = {
     apiSend<{ ok: boolean; csrfToken?: string; sessoesRevogadas?: number }>("/api/me/senha", "POST", { senhaAtual, senhaNova }),
   /** Contas que o admin pode redefinir (admin, cozinha, bar, caixa). */
   contasStaff: () =>
-    apiGet<Array<{ id: number; nome: string; login: string; papel: string; deveTrocarSenha?: boolean }>>("/api/admin/contas"),
+    apiGet<Array<{ id: number; nome: string; login: string; papel: string; email?: string | null; googleVinculado?: boolean; deveTrocarSenha?: boolean }>>("/api/admin/contas"),
+  definirEmailGoogle: (id: number, email: string) =>
+    apiSend<{ ok: boolean; staff: { id: number; nome: string; login: string; email: string } }>(
+      "/api/admin/contas/email", "PUT", { id, email }
+    ),
   /** Redefinição pelo admin: não pede a senha antiga, porque ela foi esquecida. */
   redefinirSenha: (login: string, senhaNova: string) =>
     apiSend<{ ok: boolean; login: string; papel: string; propriaConta: boolean; sessoesRevogadas?: number; csrfToken?: string | null }>(

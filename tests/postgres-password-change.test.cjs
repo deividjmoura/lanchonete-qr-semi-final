@@ -351,6 +351,6 @@ test('PostgreSQL real: listarContasStaff devolve apenas contas ativas e nunca ex
   assert.ok(!dump.includes('senha_hash'));
   assert.ok(!dump.includes('senha-list-ativo-ficticia'));
   for (const c of contas) {
-    assert.deepEqual(Object.keys(c).sort(), ['deveTrocarSenha', 'id', 'login', 'nome', 'papel']);
+    assert.deepEqual(Object.keys(c).sort(), ['deveTrocarSenha', 'email', 'googleVinculado', 'id', 'login', 'nome', 'papel']);
   }
 });

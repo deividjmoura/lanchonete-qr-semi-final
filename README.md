@@ -86,6 +86,14 @@ O dashboard permite separar a leitura do movimento financeiro da visão operacio
 
 ---
 
+## Tecnologias e estrutura
+
+O QR Admin utiliza **TypeScript** e **TSX** na interface React, com **JavaScript** no servidor Node.js e nas ferramentas de execução. O projeto também utiliza **HTML**, **CSS**, **JSON** e **SQL**, com **PostgreSQL** como banco de dados e **Vite** no processo de desenvolvimento e build.
+
+O [guia interativo do sistema](https://qradminn.up.railway.app/guia-sistema.html) apresenta as áreas e os fluxos operacionais.
+
+---
+
 ## Como o fluxo funciona
 
 ```text
