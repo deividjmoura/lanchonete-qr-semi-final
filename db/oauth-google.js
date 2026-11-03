@@ -146,43 +146,47 @@ async function concluirOAuth(req, code, state) {
     throw error;
   }
 
-  const { rows } = await pool.query(
-    `SELECT s.id, s.nome, s.login, s.papel, s.ativo,
-            COALESCE((to_jsonb(s)->>'deve_trocar_senha')::boolean, FALSE) AS deve_trocar_senha,
-            (SELECT COUNT(*) FROM staff o WHERE o.ativo AND o.senha_hash = s.senha_hash) > 1 AS senha_compartilhada
-       FROM staff s
-      WHERE lower(s.email) = $1
-      LIMIT 2`,
-    [email]
-  );
-  if (rows.length !== 1 || !rows[0].ativo) {
-    const error = new Error('Esta conta Google não está vinculada a um funcionário ativo do QRAdmin.');
-    error.status = 403;
+  const client = await pool.connect();
+  let staff;
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `SELECT s.id, s.nome, s.login, s.papel, s.ativo,
+              COALESCE((to_jsonb(s)->>'deve_trocar_senha')::boolean, FALSE) AS deve_trocar_senha,
+              (SELECT COUNT(*) FROM staff o WHERE o.ativo AND o.senha_hash = s.senha_hash) > 1 AS senha_compartilhada
+         FROM staff s
+        WHERE lower(s.email) = $1
+        LIMIT 2
+        FOR UPDATE`,
+      [email]
+    );
+    if (rows.length !== 1 || !rows[0].ativo) {
+      const error = new Error('Esta conta Google não está vinculada a um funcionário ativo do QRAdmin.');
+      error.status = 403;
+      throw error;
+    }
+    staff = rows[0];
+    const vinculo = await client.query(
+      'UPDATE staff SET google_sub = $2 WHERE id = $1 AND ativo = TRUE AND (google_sub IS NULL OR google_sub = $2) RETURNING id',
+      [staff.id, profile.sub]
+    );
+    if (!vinculo.rowCount) {
+      const error = new Error('Esta conta de funcionário já está vinculada a outra conta Google.');
+      error.status = 403;
+      throw error;
+    }
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    if (error && error.code === '23505') {
+      const conflito = new Error('Esta conta Google já está vinculada a outro funcionário.');
+      conflito.status = 403;
+      throw conflito;
+    }
     throw error;
+  } finally {
+    client.release();
   }
-  const staff = rows[0];
-  const linked = await pool.query(
-    'SELECT id FROM staff WHERE google_sub = $1 AND id <> $2 LIMIT 1',
-    [profile.sub, staff.id]
-  );
-  if (linked.rowCount) {
-    const error = new Error('Esta conta Google já está vinculada a outro funcionário.');
-    error.status = 403;
-    throw error;
-  }
-  const currentLink = await pool.query(
-    'SELECT google_sub FROM staff WHERE id = $1',
-    [staff.id]
-  );
-  if (currentLink.rows[0].google_sub && currentLink.rows[0].google_sub !== profile.sub) {
-    const error = new Error('Esta conta de funcionário já está vinculada a outra conta Google.');
-    error.status = 403;
-    throw error;
-  }
-  await pool.query(
-    'UPDATE staff SET google_sub = $2 WHERE id = $1 AND ativo = TRUE',
-    [staff.id, profile.sub]
-  );
   const token = await criarSessao(staff.id);
   return { staff: { id: staff.id, nome: staff.nome, login: staff.login, papel: staff.papel, deveTrocarSenha: exigeTrocaDeSenha(staff) }, token, home: homeDoPapel(staff.papel) };
 }
