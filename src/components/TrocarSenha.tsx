@@ -79,6 +79,7 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
           return (pa < 0 ? 99 : pa) - (pb < 0 ? 99 : pb) || a.login.localeCompare(b.login);
         });
         setContas(ordenadas);
+        if (obrigatorio) setAlvo(loginSessao);
       })
       .catch((e: any) => setErroContas(e?.message || "Não foi possível carregar os setores."))
       .finally(() => setCarregandoContas(false));
@@ -213,7 +214,7 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
                   }}
                   className={campo}
                   disabled={carregandoContas || busy || obrigatorio}
-                  autoFocus
+                  autoFocus={!obrigatorio}
                 >
                   <option value="">{carregandoContas ? "Carregando setores…" : "Selecione o setor"}</option>
                   {contas.map((c) => {
