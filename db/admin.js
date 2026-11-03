@@ -1,5 +1,6 @@
 // CRUD de cardápio e listagem de mesas para o painel admin.
 const pool = require('./pool');
+const { resolverFotoUrl } = require('./foto-serve');
 const { numeroFinito, numeroInteiroPositivo } = require('./validacao');
 
 function normalizeFotoUrl(raw) {
@@ -294,7 +295,7 @@ function mapProdutoRow(p) {
     nome: p.nome,
     descricao: p.descricao,
     preco: Number(p.preco),
-    fotoUrl: p.foto_url,
+    fotoUrl: resolverFotoUrl(p.foto_url, Number(p.id)),
     disponivel: p.disponivel,
     pedePontoCarne: p.pede_ponto_carne,
     setor: p.setor === 'bar' ? 'bar' : 'cozinha',
