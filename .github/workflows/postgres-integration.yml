@@ -73,6 +73,12 @@ jobs:
       - name: Produção parcial por item (cozinha/bar)
         if: ${{ hashFiles('tests/postgres-producao-parcial.test.cjs') != '' }}
         run: node --test tests/postgres-producao-parcial.test.cjs
+
+      # Rate limit das mutações públicas de mesa (PR #196). Sobe o server.js
+      # real em cópia isolada e exercita as quatro rotas por HTTP.
+      - name: Rate limit das mutações públicas de mesa (check-in, PIX, cancelar, editar)
+        if: ${{ hashFiles('tests/postgres-public-table-rate-limit.test.cjs') != '' }}
+        run: node --test tests/postgres-public-table-rate-limit.test.cjs
       # O cliente pg_dump precisa ser da MESMA versão maior do servidor.
       # A imagem do runner traz pg_dump 17+, que emite "SET transaction_timeout"
       # no cabeçalho do dump — parâmetro que o PostgreSQL 16 não reconhece, e o
