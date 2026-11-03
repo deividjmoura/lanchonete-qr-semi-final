@@ -32,6 +32,19 @@ export default function Login() {
   const [googleError, setGoogleError] = useState<string | null>(null);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const codigo = params.get("google_error");
+    if (codigo) {
+      const mensagens: Record<string, string> = {
+        access_denied: "O acesso com Google foi cancelado.",
+        login_failed: "Não foi possível entrar com esta conta Google. Confira se o e-mail está cadastrado para um funcionário ativo.",
+      };
+      setGoogleError(mensagens[codigo] || "Falha na autenticação com Google. Tente novamente.");
+      window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+    }
+  }, []);
+
+  useEffect(() => {
     let ativo = true;
     fetch("/api/auth/google/status")
       .then((r) => r.ok ? r.json() : { enabled: false })
