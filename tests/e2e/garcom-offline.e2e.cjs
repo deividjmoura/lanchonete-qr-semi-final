@@ -338,8 +338,10 @@ async function main() {
       const cardapio = await (await fetch('/api/cardapio')).json();
       const produto = cardapio.flatMap((c) => c.produtos || [])[0];
       novo.items = [{ productId: Number(produto.id), name: produto.nome, qty: 1, unitPrice: Number(produto.preco) }];
-      const mesas = await (await fetch('/api/garcom/' + token + '/mesas')).json();
-      novo.table = Number(mesas.mesas[0].numero);
+      // O cenário de recuperação usa a mesa criada por este próprio teste.
+      // Não escolher mesas.mesas[0]: em banco compartilhado ela pode pertencer
+      // a outro fixture e provocar conflito de responsável não determinístico.
+      novo.table = Number(  ids.numero);
       await store.put(novo);
       // lease de uma aba que morreu, ainda dentro da validade
       await store.acquireLease('sync:' + token, 'aba-que-morreu', 45000, Date.now());
