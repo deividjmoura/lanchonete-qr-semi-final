@@ -109,7 +109,7 @@ async function main() {
     ok('PWA carregou e listou mesas do garçom autenticado');
 
     // A mensagem de erro da API também é dado não confiável e precisa ser texto.
-    const errorContext = await browser.newContext({ viewport: { width: 420, height: 900 } });
+    const errorContext = await browser.newContext({ viewport: { width: 420, height: 900 }, serviceWorkers: 'block' });
     try {
       const errorPage = await errorContext.newPage();
       const errorPayload = '<img src="/xss-probe" onerror="window.__pwaXss=1">';
