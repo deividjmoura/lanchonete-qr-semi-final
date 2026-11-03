@@ -22,10 +22,12 @@ jobs:
       - name: Check production liveness
         env:
           HEALTHCHECK_URL: https://qradminn.up.railway.app/healthz
-        run: node -e '
+        run: |
+          node <<'NODE'
           const url = process.env.HEALTHCHECK_URL;
           const controller = new AbortController();
           const timer = setTimeout(() => controller.abort(), 10000);
+
           fetch(url, {
             method: "GET",
             redirect: "manual",
@@ -48,4 +50,4 @@ jobs:
             console.error("Production health check failed:", error.message);
             process.exitCode = 1;
           }).finally(() => clearTimeout(timer));
-        '
+          NODE
