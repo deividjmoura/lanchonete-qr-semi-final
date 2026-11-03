@@ -143,3 +143,42 @@ body.board-page .prod-grid--few {
   animation: mesa-spin 0.7s linear infinite;
 }
 @keyframes mesa-spin { to { transform: rotate(360deg); } }
+
+/* Busca do cardápio: faixa totalmente transparente, inclusive quando fixada */
+body.board-page #mesaSearchBox,
+body.board-page #mesaSearchBox.is-pinned {
+  position: sticky !important;
+  top: 56px !important;
+  z-index: 30 !important;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+body.board-page #mesaSearchBox.is-pinned {
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: 56px !important;
+  padding-left: max(12px, env(safe-area-inset-left)) !important;
+  padding-right: max(12px, env(safe-area-inset-right)) !important;
+}
+body.board-page #mesaSearchBox::before,
+body.board-page #mesaSearchBox::after {
+  content: none !important;
+  display: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+body.board-page #mesaSearchBox input,
+body.board-page #mesaSearchBox input[type="search"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
