@@ -20,7 +20,7 @@ A comparação de commits é apenas um indicador. Como algumas PRs foram integra
 
 - O design system Palco Azul/Violeta e o teste `tests/design-tokens-identidade.test.cjs` já existem na main atual.
 - O relatório `docs/engineering/auditoria-2026-11-01-diagnostico.md` é uma referência histórica útil, mas declara como base o commit antigo `58c3433`; todos os achados operacionais precisam ser revalidados no commit atual antes de virar tarefa.
-- Os documentos de coordenação e prompts de agentes registram decisões e handoffs históricos. Não devem ser tratados como instruções atuais sem reconciliação com a documentação vigente.
+- As instruções temporárias de coordenação e os prompts específicos de agentes foram retirados. Decisões técnicas vigentes devem ser consultadas nos documentos de arquitetura, design e operação; registros históricos servem apenas como contexto.
 - A branch contém artefatos versionados em `dist/`; não copiar builds gerados para a main como parte de saneamento.
 
 ### Decisão
