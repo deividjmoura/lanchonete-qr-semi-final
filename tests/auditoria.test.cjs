@@ -129,6 +129,20 @@ test('cancelamento, PIX e fechamento estão ligados à trilha no código de prod
   assert.match(server, /cancelarPedidoCliente\(m\[1\], Number\(m\[2\]\), null, \{ requestId: reqId \}\)/);
 });
 
+test('purge do histórico registra autoria na mesma transação e recebe request ID da rota', () => {
+  const purge = fs.readFileSync(path.join(__dirname, '..', 'db', 'purge.js'), 'utf8');
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const evento = purge.indexOf("acao: 'historico_purgado'");
+  const commit = purge.indexOf("await client.query('COMMIT')", evento);
+  assert.ok(evento > 0, 'purge deve registrar evento explícito');
+  assert.ok(commit > evento, 'evento deve ser inserido antes do COMMIT');
+  assert.match(purge, /registrarEvento\(client, \{/);
+  assert.match(purge, /atorTipo: ator \? 'staff' : 'sistema'/);
+  assert.match(purge, /requestId: opts\.requestId \|\| null/);
+  assert.match(server, /purgeHistorico\(\{[\s\S]*?ator: staff,[\s\S]*?requestId: reqId/);
+  assert.match(purge, /contexto: \{[\s\S]*?sessoes: delSess\.rowCount[\s\S]*?pagamentos: preview\.pagamentos/);
+});
+
 test('migration 0025 cria a tabela sem colunas de segredo e com índices de consulta', () => {
   const sql = fs.readFileSync(
     path.join(__dirname, '..', 'db', 'migrations', '0025_auditoria_eventos.sql'),
