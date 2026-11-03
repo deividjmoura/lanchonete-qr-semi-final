@@ -3,9 +3,9 @@
 /**
  * E2E em Chromium real da redefinição de senha pelo admin.
  *
- * Cobre o pedido do operador: a senha da Cozinha foi esquecida; o Admin deve
- * conseguir definir uma nova senha para qualquer setor (inclusive a própria)
- * sem digitar a senha antiga. O fluxo não-admin continua exigindo a senha atual.
+ * Cobre a redefinição privilegiada de outra conta sem senha antiga e a troca
+ * da própria senha do Admin com reautenticação. O fluxo não-admin também exige
+ * a senha atual.
  *
  * Sobe o servidor Node real contra PostgreSQL descartável:
  *   NODE_ENV=test DATABASE_URL=...qradmin_test node tests/e2e/admin-redefine-senha.e2e.cjs
@@ -175,7 +175,7 @@ async function main() {
     assert.ok(evCozinha.sessoes_revogadas >= 1);
     ok('banco confirma nova senha da Cozinha, sessões revogadas e auditoria do ator');
 
-    // Admin redefine a própria senha e não perde o acesso.
+    // Admin altera a própria senha pela rota de troca segura, confirmando a senha atual.
     await dialog.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
     await page.getByRole('button', { name: 'Redefinir senha de um setor' }).click();
     await dialog.waitFor();
@@ -184,6 +184,10 @@ async function main() {
       return s && [...s.options].some((o) => o.value === 'admin');
     }, null, { timeout: 15000 });
     await dialog.getByLabel('Setor').selectOption('admin');
+    const senhaAtualAdmin = dialog.locator('input[autocomplete="current-password"]');
+    await senhaAtualAdmin.waitFor({ state: 'visible' });
+    assert.equal(await senhaAtualAdmin.count(), 1, 'a própria conta exige reautenticação');
+    await senhaAtualAdmin.fill(senhaAdmin);
     await dialog.locator('input[name="new-password"]').fill(senhaAdminNova);
     await dialog.locator('input[name="confirm-password"]').fill(senhaAdminNova);
     await dialog.locator('button[type="submit"]').click();
@@ -199,7 +203,7 @@ async function main() {
     const rowAdmin = (await pool.query('SELECT senha_hash FROM staff WHERE id = $1', [ids.admin])).rows[0];
     assert.equal(await auth.verificarSenha(senhaAdminNova, rowAdmin.senha_hash), true);
     assert.equal(await auth.verificarSenha(senhaAdmin, rowAdmin.senha_hash), false);
-    ok('admin redefiniu a própria senha sem a antiga e continuou autenticado');
+    ok('admin alterou a própria senha com a senha atual e continuou autenticado');
 
     // Sai e entra como Cozinha com a senha nova; o diálogo dela ainda pede a senha atual.
     await page.getByRole('button', { name: 'Sair' }).click();

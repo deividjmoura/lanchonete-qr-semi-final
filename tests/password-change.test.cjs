@@ -168,15 +168,21 @@ test('GET /api/admin/contas usa listarContasStaff e não expõe hash', () => {
   assert.doesNotMatch(bloco, /senha_hash/);
 });
 
-test('UI: admin escolhe o setor e não vê senha atual; não-admin mantém a troca própria com senha atual', () => {
+test('UI: admin confirma senha atual na própria conta e pode redefinir outras; não-admin mantém a troca própria', () => {
   assert.match(ui, /role === "admin"/);
   assert.match(ui, /api\.contasStaff\(\)/);
   assert.match(ui, /<select/);
   assert.match(ui, /Setor/);
   assert.match(ui, /redefinirSenhaApi\(alvo, nova\)/);
   assert.match(ui, /trocarSenhaApi\(atual, nova\)/);
+  assert.match(ui, /alvoEhPropriaConta/);
+  assert.match(ui, /admin && !alvoEhPropriaConta/);
+  assert.match(ui, /!admin \|\| alvoEhPropriaConta/);
   assert.match(ui, /autoComplete="current-password"/);
-  assert.match(ui, /Não é necessário informar a senha antiga/);
+  assert.match(ui, /confirme a senha atual/);
+  assert.match(ui, /não é necessário informar a senha antiga/);
+  assert.match(ui, /if \(obrigatorio\) setAlvo\(loginSessao\)/);
+  assert.match(ui, /disabled=\{carregandoContas \|\| busy \|\| obrigatorio\}/);
   assert.doesNotMatch(ui, /localStorage|sessionStorage|console\./);
 });
 
