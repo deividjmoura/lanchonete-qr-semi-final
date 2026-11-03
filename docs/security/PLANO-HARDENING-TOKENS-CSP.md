@@ -173,6 +173,23 @@ Outros padrões encontrados:
 - A busca por padrões identifica candidatos, não prova exploração.
 - Não foi alterado nenhum arquivo de runtime, token, autenticação, CSP, configuração de deploy ou armazenamento.
 
+## Registro de validação manual — cadastro e login por e-mail
+
+**Data do registro:** 2026-11-03  
+**Origem da evidência:** relato direto do proprietário do projeto, que executou o teste manualmente.  
+**Tipo:** teste funcional manual, não automatizado.
+
+| Cenário | Resultado | Evidência e limite |
+|---|---|---|
+| Cadastro de usuário por e-mail no fluxo do bar | **Aprovado manualmente** | O proprietário informou que concluiu o cadastro e que o fluxo funcionou corretamente. |
+| Login por e-mail | **Aprovado manualmente** | O proprietário informou que concluiu o login e que o fluxo funcionou corretamente. |
+
+**Escopo exato da validação:** somente o cadastro de usuário por e-mail no bar e o login por e-mail, conforme testados pelo proprietário.
+
+**Não validado por este registro:** recuperação ou redefinição de senha; verificação/entrega de e-mail; Google OAuth; expiração, persistência ou revogação de sessões; logout; múltiplas sessões/dispositivos; rate limiting; bloqueio de conta; troca de e-mail; segurança contra CSRF/XSS; compatibilidade com navegadores/dispositivos adicionais.
+
+Este registro é evidência manual informada pelo proprietário, não um resultado de CI nem uma certificação geral do sistema de autenticação. Os demais cenários continuam sujeitos às suas próprias verificações automatizadas e manuais.
+
 ## Sessões staff — armazenamento de digest em fase compatível
 
 ### Comportamento anterior confirmado
