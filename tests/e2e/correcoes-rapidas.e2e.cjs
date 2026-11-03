@@ -9,7 +9,10 @@ const { chromium } = require('playwright-core');
 const binary = require('@sparticuz/chromium').default;
 const { criarDashboard } = require('./fixtures/dashboard.cjs');
 
-const base = process.env.VISUAL_BASE_URL || 'http://localhost:4173';
+const base = process.env.VISUAL_BASE_URL;
+if (!base) {
+  throw new Error('VISUAL_BASE_URL ausente. Execute npm run test:e2e para usar o preview isolado do runner.');
+}
 const screenshots = process.env.QUICK_WINS_SCREENSHOTS_DIR;
 const valores = [0, 1, 1234.56, 99999999.99, 0.01, 87.65, 70000];
 const dias = ['Sáb', 'Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Hoje'];
