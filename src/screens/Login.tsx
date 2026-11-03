@@ -32,7 +32,8 @@ export default function Login() {
   const [googleError, setGoogleError] = useState<string | null>(null);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const fragmentQuery = window.location.hash.split("?")[1] || "";
+    const params = new URLSearchParams(fragmentQuery);
     const codigo = params.get("google_error");
     if (codigo) {
       const mensagens: Record<string, string> = {
@@ -40,7 +41,7 @@ export default function Login() {
         login_failed: "Não foi possível entrar com esta conta Google. Confira se o e-mail está cadastrado para um funcionário ativo.",
       };
       setGoogleError(mensagens[codigo] || "Falha na autenticação com Google. Tente novamente.");
-      window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+      window.history.replaceState({}, document.title, window.location.pathname + "#/login");
     }
   }, []);
 
