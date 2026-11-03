@@ -1,0 +1,53 @@
+name: Production read-only health check
+
+on:
+  schedule:
+    # GitHub Actions cron is UTC. Runs every 15 minutes.
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-read-only-healthcheck
+  cancel-in-progress: true
+
+jobs:
+  health:
+    name: GET /healthz (read-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check production liveness
+        env:
+          HEALTHCHECK_URL: https://qradminn.up.railway.app/healthz
+        run: |
+          node <<'NODE'
+          const url = process.env.HEALTHCHECK_URL;
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 10000);
+
+          fetch(url, {
+            method: "GET",
+            redirect: "manual",
+            headers: { accept: "application/json" },
+            signal: controller.signal
+          }).then(async (response) => {
+            if (response.status !== 200) {
+              throw new Error("Expected HTTP 200, received " + response.status);
+            }
+            const type = response.headers.get("content-type") || "";
+            if (!type.includes("application/json")) {
+              throw new Error("Expected application/json response");
+            }
+            const payload = await response.json();
+            if (!payload || payload.status !== "ok") {
+              throw new Error("Unexpected health payload");
+            }
+            console.log("Production liveness OK; read-only GET /healthz.");
+          }).catch((error) => {
+            console.error("Production health check failed:", error.message);
+            process.exitCode = 1;
+          }).finally(() => clearTimeout(timer));
+          NODE
