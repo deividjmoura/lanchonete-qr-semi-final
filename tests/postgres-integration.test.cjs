@@ -337,7 +337,7 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
     assert.equal(Number(finalState.rows[0].valor_total), 30);
     assert.equal(Number(finalState.rows[0].valor_cobrado), 30);
     assert.equal(finalState.rows[0].pagamentos, 2, 'pagamento parcial + saldo do fechamento');
-    assert.equal(finalState.rows[0].pedidos, 2, 'pedido entregue + pedido cancelado preservados na sessão');
+    assert.equal(finalState.rows[0].pedidos, 3, 'pedido entregue + dois pedidos cancelados (um editado na fixture) preservados na sessão');
   } finally {
     // Limpeza limitada aos identificadores sintéticos criados por este teste.
     if (mesaId) {
