@@ -134,7 +134,7 @@ test('listagem administrativa também devolve URL de foto, nunca Base64', async 
   try {
     const cardapio = await getCardapioAdmin();
     assert.equal(cardapio[0].produtos[0].fotoUrl, '/api/cardapio/fotos/12');
-    assert.doesNotMatch(JSON.stringify(cardapio), /data:image\\/webp;base64/);
+    assert.equal(JSON.stringify(cardapio).includes(foto), false, 'a listagem não pode transportar a data-URL');
   } finally {
     pool.query = queryOriginal;
   }
