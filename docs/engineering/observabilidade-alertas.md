@@ -57,6 +57,6 @@ declarado operante.
 
 O responsável definiu: **alertas operacionais por e-mail**. O canal está
 decidido; a implementação (destinatário, provedor de envio, limiares e teste
-de alerta em ambiente de teste) entra numa frente própria.
+de alerta em ambiente de teste) deve ser entregue em PR independente.
 
 A issue #43 **segue aberta** até o alerta estar implementado e demonstrado.
