@@ -1,5 +1,6 @@
 // Limpeza de histórico: remove sessões fechadas e TODO o que depende delas.
 const pool = require('./pool');
+const { registrarEvento } = require('./auditoria');
 
 class ErroPurge extends Error {
   constructor(message, status = 400) {
@@ -127,6 +128,24 @@ async function purgeHistorico(opts = {}) {
        RETURNING id`,
       [before]
     );
+
+    const ator = opts.ator && Number.isInteger(opts.ator.id) ? opts.ator : null;
+    await registrarEvento(client, {
+      atorTipo: ator ? 'staff' : 'sistema',
+      atorId: ator ? ator.id : null,
+      atorNome: ator ? ator.nome || null : null,
+      acao: 'historico_purgado',
+      alvoTipo: 'historico',
+      alvoId: before,
+      requestId: opts.requestId || null,
+      contexto: {
+        before,
+        sessoes: delSess.rowCount,
+        pedidos: preview.pedidos,
+        itens: preview.itens,
+        pagamentos: preview.pagamentos,
+      },
+    });
 
     await client.query('COMMIT');
 
