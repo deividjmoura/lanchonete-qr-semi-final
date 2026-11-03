@@ -14,7 +14,7 @@ const ENV_NAMES = [
   'NODE_ENV',
 ];
 
-function comOAuthConfigurado(fn) {
+async function comOAuthConfigurado(fn) {
   const previous = Object.fromEntries(ENV_NAMES.map((name) => [name, process.env[name]]));
   Object.assign(process.env, {
     GOOGLE_CLIENT_ID: 'client-id-ficticio',
@@ -24,7 +24,7 @@ function comOAuthConfigurado(fn) {
     NODE_ENV: 'test',
   });
   try {
-    return fn();
+    return await fn();
   } finally {
     for (const name of ENV_NAMES) {
       if (previous[name] === undefined) delete process.env[name];
