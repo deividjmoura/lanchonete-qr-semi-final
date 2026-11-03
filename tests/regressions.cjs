@@ -9,7 +9,7 @@ const vm = require('node:vm');
 const ts = require('typescript');
 const { EventEmitter } = require('node:events');
 const { eventAccess } = require('../db/event-access');
-const { subscribe, broadcast, clientCount } = require('../db/events');
+const { subscribe, broadcast, closeAccess, clientCount } = require('../db/events');
 const { validarDestinoRemoto } = require('../db/foto');
 const { verificarOrigemRequisicao, csrfTokenParaSessao, verificarProtecaoCSRF } = require('../db/auth');
 const { ErroValidacao, numeroFinito, numeroInteiroPositivo } = require('../db/validacao');
@@ -129,6 +129,25 @@ test('SSE público não divulga nome, token ou pagamento de outra mesa', () => {
   staff.emit('close'); publicRes.emit('close');
   assert.equal(clientCount(), 0);
 });
+test('revogação fecha somente streams SSE vinculados à identidade revogada', () => {
+  const staff = new EventEmitter();
+  const garcom = new EventEmitter();
+  let staffEnded = false;
+  let garcomEnded = false;
+  staff.write = () => {};
+  staff.end = () => { staffEnded = true; };
+  garcom.write = () => {};
+  garcom.end = () => { garcomEnded = true; };
+  subscribe(staff, { accessType: 'staff', accessId: 17 });
+  subscribe(garcom, { publicClient: true, accessType: 'garcom', accessId: 17 });
+  assert.equal(closeAccess('staff', 17), 1);
+  assert.equal(staffEnded, true);
+  assert.equal(garcomEnded, false);
+  assert.equal(clientCount(), 1);
+  garcom.emit('close');
+  assert.equal(clientCount(), 0);
+});
+
 test('cliente SSE envia bearer no POST e usa apenas ticket temporário na URL', async () => {
   let url; let options; let closed = false;
   const context = {
