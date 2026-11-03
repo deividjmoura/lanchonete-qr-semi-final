@@ -13,16 +13,26 @@ const pool = require('./pool');
 const DATA_URL_RE = /^data:(image\/(?:jpeg|png|webp|gif));base64,/i;
 const MAX_DATA_URL_BYTES = Number(process.env.FOTO_MAX_SERVE_BYTES || 6 * 1024 * 1024);
 
+function urlImagemPermitida(valor) {
+  if (valor.startsWith('/') && !valor.startsWith('//')) return true;
+  try {
+    const url = new URL(valor);
+    return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
 function resolverFotoUrl(fotoUrl, produtoId) {
   if (fotoUrl === null || fotoUrl === undefined) return null;
   const valor = String(fotoUrl).trim();
   if (!valor) return null;
   if (valor.startsWith('data:')) {
-    if (!Number.isInteger(produtoId) || produtoId < 1) return null;
+    if (!DATA_URL_RE.test(valor) || !Number.isInteger(produtoId) || produtoId < 1) return null;
     return `/api/cardapio/fotos/${produtoId}`;
   }
-  // URL externa ou caminho legado: o navegador busca diretamente.
-  return valor;
+  // Somente HTTP(S) sem credenciais ou caminho relativo à mesma origem.
+  return urlImagemPermitida(valor) ? valor : null;
 }
 
 function parseDataUrl(dataUrl) {
@@ -65,9 +75,8 @@ async function carregarFotoProduto(produtoId) {
     if (!parsed) return null;
     return { kind: 'data', ...parsed };
   }
-  if (/^https?:\/\//i.test(valor)) return { kind: 'redirect', location: valor };
-  if (valor.startsWith('/') && !valor.startsWith('//')) return { kind: 'redirect', location: valor };
+  if (urlImagemPermitida(valor)) return { kind: 'redirect', location: valor };
   return null;
 }
 
-module.exports = { resolverFotoUrl, parseDataUrl, carregarFotoProduto, DATA_URL_RE, MAX_DATA_URL_BYTES };
+module.exports = { resolverFotoUrl, parseDataUrl, carregarFotoProduto, urlImagemPermitida, DATA_URL_RE, MAX_DATA_URL_BYTES };
