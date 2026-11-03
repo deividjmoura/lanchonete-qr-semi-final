@@ -78,6 +78,7 @@ const {
   verificarProtecaoCSRF,
 } = require('./db/auth');
 const { golpePermitido } = require('./db/rateLimit');
+const oauthGoogle = require('./db/oauth-google');
 const { registrarEventoIndependente } = require('./db/auditoria');
 const { resolveClientIp, loginUserRateLimitKey } = require('./security/client-ip');
 const { ErroAtendimento, transferirMesaAdmin, listarMesasGarcom, iniciarAtendimentoGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
@@ -290,6 +291,47 @@ const server = http.createServer(async (req, res) => {
     // Intencionalmente não consulta o banco nem expõe versão/configuração.
     if (p === '/healthz' && req.method === 'GET') {
       return json(res, 200, { status: 'ok' });
+    }
+
+    // Login Google: o callback cria a mesma sessão persistente do login por senha.
+    if (p === '/api/auth/google/status' && req.method === 'GET') {
+      return json(res, 200, oauthGoogle.statusOAuth());
+    }
+    if (p === '/api/auth/google' && req.method === 'GET') {
+      try {
+        const inicio = oauthGoogle.iniciarOAuth();
+        res.setHeader('Set-Cookie', inicio.cookie);
+        res.writeHead(302, { Location: inicio.url, 'Cache-Control': 'no-store' });
+        return res.end();
+      } catch (e) {
+        return json(res, e.status || 503, { error: e.message || 'Login Google indisponível.' });
+      }
+    }
+    if (p === '/api/auth/google/callback' && req.method === 'GET') {
+      const falhaGoogle = u.searchParams.get('error');
+      if (falhaGoogle) {
+        res.setHeader('Set-Cookie', oauthGoogle.limparCookieEstado());
+        res.writeHead(302, { Location: '/#/login?google_error=access_denied', 'Cache-Control': 'no-store' });
+        return res.end();
+      }
+      const code = u.searchParams.get('code');
+      const state = u.searchParams.get('state');
+      try {
+        if (!code || code.length > 4096 || !state || state.length > 256) {
+          const error = new Error('Retorno do Google inválido.');
+          error.status = 400;
+          throw error;
+        }
+        const resultado = await oauthGoogle.concluirOAuth(req, code, state);
+        res.setHeader('Set-Cookie', [oauthGoogle.limparCookieEstado(), cookieDeSessao(resultado.token)]);
+        res.writeHead(302, { Location: resultado.home, 'Cache-Control': 'no-store' });
+        return res.end();
+      } catch (e) {
+        console.warn(linhaDeLog('warn', { reqId, method: req.method, alvo: '/api/auth/google/callback', status: e.status || 401, mensagem: sanitizarDetalheErro(e.message || 'falha OAuth') }));
+        res.setHeader('Set-Cookie', oauthGoogle.limparCookieEstado());
+        res.writeHead(302, { Location: '/#/login?google_error=login_failed', 'Cache-Control': 'no-store' });
+        return res.end();
+      }
     }
 
 
