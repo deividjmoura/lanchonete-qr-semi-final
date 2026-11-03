@@ -1023,7 +1023,7 @@ const server = http.createServer(async (req, res) => {
       const b = await body(req);
       const id = Number(b && b.id);
       const email = String(b && b.email || '').trim().toLowerCase();
-      if (!Number.isSafeInteger(id) || id <= 0 || email.length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+      if (!Number.isSafeInteger(id) || id <= 0 || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return json(res, 400, { error: 'Informe um funcionário e um e-mail válido.' });
       }
       try {
