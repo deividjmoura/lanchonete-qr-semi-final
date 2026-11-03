@@ -18,8 +18,15 @@ const PUBLIC_COALESCE_MS = Number.isFinite(parsedCoalesce)
 
 const clients = new Map();
 
-function subscribe(res, { publicClient = false } = {}) {
-  clients.set(res, { publicClient, ultimoEnvioEm: 0, pendente: null, timer: null });
+function subscribe(res, { publicClient = false, accessType = null, accessId = null } = {}) {
+  clients.set(res, {
+    publicClient,
+    accessType,
+    accessId: Number.isSafeInteger(Number(accessId)) ? Number(accessId) : null,
+    ultimoEnvioEm: 0,
+    pendente: null,
+    timer: null,
+  });
   res.on('close', () => {
     const estado = clients.get(res);
     if (estado && estado.timer) clearTimeout(estado.timer);
@@ -75,8 +82,22 @@ function broadcast(event, payload = {}) {
   }
 }
 
+function closeAccess(accessType, accessId) {
+  const id = Number(accessId);
+  if (!accessType || !Number.isSafeInteger(id) || id < 1) return 0;
+  let closed = 0;
+  for (const [res, estado] of clients) {
+    if (estado.accessType !== accessType || estado.accessId !== id) continue;
+    if (estado.timer) clearTimeout(estado.timer);
+    clients.delete(res);
+    try { res.end(); } catch (_) { /* socket já encerrado */ }
+    closed++;
+  }
+  return closed;
+}
+
 function clientCount() {
   return clients.size;
 }
 
-module.exports = { subscribe, broadcast, clientCount, PUBLIC_COALESCE_MS };
+module.exports = { subscribe, broadcast, closeAccess, clientCount, PUBLIC_COALESCE_MS };
