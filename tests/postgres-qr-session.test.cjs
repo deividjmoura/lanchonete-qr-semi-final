@@ -22,7 +22,8 @@ test('QR fixo: pedido após fechamento abre NOVA sessão; token inválido é rej
 
   const suffix = randomUUID().slice(0, 8);
   const token = randomUUID();
-  const ids = { mesa: null, sessoes: [], categoria: null, produto: null };
+  const tokenOutraMesa = randomUUID();
+  const ids = { mesa: null, outraMesa: null, sessoes: [], categoria: null, produto: null };
 
   try {
     ids.categoria = (await pool.query(
@@ -38,6 +39,10 @@ test('QR fixo: pedido após fechamento abre NOVA sessão; token inválido é rej
       'INSERT INTO mesas (numero, token, status) VALUES ($1, $2, $3) RETURNING id',
       [910000 + Math.floor(Math.random() * 80000), token, 'livre']
     )).rows[0].id;
+    ids.outraMesa = (await pool.query(
+      'INSERT INTO mesas (numero, token, status) VALUES ($1, $2, $3) RETURNING id',
+      [990000 + Math.floor(Math.random() * 8000), tokenOutraMesa, 'livre']
+    )).rows[0].id;
 
     // 1) Primeiro pedido via QR cria a sessão (política atual: QR fixo sempre
     //    ativo e a primeira comanda abre a sessão, sem ação de funcionário).
@@ -48,6 +53,23 @@ test('QR fixo: pedido após fechamento abre NOVA sessão; token inválido é rej
     assert.equal(primeiro.idempotentReplay, false);
     const sessaoA = primeiro.sessaoId;
     ids.sessoes.push(sessaoA);
+
+    // Token de outra mesa deve abrir sessão exclusivamente na mesa associada
+    // ao próprio bearer; os dois QRs não podem cruzar o contexto.
+    const pedidoOutraMesa = await pedidos.criarPedido(tokenOutraMesa, {
+      idempotencyKey: 'qr-' + randomUUID(),
+      items: [{ productId: ids.produto, qty: 1 }],
+    });
+    ids.sessoes.push(pedidoOutraMesa.sessaoId);
+    const vinculos = await pool.query(
+      'SELECT id, mesa_id FROM mesa_sessoes WHERE id = ANY($1::int[])',
+      [[sessaoA, pedidoOutraMesa.sessaoId]]
+    );
+    const mesaPorSessao = new Map(vinculos.rows.map((r) => [Number(r.id), Number(r.mesa_id)]));
+    assert.equal(mesaPorSessao.get(sessaoA), ids.mesa);
+    assert.equal(mesaPorSessao.get(pedidoOutraMesa.sessaoId), ids.outraMesa);
+    assert.notEqual(mesaPorSessao.get(sessaoA), mesaPorSessao.get(pedidoOutraMesa.sessaoId));
+
     let mesaRow = await pool.query('SELECT status FROM mesas WHERE id = $1', [ids.mesa]);
     assert.equal(mesaRow.rows[0].status, 'ocupada');
 
@@ -109,7 +131,9 @@ test('QR fixo: pedido após fechamento abre NOVA sessão; token inválido é rej
       await pool.query('DELETE FROM pedidos WHERE sessao_id = $1', [sessaoId]).catch(() => {});
     }
     await pool.query('DELETE FROM mesa_sessoes WHERE mesa_id = $1', [ids.mesa]).catch(() => {});
+    await pool.query('DELETE FROM mesa_sessoes WHERE mesa_id = $1', [ids.outraMesa]).catch(() => {});
     if (ids.mesa) await pool.query('DELETE FROM mesas WHERE id = $1', [ids.mesa]).catch(() => {});
+    if (ids.outraMesa) await pool.query('DELETE FROM mesas WHERE id = $1', [ids.outraMesa]).catch(() => {});
     if (ids.produto) await pool.query('DELETE FROM produtos WHERE id = $1', [ids.produto]).catch(() => {});
     if (ids.categoria) await pool.query('DELETE FROM categorias WHERE id = $1', [ids.categoria]).catch(() => {});
     await pool.end();
