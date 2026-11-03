@@ -1222,10 +1222,13 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/admin/historico/purge' && req.method === 'POST') {
       try {
         const b = await body(req);
+        const staff = await getStaffDaRequisicao(req);
         return json(res, 200, await purgeHistorico({
           before: b.before,
           confirm: b.confirm === true,
           dryRun: b.dryRun === true,
+          ator: staff,
+          requestId: reqId,
         }));
       } catch (e) {
         if (e instanceof ErroPurge || e.status) return json(res, e.status || 400, { error: e.message });
