@@ -11,7 +11,7 @@ Não use o callback antes do deploy do código que o atende.
 
 ## Variáveis de ambiente
 
-Configurar no serviço backend, por canal seguro e coordenado com a Frente 1:
+Configurar no serviço backend do Railway, por canal seguro:
 
 | Variável | Valor |
 |---|---|
