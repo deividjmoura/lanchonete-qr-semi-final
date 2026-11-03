@@ -61,7 +61,7 @@ etapa 4 sem mudar o schema, usando `resultado='negado'`.
 O responsável definiu: **desconto/ajuste financeiro exige gerente com
 PIN/reautenticação** (além do motivo obrigatório já auditado). Logins
 individuais e a retenção da trilha seguem o desenho das etapas deste
-documento; a implementação entra numa frente própria.
+documento; a implementação deve ser entregue em PR independente.
 
 A issue #48 **segue aberta** até a regra estar implementada e testada com
 dois funcionários em dispositivo compartilhado.
