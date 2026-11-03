@@ -190,3 +190,46 @@ Outros padrões encontrados:
 
 Este registro é evidência manual informada pelo proprietário, não um resultado de CI nem uma certificação geral do sistema de autenticação. Os demais cenários continuam sujeitos às suas próprias verificações automatizadas e manuais.
 
+## Sessões staff — armazenamento de digest em fase compatível
+
+### Comportamento anterior confirmado
+
+- O cookie `lqr_session` contém um bearer aleatório de 256 bits, com atributos `HttpOnly`, `Path=/`, `SameSite=Lax` e `Secure` em produção.
+- O TTL configurado é de 12 horas.
+- A tabela `staff_sessoes` armazenava o mesmo bearer em claro na coluna `token`, que era a chave primária.
+- Autenticação, logout e validação de sessão durante redefinição administrativa consultavam o valor em claro.
+- Troca/redefinição de senha e desativação/revogação por funcionário removem as sessões pelo `staff_id`.
+
+### Risco
+
+Uma cópia não autorizada do banco contendo `staff_sessoes.token` poderia permitir reutilizar sessões ainda válidas, sem precisar quebrar senha ou scrypt. O cookie HttpOnly reduz a exposição por JavaScript comum, mas não protege o banco contra leitura.
+
+### Implementação desta fase (aditiva, sem invalidar sessões)
+
+- Migration `0035_staff_session_token_hash.sql` adiciona `token_hash` e índice único parcial, sem remover nem reescrever a coluna antiga.
+- Novas sessões passam a persistir SHA-256 do bearer em `token_hash`.
+- A aplicação aceita tanto o digest quanto sessões legadas sem digest; ao autenticar uma sessão legada, preenche o digest.
+- Logout e revalidação de sessão durante redefinição administrativa aceitam os dois formatos.
+- O cookie continua contendo o bearer original; CSRF continua derivado do bearer original, sem mudança de contrato HTTP.
+- A coluna `token` em claro é mantida temporariamente para compatibilidade com rollback e com instâncias antigas durante a janela de transição.
+
+**Limite de segurança importante:** esta fase ainda não elimina o bearer em claro do banco. Ela prepara o caminho compatível e valida o digest, mas não deve ser descrita como armazenamento exclusivamente por hash.
+
+### Estratégia de rollout e próxima fase
+
+1. Aplicar a migration aditiva e implantar o runtime com leitura dual.
+2. Manter o valor antigo para que uma reversão imediata do runtime continue reconhecendo sessões existentes; nenhuma sessão ativa é invalidada por esta fase.
+3. Aguardar pelo menos o TTL máximo de 12 horas após o último runtime antigo e confirmar que a janela de rollback terminou.
+4. Em mudança separada, redesenhar a chave primária da tabela para permitir remover o bearer em claro e gravar apenas o digest. Essa fase exige novo teste de migração, plano de rollback explícito e validação operacional; não foi executada aqui.
+5. Se houver rollback antes da fase 2, as sessões criadas no novo runtime continuam compatíveis porque o bearer legado permanece disponível.
+
+### Testes adicionados
+
+`tests/postgres-staff-session-token-hash.test.cjs` verifica:
+- persistência do SHA-256 sem alterar o cookie;
+- autenticação com a sessão emitida;
+- compatibilidade/backfill de uma sessão criada no formato legado;
+- revogação da sessão pelos dois identificadores.
+
+Nenhuma sessão, credencial, migration destrutiva ou dado de produção foi alterado por esta implementação.
+
