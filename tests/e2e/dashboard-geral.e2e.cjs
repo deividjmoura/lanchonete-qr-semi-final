@@ -4,7 +4,10 @@ const assert = require('node:assert/strict');
 const { chromium } = require('playwright-core');
 const binary = require('@sparticuz/chromium').default;
 const { criarDashboard, aguardarLayoutDashboard } = require('./fixtures/dashboard.cjs');
-const base = process.env.VISUAL_BASE_URL || 'http://localhost:4173';
+const base = process.env.VISUAL_BASE_URL;
+if (!base) {
+  throw new Error('VISUAL_BASE_URL ausente. Execute npm run test:e2e para usar o preview isolado do runner.');
+}
 
 async function novoContexto(browser, reducedMotion = 'no-preference') {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion, serviceWorkers: 'block' });
