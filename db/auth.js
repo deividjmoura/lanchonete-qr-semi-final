@@ -251,32 +251,44 @@ async function autorizarGerente(login, senha) {
   return ok ? { id: row.id, nome: row.nome, login: row.login, papel: row.papel } : null;
 }
 
+function hashTokenSessao(token) {
+  return crypto.createHash('sha256').update(String(token)).digest('hex');
+}
+
 async function criarSessao(staffId, db = pool) {
   const token = crypto.randomBytes(32).toString('hex');
+  const tokenHash = hashTokenSessao(token);
   const expira = new Date(Date.now() + SESSION_TTL_MS);
   await db.query(
-    `INSERT INTO staff_sessoes (token, staff_id, expira_em)
-     VALUES ($1, $2, $3)`,
-    [token, staffId, expira]
+    `INSERT INTO staff_sessoes (token, token_hash, staff_id, expira_em)
+     VALUES ($1, $2, $3, $4)`,
+    [token, tokenHash, staffId, expira]
   );
   return token;
 }
 
 async function destruirSessao(token) {
   if (!token) return;
-  await pool.query('DELETE FROM staff_sessoes WHERE token = $1', [token]);
+  await pool.query(
+    'DELETE FROM staff_sessoes WHERE token = $1 OR token_hash = $2',
+    [token, hashTokenSessao(token)]
+  );
 }
 
 async function getStaffDaRequisicao(req) {
   const token = parseCookies(req)[SESSION_COOKIE];
   if (!token) return null;
+  const tokenHash = hashTokenSessao(token);
 
   const { rows } = await pool.query(
-    `SELECT s.id, s.nome, s.login, s.papel, s.ativo, ss.expira_em, ${SQL_FLAGS_SENHA}
+    `SELECT s.id, s.nome, s.login, s.papel, s.ativo, ss.expira_em,
+            ss.token AS token_registro, ss.token_hash, ${SQL_FLAGS_SENHA}
      FROM staff_sessoes ss
      JOIN staff s ON s.id = ss.staff_id
-     WHERE ss.token = $1`,
-    [token]
+     WHERE ss.token_hash = $1 OR ss.token = $2
+     ORDER BY CASE WHEN ss.token_hash = $1 THEN 0 ELSE 1 END
+     LIMIT 1`,
+    [tokenHash, token]
   );
   const row = rows[0];
   if (!row || !row.ativo) {
@@ -288,9 +300,17 @@ async function getStaffDaRequisicao(req) {
     return null;
   }
 
-  // Touch leve (não bloqueia se falhar)
+  // Backfill não destrutivo: sessões legadas recebem o digest, mas o token
+  // original permanece durante a janela de rollback (12h de TTL).
+  if (!row.token_hash) {
+    pool.query(
+      'UPDATE staff_sessoes SET token_hash = $1 WHERE token = $2 AND token_hash IS NULL',
+      [tokenHash, token]
+    ).catch(() => {});
+  }
+  // Touch leve (não bloqueia se falhar); identifica a linha usada, hash ou legado.
   pool
-    .query('UPDATE staff_sessoes SET ultimo_uso = now() WHERE token = $1', [token])
+    .query('UPDATE staff_sessoes SET ultimo_uso = now() WHERE token = $1 OR token_hash = $2', [row.token_registro, tokenHash])
     .catch(() => {});
 
   return staffPublico(row);
@@ -457,8 +477,8 @@ async function redefinirSenhaStaff(atorStaffId, loginAlvo, senhaNova, tokenSessa
     // transação para não autorizar escrita com sessão morta.
     if (tokenSessao) {
       const { rows: sessoes } = await client.query(
-        'SELECT 1 FROM staff_sessoes WHERE token = $1 AND staff_id = $2 AND expira_em > now()',
-        [tokenSessao, ator.id]
+        'SELECT 1 FROM staff_sessoes WHERE (token_hash = $1 OR token = $2) AND staff_id = $3 AND expira_em > now()',
+        [hashTokenSessao(tokenSessao), tokenSessao, ator.id]
       );
       if (!sessoes.length) {
         await client.query('ROLLBACK');
