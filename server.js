@@ -84,7 +84,7 @@ const { resolveClientIp, loginUserRateLimitKey } = require('./security/client-ip
 const { ErroAtendimento, transferirMesaAdmin, listarMesasGarcom, iniciarAtendimentoGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
 const { panoramaMesas, mesaDetalhe } = require('./db/mesas-panorama');
 const { normalizarChavePix, inspecionarChavePix } = require('./db/pix-normaliza');
-const { subscribe, broadcast } = require('./db/events');
+const { subscribe, broadcast, closeAccess } = require('./db/events');
 const pool = require('./db/pool');
 const { comprovanteSessao, listarComprovantesRecentes, paginaComprovantes, ErroComprovante } = require('./db/comprovante');
 const { getMesaPorToken } = require('./db/queries');
@@ -438,6 +438,7 @@ const server = http.createServer(async (req, res) => {
     let m;
     if (p === '/api/events' && req.method === 'GET') {
       let access = null;
+      let accessIdentity = null;
       const ticket = u.searchParams.get('ticket');
       if (ticket) {
         const grant = await consumirTicketSse(ticket);
@@ -457,12 +458,14 @@ const server = http.createServer(async (req, res) => {
             return json(res, 401, { error: 'Sessão staff não corresponde ao ticket SSE' });
           }
           access = 'staff';
+          accessIdentity = { type: 'staff', id: Number(staff.id) };
         } else if (grant.access_type === 'mesa') {
           const { rows } = await pool.query('SELECT token FROM mesas WHERE id = $1 LIMIT 1', [grant.resource_id]);
           if (!rows[0] || hashCredencialSse(rows[0].token) !== grant.credential_hash) {
             return json(res, 401, { error: 'Credencial de mesa revogada' });
           }
           access = 'public';
+          accessIdentity = { type: 'mesa', id: Number(grant.resource_id) };
         } else if (grant.access_type === 'garcom') {
           const { rows } = await pool.query(
             'SELECT token, ativo, removido_em FROM garcons WHERE id = $1 LIMIT 1',
@@ -473,6 +476,7 @@ const server = http.createServer(async (req, res) => {
             return json(res, 401, { error: 'Credencial de garçom revogada ou inativa' });
           }
           access = 'public';
+          accessIdentity = { type: 'garcom', id: Number(grant.resource_id) };
         }
       } else {
         // Compatibilidade temporária: clientes antigos ainda podem usar
@@ -489,6 +493,19 @@ const server = http.createServer(async (req, res) => {
           findMesa: (token) => getMesaPorToken(pool, token),
           findGarcom: getGarcomPorToken,
         });
+        if (staff) {
+          accessIdentity = { type: 'staff', id: Number(staff.id) };
+        } else if (access === 'public') {
+          const mesaToken = (u.searchParams.get('mesa') || u.searchParams.get('token') || '').trim();
+          const garcomToken = (u.searchParams.get('garcom') || '').trim();
+          if (mesaToken) {
+            const mesa = await getMesaPorToken(pool, mesaToken);
+            if (mesa) accessIdentity = { type: 'mesa', id: Number(mesa.id) };
+          } else if (garcomToken) {
+            const garcom = await getGarcomPorToken(garcomToken);
+            if (garcom) accessIdentity = { type: 'garcom', id: Number(garcom.id) };
+          }
+        }
       }
       if (!access) {
         return json(res, 401, { error: 'SSE requer staff autenticado ou ticket válido de mesa/garçom' });
@@ -506,7 +523,11 @@ const server = http.createServer(async (req, res) => {
       }
       res.write(`event: hello\ndata: ${JSON.stringify({ ok: true, at: Date.now() })}\n\n`);
       if (typeof res.flushHeaders === 'function') res.flushHeaders();
-      subscribe(res, { publicClient: access === 'public' });
+      subscribe(res, {
+        publicClient: access === 'public',
+        accessType: accessIdentity?.type,
+        accessId: accessIdentity?.id,
+      });
       const hb = setInterval(() => {
         try {
           res.write(`: ping ${Date.now()}\n\n`);
@@ -805,7 +826,9 @@ const server = http.createServer(async (req, res) => {
     }
     if (p === '/api/logout' && req.method === 'POST') {
       verificarProtecaoCSRF(req);
+      const staff = await getStaffDaRequisicao(req);
       await destruirSessao(parseCookies(req)[SESSION_COOKIE]);
+      if (staff) closeAccess('staff', staff.id);
       res.setHeader('Set-Cookie', cookieDeLogout());
       return json(res, 200, { ok: true });
     }
@@ -828,6 +851,7 @@ const server = http.createServer(async (req, res) => {
       }
       const b = await body(req);
       const r = await trocarSenha(staff.id, b && b.senhaAtual, b && b.senhaNova);
+      closeAccess('staff', staff.id);
       res.setHeader('Set-Cookie', cookieDeSessao(r.token));
       return json(res, 200, { ok: true, csrfToken: r.csrfToken, sessoesRevogadas: r.sessoesRevogadas });
     }
@@ -1281,6 +1305,7 @@ const server = http.createServer(async (req, res) => {
         const b = await body(req);
         const staff = await exigirAcesso(req, 'admin');
         const out = await setGarcomAtivo(Number(m[1]), b.ativo !== false, staff, reqId);
+        if (b.ativo === false) closeAccess('garcom', out.id);
         broadcast('update', { type: 'garcom_atualizado', garcomId: out.id });
         return json(res, 200, out);
       } catch (e) {
@@ -1292,6 +1317,7 @@ const server = http.createServer(async (req, res) => {
       try {
         const staff = await exigirAcesso(req, 'admin');
         const out = await removerGarcom(Number(m[1]), staff, reqId);
+        closeAccess('garcom', out.id);
         broadcast('update', { type: 'garcom_removido', garcomId: out.id });
         return json(res, 200, out);
       } catch (e) {
