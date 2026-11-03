@@ -76,6 +76,7 @@ const {
   garantirStaffSeed,
   csrfTokenParaSessao,
   verificarProtecaoCSRF,
+  verificarOrigemRequisicao,
 } = require('./db/auth');
 const { golpePermitido } = require('./db/rateLimit');
 const oauthGoogle = require('./db/oauth-google');
@@ -484,6 +485,21 @@ const server = http.createServer(async (req, res) => {
       } else {
         // Compatibilidade temporária: clientes antigos ainda podem usar
         // ?mesa= ou ?garcom=. Os clientes atualizados usam tickets POST.
+        //
+        // Este ramo é a última superfície que ainda aceita bearer permanente
+        // na URL. O aviso abaixo é a telemetria que decide quando removê-lo:
+        // a janela de compatibilidade só se encerra quando este log parar de
+        // aparecer. Ver docs/security/TICKETS-SSE-CURTOS-2026-11-03.md.
+        if (u.searchParams.has('mesa') || u.searchParams.has('garcom')) {
+          console.warn(linhaDeLog('warn', {
+            reqId,
+            method: req.method,
+            alvo: sanitizarAlvoRequisicao(req.url),
+            status: 200,
+            legado_sse_fallback: true,
+            mensagem: 'SSE autorizado por query legada (mesa/garcom) sem ticket de uso único',
+          }));
+        }
         const staff = await getStaffDaRequisicao(req);
         if (staff && staff.deveTrocarSenha) {
           return json(res, 403, {

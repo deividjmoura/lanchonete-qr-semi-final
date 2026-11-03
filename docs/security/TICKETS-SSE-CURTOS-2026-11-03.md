@@ -18,9 +18,30 @@
 
 - `public/js/realtime.js` e `src/lib/api.ts` usam o contrato novo.
 - A PWA envia o bearer do garçom apenas no corpo POST; a URL SSE contém apenas o ticket temporário.
-- O servidor mantém temporariamente o contrato antigo `?mesa=`/`?garcom=` para clientes antigos durante a transição. Esse fallback é legado e deve ser removido após a janela de atualização/cache dos clientes.
+- O servidor mantém temporariamente o contrato antigo `?mesa=`/`?garcom=` para clientes antigos durante a transição. Esse fallback é legado e tem prazo definido na seção "Remoção do fallback legado" abaixo.
 - Staff autenticado pode continuar usando o stream com cookie HttpOnly; os clientes atuais também passam pelo endpoint de ticket.
 - O ticket é vinculado ao ID e ao fingerprint da credencial atual. Se o token da mesa/garçom mudar ou o garçom for desativado antes do GET SSE, o ticket não autoriza o stream.
+
+## Remoção do fallback legado
+
+O `?mesa=`/`?garcom=` continua aceito para não derrubar abas abertas antes do deploy e PWAs que ainda estejam rodando a versão anterior do service worker. Ele é a única superfície que ainda pode produzir URL com bearer permanente, então a remoção é **prazo, não intenção**.
+
+**Janela de compatibilidade: 30 dias a partir do deploy desta PR (até 2026-12-03, aproximadamente).**
+
+Critérios objetivos para remover (todos, não um subconjunto):
+
+1. **Sorvedouro de telemetria zerado.** O fallback responde com um aviso em log (`level: "warn"`, campo `legado_sse_fallback`) sempre que autoriza sem ticket. Se o contador ficar em zero por 7 dias consecutivos, a janela de clientes antigos terminou.
+2. **Versão do service worker.** O `CACHE_NAME` do `public/garcom-pwa/sw.js` já mudou ao menos duas vezes desde o deploy, garantindo que os PWAs ativos fizeram `skipWaiting` e passaram a pedir ticket.
+3. **Nenhuma URL com bearer observada.** Sem ocorrência de `?mesa=`/`?garcom=` em `GET /api/events` na janela de 7 dias.
+
+Ao final da janela, a PR de remoção deve:
+
+- apagar o ramo `else` de compatibilidade em `GET /api/events` (`server.js`);
+- remover o `servicoLegado`/`eventAccess` por query caso fiquem sem uso;
+- trocar o teste `fallback legado ?mesa= segue funcionando` de `tests/postgres-sse-ticket-http.test.cjs` por um que exija **401** sem ticket;
+- atualizar esta seção com a data efetiva da remoção.
+
+Se ao fim dos 30 dias o critério 1 não estiver zerado, a janela não se renova silenciosamente: é preciso registrar neste documento qual cliente ainda usa o fallback e por quê.
 
 ## Persistência e proteção
 

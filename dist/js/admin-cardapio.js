@@ -14,7 +14,7 @@ function renderProduto(p) {
     const fotoChip = p.fotoUrl ? '<span class="chip on">foto</span>' : '';
   const setorChip = '<span class="chip">' + (p.setor === 'bar' ? '🍹 bar' : '🍳 cozinha') + '</span>';
   const adds = (p.adicionais || []).map(a => esc(a.nome) + ' (' + br(a.preco) + ')').join(', ') || '—';
-  const rems = (p.removiveis || []).join(', ') || '—';
+  const rems = (p.removiveis || []).map(esc).join(', ') || '—';
   const addRows = (p.adicionais || []).map(a =>
     '<div class="row" style="margin-bottom:6px"><span>' + esc(a.nome) + ' · ' + br(a.preco) + '</span>' +
     '<button class="btn" type="button" style="padding:4px 10px" onclick="delAdd(' + a.id + ')">Remover</button></div>'

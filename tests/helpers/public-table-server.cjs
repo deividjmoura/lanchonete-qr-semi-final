@@ -165,8 +165,14 @@ function portaSolicitada() {
   });
 }
 
-/** Cliente HTTP mínimo: conexão nova por chamada e IP de origem escolhível. */
-function httpRequest(base, metodo, caminho, { corpo, ip, timeoutMs = 15_000 } = {}) {
+/**
+ * Cliente HTTP mínimo: conexão nova por chamada e IP de origem escolhível.
+ *
+ * `streamMs` existe para rotas SSE: um `text/event-stream` nunca emite `end`,
+ * então o cliente espera a janela indicada, coleta o que chegou e encerra o
+ * socket por conta própria. Sem isso o teste ficaria pendurado no timeout.
+ */
+function httpRequest(base, metodo, caminho, { corpo, ip, headers, streamMs = 0, timeoutMs = 15_000 } = {}) {
   const url = new URL(caminho, base);
   const dados = corpo === undefined ? null : Buffer.from(JSON.stringify(corpo));
   return new Promise((resolve, reject) => {
@@ -176,9 +182,10 @@ function httpRequest(base, metodo, caminho, { corpo, ip, timeoutMs = 15_000 } = 
         port: url.port,
         path: `${url.pathname}${url.search}`,
         method: metodo.toUpperCase(),
-        headers: dados
-          ? { 'content-type': 'application/json', 'content-length': dados.length }
-          : {},
+        headers: {
+          ...(dados ? { 'content-type': 'application/json', 'content-length': dados.length } : {}),
+          ...(headers || {}),
+        },
         // Conexão nova: o IP observado pelo servidor não pode ser reaproveitado
         // de um socket anterior (keep-alive mascararia o teste de isolamento).
         agent: false,
@@ -187,8 +194,7 @@ function httpRequest(base, metodo, caminho, { corpo, ip, timeoutMs = 15_000 } = 
       },
       (res) => {
         const partes = [];
-        res.on('data', (c) => partes.push(c));
-        res.on('end', () => {
+        const finalizar = () => {
           const texto = Buffer.concat(partes).toString('utf8');
           let json = null;
           try {
@@ -197,7 +203,18 @@ function httpRequest(base, metodo, caminho, { corpo, ip, timeoutMs = 15_000 } = 
             json = null;
           }
           resolve({ status: res.statusCode, headers: res.headers, texto, json });
-        });
+        };
+        // Janela curta para stream: coleta o "hello" e encerra a conexão.
+        if (streamMs > 0) {
+          const timer = setTimeout(() => {
+            res.removeAllListeners('end');
+            req.destroy();
+            finalizar();
+          }, streamMs);
+          timer.unref();
+        }
+        res.on('data', (c) => partes.push(c));
+        res.on('end', finalizar);
       }
     );
     req.setTimeout(timeoutMs, () => req.destroy(new Error(`timeout em ${metodo} ${caminho}`)));

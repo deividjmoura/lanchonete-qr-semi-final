@@ -47,15 +47,30 @@
       if (debounce) clearTimeout(debounce);
       debounce = setTimeout(function () { debounce = null; Promise.resolve().then(onUpdate).catch(function (e) { console.error(e); }); }, debounceMs);
     }
-    function start() {
+    async function start() {
       if (closed) return;
-      if (typeof EventSource === 'undefined') { schedule(); return; }
+      if (typeof EventSource === 'undefined' || typeof fetch !== 'function') { schedule(); return; }
       try {
         if (es) es.close();
-        var query = new URLSearchParams();
-        if (opts.mesa) query.set('mesa', opts.mesa);
-        if (opts.garcom) query.set('garcom', opts.garcom);
-        es = new EventSource('/api/events' + (query.toString() ? '?' + query.toString() : ''));
+        // Credenciais permanentes seguem no corpo POST; a URL SSE recebe só
+        // um ticket aleatório, de uso único e validade de 60 segundos.
+        var credentials = {};
+        if (opts.mesa) credentials.mesa = opts.mesa;
+        if (opts.garcom) credentials.garcom = opts.garcom;
+        var response = await fetch('/api/events/ticket', {
+          method: 'POST',
+          credentials: 'same-origin',
+          cache: 'no-store',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(credentials)
+        });
+        if (!response.ok) throw new Error('Não foi possível autorizar o stream SSE');
+        var result = await response.json();
+        if (closed) return;
+        if (!result || typeof result.ticket !== 'string' || !result.ticket) {
+          throw new Error('Ticket SSE ausente');
+        }
+        es = new EventSource('/api/events?ticket=' + encodeURIComponent(result.ticket));
         es.addEventListener('hello', function () { failures = 0; schedule(); });
         es.addEventListener('update', schedule);
         es.onerror = function () {
@@ -66,7 +81,13 @@
           reconnect = setTimeout(start, Math.min(30000, 1000 * Math.pow(2, Math.min(failures, 5))));
           schedule();
         };
-      } catch (_) { schedule(); }
+      } catch (_) {
+        if (closed) return;
+        failures++;
+        if (reconnect) clearTimeout(reconnect);
+        reconnect = setTimeout(start, Math.min(30000, 1000 * Math.pow(2, Math.min(failures, 5))));
+        schedule();
+      }
     }
     start();
     if (fallbackMs > 0) fallback = setInterval(schedule, fallbackMs);

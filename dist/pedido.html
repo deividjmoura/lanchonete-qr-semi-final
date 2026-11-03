@@ -21,8 +21,9 @@
   </div>
 </header>
 <main class="wrap tracking" id="app">Carregando pedido...</main>
+<script src="/js/safe-dom.js"></script>
 <script>
-const id=Number(location.pathname.split('/').pop()),br=n=>'R$ '+Number(n).toFixed(2).replace('.',','),esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&','<':'<','>':'>','"':'"',"'":'&#039;'}[m]));
+const id=Number(location.pathname.split('/').pop()),br=n=>'R$ '+Number(n).toFixed(2).replace('.',','),esc=s=>SafeDOM.escapeHtml(s);
 const steps=[['PENDING','Pedido recebido','Recebemos seu pedido e ele já está na fila.'],['PREPARING','Na cozinha','A cozinha está preparando seu pedido.'],['READY','Pronto para entregar','Seu pedido ficou pronto. Chame o atendente ou aguarde a entrega.'],['DELIVERED','Entregue','Bom apetite! Esperamos que tenha gostado.']];
 async function load(){
  const r=await fetch('/api/orders/'+id);if(!r.ok){document.getElementById('app').innerHTML='<div class="panel"><h2>Pedido não encontrado</h2></div>';return}

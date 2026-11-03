@@ -204,6 +204,52 @@ test('LQRRealtime troca token de garçom por ticket antes de abrir EventSource',
   assert.equal(closed, true);
 });
 
+test('o realtime.js publicado em dist/ é o mesmo que passou no teste acima', () => {
+  /* `npm start` não roda build: produção serve o dist/ versionado. Um
+     public/js/realtime.js novo com dist/js/realtime.js antigo parece verde em
+     CI (que builda antes de testar) e chega ao usuário com o cliente velho —
+     exatamente o que aconteceu nesta mudança: o PWA continuava abrindo
+     /api/events?garcom=<bearer permanente>. */
+  const fonte = fs.readFileSync('public/js/realtime.js', 'utf8');
+  assert.ok(fs.existsSync('dist/js/realtime.js'), 'dist/js/realtime.js precisa existir');
+  const publicado = fs.readFileSync('dist/js/realtime.js', 'utf8');
+  assert.equal(
+    publicado,
+    fonte,
+    'dist/js/realtime.js divergiu de public/js/realtime.js: copie a fonte para dist/ antes de commitar'
+  );
+  assert.match(publicado, /\/api\/events\/ticket/, 'cliente publicado deve pedir ticket de uso único');
+  assert.doesNotMatch(publicado, /\/api\/events\?(mesa|garcom|token)=/, 'cliente publicado não pode montar URL SSE com bearer permanente');
+});
+
+test('o bundle SPA publicado não monta URL de SSE com bearer permanente', () => {
+  /* Mesmo risco do teste anterior, no bundle do Vite: `src/lib/api.ts` pode
+     estar correto e o dist/assets/index-*.js versionado continuar com o
+     cliente antigo (`/api/events?garcom=...`). Como o E2E de CI roda depois de
+     um build fresco, nenhuma suíte enxergava esse descompasso. */
+  const bundles = fs
+    .readdirSync('dist/assets')
+    .filter((nome) => nome.startsWith('index-') && nome.endsWith('.js'));
+  assert.ok(bundles.length >= 1, 'dist/assets precisa conter o bundle index-*.js');
+
+  for (const nome of bundles) {
+    const codigo = fs.readFileSync(`dist/assets/${nome}`, 'utf8');
+    // Só interessa o bundle que realmente contém o cliente SSE.
+    if (!codigo.includes('/api/events')) continue;
+    assert.match(codigo, /\/api\/events\/ticket/, `${nome}: cliente SSE publicado deve pedir ticket de uso único`);
+    assert.doesNotMatch(
+      codigo,
+      /new EventSource\(`\/api\/events\?\$\{/,
+      `${nome}: cliente SSE publicado ainda concatena query de credencial na URL`
+    );
+    assert.doesNotMatch(
+      codigo,
+      /events\?mesa=|events\?garcom=|events\?token=/,
+      `${nome}: URL de SSE publicada com bearer permanente`
+    );
+  }
+});
+
 test('logs HTTP omitem tokens bearer de caminho, query e mensagens de erro', () => {
   const token = '12345678-1234-4234-8234-123456789abc';
   assert.equal(

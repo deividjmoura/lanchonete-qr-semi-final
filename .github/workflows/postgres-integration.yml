@@ -71,6 +71,11 @@ jobs:
         run: node --test tests/postgres-staff-session-token-hash.test.cjs
       - name: SSE ticket expiry and single-use integration
         run: node --test tests/postgres-sse-tickets.test.cjs
+      # Cobre a rota em si (origem, emissão, consumo único e render do stream).
+      # Foi essa lacuna que deixou um ReferenceError em POST /api/events/ticket
+      # passar como 500 sem nenhuma suíte falhar.
+      - name: SSE ticket HTTP endpoint integration
+        run: node --test tests/postgres-sse-ticket-http.test.cjs
       - name: Tables panorama and praças PostgreSQL integration tests
         run: node --test tests/postgres-mesas-panorama.test.cjs
       - name: Waiter billing with service fee PostgreSQL integration tests
