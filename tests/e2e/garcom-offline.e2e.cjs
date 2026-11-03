@@ -323,7 +323,7 @@ async function main() {
        da aba morta continua gravado. Antes da correção ele nunca mais saía
        desse estado: o flush ignorava `sync` e a recuperação só rodava na
        abertura, desistindo se o lease ainda estivesse válido. */
-    const interrompido = await page.evaluate(async () => {
+    const interrompido = await page.evaluate(async (mesaNumero) => {
       const { openOfflineDb, OfflineStore } = await import('./offline.js');
       const db = await openOfflineDb();
       const token = localStorage.getItem('waiter-token');
@@ -341,13 +341,13 @@ async function main() {
       // O cenário de recuperação usa a mesa criada por este próprio teste.
       // Não escolher mesas.mesas[0]: em banco compartilhado ela pode pertencer
       // a outro fixture e provocar conflito de responsável não determinístico.
-      novo.table = Number(  ids.numero);
+      novo.table = Number(mesaNumero);
       await store.put(novo);
       // lease de uma aba que morreu, ainda dentro da validade
       await store.acquireLease('sync:' + token, 'aba-que-morreu', 45000, Date.now());
       db.close();
       return { localId: novo.localId, chave: novo.idempotencyKey };
-    });
+    }, ids.numero);
     ok('cenário de envio interrompido criado com lease de aba morta ainda válido');
 
     await page.reload({ waitUntil: 'domcontentloaded' });
