@@ -566,13 +566,15 @@ async function redefinirSenhaStaff(atorStaffId, loginAlvo, senhaNova, tokenSessa
 /** Contas que o admin pode ter como alvo da redefinição (sem expor hash). */
 async function listarContasStaff() {
   const { rows } = await pool.query(
-    `SELECT s.id, s.nome, s.login, s.papel, s.ativo, ${SQL_FLAGS_SENHA}
+    `SELECT s.id, s.nome, s.login, s.email, s.google_sub, s.papel, s.ativo, ${SQL_FLAGS_SENHA}
        FROM staff s WHERE s.ativo ORDER BY s.papel, s.login`
   );
   return rows.map((r) => ({
     id: r.id,
     nome: r.nome,
     login: r.login,
+    email: r.email,
+    googleVinculado: Boolean(r.google_sub),
     papel: r.papel,
     deveTrocarSenha: exigeTrocaDeSenha(r),
   }));
