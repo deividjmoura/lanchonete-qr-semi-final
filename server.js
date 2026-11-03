@@ -1175,7 +1175,8 @@ const server = http.createServer(async (req, res) => {
     }
     if (p === '/api/admin/garcons' && req.method === 'POST') {
       try {
-        return json(res, 201, await criarGarcom(await body(req)));
+        const staff = await exigirAcesso(req, 'admin');
+        return json(res, 201, await criarGarcom(await body(req), staff, reqId));
       } catch (e) {
         if (e instanceof ErroGarcom) return json(res, e.status, { error: e.message });
         throw e;

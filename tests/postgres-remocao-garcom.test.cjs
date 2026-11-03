@@ -12,7 +12,7 @@ assert.strictEqual(databaseUrl.pathname, '/qradmin_test', 'Banco de teste obriga
 assert.strictEqual(process.env.NODE_ENV, 'test', 'NODE_ENV=test obrigatório');
 
 const pool = require('../db/pool');
-const { listGarcons, setGarcomAtivo, removerGarcom, getGarcomPorToken, assumirEntregaComoGarcom } = require('../db/garcons');
+const { listGarcons, criarGarcom, setGarcomAtivo, removerGarcom, getGarcomPorToken, assumirEntregaComoGarcom } = require('../db/garcons');
 const { iniciarAtendimentoGarcom, transferirMesaAdmin, metricasGarcons } = require('../db/atendimento');
 const { relatorioVendas } = require('../db/relatorio');
 
@@ -94,6 +94,30 @@ async function fixture() {
   };
   return { ids, novoStaff, novoGarcom, novaMesa, novaSessao, novoPedido, novoItem, request, limpar };
 }
+
+test('criar garçom registra admin, alvo e request ID atomicamente', async () => {
+  const f = await fixture();
+  try {
+    const admin = await f.novoStaff('admin');
+    const requestId = f.request('criar-garcom');
+    const garcom = await criarGarcom({ nome: 'Novo atendimento' }, admin, requestId);
+    f.ids.garcons.push(garcom.id);
+    assert.equal(garcom.nome, 'Novo atendimento');
+    const evento = (await pool.query(
+      'SELECT ator_tipo, ator_id, ator_nome, acao, alvo_tipo, alvo_id, request_id, contexto FROM auditoria_eventos WHERE request_id=$1',
+      [requestId]
+    )).rows[0];
+    assert.ok(evento);
+    assert.equal(evento.ator_tipo, 'staff');
+    assert.equal(Number(evento.ator_id), admin.id);
+    assert.equal(evento.ator_nome, admin.nome);
+    assert.equal(evento.acao, 'garcom_criado');
+    assert.equal(evento.alvo_tipo, 'garcom');
+    assert.equal(evento.alvo_id, String(garcom.id));
+    assert.equal(evento.request_id, requestId);
+    assert.deepEqual(evento.contexto, { garcomNome: 'Novo atendimento' });
+  } finally { await f.limpar(); }
+});
 
 test('remover difere de desativar, invalida o link, audita e preserva autoria e métricas', async () => {
   const f = await fixture();
