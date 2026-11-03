@@ -1188,6 +1188,8 @@ const server = http.createServer(async (req, res) => {
           b && b.senhaNova,
           parseCookies(req)[SESSION_COOKIE]
         );
+        const alvoSessao = await pool.query('SELECT id FROM staff WHERE login = $1 LIMIT 1', [r.login]);
+        if (alvoSessao.rows[0]) closeAccess('staff', alvoSessao.rows[0].id);
         // A própria conta do admin teve as sessões revogadas: rotaciona o cookie
         // para ele não perder o acesso logo após redefinir a própria senha.
         if (r.propriaConta && r.token) res.setHeader('Set-Cookie', cookieDeSessao(r.token));
