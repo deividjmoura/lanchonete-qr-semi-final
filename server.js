@@ -1461,7 +1461,8 @@ const server = http.createServer(async (req, res) => {
     }
     if (p === '/api/admin/categorias' && req.method === 'POST') {
       try {
-        const out = await criarCategoria(await body(req));
+        const staff = await exigirAcesso(req, 'admin');
+        const out = await criarCategoria(await body(req), staff, reqId);
         invalidarCardapio();
         return json(res, 201, out);
       } catch (e) {
@@ -1471,7 +1472,8 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/admin\/categorias\/(\d+)$/)) && req.method === 'PATCH') {
       try {
-        const out = await atualizarCategoria(Number(m[1]), await body(req));
+        const staff = await exigirAcesso(req, 'admin');
+        const out = await atualizarCategoria(Number(m[1]), await body(req), staff, reqId);
         invalidarCardapio();
         return json(res, 200, out);
       } catch (e) {
