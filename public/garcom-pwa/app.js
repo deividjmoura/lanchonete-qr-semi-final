@@ -95,7 +95,10 @@ async function loadProducts(){
  }
  renderProducts();
  if(!products.length){
-  $('#products').innerHTML='<p class="muted">'+(erro||'Nenhum produto disponível no cardápio.')+'</p>';
+  const message=document.createElement('p');
+  message.className='muted';
+  message.textContent=erro||'Nenhum produto disponível no cardápio.';
+  $('#products').replaceChildren(message);
   $('#connection').textContent='Cardápio indisponível';
   console.error('[garcom-pwa] Falha ao carregar produtos:',erro);
  }
