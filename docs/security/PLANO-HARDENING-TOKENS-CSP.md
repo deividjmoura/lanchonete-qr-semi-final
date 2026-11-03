@@ -63,3 +63,46 @@ Esses pontos devem ser revalidados no SHA da implementação antes de qualquer a
 ## Separação de escopo
 
 Esta PR registra o plano e não altera tokens, autenticação, CSP, armazenamento da PWA ou comportamento de produção. As mudanças de runtime devem ser implementadas em PRs pequenas e testáveis, após o inventário.
+
+
+## Inventário estático inicial — SHA `7f18dca7207d27f34d5187e22013c5c74fb10550` (2026-11-03)
+
+Esta seção registra evidências verificadas no código de `main`. É um retrato estático, não substitui testes dinâmicos nem prova ausência de outros caminhos.
+
+### Token do garçom e persistência
+
+- `public/garcom-pwa/app.js` lê o token primeiro de `location.search` (`?token=`) e, como fallback, de `localStorage['waiter-token']`.
+- Quando recebe token pela URL, grava o valor em `localStorage['waiter-token']`. A credencial bearer, portanto, permanece acessível a qualquer JavaScript executado na mesma origem e sobrevive ao fechamento da aba.
+- O mesmo arquivo usa o token para compor chaves de estado local, como alertas de pedidos prontos e pagamentos pendentes. Isso confirma que a persistência atual está ligada à retomada de operações offline, não é apenas uma preferência visual.
+- Os testes E2E existentes abrem a PWA com `/garcom-pwa/?token=...` (`tests/e2e/garcom-offline.e2e.cjs` e `tests/e2e/garcom-lote-cobranca.e2e.cjs`). O formato por query string faz parte do fluxo testado atualmente.
+- Não foi identificada, nesta leitura, uma limpeza da query string após a captura do token. Isso deve ser confirmado em teste de navegador antes de classificar como vazamento explorável. A query pode permanecer no histórico/cópia da URL e merece mitigação própria.
+- Não migrar diretamente para cookie HttpOnly: a PWA precisa autenticar chamadas e retomar sincronização offline. Qualquer mudança exige desenho explícito para o fluxo offline e revogação.
+
+### Tokens em logs
+
+- `db/log-sanitizer.js` remove query strings ao retornar apenas `url.pathname` e mascara segmentos de token em rotas `/api/garcom/:token`, `/api/mesas/:token`, `/garcom/:token` e `/mesa/:token`.
+- O sanitizador de detalhes também mascara UUIDs que apareçam em mensagens ou stacks.
+- `server.js` usa `sanitizarAlvoRequisicao(req.url)` e `sanitizarDetalheErro(e)` no log de erro. A leitura estática não encontrou motivo para registrar o token completo nesse caminho.
+- Falta teste dedicado para tokens enviados na query string da PWA e para caminhos de log em cada rota que recebe token. A garantia atual deve ser descrita como cobertura do sanitizador, não como prova universal de que nenhum log/telemetria externa recebe credenciais.
+
+### CSP e HTML da PWA
+
+- `server.js`, em `applySecurityHeaders()`, define `script-src 'self' 'unsafe-inline'` e `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com` como política padrão.
+- O cabeçalho é aplicado por `send()`, portanto alcança também páginas HTML servidas pelo servidor, incluindo o shell `public/garcom-pwa/index.html`.
+- `public/garcom-pwa/index.html` contém um bloco `<style id="critical-pwa-layout">` inline e carrega `theme-init.js` como script externo. O bloco de estilo explica uma dependência concreta de `style-src 'unsafe-inline'`; não justifica, por si só, `script-src 'unsafe-inline'`.
+- A inspeção inicial do HTML da PWA não encontrou bloco `<script>` inline nem handlers HTML inline. Isso não basta para remover a permissão global: ainda é necessário inventariar as páginas legadas, HTML gerado, scripts injetados por bibliotecas e outros pontos de entrada.
+- A política é montada centralmente no servidor. Uma migração deve começar em Report-Only e considerar a aplicação inteira, não apenas a PWA.
+
+### XSS e sinks de HTML
+
+- O PWA legado em JavaScript usa operações `.innerHTML` para montar estruturas de interface. Nos trechos inspecionados, os valores de dados são inseridos depois em elementos via `.textContent`; isso reduz risco nesses pontos, mas cada atribuição precisa de revisão contextual.
+- O teste `scripts/teste-seguranca.js` procura `dangerouslySetInnerHTML`, `insertAdjacentHTML` e `.innerHTML` apenas em fontes `src/**/*.ts(x)`. Ele não cobre `public/garcom-pwa/app.js`, HTML legado nem outros arquivos JavaScript públicos.
+- Portanto, o teste atual não sustenta a afirmação ampla de que todo o cliente está livre de injeção de HTML cru. Expandir o inventário e adicionar testes comportamentais de payloads nos sinks relevantes antes de usar isso como critério de aceite.
+
+### Próximas verificações antes de qualquer mudança de runtime
+
+1. Fazer busca completa e revisável de `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `document.write`, atributos `on*` e estilos inline em `src/`, `public/` e HTML servido.
+2. Verificar no navegador se `?token=` continua na barra de endereço/histórico após inicialização e se algum recurso externo recebe Referer com a query.
+3. Mapear todas as chamadas de API que transportam token e validar que logs, métricas e relatórios não serializam URL completa.
+4. Executar CSP Report-Only em ambiente de teste com cobertura SPA, páginas legadas e PWA, classificando violações por rota.
+5. Separar a remoção de `script-src 'unsafe-inline'` da remoção de `style-src 'unsafe-inline'`; são dependências diferentes.
