@@ -29,6 +29,6 @@ test('a chave do rate limit de mutações inclui operação, IP e token da mesa'
   const start = server.indexOf('function mesaMutationPermitida(');
   assert.notEqual(start, -1, 'helper de rate limit de mesa deve existir');
   const helper = server.slice(start, server.indexOf('\n}', start) + 2);
-  assert.match(helper, /mesa-mut:\\$\\{operacao\\}:\\$\\{clientIp\\(req\\)\\}:\\$\\{String\\(token\\)\\}/);
-  assert.match(helper, /janelaMs: 5 \\* 60 \\* 1000/);
+  assert.ok(helper.includes('mesa-mut:${operacao}:${clientIp(req)}:${String(token)}'));
+  assert.ok(helper.includes('janelaMs: 5 * 60 * 1000'));
 });
