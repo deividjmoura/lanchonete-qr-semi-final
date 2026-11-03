@@ -132,6 +132,34 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
     );
     assert.equal(orderCount.rows[0].n, 1, 'pedido recusado não pode deixar pedido parcial');
 
+    // Edição iniciada pelo QR registra o ator cliente_mesa e a ação do pedido-pai
+    // na mesma transação que substitui seus itens.
+    const pedidoParaEditar = await pedidos.criarPedido(token, {
+      idempotencyKey: 'ci-edit-' + randomUUID(),
+      items: [{ productId: produtoExtraId, qty: 1 }],
+    });
+    const requestEdicao = 'req-edit-' + randomUUID();
+    await pedidos.editarPedidoCliente(token, pedidoParaEditar.id, {
+      items: [{ productId: produtoExtraId, qty: 2 }],
+    }, null, requestEdicao);
+    const eventoEdicao = (await pool.query(
+      "SELECT ator_tipo, ator_id, acao, alvo_tipo, alvo_id, resultado, request_id, contexto FROM auditoria_eventos WHERE acao='pedido_editado' AND alvo_id=$1 AND request_id=$2",
+      [String(pedidoParaEditar.id), requestEdicao]
+    )).rows[0];
+    assert.ok(eventoEdicao, 'edição de pedido pelo cliente precisa de evento explícito');
+    assert.equal(eventoEdicao.ator_tipo, 'cliente_mesa');
+    assert.equal(eventoEdicao.ator_id, mesaId);
+    assert.equal(eventoEdicao.acao, 'pedido_editado');
+    assert.equal(eventoEdicao.alvo_tipo, 'pedido');
+    assert.equal(eventoEdicao.resultado, 'sucesso');
+    assert.equal(eventoEdicao.contexto.origem, 'qr_cliente');
+    assert.equal(Number(eventoEdicao.contexto.totalAnterior), 5);
+    assert.equal(Number(eventoEdicao.contexto.totalNovo), 10);
+    // A fixture não deve deixar uma segunda comanda aberta para o teste de fechamento.
+    await pedidos.cancelarPedidoCliente(token, pedidoParaEditar.id, null, {
+      requestId: requestEdicao + '-cleanup',
+    });
+
     // Cancelamento público restaura o estoque dentro da transação e marca o pedido como cancelado.
     const pedidoParaCancelar = await pedidos.criarPedido(token, {
       idempotencyKey: 'ci-cancel-' + randomUUID(),
@@ -309,7 +337,7 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
     assert.equal(Number(finalState.rows[0].valor_total), 30);
     assert.equal(Number(finalState.rows[0].valor_cobrado), 30);
     assert.equal(finalState.rows[0].pagamentos, 2, 'pagamento parcial + saldo do fechamento');
-    assert.equal(finalState.rows[0].pedidos, 2, 'pedido entregue + pedido cancelado preservados na sessão');
+    assert.equal(finalState.rows[0].pedidos, 3, 'pedido entregue + dois pedidos cancelados (um editado na fixture) preservados na sessão');
   } finally {
     // Limpeza limitada aos identificadores sintéticos criados por este teste.
     if (mesaId) {

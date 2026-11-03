@@ -137,6 +137,20 @@ function Cardapio() {
   const setCategoriasOrdem = usePub((s) => s.setCategoriasOrdem);
   const [categoriaArrastada, setCategoriaArrastada] = useState<number | null>(null);
   const [ordemAtualizada, setOrdemAtualizada] = useState(false);
+  const toqueTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toqueAtivo = useRef(false);
+  const toqueDestino = useRef<number | null>(null);
+  const toqueOrigem = useRef<number | null>(null);
+  const limparToque = () => {
+    if (toqueTimer.current) clearTimeout(toqueTimer.current);
+    toqueTimer.current = null;
+    toqueAtivo.current = false;
+    toqueDestino.current = null;
+    toqueOrigem.current = null;
+  };
+  useEffect(() => () => {
+    if (toqueTimer.current) clearTimeout(toqueTimer.current);
+  }, []);
   const [editando, setEditando] = useState<Produto | null>(null);
   const [novoAberto, setNovoAberto] = useState(false);
   const [novaCat, setNovaCat] = useState("");
@@ -148,6 +162,19 @@ function Cardapio() {
   const catsOrdenadas = [...categorias].sort((a, b) => a.ordem - b.ordem);
   const nomesCat = new Set(catsOrdenadas.map((c) => c.nome));
   const orfaos = produtos.filter((p) => !nomesCat.has(p.categoria));
+
+  const reposicionarCategoria = (origemId: number, destinoId: number) => {
+    if (origemId === destinoId) return;
+    const ids = catsOrdenadas.map((cat) => cat.id);
+    const origem = ids.indexOf(origemId);
+    const destino = ids.indexOf(destinoId);
+    if (origem < 0 || destino < 0) return;
+    ids.splice(origem, 1);
+    ids.splice(destino, 0, origemId);
+    setCategoriasOrdem(ids);
+    setCategoriaArrastada(null);
+    setOrdemAtualizada(true);
+  };
 
   const toggleCat = (id: number) => {
     setAbertas((prev) => {
@@ -276,20 +303,12 @@ function Cardapio() {
           const lista = produtos.filter((p) => p.categoria === c.nome);
           const open = abertas.has(c.id);
           const reposicionar = (destinoId: number) => {
-            if (categoriaArrastada === null || categoriaArrastada === destinoId) return;
-            const ids = catsOrdenadas.map((cat) => cat.id);
-            const origem = ids.indexOf(categoriaArrastada);
-            const destino = ids.indexOf(destinoId);
-            if (origem < 0 || destino < 0) return;
-            ids.splice(origem, 1);
-            ids.splice(destino, 0, categoriaArrastada);
-            setCategoriasOrdem(ids);
-            setCategoriaArrastada(null);
-            setOrdemAtualizada(true);
+            if (categoriaArrastada !== null) reposicionarCategoria(categoriaArrastada, destinoId);
           };
           return (
             <li
               key={c.id}
+              data-category-id={c.id}
               draggable
               onDragStart={(event) => {
                 if ((event.target as HTMLElement).closest("button:not([data-drag-handle])")) {
@@ -337,9 +356,40 @@ function Cardapio() {
                   }}
                   aria-expanded={open}
                   data-drag-handle
-                  aria-roledescription="categoria arrastável; use Alt mais seta para cima ou para baixo para reordenar"
+                  onPointerDown={(event) => {
+                    if (event.pointerType !== "touch") return;
+                    limparToque();
+                    toqueOrigem.current = c.id;
+                    const handle = event.currentTarget;
+                    const pointerId = event.pointerId;
+                    toqueTimer.current = setTimeout(() => {
+                      toqueAtivo.current = true;
+                      toqueDestino.current = c.id;
+                      setCategoriaArrastada(c.id);
+                      try { handle.setPointerCapture(pointerId); } catch { /* captura pode não estar disponível */ }
+                    }, 450);
+                  }}
+                  onPointerMove={(event) => {
+                    if (!toqueAtivo.current) return;
+                    const alvo = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-category-id]");
+                    const id = Number(alvo?.dataset.categoryId);
+                    if (Number.isSafeInteger(id) && id > 0) toqueDestino.current = id;
+                  }}
+                  onPointerUp={() => {
+                    if (toqueTimer.current) clearTimeout(toqueTimer.current);
+                    toqueTimer.current = null;
+                    if (toqueAtivo.current && toqueOrigem.current !== null && toqueDestino.current !== null) {
+                      reposicionarCategoria(toqueOrigem.current, toqueDestino.current);
+                    }
+                    limparToque();
+                  }}
+                  onPointerCancel={() => {
+                    limparToque();
+                    setCategoriaArrastada(null);
+                  }}
+                  aria-roledescription="categoria arrastável; segure e arraste no celular; use Alt mais seta para cima ou para baixo no teclado"
                   title="Segure e arraste para mudar a ordem. No teclado, use Alt + ↑ ou Alt + ↓."
-                  className="flex items-center gap-2.5 flex-1 min-w-[10rem] text-left rounded-sm px-2 py-1.5 hover:bg-surface-hover cursor-grab active:cursor-grabbing"
+                  className="flex items-center gap-2.5 flex-1 min-w-[10rem] text-left rounded-sm px-2 py-1.5 hover:bg-surface-hover cursor-grab active:cursor-grabbing touch-none select-none"
                 >
                   <span aria-hidden="true" className="text-text-subtle select-none">⠿</span>
                   {open ? (

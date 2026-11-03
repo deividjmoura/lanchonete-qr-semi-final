@@ -127,6 +127,52 @@ test('cancelamento, PIX e fechamento estão ligados à trilha no código de prod
   assert.match(server, /fecharSessao\(Number\(m\[1\]\), dados, operador\?\.nome \|\| null, \{[\s\S]*?requestId: reqId/);
   assert.match(server, /registrarPagamento\(Number\(m\[1\]\), await body\(req\), operador\?\.nome \|\| null, null, \{[\s\S]*?requestId: reqId/);
   assert.match(server, /cancelarPedidoCliente\(m\[1\], Number\(m\[2\]\), null, \{ requestId: reqId \}\)/);
+
+  // Edição do pedido-pai precisa identificar também o cliente QR, não apenas o garçom.
+  assert.match(pedidos, /atorTipo: garcomResponsavelId \? 'garcom' : 'cliente_mesa'/);
+  assert.match(pedidos, /acao: 'pedido_editado'/);
+  assert.match(pedidos, /origem: garcomResponsavelId \? 'pwa_garcom' : 'qr_cliente'/);
+});
+
+test('purge do histórico registra autoria na mesma transação e recebe request ID da rota', () => {
+  const purge = fs.readFileSync(path.join(__dirname, '..', 'db', 'purge.js'), 'utf8');
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const evento = purge.indexOf("acao: 'historico_purgado'");
+  const commit = purge.indexOf("await client.query('COMMIT')", evento);
+  assert.ok(evento > 0, 'purge deve registrar evento explícito');
+  assert.ok(commit > evento, 'evento deve ser inserido antes do COMMIT');
+  assert.match(purge, /registrarEvento\(client, \{/);
+  assert.match(purge, /atorTipo: ator \? 'staff' : 'sistema'/);
+  assert.match(purge, /requestId: opts\.requestId \|\| null/);
+  assert.match(server, /purgeHistorico\(\{[\s\S]*?ator: staff,[\s\S]*?requestId: reqId/);
+  assert.match(purge, /contexto: \{[\s\S]*?sessoes: delSess\.rowCount[\s\S]*?pagamentos: preview\.pagamentos/);
+});
+
+test('criação de garçom exige ator admin na rota e grava evento com request ID na transação', () => {
+  const garcons = fs.readFileSync(path.join(__dirname, '..', 'db', 'garcons.js'), 'utf8');
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const criar = garcons.indexOf('async function criarGarcom(');
+  const evento = garcons.indexOf("acao: 'garcom_criado'", criar);
+  const commit = garcons.indexOf("await client.query('COMMIT')", evento);
+  assert.ok(criar >= 0 && evento > criar && commit > evento);
+  assert.match(garcons.slice(criar, commit), /SELECT id, nome, papel, ativo FROM staff WHERE id=\$1 FOR SHARE/);
+  assert.match(garcons.slice(criar, commit), /registrarEvento\(client, \{/);
+  assert.match(garcons.slice(criar, commit), /requestId,/);
+  assert.match(server, /const staff = await exigirAcesso\(req, 'admin'\);[\s\S]*?criarGarcom\(await body\(req\), staff, reqId\)/);
+});
+
+test('habilitação de mesas registra admin e mudança de quantidade antes do commit', () => {
+  const admin = fs.readFileSync(path.join(__dirname, '..', 'db', 'admin.js'), 'utf8');
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const inicio = admin.indexOf('async function ativarMesas(');
+  const evento = admin.indexOf("acao: 'mesas_habilitadas'", inicio);
+  const commit = admin.indexOf("await client.query('COMMIT')", inicio);
+  assert.ok(inicio >= 0 && evento > inicio && commit > evento);
+  assert.match(admin.slice(inicio, commit), /SELECT id, nome, papel, ativo FROM staff WHERE id=\$1 FOR SHARE/);
+  assert.match(admin.slice(inicio, commit), /registrarEvento\(client, \{/);
+  assert.match(admin.slice(inicio, commit), /requestId,/);
+  assert.match(admin.slice(inicio, commit), /quantidadeAnterior: atual, quantidadeNova: quantidade/);
+  assert.match(server, /ativarMesas\(payload\.quantidade, staff, reqId\)/);
 });
 
 test('migration 0025 cria a tabela sem colunas de segredo e com índices de consulta', () => {

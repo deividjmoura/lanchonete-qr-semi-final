@@ -1,5 +1,6 @@
 // CRUD de cardápio e listagem de mesas para o painel admin.
 const pool = require('./pool');
+const { resolverFotoUrl } = require('./foto-serve');
 const { numeroFinito, numeroInteiroPositivo } = require('./validacao');
 
 function normalizeFotoUrl(raw) {
@@ -258,13 +259,24 @@ async function quantidadeMesasAtivas() {
   return Number(rows[0]?.quantidade ?? 20);
 }
 
-async function ativarMesas(quantidade) {
+async function ativarMesas(quantidade, ator = null, requestId = null) {
   if (!Number.isSafeInteger(quantidade) || quantidade < 1 || quantidade > 70) {
     throw new ErroAdmin(400, 'Informe uma quantidade inteira de 1 a 70 mesas');
   }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    let admin = null;
+    if (ator) {
+      const result = await client.query(
+        'SELECT id, nome, papel, ativo FROM staff WHERE id=$1 FOR SHARE',
+        [ator.id]
+      );
+      admin = result.rows[0];
+      if (!admin?.ativo || admin.papel !== 'admin') {
+        throw new ErroAdmin(403, 'Apenas um administrador ativo pode habilitar mesas.');
+      }
+    }
     // Serializa ampliações simultâneas e protege do limite excedido.
     const { rows } = await client.query('SELECT quantidade FROM configuracao_mesas WHERE id = 1 FOR UPDATE');
     if (!rows.length) throw new ErroAdmin(500, 'Configuração de mesas não inicializada');
@@ -276,11 +288,24 @@ async function ativarMesas(quantidade) {
     if (existentes[0].total < quantidade) {
       throw new ErroAdmin(409, 'Mesas ainda não provisionadas. Configure NUM_MESAS=70 e execute o seed.');
     }
-    await client.query('UPDATE configuracao_mesas SET quantidade = $1 WHERE id = 1', [quantidade]);
+    if (quantidade > atual) {
+      await client.query('UPDATE configuracao_mesas SET quantidade = $1 WHERE id = 1', [quantidade]);
+      const { registrarEvento } = require('./auditoria');
+      await registrarEvento(client, {
+        atorTipo: admin ? 'staff' : 'sistema',
+        atorId: admin ? Number(admin.id) : null,
+        atorNome: admin?.nome || null,
+        acao: 'mesas_habilitadas',
+        alvoTipo: 'configuracao_mesas',
+        alvoId: '1',
+        requestId,
+        contexto: { quantidadeAnterior: atual, quantidadeNova: quantidade },
+      });
+    }
     await client.query('COMMIT');
     return { quantidade };
   } catch (e) {
-    await client.query('ROLLBACK');
+    await client.query('ROLLBACK').catch(() => {});
     throw e;
   } finally {
     client.release();
@@ -294,7 +319,7 @@ function mapProdutoRow(p) {
     nome: p.nome,
     descricao: p.descricao,
     preco: Number(p.preco),
-    fotoUrl: p.foto_url,
+    fotoUrl: resolverFotoUrl(p.foto_url, Number(p.id)),
     disponivel: p.disponivel,
     pedePontoCarne: p.pede_ponto_carne,
     setor: p.setor === 'bar' ? 'bar' : 'cozinha',

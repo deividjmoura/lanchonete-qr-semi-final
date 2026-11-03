@@ -1234,7 +1234,8 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/admin/mesas/ativar' && req.method === 'POST') {
       try {
         const payload = await body(req);
-        const out = await ativarMesas(payload.quantidade);
+        const staff = await exigirAcesso(req, 'admin');
+        const out = await ativarMesas(payload.quantidade, staff, reqId);
         broadcast('update', { type: 'mesas_ativadas' });
         return json(res, 200, out);
       } catch (e) {
@@ -1315,7 +1316,8 @@ const server = http.createServer(async (req, res) => {
     }
     if (p === '/api/admin/garcons' && req.method === 'POST') {
       try {
-        return json(res, 201, await criarGarcom(await body(req)));
+        const staff = await exigirAcesso(req, 'admin');
+        return json(res, 201, await criarGarcom(await body(req), staff, reqId));
       } catch (e) {
         if (e instanceof ErroGarcom) return json(res, e.status, { error: e.message });
         throw e;
@@ -1364,10 +1366,13 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/admin/historico/purge' && req.method === 'POST') {
       try {
         const b = await body(req);
+        const staff = await getStaffDaRequisicao(req);
         return json(res, 200, await purgeHistorico({
           before: b.before,
           confirm: b.confirm === true,
           dryRun: b.dryRun === true,
+          ator: staff,
+          requestId: reqId,
         }));
       } catch (e) {
         if (e instanceof ErroPurge || e.status) return json(res, e.status || 400, { error: e.message });
