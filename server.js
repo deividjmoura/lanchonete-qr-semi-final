@@ -1014,6 +1014,30 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/admin/contas' && req.method === 'GET') {
       return json(res, 200, await listarContasStaff());
     }
+
+    // Cadastro prévio do e-mail autorizado para login Google. Conta já vinculada
+    // não pode trocar o e-mail por esta rota, evitando sequestro de identidade.
+    if (p === '/api/admin/contas/email' && req.method === 'PUT') {
+      const ator = await exigirSessao(req);
+      if (ator.papel !== 'admin') return json(res, 403, { error: 'Apenas o administrador pode vincular e-mails.' });
+      const b = await body(req);
+      const id = Number(b && b.id);
+      const email = String(b && b.email || '').trim().toLowerCase();
+      if (!Number.isSafeInteger(id) || id <= 0 || email.length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+        return json(res, 400, { error: 'Informe um funcionário e um e-mail válido.' });
+      }
+      try {
+        const result = await pool.query(
+          'UPDATE staff SET email = $2 WHERE id = $1 AND ativo = TRUE AND google_sub IS NULL RETURNING id, nome, login, email',
+          [id, email]
+        );
+        if (!result.rowCount) return json(res, 409, { error: 'Funcionário inexistente, inativo ou já vinculado a uma conta Google.' });
+        return json(res, 200, { ok: true, staff: result.rows[0] });
+      } catch (e) {
+        if (e.code === '23505') return json(res, 409, { error: 'Este e-mail já está vinculado a outro funcionário.' });
+        throw e;
+      }
+    }
     /* Redefinição de senha de qualquer setor, sem exigir a senha antiga
        (o caso de uso é justamente a senha esquecida). A autorização é o papel
        admin, revalidado dentro da transação em redefinirSenhaStaff(). */
