@@ -102,6 +102,11 @@ async function main() {
     const errosPagina = [];
     const eventRequests = [];
     const ticketPosts = [];
+    const ticketResponses = [];
+    page.on('response', async (response) => {
+      if (new URL(response.url()).pathname !== '/api/events/ticket') return;
+      ticketResponses.push({ status: response.status(), body: await response.text().catch(() => '') });
+    });
     page.on('pageerror', (e) => errosPagina.push(String(e)));
     page.on('dialog', (d) => d.accept());
     page.on('request', (request) => {
@@ -134,7 +139,7 @@ async function main() {
       await page.waitForTimeout(100);
     }
     const sseUrl = eventRequests.find((value) => value.searchParams.has('ticket'));
-    assert.ok(sseUrl, 'PWA deve abrir EventSource usando ticket de curta duração');
+    assert.ok(sseUrl, 'PWA deve abrir EventSource usando ticket de curta duração; respostas POST: ' + JSON.stringify(ticketResponses) + '; erros JS: ' + JSON.stringify(errosPagina));
     assert.equal(sseUrl.searchParams.has('garcom'), false, 'URL SSE não pode conter bearer de garçom');
     assert.equal(sseUrl.searchParams.has('mesa'), false, 'URL SSE não pode conter bearer de mesa');
     assert.equal(sseUrl.toString().includes(token), false, 'URL SSE não pode conter o token permanente');
