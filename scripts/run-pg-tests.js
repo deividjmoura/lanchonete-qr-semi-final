@@ -50,6 +50,9 @@ const suites = [
   'postgres-pracas-remocao.test.cjs',
   'postgres-garcom-servico.test.cjs',
   'postgres-producao-parcial.test.cjs',
+  // Rate limit das mutações públicas de mesa (PR #196): sobe o server.js real
+  // em cópia isolada e fala HTTP com ele.
+  'postgres-public-table-rate-limit.test.cjs',
 ];
 
 // O drill de backup precisa de pg_dump/psql no PATH. Em ambiente local com
