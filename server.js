@@ -84,11 +84,12 @@ const { resolveClientIp, loginUserRateLimitKey } = require('./security/client-ip
 const { ErroAtendimento, transferirMesaAdmin, listarMesasGarcom, iniciarAtendimentoGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
 const { panoramaMesas, mesaDetalhe } = require('./db/mesas-panorama');
 const { normalizarChavePix, inspecionarChavePix } = require('./db/pix-normaliza');
-const { subscribe, broadcast } = require('./db/events');
+const { subscribe, broadcast, closeAccess } = require('./db/events');
 const pool = require('./db/pool');
 const { comprovanteSessao, listarComprovantesRecentes, paginaComprovantes, ErroComprovante } = require('./db/comprovante');
 const { getMesaPorToken } = require('./db/queries');
 const { eventAccess } = require('./db/event-access');
+const { emitirTicketSse, consumirTicketSse, hashCredencialSse, SSE_TICKET_TTL_MS } = require('./db/sse-tickets');
 const {
   ErroGarcom,
   listGarcons,
@@ -379,30 +380,141 @@ const server = http.createServer(async (req, res) => {
       return res.end(foto.buffer);
     }
 
+    if (p === '/api/events/ticket' && req.method === 'POST') {
+      const payload = await body(req, { maxBytes: 4096 });
+      const staff = await getStaffDaRequisicao(req);
+      let grant;
+      if (staff) {
+        if (staff.deveTrocarSenha) {
+          return json(res, 403, {
+            error: 'Troca de senha obrigatória antes de continuar.',
+            code: 'SENHA_TROCA_OBRIGATORIA',
+          });
+        }
+        const cookieToken = parseCookies(req)[SESSION_COOKIE];
+        if (!cookieToken) return json(res, 401, { error: 'Sessão staff inválida' });
+        grant = { tipo: 'staff', id: staff.id, credencial: cookieToken };
+      } else {
+        if (payload.mesa && payload.garcom) {
+          return json(res, 400, { error: 'Informe apenas uma credencial de acesso SSE' });
+        }
+        if (payload.mesa) {
+          if (typeof payload.mesa !== 'string' || payload.mesa.length > 256) {
+            return json(res, 400, { error: 'Credencial de mesa inválida' });
+          }
+          const mesa = await getMesaPorToken(pool, payload.mesa);
+          if (!mesa) return json(res, 401, { error: 'Token de mesa inválido' });
+          grant = { tipo: 'mesa', id: mesa.id, credencial: payload.mesa };
+        } else if (payload.garcom) {
+          if (typeof payload.garcom !== 'string' || payload.garcom.length > 256) {
+            return json(res, 400, { error: 'Credencial de garçom inválida' });
+          }
+          const garcom = await getGarcomPorToken(payload.garcom);
+          if (!garcom || !garcom.ativo || garcom.removido_em) {
+            return json(res, 401, { error: 'Token de garçom inválido ou inativo' });
+          }
+          grant = { tipo: 'garcom', id: garcom.id, credencial: payload.garcom };
+        } else {
+          return json(res, 401, { error: 'SSE requer sessão staff ou credencial de mesa/garçom' });
+        }
+      }
+
+      if (!golpePermitido(`sse-ticket:${grant.tipo}:${grant.id}:${clientIp(req)}`, {
+        janelaMs: 60 * 1000,
+        max: 30,
+      })) {
+        return json(res, 429, { error: 'Muitas solicitações de conexão ao vivo. Aguarde e tente novamente.' });
+      }
+      const ticket = await emitirTicketSse({
+        tipo: grant.tipo,
+        recursoId: grant.id,
+        credencial: grant.credencial,
+      });
+      return json(res, 201, { ticket, expiresInMs: SSE_TICKET_TTL_MS }, {
+        'Cache-Control': 'no-store',
+      });
+    }
+
     let m;
     if (p === '/api/events' && req.method === 'GET') {
-      const staff = await getStaffDaRequisicao(req);
-      // A sessão pode continuar válida para abrir /api/me e trocar a senha,
-      // mas não deve manter acesso ao stream operacional durante a troca obrigatória.
-      if (staff && staff.deveTrocarSenha) {
-        return json(res, 403, {
-          error: 'Troca de senha obrigatória antes de continuar.',
-          code: 'SENHA_TROCA_OBRIGATORIA',
+      let access = null;
+      let accessIdentity = null;
+      const ticket = u.searchParams.get('ticket');
+      if (ticket) {
+        const grant = await consumirTicketSse(ticket);
+        if (!grant) return json(res, 401, { error: 'Ticket SSE expirado ou já utilizado' });
+
+        if (grant.access_type === 'staff') {
+          const staff = await getStaffDaRequisicao(req);
+          const cookieToken = parseCookies(req)[SESSION_COOKIE];
+          if (staff && staff.deveTrocarSenha) {
+            return json(res, 403, {
+              error: 'Troca de senha obrigatória antes de continuar.',
+              code: 'SENHA_TROCA_OBRIGATORIA',
+            });
+          }
+          if (!staff || Number(staff.id) !== Number(grant.resource_id) ||
+              hashCredencialSse(cookieToken) !== grant.credential_hash) {
+            return json(res, 401, { error: 'Sessão staff não corresponde ao ticket SSE' });
+          }
+          access = 'staff';
+          accessIdentity = { type: 'staff', id: Number(staff.id) };
+        } else if (grant.access_type === 'mesa') {
+          const { rows } = await pool.query('SELECT token FROM mesas WHERE id = $1 LIMIT 1', [grant.resource_id]);
+          if (!rows[0] || hashCredencialSse(rows[0].token) !== grant.credential_hash) {
+            return json(res, 401, { error: 'Credencial de mesa revogada' });
+          }
+          access = 'public';
+          accessIdentity = { type: 'mesa', id: Number(grant.resource_id) };
+        } else if (grant.access_type === 'garcom') {
+          const { rows } = await pool.query(
+            'SELECT token, ativo, removido_em FROM garcons WHERE id = $1 LIMIT 1',
+            [grant.resource_id]
+          );
+          if (!rows[0] || !rows[0].ativo || rows[0].removido_em ||
+              hashCredencialSse(rows[0].token) !== grant.credential_hash) {
+            return json(res, 401, { error: 'Credencial de garçom revogada ou inativa' });
+          }
+          access = 'public';
+          accessIdentity = { type: 'garcom', id: Number(grant.resource_id) };
+        }
+      } else {
+        // Compatibilidade temporária: clientes antigos ainda podem usar
+        // ?mesa= ou ?garcom=. Os clientes atualizados usam tickets POST.
+        const staff = await getStaffDaRequisicao(req);
+        if (staff && staff.deveTrocarSenha) {
+          return json(res, 403, {
+            error: 'Troca de senha obrigatória antes de continuar.',
+            code: 'SENHA_TROCA_OBRIGATORIA',
+          });
+        }
+        access = await eventAccess(u.searchParams, {
+          staff,
+          findMesa: (token) => getMesaPorToken(pool, token),
+          findGarcom: getGarcomPorToken,
         });
+        if (staff) {
+          accessIdentity = { type: 'staff', id: Number(staff.id) };
+        } else if (access === 'public') {
+          const mesaToken = (u.searchParams.get('mesa') || u.searchParams.get('token') || '').trim();
+          const garcomToken = (u.searchParams.get('garcom') || '').trim();
+          if (mesaToken) {
+            const mesa = await getMesaPorToken(pool, mesaToken);
+            if (mesa) accessIdentity = { type: 'mesa', id: Number(mesa.id) };
+          } else if (garcomToken) {
+            const garcom = await getGarcomPorToken(garcomToken);
+            if (garcom) accessIdentity = { type: 'garcom', id: Number(garcom.id) };
+          }
+        }
       }
-      const access = await eventAccess(u.searchParams, {
-        staff,
-        findMesa: (token) => getMesaPorToken(pool, token),
-        findGarcom: getGarcomPorToken,
-      });
       if (!access) {
-        return json(res, 401, { error: 'SSE requer staff autenticado ou token válido de mesa/garçom' });
+        return json(res, 401, { error: 'SSE requer staff autenticado ou ticket válido de mesa/garçom' });
       }
 
       applySecurityHeaders(res);
       res.writeHead(200, {
         'Content-Type': 'text/event-stream; charset=utf-8',
-        'Cache-Control': 'no-cache, no-transform',
+        'Cache-Control': 'no-store, no-cache, no-transform',
         Connection: 'keep-alive',
         'X-Accel-Buffering': 'no',
       });
@@ -411,7 +523,11 @@ const server = http.createServer(async (req, res) => {
       }
       res.write(`event: hello\ndata: ${JSON.stringify({ ok: true, at: Date.now() })}\n\n`);
       if (typeof res.flushHeaders === 'function') res.flushHeaders();
-      subscribe(res, { publicClient: access === 'public' });
+      subscribe(res, {
+        publicClient: access === 'public',
+        accessType: accessIdentity?.type,
+        accessId: accessIdentity?.id,
+      });
       const hb = setInterval(() => {
         try {
           res.write(`: ping ${Date.now()}\n\n`);
@@ -710,7 +826,9 @@ const server = http.createServer(async (req, res) => {
     }
     if (p === '/api/logout' && req.method === 'POST') {
       verificarProtecaoCSRF(req);
+      const staff = await getStaffDaRequisicao(req);
       await destruirSessao(parseCookies(req)[SESSION_COOKIE]);
+      if (staff) closeAccess('staff', staff.id);
       res.setHeader('Set-Cookie', cookieDeLogout());
       return json(res, 200, { ok: true });
     }
@@ -733,6 +851,7 @@ const server = http.createServer(async (req, res) => {
       }
       const b = await body(req);
       const r = await trocarSenha(staff.id, b && b.senhaAtual, b && b.senhaNova);
+      closeAccess('staff', staff.id);
       res.setHeader('Set-Cookie', cookieDeSessao(r.token));
       return json(res, 200, { ok: true, csrfToken: r.csrfToken, sessoesRevogadas: r.sessoesRevogadas });
     }
@@ -1069,6 +1188,8 @@ const server = http.createServer(async (req, res) => {
           b && b.senhaNova,
           parseCookies(req)[SESSION_COOKIE]
         );
+        const alvoSessao = await pool.query('SELECT id FROM staff WHERE login = $1 LIMIT 1', [r.login]);
+        if (alvoSessao.rows[0]) closeAccess('staff', alvoSessao.rows[0].id);
         // A própria conta do admin teve as sessões revogadas: rotaciona o cookie
         // para ele não perder o acesso logo após redefinir a própria senha.
         if (r.propriaConta && r.token) res.setHeader('Set-Cookie', cookieDeSessao(r.token));
@@ -1186,6 +1307,7 @@ const server = http.createServer(async (req, res) => {
         const b = await body(req);
         const staff = await exigirAcesso(req, 'admin');
         const out = await setGarcomAtivo(Number(m[1]), b.ativo !== false, staff, reqId);
+        if (b.ativo === false) closeAccess('garcom', out.id);
         broadcast('update', { type: 'garcom_atualizado', garcomId: out.id });
         return json(res, 200, out);
       } catch (e) {
@@ -1197,6 +1319,7 @@ const server = http.createServer(async (req, res) => {
       try {
         const staff = await exigirAcesso(req, 'admin');
         const out = await removerGarcom(Number(m[1]), staff, reqId);
+        closeAccess('garcom', out.id);
         broadcast('update', { type: 'garcom_removido', garcomId: out.id });
         return json(res, 200, out);
       } catch (e) {
