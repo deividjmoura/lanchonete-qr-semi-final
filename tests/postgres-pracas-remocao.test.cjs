@@ -25,10 +25,29 @@ test('excluir praça devolve as mesas para “Sem praça”, audita e é 404 se 
   const nome = `Varanda ${suffix}`;
   const numeros = [1, 2];
   const pracaOriginal = {};
+  // Mesas criadas por esta suíte (a limpeza só apaga o que ela mesma criou).
+  const mesasCriadas = [];
   let pracaId = null;
   let staffId = null;
 
   try {
+    // As mesas 1 e 2 do caminho feliz vêm do seed em ambientes de desenvolvimento,
+    // mas o CI aplica apenas migrations. Criar aqui (com a quantidade já liberada
+    // na configuração) mantém a suíte hermética: ela não depende de `npm run db:seed`
+    // e continua funcionando quando as mesas já existem.
+    for (const numero of numeros) {
+      const { rows } = await pool.query(
+        'INSERT INTO mesas (numero) VALUES ($1) ON CONFLICT (numero) DO NOTHING RETURNING id',
+        [numero],
+      );
+      if (rows[0]) mesasCriadas.push(rows[0].id);
+    }
+    const config = (await pool.query('SELECT quantidade FROM configuracao_mesas WHERE id = 1')).rows[0];
+    assert.ok(
+      Number(config?.quantidade) >= Math.max(...numeros),
+      'configuração de mesas precisa liberar as mesas usadas no teste',
+    );
+
     // Praça inexistente: 404 limpo, sem apagar nada por engano.
     const antes = (await pool.query('SELECT COUNT(*)::int AS total FROM mesa_pracas')).rows[0].total;
     await assert.rejects(
@@ -99,6 +118,12 @@ test('excluir praça devolve as mesas para “Sem praça”, audita e é 404 se 
         .catch(() => {});
     }
     if (staffId) await pool.query('DELETE FROM staff WHERE id = $1', [staffId]).catch(() => {});
+    // Só remove as mesas que esta execução criou; as pré-existentes ficam intactas.
+    if (mesasCriadas.length) {
+      await pool
+        .query('DELETE FROM mesas WHERE id = ANY($1::int[])', [mesasCriadas])
+        .catch(() => {});
+    }
     await pool.end();
   }
 });
