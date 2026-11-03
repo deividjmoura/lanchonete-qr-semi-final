@@ -103,6 +103,15 @@ async function main() {
     page.on('pageerror', (e) => errosPagina.push(String(e)));
     page.on('dialog', (d) => d.accept());
 
+    // Simula uma entrada antiga no Cache Storage para provar que a ativação
+    // da versão nova remove o cache anterior, inclusive a chave com bearer.
+    await page.goto(`${base}/healthz`, { waitUntil: 'domcontentloaded' });
+    await page.evaluate(async (tokenAntigo) => {
+      const cache = await caches.open('garcom-pwa-shell-v36');
+      const urlAntiga = new URL('/garcom-pwa/?token=' + encodeURIComponent(tokenAntigo), location.origin);
+      await cache.put(new Request(urlAntiga.href), new Response('stale bearer URL'));
+    }, token);
+
     // O SSE fica aberto de propósito: 'networkidle' nunca aconteceria.
     const respostaPwa = await page.goto(`${base}/garcom-pwa/?token=${token}`, { waitUntil: 'domcontentloaded' });
     assert.equal(respostaPwa.headers()['referrer-policy'], 'no-referrer', 'shell PWA não deve propagar a URL bearer como Referer');
@@ -114,6 +123,8 @@ async function main() {
     // Confirma que o Service Worker ativo também não persiste a URL bearer
     // quando um link legado é aberto novamente sob controle do cache.
     await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+    const cachesDepoisDaAtivacao = await page.evaluate(() => caches.keys());
+    assert.equal(cachesDepoisDaAtivacao.includes('garcom-pwa-shell-v36'), false, 'ativação deve expurgar cache antigo que podia conter query bearer');
     const cachePage = await context.newPage();
     await cachePage.goto(`${base}/garcom-pwa/?token=${token}`, { waitUntil: 'domcontentloaded' });
     await cachePage.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 15000 });
