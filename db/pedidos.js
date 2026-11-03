@@ -592,28 +592,38 @@ async function editarPedidoCliente(token, pedidoId, body, garcomResponsavelId = 
       [pedido.id, observacaoGeral]
     );
 
+    let atorNomeEdicao = null;
     if (garcomResponsavelId) {
-      const { rows: atores } = await client.query('SELECT id, nome FROM garcons WHERE id=$1', [garcomResponsavelId]);
-      await registrarEvento(client, {
-        atorTipo: 'garcom',
-        atorId: Number(garcomResponsavelId),
-        atorNome: atores[0]?.nome || null,
-        acao: 'pedido_editado',
-        alvoTipo: 'pedido',
-        alvoId: pedido.id,
-        resultado: 'sucesso',
-        requestId,
-        contexto: {
-          sessaoId: Number(pedido.sessao_id),
-          mesa: mesa.numero,
-          totalAnterior,
-          totalNovo: total,
-          itensAnteriores: quantidadeAnterior,
-          itensNovos: itensGravados.length,
-          observacaoAlterada: body.note !== undefined,
-        },
-      });
+      const { rows: atores } = await client.query(
+        'SELECT id, nome, ativo FROM garcons WHERE id=$1 FOR SHARE',
+        [garcomResponsavelId]
+      );
+      if (!atores[0]?.ativo) throw new ErroPedido(401, 'Link do garçom inválido ou desativado');
+      atorNomeEdicao = atores[0].nome || null;
     }
+    // Registrar a edição do pedido-pai para AMBAS as origens. Os eventos
+    // item_status abaixo preservam cada linha, mas não substituem a ação
+    // explícita de edição (totais/quantidades antes e depois).
+    await registrarEvento(client, {
+      atorTipo: garcomResponsavelId ? 'garcom' : 'cliente_mesa',
+      atorId: garcomResponsavelId ? Number(garcomResponsavelId) : Number(mesa.id),
+      atorNome: atorNomeEdicao,
+      acao: 'pedido_editado',
+      alvoTipo: 'pedido',
+      alvoId: pedido.id,
+      resultado: 'sucesso',
+      requestId,
+      contexto: {
+        sessaoId: Number(pedido.sessao_id),
+        mesa: mesa.numero,
+        origem: garcomResponsavelId ? 'pwa_garcom' : 'qr_cliente',
+        totalAnterior,
+        totalNovo: total,
+        itensAnteriores: quantidadeAnterior,
+        itensNovos: itensGravados.length,
+        observacaoAlterada: body.note !== undefined,
+      },
+    });
     await client.query('COMMIT');
     if (mudouDisponibilidade || restaurou.mudouDisponibilidade) invalidarCardapio();
 
