@@ -55,6 +55,7 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
           return (pa < 0 ? 99 : pa) - (pb < 0 ? 99 : pb) || a.login.localeCompare(b.login);
         });
         setContas(ordenadas);
+        if (obrigatorio) setAlvo(loginSessao);
       })
       .catch((e: any) => {
         if (ativo) setErroContas(e?.message || "Não foi possível carregar os setores.");
@@ -65,7 +66,7 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
     return () => {
       ativo = false;
     };
-  }, [admin]);
+  }, [admin, obrigatorio, loginSessao]);
 
   const recarregarContas = () => {
     setCarregandoContas(true);
@@ -86,11 +87,12 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
   // Para o admin, o gerenciador de senhas deve associar a nova senha ao setor
   // selecionado; para os demais, à própria sessão.
   const login = admin ? alvo : loginSessao;
+  const alvoEhPropriaConta = admin && alvo === loginSessao;
   const aviso = dica(nova, confirmar);
   const podeEnviar =
     !busy &&
     !carregandoContas &&
-    (admin ? Boolean(alvo) : atual.length > 0) &&
+    (admin ? Boolean(alvo) && (alvoEhPropriaConta ? atual.length > 0 : !obrigatorio) : atual.length > 0) &&
     nova.length >= MIN &&
     nova === confirmar;
 
@@ -98,7 +100,9 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
     if (!podeEnviar) return;
     setBusy(true);
     setErro(null);
-    const msg = admin ? await redefinirSenhaApi(alvo, nova) : await trocarSenhaApi(atual, nova);
+    const msg = admin && !alvoEhPropriaConta
+      ? await redefinirSenhaApi(alvo, nova)
+      : await trocarSenhaApi(atual, nova);
     setBusy(false);
     if (msg) {
       setAtual("");
@@ -160,7 +164,9 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
 
         {admin && !obrigatorio && (
           <p className="mt-3 text-xs text-text-muted leading-relaxed">
-            Escolha o setor e defina uma nova senha. Não é necessário informar a senha antiga.
+            {alvoEhPropriaConta
+              ? "Para alterar sua própria senha, confirme a senha atual. Para outra conta, não é necessário informar a senha antiga."
+              : "Escolha o setor para redefinir a senha de outra conta. Não é necessário informar a senha antiga."}
           </p>
         )}
 
@@ -202,10 +208,11 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
                   value={alvo}
                   onChange={(e) => {
                     setAlvo(e.target.value);
+                    setAtual("");
                     setErro(null);
                   }}
                   className={campo}
-                  disabled={carregandoContas || busy}
+                  disabled={carregandoContas || busy || obrigatorio}
                   autoFocus
                 >
                   <option value="">{carregandoContas ? "Carregando setores…" : "Selecione o setor"}</option>
@@ -230,7 +237,9 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
                   </span>
                 )}
               </label>
-            ) : (
+            ) : null}
+
+            {(!admin || alvoEhPropriaConta) && (
               <label className="block font-mono text-[11px] uppercase tracking-[0.06em] text-text-muted">
                 Senha atual
                 <input
