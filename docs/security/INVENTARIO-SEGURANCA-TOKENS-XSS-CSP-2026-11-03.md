@@ -15,7 +15,7 @@ Esta etapa é estática. Não houve execução de navegador, PostgreSQL, teste E
 1. **Sessão staff:** desenho relativamente sólido: 256 bits aleatórios, cookie HttpOnly, SameSite=Lax e Secure em produção, expiração no banco em 12 horas, revogação no logout e revogação de todas as sessões em mudanças/redefinições de senha. O token é armazenado em claro na tabela de sessões.
 2. **Token de mesa:** UUID gerado pelo PostgreSQL e usado como credencial bearer de longa duração. Não foi localizado fluxo de rotação/revogação operacional por mesa. A rotação precisa respeitar os QRs físicos e sessões existentes.
 3. **Token de garçom:** UUID bearer validado no servidor e vinculado a garçom ativo. Desativar bloqueia o token, mas preserva seu valor; remover gira o token. Reativar um garçom desativado volta a habilitar o mesmo link anterior.
-4. **PWA:** o token do garçom é lido de `?token=` e persistido em `localStorage`. A query não é removida da URL. O token também é usado como proprietário lógico de dados no IndexedDB e como parâmetro de autenticação de SSE. Uma migração direta para cookie HttpOnly quebraria ou exigiria redesenho do modo offline.
+4. **PWA:** o token do garçom é lido de `?token=` e persistido em `localStorage`. A query não é removida da URL. O token também é usado como proprietário lógico de dados no IndexedDB e como parâmetro de autenticação de SSE. O service worker cacheia requisições GET do shell pela URL completa; portanto, uma navegação inicial com `?token=` também pode ser retida como chave do Cache Storage. Uma migração direta para cookie HttpOnly quebraria ou exigiria redesenho do modo offline.
 5. **XSS:** foi encontrado um defeito concreto em `public/pedido.html`: o helper `esc()` não codifica `&`, `<`, `>` ou aspas duplas, mas o resultado é interpolado em `innerHTML`. O caminho é legado e sua exposição depende do fallback sem `dist/`; ainda assim, o código precisa ser corrigido antes de ser reativado/servido.
 6. **CSP:** política efetiva global permite `unsafe-inline` em `script-src` e `style-src`; não foi encontrada política Report-Only. Há dependências reais de scripts, handlers e estilos inline em páginas legadas. Não remover a permissão indiscriminadamente.
 7. **Testes:** a verificação estática de XSS em `scripts/teste-seguranca.js` percorre somente `src/**/*.ts(x)`; não cobre os sinks de `public/`. Há testes úteis de token de mesa, OAuth e PWA offline, mas faltam casos de expiração/revogação/rotação, vazamento em logs/URLs e payloads XSS renderizados em Chromium.
@@ -51,7 +51,7 @@ Esta etapa é estática. Não houve execução de navegador, PostgreSQL, teste E
 | sessionStorage | `pub-auth` (papel/nome/flags UI); nome do cliente e contexto da mesa | Não contém cookie staff nem token bearer staff; a chave do nome do cliente inclui o token da mesa. |
 | IndexedDB | Pedidos offline, metadados e leases da PWA; cada pedido tem `ownerToken` | Contém o token do garçom como identificador de propriedade e dados operacionais offline. XSS same-origin pode ler a base. |
 | Memória | `waiterToken` do PWA; token de mesa no estado do store React; token CSRF staff em memória | Preferível a persistência para credenciais temporárias, mas a memória JS continua acessível a XSS. |
-| Cache Storage | Shell PWA estático (`garcom-pwa-shell-v36`); o service worker ignora `/api/` | API não é cacheada pelo handler observado; fallback offline serve shell e cache de assets. Não foi observada persistência de bearer no Cache Storage. |
+| Cache Storage | Shell PWA estático (`garcom-pwa-shell-v36`); o service worker ignora `/api/`, mas cacheia outros GETs por URL completa | **Risco identificado:** `/garcom-pwa/?token=...` pode ser armazenada como chave de cache quando a navegação passa por um service worker já ativo. A mitigação foi incluída na PR de higiene de URL da PWA: não cachear navegações com `token` e trocar a versão do cache para remover entradas antigas. |
 
 ## Compatibilidade e restrições
 
@@ -64,7 +64,7 @@ Esta etapa é estática. Não houve execução de navegador, PostgreSQL, teste E
 
 ## Plano de implementação em PRs pequenas
 
-1. **PWA URL hygiene (baixo risco):** limpar query após captura, política Referrer-Policy específica e testes de URL/reload/offline. Não mudar formato dos links existentes nesta PR.
+1. **PWA URL hygiene (baixo risco):** limpar query após captura, política Referrer-Policy específica, não cachear URLs bearer no service worker e versionar o cache para remover entradas antigas; testar URL/reload/offline/Cache Storage. Não mudar formato dos links existentes nesta PR.
 2. **XSS comprovado no acompanhamento legado:** corrigir `esc()` quebrado em `public/pedido.html` e adicionar teste comportamental. Confirmar a rota servida em build com/sem `dist/`.
 3. **Templates JavaScript inline:** eliminar interpolação de removíveis em handler no `mesa-app-b1.js`; auditar `SafeDOM.html` e chamadores.
 4. **SSE ticket:** desenhar ticket curto, uso único, escopo mesa/garçom e reconexão antes de implementação.
