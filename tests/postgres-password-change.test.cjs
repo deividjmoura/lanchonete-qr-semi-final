@@ -354,3 +354,38 @@ test('PostgreSQL real: listarContasStaff devolve apenas contas ativas e nunca ex
     assert.deepEqual(Object.keys(c).sort(), ['deveTrocarSenha', 'email', 'googleVinculado', 'id', 'login', 'nome', 'papel']);
   }
 });
+
+
+test('PostgreSQL real: sessão válida funciona; token adulterado falha; sessão expirada é revogada', async () => {
+  const u = await criarStaff('ciclo-sessao', 'senha-ciclo-sessao-ficticia-2026');
+  const token = await auth.criarSessao(u.id);
+  assert.match(token, /^[0-9a-f]{64}$/i, 'sessão usa token aleatório de 256 bits em hex');
+
+  const staff = await auth.exigirAcesso(reqComSessao(token), 'caixa');
+  assert.equal(staff.id, u.id, 'token válido deve autenticar a conta');
+
+  const adulterado = token.slice(0, -1) + (token.endsWith('0') ? '1' : '0');
+  await assert.rejects(
+    () => auth.exigirAcesso(reqComSessao(adulterado), 'caixa'),
+    (e) => e.status === 401
+  );
+  assert.equal(
+    (await pool.query('SELECT 1 FROM staff_sessoes WHERE token = $1', [token])).rowCount,
+    1,
+    'tentativa com token adulterado não pode revogar a sessão legítima'
+  );
+
+  await pool.query(
+    "UPDATE staff_sessoes SET expira_em = now() - interval '1 second' WHERE token = $1",
+    [token]
+  );
+  await assert.rejects(
+    () => auth.exigirAcesso(reqComSessao(token), 'caixa'),
+    (e) => e.status === 401
+  );
+  assert.equal(
+    (await pool.query('SELECT 1 FROM staff_sessoes WHERE token = $1', [token])).rowCount,
+    0,
+    'sessão expirada deve ser removida no primeiro uso'
+  );
+});
