@@ -104,9 +104,12 @@ async function main() {
     page.on('dialog', (d) => d.accept());
 
     // O SSE fica aberto de propósito: 'networkidle' nunca aconteceria.
-    await page.goto(`${base}/garcom-pwa/?token=${token}`, { waitUntil: 'domcontentloaded' });
+    const respostaPwa = await page.goto(`${base}/garcom-pwa/?token=${token}`, { waitUntil: 'domcontentloaded' });
+    assert.equal(respostaPwa.headers()['referrer-policy'], 'no-referrer', 'shell PWA não deve propagar a URL bearer como Referer');
     await page.waitForFunction(() => document.querySelectorAll('#modalTable option').length > 0, null, { timeout: 20000 });
-    ok('PWA carregou e listou mesas do garçom autenticado');
+    assert.equal(await page.evaluate(() => new URL(location.href).searchParams.has('token')), false, 'query bearer deve ser removida do histórico atual');
+    assert.equal(await page.evaluate(() => localStorage.getItem('waiter-token')), token, 'token capturado deve continuar persistido para retomada offline');
+    ok('PWA remove o token da URL, mantém a sessão local e lista as mesas do garçom autenticado');
 
     // O primeiro acesso não bloqueia o atendimento; avisos são configurados
     // voluntariamente pelo sino (cobertos em garcom-lote-cobranca.e2e.cjs).
@@ -138,7 +141,7 @@ async function main() {
     const lerFila = () => page.evaluate(async () => {
       const { openOfflineDb, OfflineStore } = await import('./offline.js');
       const db = await openOfflineDb();
-      const token = new URLSearchParams(location.search).get('token');
+      const token = localStorage.getItem('waiter-token');
       const linhas = await new OfflineStore(db, token).all();
       db.close();
       return linhas.map((o) => ({
@@ -220,7 +223,7 @@ async function main() {
     const interrompido = await page.evaluate(async () => {
       const { openOfflineDb, OfflineStore } = await import('./offline.js');
       const db = await openOfflineDb();
-      const token = new URLSearchParams(location.search).get('token');
+      const token = localStorage.getItem('waiter-token');
       const store = new OfflineStore(db, token);
       const novo = {
         ownerToken: token, localId: 'interrompido-' + Date.now(),
@@ -253,7 +256,7 @@ async function main() {
     await page.evaluate(async () => {
       const { openOfflineDb } = await import('./offline.js');
       const db = await openOfflineDb();
-      const token = new URLSearchParams(location.search).get('token');
+      const token = localStorage.getItem('waiter-token');
       await new Promise((resolve, reject) => {
         const tx = db.transaction('leases', 'readwrite');
         tx.objectStore('leases').put({ key: 'sync:' + token, holder: 'aba-que-morreu', expiresAt: Date.now() - 1 });
