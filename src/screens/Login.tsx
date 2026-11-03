@@ -28,7 +28,7 @@ export default function Login() {
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [googleEnabled, setGoogleEnabled] = useState(false);\n  const [googleError, setGoogleError] = useState<string | null>(null);
 
   useEffect(() => {
     let ativo = true;
@@ -222,7 +222,7 @@ export default function Login() {
               )}
             </AnimatePresence>
 
-            {googleEnabled && (
+            {googleError && <p role="alert" className="mt-4 rounded-sm border border-status-danger-border bg-status-danger-surface px-3 py-2 text-xs font-semibold text-status-danger-ink">{googleError}</p>}\n\n            {googleEnabled && (
               <div className="mt-5 pt-5 border-t border-line">
                 <button
                   type="button"
