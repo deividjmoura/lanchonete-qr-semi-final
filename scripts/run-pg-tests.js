@@ -53,6 +53,10 @@ const suites = [
   // Rate limit das mutações públicas de mesa (PR #196): sobe o server.js real
   // em cópia isolada e fala HTTP com ele.
   'postgres-public-table-rate-limit.test.cjs',
+  // Tickets SSE de uso único (PR #222): unidade de db/sse-tickets.js e a rota
+  // HTTP real, que é onde a ausência de um import derrubava tudo com 500.
+  'postgres-sse-tickets.test.cjs',
+  'postgres-sse-ticket-http.test.cjs',
 ];
 
 // O drill de backup precisa de pg_dump/psql no PATH. Em ambiente local com

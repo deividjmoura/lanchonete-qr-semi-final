@@ -9,7 +9,7 @@ const vm = require('node:vm');
 const ts = require('typescript');
 const { EventEmitter } = require('node:events');
 const { eventAccess } = require('../db/event-access');
-const { subscribe, broadcast, clientCount } = require('../db/events');
+const { subscribe, broadcast, closeAccess, clientCount } = require('../db/events');
 const { validarDestinoRemoto } = require('../db/foto');
 const { verificarOrigemRequisicao, csrfTokenParaSessao, verificarProtecaoCSRF } = require('../db/auth');
 const { ErroValidacao, numeroFinito, numeroInteiroPositivo } = require('../db/validacao');
@@ -129,19 +129,125 @@ test('SSE público não divulga nome, token ou pagamento de outra mesa', () => {
   staff.emit('close'); publicRes.emit('close');
   assert.equal(clientCount(), 0);
 });
-test('cliente SSE envia token e encerra conexão no cleanup', () => {
-  let url; let closed = false;
-  const context = { exports: {}, URLSearchParams, setTimeout, clearTimeout, EventSource: class {
-    constructor(value) { url = value; } addEventListener() {} close() { closed = true; }
-  } };
+test('revogação fecha somente streams SSE vinculados à identidade revogada', () => {
+  const staff = new EventEmitter();
+  const garcom = new EventEmitter();
+  let staffEnded = false;
+  let garcomEnded = false;
+  staff.write = () => {};
+  staff.end = () => { staffEnded = true; };
+  garcom.write = () => {};
+  garcom.end = () => { garcomEnded = true; };
+  subscribe(staff, { accessType: 'staff', accessId: 17 });
+  subscribe(garcom, { publicClient: true, accessType: 'garcom', accessId: 17 });
+  assert.equal(closeAccess('staff', 17), 1);
+  assert.equal(staffEnded, true);
+  assert.equal(garcomEnded, false);
+  assert.equal(clientCount(), 1);
+  garcom.emit('close');
+  assert.equal(clientCount(), 0);
+});
+
+test('cliente SSE envia bearer no POST e usa apenas ticket temporário na URL', async () => {
+  let url; let options; let closed = false;
+  const context = {
+    exports: {}, URLSearchParams, setTimeout, clearTimeout,
+    fetch: async (path, init) => {
+      assert.equal(path, '/api/events/ticket');
+      options = init;
+      return { ok: true, json: async () => ({ ticket: 'temporary-ticket-value' }) };
+    },
+    EventSource: class {
+      constructor(value) { url = value; }
+      addEventListener() {}
+      close() { closed = true; }
+    },
+  };
   vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/api.ts', 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS },
   }).outputText, context);
   const stop = context.exports.connectEvents(() => {}, { mesa: 'a&b' });
-  assert.equal(url, '/api/events?mesa=a%26b'); stop(); assert.equal(closed, true);
-  context.exports.connectEvents(() => {}, { garcom: 'abc' })();
-  assert.equal(url, '/api/events?garcom=abc');
-  context.exports.connectEvents(() => {})(); assert.equal(url, '/api/events');
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(url, '/api/events?ticket=temporary-ticket-value');
+  assert.deepEqual(JSON.parse(options.body), { mesa: 'a&b' });
+  assert.equal(options.credentials, 'include');
+  assert.equal(options.cache, 'no-store');
+  stop();
+  assert.equal(closed, true);
+});
+
+test('LQRRealtime troca token de garçom por ticket antes de abrir EventSource', async () => {
+  let url; let options; let closed = false;
+  const window = { innerWidth: 1000, addEventListener() {} };
+  const document = { documentElement: { clientWidth: 1000, style: { setProperty() {} } } };
+  const context = {
+    window, document, URLSearchParams, setTimeout, clearTimeout, setInterval, clearInterval,
+    fetch: async (path, init) => {
+      assert.equal(path, '/api/events/ticket');
+      options = init;
+      return { ok: true, json: async () => ({ ticket: 'one-time-sse-ticket' }) };
+    },
+    EventSource: class {
+      constructor(value) { url = value; }
+      addEventListener() {}
+      close() { closed = true; }
+    },
+    console,
+  };
+  vm.runInNewContext(fs.readFileSync('public/js/realtime.js', 'utf8'), context);
+  const connection = window.LQRRealtime.connect(() => {}, { garcom: 'permanent-waiter-bearer', fallbackMs: 0 });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(url, '/api/events?ticket=one-time-sse-ticket');
+  assert.deepEqual(JSON.parse(options.body), { garcom: 'permanent-waiter-bearer' });
+  assert.equal(url.includes('permanent-waiter-bearer'), false);
+  connection.close();
+  assert.equal(closed, true);
+});
+
+test('o realtime.js publicado em dist/ é o mesmo que passou no teste acima', () => {
+  /* `npm start` não roda build: produção serve o dist/ versionado. Um
+     public/js/realtime.js novo com dist/js/realtime.js antigo parece verde em
+     CI (que builda antes de testar) e chega ao usuário com o cliente velho —
+     exatamente o que aconteceu nesta mudança: o PWA continuava abrindo
+     /api/events?garcom=<bearer permanente>. */
+  const fonte = fs.readFileSync('public/js/realtime.js', 'utf8');
+  assert.ok(fs.existsSync('dist/js/realtime.js'), 'dist/js/realtime.js precisa existir');
+  const publicado = fs.readFileSync('dist/js/realtime.js', 'utf8');
+  assert.equal(
+    publicado,
+    fonte,
+    'dist/js/realtime.js divergiu de public/js/realtime.js: copie a fonte para dist/ antes de commitar'
+  );
+  assert.match(publicado, /\/api\/events\/ticket/, 'cliente publicado deve pedir ticket de uso único');
+  assert.doesNotMatch(publicado, /\/api\/events\?(mesa|garcom|token)=/, 'cliente publicado não pode montar URL SSE com bearer permanente');
+});
+
+test('o bundle SPA publicado não monta URL de SSE com bearer permanente', () => {
+  /* Mesmo risco do teste anterior, no bundle do Vite: `src/lib/api.ts` pode
+     estar correto e o dist/assets/index-*.js versionado continuar com o
+     cliente antigo (`/api/events?garcom=...`). Como o E2E de CI roda depois de
+     um build fresco, nenhuma suíte enxergava esse descompasso. */
+  const bundles = fs
+    .readdirSync('dist/assets')
+    .filter((nome) => nome.startsWith('index-') && nome.endsWith('.js'));
+  assert.ok(bundles.length >= 1, 'dist/assets precisa conter o bundle index-*.js');
+
+  for (const nome of bundles) {
+    const codigo = fs.readFileSync(`dist/assets/${nome}`, 'utf8');
+    // Só interessa o bundle que realmente contém o cliente SSE.
+    if (!codigo.includes('/api/events')) continue;
+    assert.match(codigo, /\/api\/events\/ticket/, `${nome}: cliente SSE publicado deve pedir ticket de uso único`);
+    assert.doesNotMatch(
+      codigo,
+      /new EventSource\(`\/api\/events\?\$\{/,
+      `${nome}: cliente SSE publicado ainda concatena query de credencial na URL`
+    );
+    assert.doesNotMatch(
+      codigo,
+      /events\?mesa=|events\?garcom=|events\?token=/,
+      `${nome}: URL de SSE publicada com bearer permanente`
+    );
+  }
 });
 
 test('logs HTTP omitem tokens bearer de caminho, query e mensagens de erro', () => {
@@ -735,6 +841,10 @@ test('CSRF integra emissao de token, validacao de rotas staff e cliente HTTP', (
   assert.match(serverSource, /csrfToken: csrfTokenParaSessao\(token\)/);
   assert.match(serverSource, /csrfToken: csrfTokenParaSessao\(sessionToken\)/);
   assert.match(serverSource, /verificarProtecaoCSRF\(req\);/);
+  const inicioTicketSse = serverSource.indexOf("if (p === '/api/events/ticket'");
+  const fimTicketSse = serverSource.indexOf('\n    let m;', inicioTicketSse);
+  assert.ok(inicioTicketSse >= 0 && fimTicketSse > inicioTicketSse, 'rota de emissão SSE deve existir');
+  assert.match(serverSource.slice(inicioTicketSse, fimTicketSse), /verificarOrigemRequisicao\(req\)/, 'emissão de ticket SSE deve rejeitar origem cross-site');
   assert.match(apiSource, /headers\["X-CSRF-Token"\] = csrfToken/);
   assert.match(apiSource, /await apiGet\("\/api\/me"\)/);
 });

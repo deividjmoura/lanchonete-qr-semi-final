@@ -21,16 +21,24 @@ function renderCustomizeModal(){
       }).join('')}</div>`;
     }
   }
-  const remsHtml=(!escolha&&rems.length)?`<div class="opt-group"><h3>Remover</h3>${rems.map(r=>{
+  const remsHtml=(!escolha&&rems.length)?`<div class="opt-group"><h3>Remover</h3>${rems.map((r,index)=>{
     const on=customizeDraft.removals.includes(r);
-    return `<label class="opt-chip${on?' on':''}"><input type="checkbox" ${on?'checked':''} onchange="toggleRem('${String(r).replace(/'/g,"\\'")}', this.checked)"><span>Sem ${esc(r)}</span></label>`;
+    return `<label class="opt-chip${on?' on':''}"><input type="checkbox" data-rem-index="${index}" ${on?'checked':''}><span>Sem ${esc(r)}</span></label>`;
   }).join('')}</div>`:'';
   const noteHtml=escolha
     ?`<div class="opt-group"><h3>Observação</h3><input id="custNote" type="text" maxlength="200" placeholder="Ex.: sem gelo, pouco gás" value="${esc(customizeDraft.note)}" oninput="customizeDraft.note=this.value" style="width:100%;padding:12px;border-radius:12px;border:1px solid rgba(240,235,224,.2);background:rgba(0,0,0,.25);color:#f0ebe0"></div>`
     :`<div class="opt-group"><h3>Observação</h3><input id="custNote" type="text" maxlength="200" placeholder="Ex.: sem cebola, bem passado…" value="${esc(customizeDraft.note)}" oninput="customizeDraft.note=this.value" style="width:100%;padding:12px;border-radius:12px;border:1px solid rgba(240,235,224,.2);background:rgba(0,0,0,.25);color:#f0ebe0"></div>`;
   const sub=escolha?'escolha o tamanho ou sabor': 'personalize';
   const btnLabel=escolha?'Confirmar escolha':'Adicionar';
-  document.getElementById('modal').innerHTML=`<div class="modal-root" role="dialog" aria-modal="true"><div class="modal-backdrop" onclick="closeModal()"></div><div class="modal-sheet"><button class="close" type="button" onclick="closeModal()">×</button><h2>${esc(p.nome)}</h2><p class="muted" style="margin:0 0 12px">${br(p.preco)} · ${sub}</p><div class="qty-row" style="margin-bottom:8px"><button type="button" onclick="custQty(-1)">−</button><span>${customizeDraft.qty}</span><button type="button" onclick="custQty(1)">+</button></div>${addsHtml}${remsHtml}${noteHtml}<button class="btn primary" style="width:100%;margin-top:16px;min-height:48px" type="button" onclick="confirmCustomize()">${btnLabel} · ${br(total)}</button></div></div>`;
+  const modal=document.getElementById('modal');
+  modal.innerHTML=`<div class="modal-root" role="dialog" aria-modal="true"><div class="modal-backdrop" onclick="closeModal()"></div><div class="modal-sheet"><button class="close" type="button" onclick="closeModal()">×</button><h2>${esc(p.nome)}</h2><p class="muted" style="margin:0 0 12px">${br(p.preco)} · ${sub}</p><div class="qty-row" style="margin-bottom:8px"><button type="button" onclick="custQty(-1)">−</button><span>${customizeDraft.qty}</span><button type="button" onclick="custQty(1)">+</button></div>${addsHtml}${remsHtml}${noteHtml}<button class="btn primary" style="width:100%;margin-top:16px;min-height:48px" type="button" onclick="confirmCustomize()">${btnLabel} · ${br(total)}</button></div></div>`;
+  modal.querySelectorAll('input[data-rem-index]').forEach(input=>{
+    input.addEventListener('change',()=>{
+      const index=Number(input.dataset.remIndex);
+      if(!Number.isInteger(index)||index<0||index>=rems.length)return;
+      toggleRem(rems[index],input.checked);
+    });
+  });
   document.body.classList.add('modal-open');
   cartOpen=false;sessaoOpen=false;
 }

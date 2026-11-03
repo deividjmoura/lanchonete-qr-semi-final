@@ -78,14 +78,16 @@ body.board-page .board-header {
 
 .mesa-search {
   position: sticky !important;
-  top: 0 !important;
-  z-index: 40;
+  top: 56px !important;
+  z-index: 30 !important;
   margin: 0 0 12px !important;
-  background: rgba(12, 10, 9, 0.72) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   box-shadow: none !important;
-  border: 1px solid rgba(255,255,255,.10) !important;
+  border: 0 !important;
 }
 
 .cat-chips {

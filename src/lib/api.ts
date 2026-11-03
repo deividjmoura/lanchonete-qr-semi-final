@@ -416,15 +416,27 @@ export function connectEvents(onUpdate: () => void, acesso?: { mesa?: string; ga
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => { timer = null; onUpdate(); }, 350);
   };
-  const start = () => {
+  const start = async () => {
     if (closed || typeof EventSource === "undefined") return;
     try {
       if (es) es.close();
-      const query = new URLSearchParams();
-      if (acesso?.mesa) query.set("mesa", acesso.mesa);
-      if (acesso?.garcom) query.set("garcom", acesso.garcom);
-      const qs = query.toString();
-      es = new EventSource(`/api/events${qs ? `?${qs}` : ""}`);
+      // Bearers permanentes seguem no corpo POST; a URL contém só ticket
+      // aleatório, de uso único e validade curta.
+      const credentials: { mesa?: string; garcom?: string } = {};
+      if (acesso?.mesa) credentials.mesa = acesso.mesa;
+      if (acesso?.garcom) credentials.garcom = acesso.garcom;
+      const response = await fetch("/api/events/ticket", {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+      });
+      if (!response.ok) throw new Error("Não foi possível autorizar o stream SSE");
+      const result = await response.json() as { ticket?: string };
+      if (closed) return;
+      if (!result.ticket) throw new Error("Ticket SSE ausente");
+      es = new EventSource(`/api/events?ticket=${encodeURIComponent(result.ticket)}`);
       es.addEventListener("hello", () => { failures = 0; bounce(); });
       es.addEventListener("update", bounce);
       es.onerror = () => {
@@ -433,12 +445,18 @@ export function connectEvents(onUpdate: () => void, acesso?: { mesa?: string; ga
         es = null;
         failures++;
         if (reconnect) clearTimeout(reconnect);
-        reconnect = setTimeout(start, Math.min(30000, 1000 * 2 ** Math.min(failures, 5)));
+        reconnect = setTimeout(() => { void start(); }, Math.min(30000, 1000 * 2 ** Math.min(failures, 5)));
         bounce();
       };
-    } catch { bounce(); }
+    } catch {
+      if (closed) return;
+      failures++;
+      if (reconnect) clearTimeout(reconnect);
+      reconnect = setTimeout(() => { void start(); }, Math.min(30000, 1000 * 2 ** Math.min(failures, 5)));
+      bounce();
+    }
   };
-  start();
+  void start();
   return () => {
     closed = true;
     if (timer) clearTimeout(timer);

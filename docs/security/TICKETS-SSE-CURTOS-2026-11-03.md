@@ -1,0 +1,66 @@
+# Tickets SSE curtos e de uso único
+
+**Data:** 2026-11-03  
+**Base de implementação:** branch `security/sse-one-time-short-lived-tickets`  
+**Objetivo:** impedir que bearers permanentes de mesa/garçom apareçam na URL de `EventSource`.
+
+## Contrato novo
+
+1. O cliente envia a credencial permanente no corpo JSON de `POST /api/events/ticket`; para staff, a autenticação usa o cookie HttpOnly existente.
+2. O servidor valida a credencial e emite um ticket aleatório de 256 bits.
+3. O banco guarda somente SHA-256 do ticket, tipo/ID do recurso e SHA-256 da credencial que autorizou sua emissão.
+4. O ticket expira em **60 segundos** e é consumido atomicamente uma única vez.
+5. O cliente abre `GET /api/events?ticket=...`; o servidor consome o ticket e revalida a sessão/token original antes de assinar o stream.
+6. Em erro/reconexão, os clientes atualizados pedem um ticket novo. O fallback de polling permanece ativo.
+7. Logout/troca de senha staff e desativação/remoção de garçom encerram os streams já abertos para aquela identidade.
+
+## Compatibilidade
+
+- `public/js/realtime.js` e `src/lib/api.ts` usam o contrato novo.
+- A PWA envia o bearer do garçom apenas no corpo POST; a URL SSE contém apenas o ticket temporário.
+- O servidor mantém temporariamente o contrato antigo `?mesa=`/`?garcom=` para clientes antigos durante a transição. Esse fallback é legado e tem prazo definido na seção "Remoção do fallback legado" abaixo.
+- Staff autenticado pode continuar usando o stream com cookie HttpOnly; os clientes atuais também passam pelo endpoint de ticket.
+- O ticket é vinculado ao ID e ao fingerprint da credencial atual. Se o token da mesa/garçom mudar ou o garçom for desativado antes do GET SSE, o ticket não autoriza o stream.
+
+## Remoção do fallback legado
+
+O `?mesa=`/`?garcom=` continua aceito para não derrubar abas abertas antes do deploy e PWAs que ainda estejam rodando a versão anterior do service worker. Ele é a única superfície que ainda pode produzir URL com bearer permanente, então a remoção é **prazo, não intenção**.
+
+**Janela de compatibilidade: 30 dias a partir do deploy desta PR (até 2026-12-03, aproximadamente).**
+
+Critérios objetivos para remover (todos, não um subconjunto):
+
+1. **Sorvedouro de telemetria zerado.** O fallback responde com um aviso em log (`level: "warn"`, campo `legado_sse_fallback`) sempre que autoriza sem ticket. Se o contador ficar em zero por 7 dias consecutivos, a janela de clientes antigos terminou.
+2. **Versão do service worker.** O `CACHE_NAME` do `public/garcom-pwa/sw.js` já mudou ao menos duas vezes desde o deploy, garantindo que os PWAs ativos fizeram `skipWaiting` e passaram a pedir ticket.
+3. **Nenhuma URL com bearer observada.** Sem ocorrência de `?mesa=`/`?garcom=` em `GET /api/events` na janela de 7 dias.
+
+Ao final da janela, a PR de remoção deve:
+
+- apagar o ramo `else` de compatibilidade em `GET /api/events` (`server.js`);
+- remover o `servicoLegado`/`eventAccess` por query caso fiquem sem uso;
+- trocar o teste `fallback legado ?mesa= segue funcionando` de `tests/postgres-sse-ticket-http.test.cjs` por um que exija **401** sem ticket;
+- atualizar esta seção com a data efetiva da remoção.
+
+Se ao fim dos 30 dias o critério 1 não estiver zerado, a janela não se renova silenciosamente: é preciso registrar neste documento qual cliente ainda usa o fallback e por quê.
+
+## Persistência e proteção
+
+Migration `0036_sse_tickets.sql` cria tabela aditiva. Ela não armazena o ticket bruto nem a credencial permanente. Registros usados/expirados são limpos oportunisticamente após a janela de retenção.
+
+O ticket ainda aparece como parâmetro na requisição EventSource, mas é aleatório, de uso único, expira em 60 segundos e não permite autenticar novamente. O bearer permanente não aparece na URL, histórico do navegador ou referer.
+
+## Testes previstos nesta mudança
+
+- Teste PostgreSQL de persistência somente do hash, expiração e consumo único.
+- Teste de regressão do cliente TypeScript: bearer no corpo POST e ticket na URL SSE.
+- Teste do cliente legado/PWA: mesma separação de credenciais.
+- E2E Chromium da PWA: captura a requisição EventSource e comprova ausência do token permanente.
+- Teste do barramento: revogação fecha somente streams vinculados à identidade correspondente.
+
+## Limites e riscos restantes
+
+- O fallback de URL permanente fica ativo temporariamente para compatibilidade. Até removê-lo, clientes antigos ainda podem gerar URLs com token.
+- Uma conexão já aberta de mesa permanece conectada até o cliente fechar ou a conexão cair; quando existir uma ação de rotação de token de mesa, ela deve chamar `closeAccess('mesa', id)`.
+- O barramento SSE atual é local ao processo. A tabela de tickets funciona entre instâncias, mas **não** implementa pub/sub para distribuir eventos entre instâncias Railway. O escalonamento horizontal do broadcast é um trabalho separado.
+- A validação em Android/iOS físicos continua pendente; os testes aqui são automatizados em Chromium.
+- Nenhuma variável, segredo, serviço, dado ou configuração de produção/Railway foi alterada.
