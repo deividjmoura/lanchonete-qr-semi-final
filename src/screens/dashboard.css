@@ -13,10 +13,7 @@
   isolation: isolate;
   border: 1px solid var(--stage-line);
   border-radius: var(--radius-lg)
-  background:
-    radial-gradient(ellipse at 7% 2%, var(--stage-glow-violet), transparent 32%),
-    radial-gradient(ellipse at 95% 20%, var(--stage-glow-cyan), transparent 28%),
-    linear-gradient(145deg, var(--stage-bg-2) 0%, var(--stage-bg) 56%, var(--stage-bg-2) 100%);
+  background: linear-gradient(145deg, var(--stage-bg-2) 0%, var(--stage-bg) 56%, var(--stage-bg-2) 100%);
   color: var(--stage-ink);
 }
 .dashboard-stage::before {
@@ -34,7 +31,7 @@
 .dashboard-intro__copy { min-width: 0; }
 .dash-eyebrow, .dash-kicker { margin: 0; color: var(--stage-ink-subtle); font-size: 10px; font-weight: 800; letter-spacing: .17em; line-height: 1.4; }
 .dash-eyebrow { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; color: var(--stage-ink-muted-2); }
-.dash-eyebrow > span:first-child, .dash-now > span, .card-neon__live > span { width: 7px; height: 7px; border-radius: 50%; background: var(--stage-mint); box-shadow: 0 0 11px var(--stage-mint-2); }
+.dash-eyebrow > span:first-child, .dash-now > span, .card-neon__live > span { width: 7px; height: 7px; border-radius: 50%; background: var(--stage-mint); box-shadow: none; }
 .dash-eyebrow__sep { color: var(--stage-ink-faint); }
 .dashboard-intro h2 { margin: 13px 0 7px; font-family: var(--font-display), serif; font-size: clamp(27px, 3.2vw, 42px); font-weight: 700; letter-spacing: -.035em; line-height: 1.1; }
 .dashboard-intro h2 span { color: var(--stage-violet-text); }
@@ -69,11 +66,8 @@
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--neon) 35%, var(--stage-line-base));
   border-radius: 17px;
-  background:
-    linear-gradient(135deg, var(--stage-veil), transparent 45%),
-    radial-gradient(ellipse at 5% -20%, var(--neon-soft), transparent 68%),
-    linear-gradient(150deg, var(--stage-card), var(--stage-card-2));
-  box-shadow: inset 0 1px 0 var(--stage-hairline-4), inset 0 -1px 0 var(--stage-hairline), 0 12px 28px var(--stage-shadow-1), 0 0 18px color-mix(in srgb, var(--neon) 10%, transparent);
+  background: linear-gradient(150deg, var(--stage-card), var(--stage-card-2));
+  box-shadow: inset 0 1px 0 var(--stage-hairline-4), inset 0 -1px 0 var(--stage-hairline), 0 12px 28px var(--stage-shadow-1);
   color: var(--stage-ink);
   text-align: left;
   transform: perspective(900px) rotateX(calc(var(--dash-hy) * -2.2deg)) rotateY(calc(var(--dash-hx) * 2.8deg));
@@ -82,8 +76,8 @@
   cursor: pointer;
 }
 .card-neon::before { content: ""; position: absolute; inset: 1px; border-radius: 16px; pointer-events: none; border: 1px solid var(--stage-hairline); }
-.card-neon::after { content: ""; position: absolute; width: 120px; height: 120px; right: -65px; top: -75px; pointer-events: none; border-radius: 50%; background: var(--neon-soft); filter: blur(20px); transform: translate(calc(var(--dash-hx) * 12px), calc(var(--dash-hy) * 12px)); }
-.card-neon:hover { border-color: color-mix(in srgb, var(--neon) 70%, var(--stage-hairline-2)); box-shadow: inset 0 1px 0 var(--stage-hairline-5), 0 15px 32px var(--stage-shadow-2), 0 0 22px color-mix(in srgb, var(--neon) 18%, transparent); }
+
+.card-neon:hover { border-color: color-mix(in srgb, var(--neon) 70%, var(--stage-hairline-2)); box-shadow: inset 0 1px 0 var(--stage-hairline-5), 0 15px 32px var(--stage-shadow-2); }
 .card-neon:disabled { cursor: default; opacity: 1; }
 .card-neon--ciano { --neon: var(--stage-cyan); --neon-deep: var(--stage-cyan-deep); --neon-soft: var(--stage-cyan-soft); }
 .card-neon--lima { --neon: var(--stage-lime); --neon-deep: var(--stage-lime-deep); --neon-soft: var(--stage-lime-soft); }
@@ -93,7 +87,7 @@
 .card-neon__icon, .dash-panel__icon { display: grid; place-items: center; width: 38px; height: 38px; flex: none; border: 1px solid color-mix(in srgb, var(--neon) 35%, transparent); border-radius: 11px; color: var(--neon); background: var(--neon-soft); box-shadow: inset 0 1px 0 var(--stage-hairline-3); }
 .card-neon__arrow { color: var(--stage-ink-muted-2); }
 .card-neon__label { color: var(--stage-ink-muted-2); font-size: 11px; font-weight: 750; line-height: 1.3; letter-spacing: .02em; }
-.num-extruded { color: var(--neon); font-variant-numeric: tabular-nums; text-shadow: 1px 1px 0 var(--neon-deep), 2px 2px 0 var(--neon-deep), 3px 3px 0 color-mix(in srgb, var(--neon-deep) 75%, var(--stage-inset-deep)), 4px 4px 0 var(--stage-inset-3), 5px 5px 12px var(--stage-shadow-4); }
+.num-extruded { color: var(--neon); font-variant-numeric: tabular-nums; text-shadow: none; }
 .card-neon .metric-value { display: block; max-width: 100%; margin-top: 7px; overflow-wrap: anywhere; font-family: var(--font-display), serif; font-size: clamp(23px, 2.1vw, 32px); font-weight: 800; letter-spacing: -.035em; line-height: 1.12; }
 .card-neon__bottom { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-top: auto; padding-top: 12px; }
 .card-neon__sub { color: var(--stage-ink-muted); font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
@@ -482,10 +476,7 @@
   overflow: hidden;
   border-radius: inherit;
   color: var(--stage-ink);
-  background:
-    radial-gradient(ellipse at 8% -10%, var(--stage-glow-violet), transparent 30%),
-    radial-gradient(ellipse at 96% 6%, var(--stage-glow-cyan), transparent 26%),
-    linear-gradient(145deg, var(--stage-bg-2) 0%, var(--stage-bg) 56%, var(--stage-bg-2) 100%);
+  background: linear-gradient(145deg, var(--stage-bg-2) 0%, var(--stage-bg) 56%, var(--stage-bg-2) 100%);
 }
 .dash-mesas__head {
   display: flex;
@@ -694,10 +685,7 @@
   padding: 15px 16px;
   border: 1px solid color-mix(in srgb, var(--neon) 34%, var(--stage-line-base));
   border-radius: 16px;
-  background:
-    linear-gradient(135deg, var(--stage-veil), transparent 45%),
-    radial-gradient(ellipse at 100% -12%, var(--neon-soft), transparent 62%),
-    linear-gradient(150deg, var(--stage-card), var(--stage-card-2));
+  background: linear-gradient(150deg, var(--stage-card), var(--stage-card-2));
   box-shadow: inset 0 1px 0 var(--stage-hairline-4), 0 12px 26px var(--stage-shadow-1);
 }
 .dash-mesa--atencao { --neon: var(--stage-amber); --neon-deep: var(--stage-amber-deep); --neon-soft: var(--stage-amber-soft); }
