@@ -7,7 +7,10 @@ const binary = require('@sparticuz/chromium').default;
 const { criarDashboard } = require('./fixtures/dashboard.cjs');
 const { criarPanorama, criarMesaDetalhe } = require('./fixtures/panorama-mesas.cjs');
 
-const base = process.env.VISUAL_BASE_URL || 'http://localhost:4173';
+const base = process.env.VISUAL_BASE_URL;
+if (!base) {
+  throw new Error('VISUAL_BASE_URL ausente. Execute npm run test:e2e para usar o preview isolado do runner.');
+}
 const resumo = Array.from({ length: 12 }, (_, i) => ({
   id: 1001 + i, mesa: i + 1, clienteNome: 'Cliente ' + (i + 1),
   total: 32.5 + i, fechadaEm: '2026-10-30T15:00:00.000Z',
