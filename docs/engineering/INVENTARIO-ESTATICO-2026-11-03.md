@@ -1,6 +1,7 @@
 # Inventário estático do codebase — linha de base 2026-11-03
 
-Complementa `PLANO-SANEAMENTO-CODEBASE.md` (Fases 0 e 1). Este documento registra
+Complementa `PLANO-SANEAMENTO-CODEBASE.md` (Fases 0 e 1), que ainda **não está na
+`main`**: vive na PR #198, que é só documental. Este documento registra
 **evidência reproduzível**, não intenção. Nenhuma linha de código de produção foi
 alterada para produzi-lo.
 
@@ -10,8 +11,9 @@ alterada para produzi-lo.
 |---|---|
 | `main` auditada | `88fa7be5882894c6bea2b7863feca44340aabab6` |
 | Base original da PR #198 | `150be51` sobre `7f18dca` |
-| Branch de execução | `arena/8e3909f1-lanchonete-qr-semi-final`, fast-forward para `88fa7be` + 3 commits desta etapa |
-| SHA desta linha de base | registrado no corpo da PR #198 (commits `8ae7228`, `126b30d` e o deste documento) |
+| Branch de execução | `arena/8e3909f1-lanchonete-qr-semi-final`, fast-forward para `88fa7be` |
+| Commits desta etapa | `8ae7228` (README), `126b30d` (teste hermético), `5b4a96e` (este documento), `4ed03cb`/`0ffee4c` (evidência de `dist/` e repro) |
+| PR de execução | **#202** (rascunho), base `main`; a #198 permanece só com os dois documentos do plano |
 | Node | v22.22.3 |
 | npm | 10.9.8 |
 | Node exigido pelo projeto | `>=20.9.0` (`package.json` → `engines`) |
