@@ -155,6 +155,10 @@ test('pedido idempotente, estoque, entrega parcial, pagamento e fechamento persi
     assert.equal(eventoEdicao.contexto.origem, 'qr_cliente');
     assert.equal(Number(eventoEdicao.contexto.totalAnterior), 5);
     assert.equal(Number(eventoEdicao.contexto.totalNovo), 10);
+    // A fixture não deve deixar uma segunda comanda aberta para o teste de fechamento.
+    await pedidos.cancelarPedidoCliente(token, pedidoParaEditar.id, null, {
+      requestId: requestEdicao + '-cleanup',
+    });
 
     // Cancelamento público restaura o estoque dentro da transação e marca o pedido como cancelado.
     const pedidoParaCancelar = await pedidos.criarPedido(token, {
