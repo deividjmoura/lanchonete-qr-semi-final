@@ -227,3 +227,16 @@ test('gerenciamento de e-mail Google permite desvincular e fica na aba Logins', 
   assert.ok(ui.includes('Desvincular e remover'));
   assert.ok(!ui.includes('disabled={Boolean(conta.googleVinculado)}'));
 });
+
+
+test('gerenciamento de e-mails Google usa lista e modal com remoção por ícone e confirmação', () => {
+  const ui = fs.readFileSync(path.join(__dirname, '..', 'src', 'screens', 'Admin.tsx'), 'utf8');
+  assert.match(ui, /Gerenciar e-mails/);
+  assert.match(ui, /<Modal open=\{modalEmailsAberto\}/);
+  assert.match(ui, /E-mails cadastrados/);
+  assert.match(ui, /Cadastrar e-mail/);
+  assert.match(ui, /<Trash size=\{16\}/);
+  assert.match(ui, /await confirmarAcao\(\{/);
+  assert.doesNotMatch(ui, /value=\{emailsGoogle\[conta\.id\]/);
+  assert.doesNotMatch(ui, /Desvincular e remover<\/Btn>/);
+});
