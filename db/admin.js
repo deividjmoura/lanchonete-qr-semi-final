@@ -603,7 +603,7 @@ async function atualizarCategoria(id, { nome, ordem }, ator = null, requestId = 
   }
 }
 
-async function criarProduto(body) {
+async function criarProduto(body, ator = null, requestId = null) {
   const nome = String(body.nome || '').trim();
   const categoriaId = numeroInteiroPositivo(body.categoriaId, 'categoriaId');
   const preco = numeroFinito(body.preco, 'Preço', { minimo: 0 });
@@ -640,28 +640,58 @@ async function criarProduto(body) {
         : 'cozinha';
   }
 
-  const { rows } = await pool.query(
-    `INSERT INTO produtos (categoria_id, nome, descricao, preco, foto_url, disponivel, pede_ponto_carne, controla_estoque, estoque, estoque_minimo, setor)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-     RETURNING id, categoria_id, nome, descricao, preco, foto_url, disponivel, pede_ponto_carne, controla_estoque, estoque, estoque_minimo, setor`,
-    [
-      categoriaId,
-      nome,
-      body.descricao ? String(body.descricao).trim() : null,
-      preco,
-      normalizeFotoUrl(body.fotoUrl ?? null),
-      body.disponivel !== false,
-      Boolean(body.pedePontoCarne),
-      Boolean(body.controlaEstoque || body.controla_estoque),
-      estoque,
-      estoqueMinimo,
-      setor,
-    ]
-  );
-  return { ...mapProdutoRow(rows[0]), adicionais: [], removiveis: [] };
+  // Issue #48: a criação passou a ser transacional para gravar o ator na MESMA
+  // transação do produto. Antes não havia autoria nenhuma de quem cadastrou.
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const admin = await obterAdminAtivo(client, ator);
+    const { rows } = await client.query(
+      `INSERT INTO produtos (categoria_id, nome, descricao, preco, foto_url, disponivel, pede_ponto_carne, controla_estoque, estoque, estoque_minimo, setor)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING id, categoria_id, nome, descricao, preco, foto_url, disponivel, pede_ponto_carne, controla_estoque, estoque, estoque_minimo, setor`,
+      [
+        categoriaId,
+        nome,
+        body.descricao ? String(body.descricao).trim() : null,
+        preco,
+        normalizeFotoUrl(body.fotoUrl ?? null),
+        body.disponivel !== false,
+        Boolean(body.pedePontoCarne),
+        Boolean(body.controlaEstoque || body.controla_estoque),
+        estoque,
+        estoqueMinimo,
+        setor,
+      ]
+    );
+    const produto = rows[0];
+    await registrarEvento(client, {
+      atorTipo: admin ? 'staff' : 'sistema',
+      atorId: admin ? Number(admin.id) : null,
+      atorNome: admin?.nome || null,
+      acao: 'produto_criado',
+      alvoTipo: 'produto',
+      alvoId: String(produto.id),
+      requestId,
+      contexto: {
+        nome: produto.nome,
+        categoriaId: Number(produto.categoria_id),
+        preco: Number(produto.preco),
+        setor: produto.setor,
+        disponivel: Boolean(produto.disponivel),
+      },
+    });
+    await client.query('COMMIT');
+    return { ...mapProdutoRow(produto), adicionais: [], removiveis: [] };
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
-async function atualizarProduto(id, body) {
+async function atualizarProduto(id, body, ator = null, requestId = null) {
   const campos = [];
   const vals = [];
   let i = 1;
@@ -729,37 +759,130 @@ async function atualizarProduto(id, body) {
   if (!campos.length) throw new ErroAdmin(400, 'Nada para atualizar');
 
   vals.push(id);
-  const { rows } = await pool.query(
-        `UPDATE produtos SET ${campos.join(', ')} WHERE id = $${i}
-     RETURNING id, categoria_id, nome, descricao, preco, foto_url, disponivel, pede_ponto_carne, setor, controla_estoque, estoque, estoque_minimo, ordem`,
-    vals
-  );
-  if (!rows[0]) throw new ErroAdmin(404, 'Produto não encontrado');
-  return mapProdutoRow(rows[0]);
+  // Issue #48: captura o estado anterior e grava o ator na mesma transação,
+  // para a trilha poder responder "quem mudou o preço e de quanto para quanto".
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const admin = await obterAdminAtivo(client, ator);
+    const anterior = (await client.query(
+      'SELECT id, nome, preco, disponivel, categoria_id, setor FROM produtos WHERE id=$1 FOR UPDATE',
+      [id]
+    )).rows[0];
+    if (!anterior) throw new ErroAdmin(404, 'Produto não encontrado');
+
+    const { rows } = await client.query(
+      `UPDATE produtos SET ${campos.join(', ')} WHERE id = $${i}
+       RETURNING id, categoria_id, nome, descricao, preco, foto_url, disponivel, pede_ponto_carne, setor, controla_estoque, estoque, estoque_minimo, ordem`,
+      vals
+    );
+    const produto = rows[0];
+
+    const camposAlterados = Object.keys(body).filter((k) => body[k] !== undefined).join(',');
+    await registrarEvento(client, {
+      atorTipo: admin ? 'staff' : 'sistema',
+      atorId: admin ? Number(admin.id) : null,
+      atorNome: admin?.nome || null,
+      acao: 'produto_atualizado',
+      alvoTipo: 'produto',
+      alvoId: String(id),
+      requestId,
+      contexto: {
+        camposAlterados,
+        nomeAnterior: anterior.nome,
+        nomeNovo: produto.nome,
+        precoAnterior: Number(anterior.preco),
+        precoNovo: Number(produto.preco),
+        disponivelAnterior: Boolean(anterior.disponivel),
+        disponivelNovo: Boolean(produto.disponivel),
+      },
+    });
+    await client.query('COMMIT');
+    return mapProdutoRow(produto);
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
-async function criarAdicional(produtoId, { nome, preco }) {
+async function criarAdicional(produtoId, { nome, preco }, ator = null, requestId = null) {
   const n = String(nome || '').trim();
   const p = numeroFinito(preco, 'Preço', { minimo: 0 });
   if (!n) throw new ErroAdmin(400, 'Nome do adicional é obrigatório');
 
-  const { rows: prod } = await pool.query('SELECT id FROM produtos WHERE id = $1', [produtoId]);
-  if (!prod[0]) throw new ErroAdmin(404, 'Produto não encontrado');
+  // Issue #48: adicional altera o preço final do que o cliente paga, então
+  // também precisa de autoria na mesma transação.
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const admin = await obterAdminAtivo(client, ator);
+    const { rows: prod } = await client.query('SELECT id FROM produtos WHERE id = $1', [produtoId]);
+    if (!prod[0]) throw new ErroAdmin(404, 'Produto não encontrado');
 
-  const { rows } = await pool.query(
-    'INSERT INTO adicionais (produto_id, nome, preco) VALUES ($1, $2, $3) RETURNING id, produto_id, nome, preco',
-    [produtoId, n, p]
-  );
-  return { id: rows[0].id, produtoId: rows[0].produto_id, nome: rows[0].nome, preco: Number(rows[0].preco) };
+    const { rows } = await client.query(
+      'INSERT INTO adicionais (produto_id, nome, preco) VALUES ($1, $2, $3) RETURNING id, produto_id, nome, preco',
+      [produtoId, n, p]
+    );
+    const ad = rows[0];
+    await registrarEvento(client, {
+      atorTipo: admin ? 'staff' : 'sistema',
+      atorId: admin ? Number(admin.id) : null,
+      atorNome: admin?.nome || null,
+      acao: 'adicional_criado',
+      alvoTipo: 'adicional',
+      alvoId: String(ad.id),
+      requestId,
+      contexto: { produtoId: Number(ad.produto_id), nome: ad.nome, preco: Number(ad.preco) },
+    });
+    await client.query('COMMIT');
+    return { id: ad.id, produtoId: ad.produto_id, nome: ad.nome, preco: Number(ad.preco) };
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
-async function removerAdicional(id) {
-  const { rowCount } = await pool.query('DELETE FROM adicionais WHERE id = $1', [id]);
-  if (!rowCount) throw new ErroAdmin(404, 'Adicional não encontrado');
-  return { ok: true };
+async function removerAdicional(id, ator = null, requestId = null) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const admin = await obterAdminAtivo(client, ator);
+    const anterior = (await client.query(
+      'SELECT id, produto_id, nome, preco FROM adicionais WHERE id = $1 FOR UPDATE',
+      [id]
+    )).rows[0];
+    if (!anterior) throw new ErroAdmin(404, 'Adicional não encontrado');
+
+    await client.query('DELETE FROM adicionais WHERE id = $1', [id]);
+    await registrarEvento(client, {
+      atorTipo: admin ? 'staff' : 'sistema',
+      atorId: admin ? Number(admin.id) : null,
+      atorNome: admin?.nome || null,
+      acao: 'adicional_removido',
+      alvoTipo: 'adicional',
+      alvoId: String(id),
+      requestId,
+      contexto: {
+        produtoId: Number(anterior.produto_id),
+        nome: anterior.nome,
+        preco: Number(anterior.preco),
+      },
+    });
+    await client.query('COMMIT');
+    return { ok: true };
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
-async function setRemoviveis(produtoId, ingredientes) {
+async function setRemoviveis(produtoId, ingredientes, ator = null, requestId = null) {
   const lista = Array.isArray(ingredientes)
     ? [...new Set(ingredientes.map((x) => String(x).trim()).filter(Boolean))]
     : [];
@@ -767,6 +890,7 @@ async function setRemoviveis(produtoId, ingredientes) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    const admin = await obterAdminAtivo(client, ator);
     const { rows: prod } = await client.query('SELECT id FROM produtos WHERE id = $1', [produtoId]);
     if (!prod[0]) throw new ErroAdmin(404, 'Produto não encontrado');
 
@@ -777,6 +901,16 @@ async function setRemoviveis(produtoId, ingredientes) {
         [produtoId, ing]
       );
     }
+    await registrarEvento(client, {
+      atorTipo: admin ? 'staff' : 'sistema',
+      atorId: admin ? Number(admin.id) : null,
+      atorNome: admin?.nome || null,
+      acao: 'produto_removiveis_definidos',
+      alvoTipo: 'produto',
+      alvoId: String(produtoId),
+      requestId,
+      contexto: { quantidade: lista.length, ingredientes: lista.slice(0, 20) },
+    });
     await client.query('COMMIT');
     return { produtoId, removiveis: lista };
   } catch (e) {
@@ -787,7 +921,7 @@ async function setRemoviveis(produtoId, ingredientes) {
   }
 }
 
-async function removerProduto(id) {
+async function removerProduto(id, ator = null, requestId = null) {
   const { rows: used } = await pool.query(
     'SELECT 1 FROM itens_pedido WHERE produto_id = $1 LIMIT 1',
     [id]
@@ -813,10 +947,31 @@ async function removerProduto(id) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    const admin = await obterAdminAtivo(client, ator);
+    const anterior = (await client.query(
+      'SELECT id, nome, preco, categoria_id FROM produtos WHERE id = $1 FOR UPDATE',
+      [id]
+    )).rows[0];
+    if (!anterior) throw new ErroAdmin(404, 'Produto não encontrado');
+
     await client.query('DELETE FROM produtos_ingredientes_removiveis WHERE produto_id = $1', [id]);
     await client.query('DELETE FROM adicionais WHERE produto_id = $1', [id]);
     const { rowCount } = await client.query('DELETE FROM produtos WHERE id = $1', [id]);
     if (!rowCount) throw new ErroAdmin(404, 'Produto não encontrado');
+    await registrarEvento(client, {
+      atorTipo: admin ? 'staff' : 'sistema',
+      atorId: admin ? Number(admin.id) : null,
+      atorNome: admin?.nome || null,
+      acao: 'produto_removido',
+      alvoTipo: 'produto',
+      alvoId: String(id),
+      requestId,
+      contexto: {
+        nome: anterior.nome,
+        preco: Number(anterior.preco),
+        categoriaId: Number(anterior.categoria_id),
+      },
+    });
     await client.query('COMMIT');
     return { ok: true };
   } catch (e) {
@@ -855,7 +1010,7 @@ async function reordenarCategorias(ids) {
 }
 
 /** Reordena produtos de uma categoria: ids na ordem desejada → ordem 0..n-1 */
-async function reordenarProdutos(categoriaId, ids) {
+async function reordenarProdutos(categoriaId, ids, ator = null, requestId = null) {
   const catId = numeroInteiroPositivo(categoriaId, 'categoriaId');
   if (!Array.isArray(ids) || !ids.length) throw new ErroAdmin(400, 'ids é obrigatório');
   const lista = ids.map((x) => Number(x)).filter((n) => Number.isFinite(n) && n > 0);
@@ -864,6 +1019,7 @@ async function reordenarProdutos(categoriaId, ids) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    const admin = await obterAdminAtivo(client, ator);
     const { rows: existing } = await client.query(
       'SELECT id FROM produtos WHERE categoria_id = $1',
       [catId]
@@ -879,6 +1035,16 @@ async function reordenarProdutos(categoriaId, ids) {
         catId,
       ]);
     }
+    await registrarEvento(client, {
+      atorTipo: admin ? 'staff' : 'sistema',
+      atorId: admin ? Number(admin.id) : null,
+      atorNome: admin?.nome || null,
+      acao: 'produtos_reordenados',
+      alvoTipo: 'categoria',
+      alvoId: String(catId),
+      requestId,
+      contexto: { quantidade: lista.length },
+    });
     await client.query('COMMIT');
     return { ok: true, categoriaId: catId, ids: lista };
   } catch (e) {

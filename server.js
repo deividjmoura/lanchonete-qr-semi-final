@@ -1574,7 +1574,8 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/admin/produtos/ordem' && req.method === 'PUT') {
       try {
         const b = await body(req);
-        const out = await reordenarProdutos(b.categoriaId, b.ids || b.ordem || []);
+        const ator = await getStaffDaRequisicao(req);
+        const out = await reordenarProdutos(b.categoriaId, b.ids || b.ordem || [], ator, reqId);
         invalidarCardapio();
         return json(res, 200, out);
       } catch (e) {
@@ -1584,7 +1585,12 @@ const server = http.createServer(async (req, res) => {
     }
     if (p === '/api/admin/produtos' && req.method === 'POST') {
       try {
-        const out = await criarProduto(await body(req, { maxBytes: Number(process.env.FOTO_MAX_BODY_BYTES || 8 * 1024 * 1024) }));
+        const ator = await getStaffDaRequisicao(req);
+        const out = await criarProduto(
+          await body(req, { maxBytes: Number(process.env.FOTO_MAX_BODY_BYTES || 8 * 1024 * 1024) }),
+          ator,
+          reqId
+        );
         invalidarCardapio();
         return json(res, 201, out);
       } catch (e) {
@@ -1594,9 +1600,12 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/admin\/produtos\/(\d+)$/)) && req.method === 'PATCH') {
       try {
+        const ator = await getStaffDaRequisicao(req);
         const out = await atualizarProduto(
           Number(m[1]),
-          await body(req, { maxBytes: Number(process.env.FOTO_MAX_BODY_BYTES || 8 * 1024 * 1024) })
+          await body(req, { maxBytes: Number(process.env.FOTO_MAX_BODY_BYTES || 8 * 1024 * 1024) }),
+          ator,
+          reqId
         );
         invalidarCardapio();
         return json(res, 200, out);
@@ -1608,7 +1617,8 @@ const server = http.createServer(async (req, res) => {
 
     if ((m = p.match(/^\/api\/admin\/produtos\/(\d+)$/)) && req.method === 'DELETE') {
       try {
-        const out = await removerProduto(Number(m[1]));
+        const ator = await getStaffDaRequisicao(req);
+        const out = await removerProduto(Number(m[1]), ator, reqId);
         invalidarCardapio();
         return json(res, 200, out);
       } catch (e) {
@@ -1618,7 +1628,8 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/admin\/produtos\/(\d+)\/adicionais$/)) && req.method === 'POST') {
       try {
-        const out = await criarAdicional(Number(m[1]), await body(req));
+        const ator = await getStaffDaRequisicao(req);
+        const out = await criarAdicional(Number(m[1]), await body(req), ator, reqId);
         invalidarCardapio();
         return json(res, 201, out);
       } catch (e) {
@@ -1628,7 +1639,8 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/admin\/adicionais\/(\d+)$/)) && req.method === 'DELETE') {
       try {
-        const out = await removerAdicional(Number(m[1]));
+        const ator = await getStaffDaRequisicao(req);
+        const out = await removerAdicional(Number(m[1]), ator, reqId);
         invalidarCardapio();
         return json(res, 200, out);
       } catch (e) {
@@ -1639,7 +1651,8 @@ const server = http.createServer(async (req, res) => {
     if ((m = p.match(/^\/api\/admin\/produtos\/(\d+)\/removiveis$/)) && req.method === 'PUT') {
       try {
         const b = await body(req);
-        const out = await setRemoviveis(Number(m[1]), b.ingredientes || b.removiveis || []);
+        const ator = await getStaffDaRequisicao(req);
+        const out = await setRemoviveis(Number(m[1]), b.ingredientes || b.removiveis || [], ator, reqId);
         invalidarCardapio();
         return json(res, 200, out);
       } catch (e) {
