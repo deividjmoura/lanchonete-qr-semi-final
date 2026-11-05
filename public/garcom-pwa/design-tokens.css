@@ -540,3 +540,8 @@
     --dur-slow: 0ms;
   }
 }
+
+
+/* Rolagem sem trilhos visíveis: mantém a interação sem expor trilhos nativos. */
+html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
+*::-webkit-scrollbar { display: none; width: 0; height: 0; }
