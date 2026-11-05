@@ -75,7 +75,7 @@ Portanto, o purge atual não é uma anonimização: ele apaga registros operacio
 | Logs da aplicação e do provedor (Railway) | Até 90 dias | Depende da configuração do provedor; não há retenção própria na aplicação. |
 | Fila offline do PWA do garçom | Até sincronizar ou limpar navegador/aparelho | Sem expurgo automático (decisão de produto: preservar replay idempotente). |
 
-Os prazos acima são **política**, não mecanismo: nenhuma rotina roda por agendamento. Para aplicá-los, é preciso decidir quem executa a purga e com qual periodicidade (§4). O texto público correspondente está na seção 8 da Política de Privacidade.
+Os prazos acima são **política**, não mecanismo: nenhuma rotina roda por agendamento. **Decisão de 05/11/2026:** a revisão é feita pelo administrador da instalação a cada **90 dias**, com `Ver prévia` obrigatório antes de `Anonimizar` no painel (`Limpar` → *Anonimizar histórico antigo*, que agora explica os prazos em um ícone de informação). O texto público correspondente está na seção 8 da Política de Privacidade.
 
 ## 4. Controles antes de qualquer exclusão
 
@@ -101,13 +101,14 @@ O canal já está definido (`dejesusdemouradeivid@gmail.com`, resposta em até 1
 - [x] Confirmar se o e-mail atualmente publicado como contato de privacidade é canal oficial, monitorado e autorizado para receber solicitações de titulares. — **05/11/2026:** `dejesusdemouradeivid@gmail.com`, com resposta em até 15 dias.
 - [x] Confirmar fornecedores efetivamente contratados, suboperadores, local de armazenamento e transferências internacionais a partir dos contratos/configuração reais. — **05/11/2026:** Railway (aplicação + PostgreSQL) e Google OAuth quando habilitado. Nenhum outro suboperador identificado; fotos de cardápio podem apontar para host externo cadastrado pelo estabelecimento. Região de processamento e contrato de tratamento **não** confirmados.
 - [x] Aprovar prazos por classe, após validação contábil/jurídica. — **05/11/2026:** prazos aprovados em §3.1; validação contábil/jurídica segue como etapa do responsável.
+- [x] Definir quem aprova e com que frequência se executa a purga. — **05/11/2026:** administrador da instalação, revisão a cada 90 dias, sempre com prévia.
+- [x] Definir o procedimento interno de atendimento a titulares. — **05/11/2026:** `docs/engineering/procedimento-titulares.md`.
+- [x] Definir o ciclo de vida de contas de staff após desligamento. — **05/11/2026:** `docs/engineering/ciclo-de-vida-contas-staff.md` (remover e-mail Google → redefinir senha → desativar garçom → limpar PWA → manter autoria).
 - [ ] Decidir se nomes/observações podem ser anonimizados antes do purge financeiro.
 - [ ] Decidir se avisos PIX e histórico de transferência devem sobreviver à exclusão da sessão.
 - [ ] Definir retenção e acesso às trilhas `auditoria_eventos` e `staff_credencial_eventos`.
-- [ ] Definir ciclo de vida de contas de staff, e-mails e vínculos Google após desligamento.
 - [ ] Confirmar a retenção real de logs no provedor e quem pode acessá-los.
 - [ ] Definir descarte de fotos e backups de fotos quando produtos forem arquivados/removidos.
-- [ ] Definir quem aprova e quem revisa a execução do purge.
 
 **Até essas decisões serem registradas, não habilitar purge automático, anonimização automática nem exclusão de fotos.** O comportamento atual permanece manual; esta atualização não altera runtime, schema, migrations, banco ou produção.
 

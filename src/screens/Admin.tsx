@@ -10,6 +10,7 @@ import {
   EyeSlash,
   FileText,
   FileArrowUp,
+  Info,
   Key,
   LinkSimple,
   Package,
@@ -2275,6 +2276,7 @@ function Funcoes() {
   });
   const [histTo, setHistTo] = useState(() => dataLocal());
   const [purgeBefore, setPurgeBefore] = useState("");
+  const [purgeInfo, setPurgeInfo] = useState(false);
   const [purgeMsg, setPurgeMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -2528,15 +2530,49 @@ function Funcoes() {
       )}
       {sub === "purge" && (
         <section className="rounded-md border border-status-danger-border bg-surface-raised p-5">
-          <h3 className="font-display text-2xl font-bold tracking-tight text-text mb-1">
-            Anonimizar histórico antigo
-          </h3>
+          <div className="flex items-start gap-2 mb-1">
+            <h3 className="font-display text-2xl font-bold tracking-tight text-text">
+              Anonimizar histórico antigo
+            </h3>
+            <button
+              type="button"
+              onClick={() => setPurgeInfo((v) => !v)}
+              aria-expanded={purgeInfo}
+              aria-controls="purgeRetentionInfo"
+              aria-label="Prazos de retenção e o que esta anonimização faz"
+              title="Prazos de retenção e o que esta anonimização faz"
+              className="mt-1 inline-grid h-7 w-7 shrink-0 place-items-center rounded-full border border-line-strong text-text-muted hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            >
+              <Info size={16} weight="regular" aria-hidden="true" />
+            </button>
+          </div>
           <p className="text-xs text-text-muted mb-4">
             Substitui por {ANONIMIZADO} os nomes de cliente e as observações livres das contas
             encerradas antes da data escolhida. Valor, forma de pagamento, data e autoria são
             preservados — as contas continuam em Relatório, Comprovantes recentes e Histórico.
             Mesas abertas não são afetadas. Confira a prévia antes de executar.
           </p>
+          {purgeInfo && (
+            <div
+              id="purgeRetentionInfo"
+              className="mb-4 rounded-sm border border-line-strong bg-surface-sunken p-3 text-xs text-text"
+            >
+              <p className="font-semibold mb-1">Prazos de retenção definidos pelo responsável</p>
+              <ul className="list-disc pl-5 space-y-0.5 text-text-muted">
+                <li>Contas fechadas, pedidos e itens: até 12 meses após o fechamento.</li>
+                <li>Registros financeiros e comprovantes: até 5 anos — não são anonimizados aqui.</li>
+                <li>Auditoria e eventos de credencial: até 24 meses, em trilha separada.</li>
+                <li>Logs da aplicação e do provedor: até 90 dias, fora deste painel.</li>
+                <li>Fila offline do PWA do garçom: no aparelho, até sincronizar ou limpar os dados.</li>
+              </ul>
+              <p className="mt-2 text-text-muted">
+                Esta operação é <strong>manual</strong> e não roda em agendamento: revise a cada
+                90 dias, sempre com a prévia antes de executar. Nada é apagado do histórico — só o
+                dado pessoal digitado pelo cliente ou sobre ele é substituído. Não pode ser
+                desfeito.
+              </p>
+            </div>
+          )}
           <div className="flex flex-wrap gap-3 items-end">
             <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
               Antes de
