@@ -154,6 +154,18 @@ test('as páginas legais identificam o fornecedor real sem expor dados pessoais 
   // Fornecedores só entram na Política se estiverem confirmados.
   assert.match(ler('public/politica-de-privacidade.html'), /Railway/);
   assert.match(ler('public/politica-de-privacidade.html'), /Google<\/strong> \(OAuth\/OpenID Connect\)/);
+  // Região confirmada (us-east) caracteriza transferência internacional e
+  // precisa estar dita; a ausência de DPA não pode ser escondida.
+  assert.match(ler('public/politica-de-privacidade.html'), /região <strong>us-east<\/strong>.*Estados Unidos/);
+  assert.match(
+    ler('public/politica-de-privacidade.html'),
+    /ainda não firmou com esse provedor um contrato específico de tratamento/i,
+    'não declarar contrato de tratamento inexistente',
+  );
+  // O atendimento a titulares precisa dizer como o pedido é respondido.
+  assert.match(ler('public/politica-de-privacidade.html'), /responde por escrito em até 15 dias/);
+  // A revisão periódica da anonimização é decisão registrada, não promessa solta.
+  assert.match(ler('public/politica-de-privacidade.html'), /revisa essa limpeza a cada <strong>90 dias<\/strong>/);
   // Nenhuma página pública pode depender de CDN de fonte de terceiro.
   for (const arquivo of ['public/mesa.html', 'public/garcom-pwa/index.html', 'index.html']) {
     assert.doesNotMatch(ler(arquivo), /fonts\.googleapis\.com|fonts\.gstatic\.com/, arquivo + ' sem Google Fonts');
