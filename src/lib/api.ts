@@ -175,6 +175,8 @@ export type ErroImportCardapio = {
   mensagem: string;
 };
 
+export type ReversaoCardapio = { disponivel: boolean; versao?: string; criadoEm?: string };
+
 export type ProdutoImportado = {
   linha: number;
   categoria: string;
@@ -182,6 +184,7 @@ export type ProdutoImportado = {
   descricao: string | null;
   preco: number;
   imagemUrl: string | null;
+  estoque?: number | null;
   disponivel: boolean;
   ordem: number;
 };
@@ -216,6 +219,8 @@ export type ResumoImportCardapio = {
 };
 
 export const api = {
+  statusReversaoCardapio: () => apiGet<ReversaoCardapio>("/api/admin/cardapio/reversao"),
+  reverterCardapio: (versao: string) => apiSend<{ ok: true }>("/api/admin/cardapio/reverter", "POST", { versao, confirmar: true }),
   cardapio: () => apiGet<any[]>("/api/cardapio"),
   login: (usuario: string, senha: string) =>
     apiSend<{

@@ -316,3 +316,25 @@ O CNPJ e o nome empresarial são reproduzidos conforme o certificado cadastral. 
 *Mais clareza para a equipe. Mais acompanhamento para o cliente. Mais controle para a operação.*
 
 </div>
+
+### CSV com estoque e reversão
+
+No modelo baixado em **Admin → Cardápio → Importar CSV**, a coluna opcional
+`estoque` recebe unidades inteiras de 0 a 2147483647. **`0` ativa o controle com
+saldo zerado** (produto esgotado até a reposição); quantidade positiva ativa o
+controle com esse saldo. Vazio ou coluna ausente preserva o estoque existente
+no modo atualizar e deixa produtos novos sem controle. A coluna `disponivel`
+continua independente: `nao` mantém o produto pausado mesmo após reposição.
+Arquivos antigos de sete colunas continuam aceitos.
+
+Cada importação bem-sucedida salva no banco **um ponto de restauração** do
+catálogo anterior, na mesma transação. Abra novamente **Importar CSV** e use
+**Reverter última importação**. O ponto persiste ao fechar a janela ou reiniciar
+o servidor; uma nova importação o substitui. Produtos novos são arquivados,
+nunca apagados, e IDs, pedidos, vendas e adicionais anteriores são preservados.
+
+Por segurança, a reversão é bloqueada se houve qualquer mudança posterior no
+catálogo, inclusive entrada/baixa de estoque. Ela não deve ser usada para
+sobrescrever operação da loja. A reversão exige administrador, confirmação,
+sessão/CSRF válidos e gera auditoria. Não é um histórico ilimitado de versões,
+nem restaura importações anteriores à migration `0040`.

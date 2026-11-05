@@ -1,4 +1,5 @@
 require('dotenv').config();
+const { statusReversao, reverterCardapio } = require('./db/cardapio-reversao');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -1627,6 +1628,26 @@ const server = http.createServer(async (req, res) => {
       });
       // BOM para o Excel abrir os acentos corretamente em pt-BR.
       return res.end('\uFEFF' + MODELO_CSV_CARDAPIO);
+    }
+
+    if (p === '/api/admin/cardapio/reversao' && req.method === 'GET') {
+      return json(res, 200, await statusReversao());
+    }
+    if (p === '/api/admin/cardapio/reverter' && req.method === 'POST') {
+      const staff = await getStaffDaRequisicao(req);
+      const b = await body(req);
+      if (b.confirmar !== true || typeof b.versao !== 'string') {
+        return json(res, 400, { error: 'Confirme a reversão da última importação.' });
+      }
+      try {
+        const out = await reverterCardapio({ versao: b.versao, ator: staff, requestId: reqId });
+        invalidarCardapio();
+        broadcast('update', { type: 'cardapio_importacao_revertida' });
+        return json(res, 200, out);
+      } catch (e) {
+        if (e.status === 409) return json(res, 409, { error: e.message });
+        throw e;
+      }
     }
 
     /* Etapa 1 da importação: só lê e valida. Nada é gravado aqui. */

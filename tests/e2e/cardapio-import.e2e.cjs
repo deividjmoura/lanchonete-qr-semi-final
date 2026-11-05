@@ -106,7 +106,7 @@ async function contexto(browser) {
     }
   });
 
-  const req = { previas: [], importacoes: [], cardapios: 0, falharImportacao: false };
+  const req = { previas: [], importacoes: [], cardapios: 0, falharImportacao: false, ponto: null, reversoes: 0, bloquearReversao: false };
 
   await context.route('**/api/**', async (route) => {
     const url = new URL(route.request().url());
@@ -114,7 +114,15 @@ async function contexto(browser) {
     const metodo = route.request().method();
     let data = [];
 
-    if (p === '/api/me') {
+    if (p === '/api/admin/cardapio/reversao') {
+      data = req.ponto || { disponivel: false };
+    } else if (p === '/api/admin/cardapio/reverter') {
+      req.reversoes++;
+      const b = route.request().postDataJSON();
+      assert.equal(b.confirmar, true); assert.equal(b.versao, req.ponto.versao);
+      if (req.bloquearReversao) return route.fulfill({ status: 409, json: { error: 'O estoque mudou. Reversão bloqueada.' } });
+      req.ponto = { disponivel: false }; data = { ok: true };
+    } else if (p === '/api/me') {
       data = { staff: { id: 1, login: 'admin', papel: 'admin', nome: 'admin', deveTrocarSenha: false }, csrfToken: 'csrf-test' };
     } else if (p === '/api/admin/cardapio' && metodo === 'GET') {
       req.cardapios++;
@@ -129,6 +137,7 @@ async function contexto(browser) {
       if (req.falharImportacao) {
         return route.fulfill({ status: 500, json: { error: 'Falha simulada ao gravar o cardápio. Nada foi alterado.' } });
       }
+      req.ponto = { disponivel: true, versao: `versao-${req.importacoes.length}` };
       const previa = analisarCsv(corpo && corpo.csv);
       const modo = corpo && corpo.modo === 'atualizar' ? 'atualizar' : 'substituir';
       data = {
@@ -178,7 +187,7 @@ async function main() {
 
   try {
     await page.goto(base + '/#/admin/cardapio', { waitUntil: 'load' });
-    await page.getByRole('heading', { name: 'Cardápio', exact: true, level: 1 }).waitFor();
+    await page.getByRole('heading', { name: 'Cardápio & Estoque', exact: true, level: 1 }).waitFor();
 
     // ---------------------------------------------------------------- abrir
     await page.getByRole('button', { name: 'Importar CSV' }).click();
@@ -300,9 +309,27 @@ async function main() {
     // --------------------------------------------------------------- fechar
     await sucesso.getByRole('button', { name: 'Fechar', exact: true }).click();
     await dialogo.waitFor({ state: 'hidden' });
-    await page.getByRole('heading', { name: 'Cardápio', exact: true, level: 1 }).waitFor();
+    await page.getByRole('heading', { name: 'Cardápio & Estoque', exact: true, level: 1 }).waitFor();
     assert.ok(req.cardapios >= 2, 'cardápio recarregado nas duas importações');
 
+    // Reabre a janela: ponto de restauração vem do servidor, não da memória do modal.
+    await page.getByRole('button', { name: 'Importar CSV' }).click();
+    await dialogo.waitFor();
+    const reverter = dialogo.getByRole('button', { name: 'Reverter última importação', exact: true });
+    await reverter.click();
+    const confirmarReversao = page.getByRole('alertdialog', { name: 'Reverter última importação?' });
+    await confirmarReversao.getByRole('button', { name: 'Cancelar', exact: true }).click();
+    assert.equal(req.reversoes, 0);
+    req.bloquearReversao = true;
+    await reverter.click();
+    await confirmarReversao.getByRole('button', { name: 'Reverter cardápio', exact: true }).click();
+    await dialogo.getByText('O estoque mudou. Reversão bloqueada.', { exact: true }).waitFor();
+    req.bloquearReversao = false;
+    await reverter.click();
+    await confirmarReversao.getByRole('button', { name: 'Reverter cardápio', exact: true }).click();
+    await dialogo.getByText('Cardápio anterior restaurado.', { exact: true }).waitFor();
+    assert.equal(req.reversoes, 2);
+    assert.equal(req.ponto.disponivel, false);
     assert.deepEqual(errors, [], 'nenhum erro de runtime na página');
     console.log('cardapio-import: fluxo de prévia → confirmação → resumo OK');
   } finally {

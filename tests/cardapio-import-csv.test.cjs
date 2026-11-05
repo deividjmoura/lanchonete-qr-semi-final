@@ -457,3 +457,19 @@ test('formato do CSV está documentado para quem vai preencher a planilha', () =
   assert.match(doc, /substituir/i);
   assert.match(doc, /transação|transacao/i);
 });
+
+test('estoque CSV distingue zero de vazio/ausente e aceita apenas inteiros não negativos', () => {
+  const h = 'categoria;nome;preco;disponivel;estoque';
+  for (const [raw, esperado] of [['0', 0], ['25', 25], ['', null]]) {
+    const out = lerCsvCardapio(`${h}\nLanches;Teste;10;sim;${raw}`);
+    assert.equal(out.ok, true);
+    assert.equal(out.produtos[0].estoque, esperado);
+  }
+  const antigo = lerCsvCardapio('categoria;nome;preco;disponivel\nLanches;Teste;10;sim');
+  assert.equal(antigo.produtos[0].estoque, null);
+  for (const raw of ['-1', '1.5', '1,5', 'NaN', '2147483648']) {
+    const out = lerCsvCardapio(`${h}\nLanches;Teste;10;sim;${raw}`);
+    assert.equal(out.ok, false, raw);
+    assert.equal(out.erros[0].coluna, 'estoque');
+  }
+});
