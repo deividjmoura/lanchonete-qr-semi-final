@@ -112,10 +112,23 @@ export async function probeBackend(url, fetchImpl = globalThis.fetch, timeoutMs 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetchImpl(url, { cache: 'no-store', signal: controller.signal, headers: { accept: 'application/json' } });
-    if (res.status === 401 || res.status === 403) { const e = new Error('Link do garçom inválido ou desativado'); e.status = res.status; throw e; }
-    return res.ok;
-  } finally { clearTimeout(timer); }
+    const res = await fetchImpl(url, {
+      cache: 'no-store',
+      signal: controller.signal,
+      headers: { accept: 'application/json' }
+    });
+    // Uma resposta HTTP prova que o servidor foi alcançado. 404/429/5xx
+    // são problemas de rota/serviço, não ausência de conexão. Só 401/403
+    // indicam que o link individual precisa de autenticação válida.
+    if (res.status === 401 || res.status === 403) {
+      const error = new Error('Link do garçom inválido ou desativado');
+      error.status = res.status;
+      throw error;
+    }
+    return true;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export class SyncEngine {
