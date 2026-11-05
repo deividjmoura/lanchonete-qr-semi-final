@@ -19,6 +19,50 @@ async function check(page, id) {
   assert.ok(style.inside, 'input cabe no contêiner');
   assert.ok(style.page <= style.width + 1, 'sem overflow de página');
 }
+async function checkViewport(page, width) {
+  const original = await page.locator('.brand-mark').boundingBox();
+  for (const height of [420, 320, 900]) {
+    await page.setViewportSize({ width, height });
+    await page.waitForTimeout(100);
+    const layout = await page.evaluate(() => {
+      const rect = (selector) => {
+        const r = document.querySelector(selector).getBoundingClientRect();
+        return { top: r.top, bottom: r.bottom, width: r.width, height: r.height };
+      };
+      return { footer: rect('.login-page > footer'), logo: rect('.brand-mark'),
+        card: rect('.login-card'), width: innerWidth, height: innerHeight,
+        scrollWidth: document.documentElement.scrollWidth,
+        scrollHeight: document.documentElement.scrollHeight,
+        bodyHeight: document.body.scrollHeight };
+    });
+    assert.ok(layout.footer.bottom <= height + 1 && layout.footer.top >= 0, 'rodapé visível com teclado');
+    assert.equal(layout.logo.width, original.width, 'logo não encolhe em largura');
+    assert.equal(layout.logo.height, original.height, 'logo não encolhe em altura');
+    assert.ok(layout.logo.top >= 0 && layout.logo.bottom <= layout.footer.top, 'logo visível');
+    assert.ok(layout.card.bottom <= layout.footer.top, 'formulário não cobre rodapé');
+    assert.ok(layout.scrollWidth <= width + 1, 'sem rolagem horizontal');
+    assert.ok(layout.scrollHeight <= height + 1 && layout.bodyHeight <= height + 1, 'sem rolagem vertical na página');
+  }
+  // Safari-style keyboard: layout viewport stays tall, visual viewport shrinks
+  // and pans. This simulates viewport events, not a physical device keyboard.
+  await page.evaluate(() => {
+    Object.defineProperty(visualViewport, 'height', { configurable: true, value: 320 });
+    Object.defineProperty(visualViewport, 'offsetTop', { configurable: true, value: 20 });
+    visualViewport.dispatchEvent(new Event('resize'));
+    visualViewport.dispatchEvent(new Event('scroll'));
+  });
+  await page.waitForTimeout(100);
+  const visible = await page.locator('.login-page > footer').boundingBox();
+  assert.ok(visible.y >= 20 && visible.y + visible.height <= 341, 'rodapé acompanha visualViewport');
+  const logo = await page.locator('.brand-mark').boundingBox();
+  assert.equal(logo.width, original.width);
+  assert.equal(logo.height, original.height);
+  await page.evaluate(() => {
+    delete visualViewport.height;
+    delete visualViewport.offsetTop;
+    visualViewport.dispatchEvent(new Event('resize'));
+  });
+}
 async function main() {
   const browser = await chromium.launch({ executablePath: await binary.executablePath(), args: binary.args.filter((a) => a !== '--single-process'), headless: true });
   try {
@@ -29,12 +73,14 @@ async function main() {
       await page.goto(`${base}/#/login`);
       await page.getByRole('button', { name: 'Admin', exact: true }).click();
       await check(page, '#login-senha');
+      await checkViewport(page, width);
       await page.getByRole('button', { name: 'Entrar em Admin', exact: true }).click();
       await page.locator('#login-2fa').waitFor();
       await check(page, '#login-2fa');
+      await checkViewport(page, width);
       await context.close();
     }
-    console.log('✓ Campos de senha e 2FA: foco único, contidos em 320/490/1440px, temas claro/escuro.');
+    console.log('✓ Senha/2FA: foco, logo e rodapé preservados, sem scroll de página; larguras 320/490/1440, alturas 320/420/900, temas claro/escuro e eventos visualViewport.');
   } finally { await browser.close(); }
 }
 main().catch((e) => { console.error(e); process.exitCode = 1; });

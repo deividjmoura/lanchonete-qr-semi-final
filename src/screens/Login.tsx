@@ -11,7 +11,7 @@ import {
   SquaresFour,
   WarningCircle,
 } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Logo, ThemeToggle } from "../components/ui";
 import { ir } from "../router";
 import { usePub } from "../store/usePub";
@@ -26,6 +26,33 @@ const PAPEIS = [
 ] as const;
 
 export default function Login() {
+  const paginaRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const pagina = paginaRef.current;
+    if (!pagina) return;
+    const viewport = window.visualViewport;
+    const atualizar = () => {
+      const altura = viewport?.height ?? window.innerHeight;
+      pagina.style.setProperty("--login-height", `${altura}px`);
+      pagina.style.setProperty("--login-top", `${viewport?.offsetTop ?? 0}px`);
+      pagina.dataset.compact = altura < 600 ? "true" : "false";
+    };
+    const overflowBody = document.body.style.overflow;
+    const overflowHtml = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    atualizar();
+    viewport?.addEventListener("resize", atualizar);
+    viewport?.addEventListener("scroll", atualizar);
+    window.addEventListener("resize", atualizar);
+    return () => {
+      viewport?.removeEventListener("resize", atualizar);
+      viewport?.removeEventListener("scroll", atualizar);
+      window.removeEventListener("resize", atualizar);
+      document.body.style.overflow = overflowBody;
+      document.documentElement.style.overflow = overflowHtml;
+    };
+  }, []);
   const loginApi = usePub((s) => s.loginApi);
   const concluirSegundoFatorApi = usePub((s) => s.concluirSegundoFatorApi);
   const cancelarSegundoFatorApi = usePub((s) => s.cancelarSegundoFatorApi);
@@ -123,8 +150,9 @@ export default function Login() {
 
   return (
     <div
+      ref={paginaRef}
       data-regime="expressive"
-      className="min-h-dvh flex flex-col justify-between p-4 sm:p-6 bg-surface text-text"
+      className="login-page min-h-dvh flex flex-col justify-between p-4 sm:p-6 bg-surface text-text"
     >
       <header className="mx-auto w-full max-w-5xl flex items-center justify-between">
         <button
@@ -137,16 +165,16 @@ export default function Login() {
         <ThemeToggle />
       </header>
 
-      <main className="my-auto py-8 flex items-center justify-center">
+      <main className="login-main my-auto py-8 flex items-center justify-center">
         <motion.section
           initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: reduceMotion ? 0 : 0.16, ease: [0.22, 1.18, 0.36, 1] }}
           aria-labelledby="login-titulo"
-          className="w-full max-w-md rounded-xl border border-line bg-surface-raised shadow-card overflow-hidden"
+          className="login-card w-full max-w-md rounded-xl border border-line bg-surface-raised shadow-card overflow-hidden"
         >
           {/* Cabeçalho da comanda de acesso */}
-          <div className="px-6 pt-6 pb-5 flex items-center justify-between gap-4 border-b border-line">
+          <div className="login-brand-row px-6 pt-6 pb-5 flex items-center justify-between gap-4 border-b border-line">
             <Logo size="md" />
             <div className="text-right">
               <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-ink block">
@@ -161,13 +189,13 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="p-6">
+          <div className="login-card-content p-6">
             {etapa === "credencial" && (
               <p className="text-xs font-semibold uppercase tracking-[0.08em] text-text-muted mb-3">
                 Selecione o setor
               </p>
             )}
-            <div className={cn("grid grid-cols-2 sm:grid-cols-4 gap-2.5", etapa !== "credencial" && "hidden")}>
+            <div className={cn("login-sectors grid grid-cols-2 sm:grid-cols-4 gap-2.5", etapa !== "credencial" && "hidden")}>
               {PAPEIS.map((p) => {
                 const selecionado = papel === p.id;
                 const Icon = p.Icon;
