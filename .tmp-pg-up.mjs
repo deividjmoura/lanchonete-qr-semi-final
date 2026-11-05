@@ -1,0 +1,10 @@
+import EmbeddedPostgres from 'embedded-postgres';
+import { mkdirSync } from 'node:fs';
+const dir = '/home/user/lanchonete-qr-semi-final/.tmp-pgdata';
+mkdirSync(dir, { recursive: true });
+const pg = new EmbeddedPostgres({ databaseDir: dir, user: 'postgres', password: 'postgres', port: 55433, persistent: true });
+await pg.initialise();
+await pg.start();
+await pg.createDatabase('qradmin_test');
+console.log('PG_READY');
+setInterval(() => {}, 1 << 30);
