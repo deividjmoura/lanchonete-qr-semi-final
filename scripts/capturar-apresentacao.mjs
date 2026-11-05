@@ -76,14 +76,10 @@ async function shot(page, name, { fullPage = false } = {}) {
     fullPage,
     animations: "disabled",
   });
-  try {
-    const sharp = (await import("sharp")).default;
-    await sharp(png).webp({ quality: 88 }).toFile(webp);
-    fs.unlinkSync(png);
-    console.log("ok", webp);
-  } catch {
-    console.warn("sharp indisponível; captura mantida em PNG:", png);
-  }
+  const sharp = (await import("sharp")).default;
+  await sharp(png).webp({ quality: 88 }).toFile(webp);
+  fs.unlinkSync(png);
+  console.log("ok", webp);
 }
 
 async function loginStaff(page, user, pass) {
