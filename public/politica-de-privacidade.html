@@ -26,9 +26,14 @@
   <p>Esta Política explica como dados pessoais são tratados no QRAdmin, sistema de pedidos por QR Code e gestão operacional utilizado por um estabelecimento. Ela se aplica às pessoas que acessam o cardápio, fazem pedidos ou utilizam as áreas de administração e operação.</p>
 
   <h2>1. Quem é responsável pelo tratamento</h2>
-  <p>O controlador dos dados é o estabelecimento que utiliza esta instalação do QRAdmin, representado por seu responsável legal ou operacional. O QRAdmin é o software utilizado para registrar e organizar as operações do estabelecimento. Para dúvidas ou solicitações sobre privacidade, entre em contato pelo e-mail <a href="mailto:deividmoura729249@gmail.com">deividmoura729249@gmail.com</a>. Se esta instalação for transferida para outro estabelecimento, os dados de identificação e contato do controlador deverão ser atualizados nesta política.</p>
+  <p>O controlador dos dados pessoais tratados na operação do estabelecimento é o próprio estabelecimento que utiliza esta instalação do QRAdmin, por meio de seu responsável legal. Cabe ao estabelecimento definir as finalidades e as decisões essenciais sobre o tratamento, orientar sua equipe, atender os titulares e manter seus próprios canais de privacidade atualizados. O fornecedor do software não se torna controlador dos dados do estabelecimento apenas por fornecer ou manter a aplicação.</p>
 
-  <h2>2. Quais dados podem ser tratados</h2>
+  <h2>2. Fornecedor do software e contato técnico</h2>
+  <p>O QR Admin é fornecido tecnicamente por <strong>69.987.201 DEIVID DE JESUS DE MOURA</strong>, Microempreendedor Individual (MEI), CNPJ <strong>69.987.201/0001-20</strong>, titular Deivid de Jesus de Moura, situação cadastral ativa conforme Certificado da Condição de MEI emitido em 05/11/2026. O contato profissional informado para assuntos relacionados ao software é <a href="mailto:deividmoura729249@gmail.com">deividmoura729249@gmail.com</a>.</p>
+  <p>O fornecedor disponibiliza o software e suporte técnico conforme as condições acordadas com cada estabelecimento. A definição de papéis de controlador e operador, instruções documentadas, escopo de suporte, prazos de atendimento e demais obrigações de tratamento de dados deve constar do contrato aplicável. Esta identificação comercial não substitui esse instrumento.</p>
+  <p>Na arquitetura atualmente documentada, a aplicação está hospedada na plataforma Railway e pode utilizar autenticação Google OAuth quando habilitada. A participação de fornecedores externos depende dos recursos efetivamente ativados na instalação. O QR Admin não integra gateway bancário para processar ou confirmar automaticamente pagamentos PIX.</p>
+
+  <h2>3. Quais dados podem ser tratados</h2>
   <ul>
     <li><strong>Pedidos e atendimento:</strong> nome informado pelo cliente, mesa ou identificador da comanda, produtos, adicionais, observações, quantidades, preços e horários dos pedidos.</li>
     <li><strong>Pagamentos:</strong> valores, forma de pagamento escolhida, registros de pagamentos parciais e situação de fechamento da comanda. O sistema não recebe credenciais bancárias e não confirma automaticamente o crédito de uma transferência PIX.</li>
@@ -39,7 +44,7 @@
   </ul>
   <p>O sistema é destinado a uma única instalação de estabelecimento e não deve ser usado para cadastrar dados pessoais excessivos ou informações sensíveis que não sejam necessárias ao atendimento.</p>
 
-  <h2>3. Para que os dados são utilizados</h2>
+  <h2>4. Para que os dados são utilizados</h2>
   <ul>
     <li>receber, organizar, preparar, entregar e acompanhar pedidos;</li>
     <li>identificar mesas, comandas e responsáveis pelo atendimento;</li>
@@ -49,34 +54,34 @@
     <li>proteger o sistema, prevenir fraude e abuso, investigar falhas e cumprir obrigações legais.</li>
   </ul>
 
-  <h2>4. Bases legais</h2>
+  <h2>5. Bases legais</h2>
   <p>Conforme o contexto, o tratamento poderá se apoiar nas bases legais previstas na Lei nº 13.709/2018 (LGPD), incluindo execução de procedimentos relacionados ao atendimento e à relação de consumo, cumprimento de obrigação legal ou regulatória, exercício regular de direitos, legítimo interesse com respeito aos direitos do titular e consentimento quando ele for efetivamente solicitado e necessário.</p>
 
-  <h2>5. Compartilhamento e operadores</h2>
+  <h2>6. Compartilhamento e operadores</h2>
   <p>Os dados podem ser processados por fornecedores necessários à operação, como hospedagem da aplicação, infraestrutura de banco de dados e, quando habilitado, Google para autenticação. Esses fornecedores tratam dados conforme seus próprios contratos, políticas e medidas de segurança. Dados também poderão ser compartilhados quando exigido por lei, ordem válida de autoridade ou para exercício regular de direitos. A existência de qualquer compartilhamento adicional, inclusive para publicidade ou marketing, deve ser informada pelo controlador de forma transparente.</p>
 
-  <h2>6. Cookies, sessões e armazenamento local</h2>
+  <h2>7. Cookies, sessões e armazenamento local</h2>
   <p>O sistema utiliza mecanismos técnicos necessários ao funcionamento, como cookie de sessão de funcionário e proteção contra requisições indevidas. Na PWA do garçom, o navegador usa IndexedDB para manter a fila local e localStorage para a credencial individual de acesso, preferências, avisos e uma tentativa de pagamento pendente. A fila pode conter nome informado pelo cliente, mesa, itens, observações e identificadores usados para sincronização idempotente. A credencial individual é um token de acesso do tipo bearer armazenado no navegador, não um cookie HttpOnly; links e dispositivos devem ser protegidos contra uso por terceiros.</p>
   <p>O Service Worker armazena apenas arquivos estáticos necessários para abrir a interface; respostas da API não são armazenadas em cache. Um rascunho offline só é recebido pelo servidor depois que a sincronização é concluída e confirmada por uma resposta com identificador do pedido. Não há garantia de backup dos dados locais: limpar os dados do site, remover o perfil do navegador ou desinstalar o PWA pode apagar pedidos ainda não sincronizados. O código não define prazo automático de expurgo para a fila local; o espaço disponível e a retenção dependem do navegador e do usuário. Evite dispositivos compartilhados e não compartilhe o link individual do garçom.</p>
 
-  <h2>7. Armazenamento e retenção</h2>
+  <h2>8. Armazenamento e retenção</h2>
   <p>Os dados são mantidos na infraestrutura configurada pelo estabelecimento e por seus fornecedores. O prazo de retenção varia conforme a finalidade, a necessidade operacional e as obrigações legais aplicáveis. Registros de pedidos, pagamentos e auditoria podem ser mantidos pelo período necessário à gestão do estabelecimento e à defesa de direitos. Quando deixam de ser necessários, os dados deverão ser eliminados ou anonimizados, ressalvadas as hipóteses legais de conservação.</p>
 
-  <h2>8. Segurança</h2>
+  <h2>9. Segurança</h2>
   <p>O QRAdmin possui controles técnicos destinados a restringir acessos, proteger sessões e registrar operações relevantes. Nenhum sistema conectado à internet é capaz de garantir segurança absoluta. O estabelecimento deve manter senhas fortes, restringir contas por função, proteger links e dispositivos, atualizar a aplicação e limitar o acesso às informações às pessoas autorizadas.</p>
 
-  <h2>9. Direitos dos titulares</h2>
+  <h2>10. Direitos dos titulares</h2>
   <p>Nos termos da LGPD, o titular pode solicitar confirmação da existência de tratamento, acesso, correção, anonimização, bloqueio ou eliminação de dados desnecessários ou tratados em desconformidade, informações sobre compartilhamento e demais direitos previstos em lei. As solicitações serão avaliadas pelo controlador e poderão exigir confirmação razoável de identidade. Algumas informações podem precisar ser conservadas para cumprir obrigações legais ou exercer direitos.</p>
 
-  <h2>10. Crianças e adolescentes</h2>
+  <h2>11. Crianças e adolescentes</h2>
   <p>O sistema não é projetado para criar perfis de crianças. O estabelecimento deve evitar coletar dados de crianças e, caso o tratamento seja necessário em uma situação específica, observar as exigências legais e o melhor interesse da criança ou adolescente.</p>
 
-  <h2>11. Alterações nesta política</h2>
+  <h2>12. Alterações nesta política</h2>
   <p>Esta Política poderá ser atualizada para refletir mudanças no sistema, nos fornecedores ou nas exigências legais. A versão vigente será publicada nesta página com a data da última atualização.</p>
 
-  <h2>12. Contato</h2>
-  <p>Para dúvidas ou solicitações relacionadas a dados pessoais, escreva para <a href="mailto:deividmoura729249@gmail.com">deividmoura729249@gmail.com</a>, informando que o assunto é privacidade no QRAdmin.</p>
-  <p class="notice"><strong>Nota:</strong> esta página descreve o funcionamento conhecido do QRAdmin. O estabelecimento responsável deve revisar e complementar seus dados de identificação e contato, fornecedores efetivamente contratados e prazos internos de retenção antes de utilizar esta política como documento definitivo.</p>
+  <h2>13. Contato</h2>
+  <p>Para exercer direitos ou fazer solicitações sobre dados pessoais tratados na operação, procure primeiro o estabelecimento controlador. Para dúvidas técnicas sobre o QR Admin, fale com o fornecedor pelo e-mail <a href="mailto:deividmoura729249@gmail.com">deividmoura729249@gmail.com</a>, informando que o assunto é privacidade no QR Admin.</p>
+  <p class="notice"><strong>Nota:</strong> esta página descreve o funcionamento conhecido do QRAdmin. O estabelecimento responsável deve inserir e manter seus próprios dados de identificação e canal de privacidade, confirmar os fornecedores efetivamente ativados na instalação e definir seus prazos internos de retenção. O contrato entre o estabelecimento e o fornecedor deve detalhar as responsabilidades de cada parte.</p>
 </main>
 <footer><a href="/">Página inicial do QRAdmin</a><a href="/termos-de-servico.html">Termos de Serviço</a></footer>
 </body>
