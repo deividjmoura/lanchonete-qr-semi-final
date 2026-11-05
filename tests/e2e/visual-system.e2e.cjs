@@ -261,6 +261,10 @@ async function main() {
               : "/#/" + (screen === "home" ? "" : screen) + (screen === "mesa" ? "/visual-1" : "")),
           { waitUntil: "load" },
         );
+        if (screen === "pwa") {
+          // O salão completo só aparece depois da busca por número.
+          await page.locator("#tableSearch").fill("1");
+        }
         await page
           .locator(
             screen === "pwa"
@@ -358,16 +362,21 @@ async function main() {
           }
 
           if (screen === "pwa") {
-            const mark = await inViewport(page, page.locator(".brand-mark"));
-            const pill = await inViewport(page, page.locator("#connection"));
-            const syncBtn = await inViewport(page, page.locator("#syncBtn"));
-            assert.ok(mark.x + mark.width <= pill.x, "Marca não sobrepõe conexão");
+            assert.equal(await page.locator(".app-header").count(), 0, "sem cabeçalho fixo");
+            const footer = await inViewport(page, page.locator(".app-footer"));
             assert.ok(
-              syncBtn.x >= pill.x + pill.width - 2,
+              footer.y + footer.height <= 900 + 1,
+              "rodapé encostado na base da viewport",
+            );
+            const conexao = await inViewport(page, page.locator("#connection"));
+            const syncBtn = await inViewport(page, page.locator("#syncBtn"));
+            assert.ok(
+              syncBtn.x >= conexao.x + conexao.width - 2,
               "#syncBtn fica imediatamente à direita de #connection",
             );
-            const waiterStrip = await page.locator(".waiter-strip").boundingBox();
-            assert.ok(waiterStrip && waiterStrip.height <= 42, "Faixa do garçom permanece compacta");
+            for (const id of ["#themeToggleBtn", "#helpBtn", "#openNotificationSettings"]) {
+              await inViewport(page, page.locator(id));
+            }
             await inViewport(page, page.locator(".bottom-nav"));
           }
 
@@ -500,6 +509,10 @@ async function main() {
     assert.ok(await page.evaluate(() => document.fonts.check('700 20px "Fraunces"')));
     assert.ok(await page.evaluate(() => document.fonts.check('600 15px "Plus Jakarta Sans"')));
     assert.ok(await page.evaluate(() => document.fonts.check('600 13px "JetBrains Mono"')));
+    // A marca continua no shell offline: agora ela vive no painel de ajuda do rodapé.
+    assert.equal(await page.locator(".app-header").count(), 0, "sem cabeçalho para precachear");
+    await page.locator("#helpBtn").click();
+    await page.locator(".brand-mark").waitFor({ state: "visible" });
     assert.equal(
       await page.locator(".brand-mark").evaluate((img) => img.complete && img.naturalWidth > 0),
       true,

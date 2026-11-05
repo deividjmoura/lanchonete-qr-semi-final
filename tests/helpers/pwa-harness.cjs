@@ -86,6 +86,27 @@ class Elemento {
   setAttribute(k, v) { this.attributes[k] = String(v); }
   removeAttribute(k) { delete this.attributes[k]; }
   addEventListener(ev, fn) { (this._listeners ||= {})[ev] = fn; }
+  /** Seletor simples (tag e/ou classes) sobre a árvore — usado pelo app.js. */
+  querySelector(sel) {
+    const alvo = String(sel || '').trim();
+    const casar = (el) => {
+      const m = /^([a-z0-9]*)((?:\.[\w-]+)*)$/i.exec(alvo);
+      if (!m) return false;
+      if (m[1] && el.tagName !== m[1].toUpperCase()) return false;
+      const classes = m[2].split('.').filter(Boolean);
+      const atuais = String(el.className || '').split(/\s+/).filter(Boolean);
+      return classes.every((c) => atuais.includes(c));
+    };
+    const andar = (n) => {
+      for (const f of n.children) {
+        if (casar(f)) return f;
+        const achado = andar(f);
+        if (achado) return achado;
+      }
+      return null;
+    };
+    return andar(this);
+  }
   querySelectorAll(sel) {
     // suporta apenas 'button', usado pela barra de lote
     const tag = sel.replace(/[^a-z]/gi, '').toUpperCase();
@@ -145,6 +166,8 @@ function contexto({ ids = {}, globais = {} } = {}) {
     Promise,
     navigator: { onLine: true },
     confirm: () => true,
+    setTimeout,
+    clearTimeout,
     alert: (m) => { sandbox.__alerts.push(m); },
     __alerts: [],
     __criados: criados,
