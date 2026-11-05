@@ -1898,15 +1898,11 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(302, { Location: legacyParaSpa[p] });
         return res.end();
       }
-      /* GET / sempre serve o index — o hash (#/admin) NÃO vai ao servidor.
-         Redirecionar / → /#/admin causaria loop infinito. */
+      /* A página inicial do produto é o login. A apresentação comercial
+         permanece disponível em /apresentacao.html e não dá acesso direto ao sistema. */
       if (p === '/') {
-        try {
-          const data = await fs.promises.readFile(spaIndexPath);
-          return send(res, 200, 'text/html; charset=utf-8', data);
-        } catch {
-          /* fall through to legacy */
-        }
+        res.writeHead(302, { Location: '/#/login', 'Cache-Control': 'no-store' });
+        return res.end();
       }
     }
 
