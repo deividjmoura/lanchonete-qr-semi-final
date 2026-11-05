@@ -12,6 +12,7 @@
     "start": "node scripts/start-production.js",
     "db:migrate": "node db/migrate.js",
     "db:seed": "node db/seed.js",
+    "seed:apresentacao": "node scripts/seed-apresentacao.cjs",
     "db:reset-senha": "node scripts/reset-senha.js",
     "test:smoke": "node scripts/smoke.js",
     "test:full": "node scripts/smoke-full.js",

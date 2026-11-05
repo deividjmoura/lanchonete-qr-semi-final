@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QR Admin — Do pedido ao fechamento da conta na mesma comanda</title>
+  <meta name="description" content="Sistema de operação para lanchonete, bar e restaurante: pedido por QR Code, filas de cozinha e bar por item, atendimento do garçom, caixa e administração em um único fluxo.">
+  <meta name="theme-color" content="#5b3fc4">
+  <link rel="canonical" href="https://qradminn.up.railway.app/apresentacao.html">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:url" content="https://qradminn.up.railway.app/apresentacao.html">
+  <meta property="og:title" content="QR Admin — Do pedido ao fechamento da conta na mesma comanda">
+  <meta property="og:description" content="Pedido por QR Code, produção por setor, entrega progressiva, cobrança e gestão administrativa em um fluxo único para um único estabelecimento.">
+  <meta property="og:image" content="https://qradminn.up.railway.app/public/logo/qradmin-horizontal.png">
+  <meta property="og:site_name" content="QR Admin">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="QR Admin — Do pedido ao fechamento da conta na mesma comanda">
+  <meta name="twitter:description" content="Pedido por QR Code, produção por setor, entrega progressiva e cobrança em um fluxo único.">
+  <meta name="twitter:image" content="https://qradminn.up.railway.app/public/logo/qradmin-horizontal.png">
+
+  <link rel="icon" href="/logo/favicon.png" type="image/png">
+
+  <style>
+    /* Fontes self-hosted do produto */
+    @font-face {
+      font-family: "Fraunces";
+      src: url("/garcom-pwa/fonts/fraunces-latin-soft-normal.woff2") format("woff2-variations");
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "Plus Jakarta Sans";
+      src: url("/garcom-pwa/fonts/plus-jakarta-sans-latin-wght-normal.woff2") format("woff2-variations");
+      font-weight: 200 800;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "JetBrains Mono";
+      src: url("/garcom-pwa/fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
+      font-weight: 100 800;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root {
+      --surface: #eef1f8;
+      --surface-raised: #f8faff;
+      --surface-sunken: #e0e5f1;
+      --text: #121829;
+      --text-muted: #48536d;
+      --brand: #5b3fc4;
+      --brand-ink: #4a32a6;
+      --brand-contrast: #f8faff;
+      --accent: #0a5a63;
+      --line: #c7cfe0;
+      --line-strong: #a5b0c8;
+      --focus: #5b3fc4;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-frame: 12px;
+      --shadow-soft: 0 4px 16px -4px rgba(18, 24, 41, 0.12);
+      --shadow-frame: 0 8px 28px -8px rgba(18, 24, 41, 0.18);
+      --font-display: "Fraunces", "Georgia", serif;
+      --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, monospace;
+      --max: 1180px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--surface);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: var(--brand-ink); text-underline-offset: 3px; }
+    a:hover { color: var(--brand); }
+    a:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 3px;
+    }
+
+    img { max-width: 100%; height: auto; display: block; }
+
+    .skip {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      background: var(--brand);
+      color: var(--brand-contrast);
+      padding: 0.6rem 1rem;
+      z-index: 100;
+    }
+    .skip:focus { left: 1rem; top: 1rem; }
+
+    /* Header */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: color-mix(in srgb, var(--surface-raised) 92%, transparent);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+    }
+    .site-header .inner {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .logo img { height: 32px; width: auto; }
+    .nav-cta {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      font-family: var(--font-sans);
+      font-weight: 600;
+      font-size: 0.9rem;
+      line-height: 1.2;
+      padding: 0.65rem 1.1rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 150ms, border-color 150ms, color 150ms, box-shadow 150ms;
+      min-height: 44px;
+      min-width: 44px;
+    }
+    .btn:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+    .btn-primary {
+      background: var(--brand);
+      color: var(--brand-contrast);
+    }
+    .btn-primary:hover {
+      background: var(--brand-ink);
+      color: var(--brand-contrast);
+    }
+    .btn-secondary {
+      background: var(--surface-raised);
+      color: var(--text);
+      border-color: var(--line-strong);
+    }
+    .btn-secondary:hover {
+      border-color: var(--brand);
+      color: var(--brand-ink);
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+    }
+    .btn-ghost:hover { color: var(--brand-ink); }
+
+    /* Layout helpers */
+    .wrap {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 0 1.25rem;
+    }
+    section {
+      padding: 3.5rem 0;
+    }
+    section + section {
+      border-top: 1px solid var(--line);
+    }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--brand-ink);
+      margin: 0 0 0.6rem;
+    }
+    h1, h2, h3 {
+      font-family: var(--font-display);
+      font-weight: 600;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      margin: 0 0 0.75rem;
+    }
+    h1 { font-size: clamp(2rem, 5vw, 3.25rem); }
+    h2 { font-size: clamp(1.5rem, 3.5vw, 2.25rem); }
+    h3 { font-size: 1.25rem; }
+    .lead {
+      font-size: 1.125rem;
+      line-height: 1.55;
+      color: var(--text-muted);
+      max-width: 38rem;
+    }
+    p { margin: 0 0 1rem; }
+    p:last-child { margin-bottom: 0; }
+
+    /* Hero */
+    .hero {
+      padding: 3rem 0 4rem;
+      background:
+        radial-gradient(ellipse 80% 60% at 70% 0%, color-mix(in srgb, var(--brand) 8%, transparent), transparent 70%),
+        var(--surface);
+    }
+    .hero-grid {
+      display: grid;
+      gap: 2.5rem;
+      align-items: center;
+    }
+    @media (min-width: 900px) {
+      .hero-grid {
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 3rem;
+      }
+    }
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1.75rem;
+    }
+    .hero-note {
+      margin-top: 1.25rem;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    /* Frame for screenshots / placeholders */
+    .frame {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-frame);
+      box-shadow: var(--shadow-frame);
+      overflow: hidden;
+    }
+    .frame img {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      object-fit: cover;
+      background: var(--surface-sunken);
+    }
+    .frame--portrait {
+      max-width: 360px;
+      margin-inline: auto;
+    }
+    .frame--portrait img {
+      aspect-ratio: 390 / 844;
+      object-fit: contain;
+    }
+    .caption {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.6rem;
+      line-height: 1.45;
+    }
+
+    /* Problem + flow */
+    .problem-list {
+      display: grid;
+      gap: 1rem;
+      margin: 1.5rem 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    .problem-list li {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.75rem;
+      align-items: start;
+      padding: 1rem 1.1rem;
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+    }
+    .problem-list .num {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--brand-ink);
+      padding-top: 0.15rem;
+    }
+
+    .flow {
+      display: grid;
+      gap: 0.75rem;
+      margin-top: 2rem;
+    }
+    @media (min-width: 720px) {
+      .flow {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+    .flow-step {
+      padding: 1.1rem;
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+    }
+    .flow-step .step {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--brand-ink);
+      margin-bottom: 0.4rem;
+    }
+    .flow-step h3 {
+      font-size: 1.05rem;
+      margin-bottom: 0.35rem;
+    }
+    .flow-step p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    /* Area sections */
+    .area {
+      display: grid;
+      gap: 2rem;
+      align-items: start;
+    }
+    @media (min-width: 860px) {
+      .area {
+        grid-template-columns: 1fr 1fr;
+        gap: 2.5rem;
+      }
+      .area.reverse .area-text { order: 2; }
+      .area.reverse .area-media { order: 1; }
+      .area.admin-wide {
+        grid-template-columns: 1.15fr 0.85fr;
+      }
+    }
+    .area-text ul {
+      margin: 1rem 0 0;
+      padding: 0 0 0 1.1rem;
+      color: var(--text-muted);
+    }
+    .area-text li { margin-bottom: 0.4rem; }
+    .area-text li strong { color: var(--text); font-weight: 600; }
+
+    /* Diferenciais */
+    .diff-grid {
+      display: grid;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+    @media (min-width: 700px) {
+      .diff-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    .diff-item {
+      padding: 1.15rem 1.25rem;
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+    }
+    .diff-item h3 {
+      font-size: 1.05rem;
+      margin-bottom: 0.4rem;
+    }
+    .diff-item p {
+      font-size: 0.925rem;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    /* Transparency */
+    .limits {
+      display: grid;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+    }
+    .limits details {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 0.85rem 1.1rem;
+    }
+    .limits summary {
+      font-weight: 600;
+      cursor: pointer;
+      list-style: none;
+    }
+    .limits summary::-webkit-details-marker { display: none; }
+    .limits summary::before {
+      content: "+";
+      display: inline-block;
+      width: 1.2em;
+      color: var(--brand-ink);
+      font-family: var(--font-mono);
+    }
+    .limits details[open] summary::before { content: "−"; }
+    .limits details p {
+      margin-top: 0.6rem;
+      font-size: 0.925rem;
+      color: var(--text-muted);
+    }
+
+    /* FAQ */
+    .faq {
+      display: grid;
+      gap: 0.6rem;
+      margin-top: 1.5rem;
+    }
+    .faq details {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 0.9rem 1.15rem;
+    }
+    .faq summary {
+      font-weight: 600;
+      cursor: pointer;
+      list-style: none;
+    }
+    .faq summary::-webkit-details-marker { display: none; }
+    .faq details p {
+      margin-top: 0.65rem;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+
+    /* CTA final */
+    .cta-final {
+      background:
+        linear-gradient(160deg, color-mix(in srgb, var(--brand) 9%, var(--surface-raised)), var(--surface-raised));
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 2rem 1.5rem;
+      text-align: center;
+    }
+    @media (min-width: 700px) {
+      .cta-final { padding: 2.5rem 3rem; }
+    }
+    .cta-final .actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+    .cta-final .contact {
+      margin-top: 1.5rem;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+    .cta-final .contact a { font-weight: 600; }
+
+    /* Footer */
+    .site-footer {
+      padding: 2rem 0 2.5rem;
+      border-top: 1px solid var(--line);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .site-footer .inner {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 0 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .site-footer nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .site-footer a { color: var(--text-muted); text-decoration: none; }
+    .site-footer a:hover { color: var(--brand-ink); }
+
+    .demo-note {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px dashed var(--line);
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#conteudo">Pular para o conteúdo</a>
+
+  <header class="site-header">
+    <div class="inner">
+      <a class="logo" href="/" aria-label="QR Admin — início">
+        <img src="/logo/qradmin-horizontal.png" alt="QR Admin" width="140" height="32">
+      </a>
+      <div class="nav-cta">
+        <a class="btn btn-ghost" href="/guia-sistema.html">Guia demonstrativo</a>
+        <a class="btn btn-primary" href="https://qradminn.up.railway.app/">Acessar o sistema</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="conteudo">
+    <!-- 1. Primeira dobra -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="wrap hero-grid">
+        <div>
+          <p class="eyebrow">Para um único estabelecimento</p>
+          <h1 id="hero-title">Do primeiro pedido ao fechamento da conta, tudo na mesma comanda</h1>
+          <p class="lead">
+            O QR Admin liga o cliente, a cozinha, o bar, o garçom e o caixa num fluxo contínuo.
+            Cada item avança sozinho; a comanda acumula o consumo até o fechamento.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#como-funciona">Como funciona</a>
+            <a class="btn btn-secondary" href="/guia-sistema.html">Ver demonstração visual</a>
+          </div>
+          <p class="hero-note">Instalação única · sem multi-loja · PIX com confirmação manual da equipe</p>
+        </div>
+        <div class="area-media">
+          <figure>
+            <div class="frame">
+              <img src="/assets/apresentacao/cardapio-cliente.webp" width="1440" height="900" alt="Cardápio digital da mesa 18 com categorias, fotos, preços e comanda lateral." decoding="async" fetchpriority="high">
+            </div>
+            <figcaption class="caption">Cardápio no navegador do cliente — sem instalar aplicativo. Dados de demonstração.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. O problema -->
+    <section id="problema" aria-labelledby="problema-title">
+      <div class="wrap">
+        <p class="eyebrow">O dia a dia</p>
+        <h2 id="problema-title">Pedidos que se perdem entre salão, cozinha e bar</h2>
+        <p class="lead">
+          Anotações manuais, informação desencontrada e dificuldade de saber quem responde por cada item
+          atrasam a entrega e complicam o fechamento da conta.
+        </p>
+        <ul class="problem-list">
+          <li>
+            <span class="num">01</span>
+            <div>
+              <strong>Pedido anotado e repassado à mão</strong>
+              <p>O que o cliente pediu, com adicionais e observações, precisa chegar intacto ao setor certo.</p>
+            </div>
+          </li>
+          <li>
+            <span class="num">02</span>
+            <div>
+              <strong>Cozinha e bar no mesmo ritmo forçado</strong>
+              <p>Uma bebida pronta não deveria esperar o prato principal para ser entregue.</p>
+            </div>
+          </li>
+          <li>
+            <span class="num">03</span>
+            <div>
+              <strong>Conferência manual de comandas</strong>
+              <p>Saber o que já foi entregue, o que ainda está em preparo e o saldo a pagar exige cruzar papéis ou telas soltas.</p>
+            </div>
+          </li>
+          <li>
+            <span class="num">04</span>
+            <div>
+              <strong>Responsabilidade difusa</strong>
+              <p>Quem retirou o item, quem entregou na mesa e quando: sem registro, a operação fica opaca.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 3. Como funciona -->
+    <section id="como-funciona" aria-labelledby="fluxo-title">
+      <div class="wrap">
+        <p class="eyebrow">Fluxo</p>
+        <h2 id="fluxo-title">Como a comanda anda do QR Code ao caixa</h2>
+        <p class="lead">
+          A comanda é acumulativa: novos pedidos entram na mesma sessão da mesa.
+          Cada item segue o caminho do seu setor e só entra na cobrança depois de entregue.
+        </p>
+        <div class="flow">
+          <div class="flow-step">
+            <div class="step">1 · Cliente</div>
+            <h3>QR da mesa</h3>
+            <p>Lê o código, monta o pedido com adicionais e envia. A comanda da mesa recebe os itens.</p>
+          </div>
+          <div class="flow-step">
+            <div class="step">2 · Produção</div>
+            <h3>Cozinha e bar</h3>
+            <p>Cada setor vê só o que é dele. O item avança sozinho: inicia e conclui o preparo sem esperar o outro setor.</p>
+          </div>
+          <div class="flow-step">
+            <div class="step">3 · Garçom</div>
+            <h3>Entrega</h3>
+            <p>Vê o que ficou pronto, aceita, retira e entrega. Registra responsável e horário. Pode trabalhar offline e sincronizar depois.</p>
+          </div>
+          <div class="flow-step">
+            <div class="step">4 · Caixa</div>
+            <h3>Cobrança</h3>
+            <p>Cobra o que foi entregue. Aceita pagamentos parciais, aplica desconto ou taxa com autorização e libera a mesa.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Áreas -->
+    <section id="cliente" aria-labelledby="cliente-title">
+      <div class="wrap area">
+        <div class="area-text">
+          <p class="eyebrow">Cliente</p>
+          <h2 id="cliente-title">Pedido pelo QR Code da mesa</h2>
+          <p>
+            O cliente aponta a câmera para o QR fixo da mesa e abre o cardápio no navegador.
+            Não precisa instalar aplicativo.
+          </p>
+          <ul>
+            <li>Categorias, pesquisa, fotos, descrições e preços</li>
+            <li>Personalização com adicionais, removíveis e observações</li>
+            <li>Carrinho e envio para a comanda da mesa</li>
+            <li>Acompanhamento do andamento e consulta do consumo</li>
+            <li>Comanda acumulativa: novos pedidos entram na mesma sessão</li>
+          </ul>
+        </div>
+        <div class="area-media">
+          <figure>
+            <div class="frame">
+              <img src="/assets/apresentacao/personalizacao-produto.webp" width="1440" height="900" alt="Personalização do X-Bacon da Casa com cheddar extra, ingrediente removido e observação para a cozinha." loading="lazy" decoding="async">
+            </div>
+            <figcaption class="caption">Personalização no cardápio do cliente. Dados fictícios de demonstração.</figcaption>
+          </figure>
+          <figure style="margin-top:1.25rem">
+            <div class="frame">
+              <img src="/assets/apresentacao/comanda-cliente.webp" width="1440" height="900" alt="Comanda da mesa 18 com um X-Bacon personalizado, nome do cliente e total do envio." loading="lazy" decoding="async">
+            </div>
+            <figcaption class="caption">Comanda do cliente na mesa. Dados fictícios de demonstração.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section id="producao" aria-labelledby="producao-title">
+      <div class="wrap area reverse">
+        <div class="area-text">
+          <p class="eyebrow">Cozinha e bar</p>
+          <h2 id="producao-title">Filas separadas, item por item</h2>
+          <p>
+            Cozinha e bar recebem filas próprias. O item de comida não trava a bebida, e o contrário também não.
+            Cada um inicia e conclui o preparo no seu ritmo.
+          </p>
+          <ul>
+            <li>Fila do setor com mesa, cliente, adicionais e observações</li>
+            <li>Início e conclusão do preparo por item</li>
+            <li>Atualização em tempo real e aviso sonoro nas telas compatíveis</li>
+            <li>Impressão de comanda quando habilitada</li>
+          </ul>
+        </div>
+        <div class="area-media">
+          <figure>
+            <div class="frame">
+              <img src="/assets/apresentacao/fila-cozinha.webp" width="1440" height="900" alt="Fila da cozinha com comandas em produção e itens aguardando preparo, identificados por mesa." loading="lazy" decoding="async">
+            </div>
+            <figcaption class="caption">Fila da cozinha — controle por item. Dados de demonstração.</figcaption>
+          </figure>
+          <figure style="margin-top:1.25rem">
+            <div class="frame">
+              <img src="/assets/apresentacao/fila-bar.webp" width="1440" height="900" alt="Fila do bar com bebida em produção e pedido aguardando preparo." loading="lazy" decoding="async">
+            </div>
+            <figcaption class="caption">Fila do bar — preparo independente. Dados de demonstração.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section id="garcom" aria-labelledby="garcom-title">
+      <div class="wrap area">
+        <div class="area-text">
+          <p class="eyebrow">Garçom</p>
+          <h2 id="garcom-title">Entrega com registro de responsabilidade</h2>
+          <p>
+            A área do garçom funciona no navegador e também como PWA instalável.
+            Quando um item fica pronto, o garçom vê, aceita, retira e entrega — individualmente ou em lote.
+          </p>
+          <ul>
+            <li>Aviso de item pronto e registro de quem fez cada etapa</li>
+            <li>Transferência explícita de mesa e responsabilidade</li>
+            <li>Lançamento de pedidos conforme a permissão da conta</li>
+            <li>Fila offline persistente: o pedido fica pendente até sincronizar com o servidor</li>
+            <li>Conflitos na sincronização exigem revisão — o offline não confirma sozinho</li>
+          </ul>
+        </div>
+        <div class="area-media">
+          <figure>
+            <div class="frame frame--portrait">
+              <img src="/assets/apresentacao/entregas-garcom.webp" width="390" height="844" alt="PWA móvel do garçom com pedidos prontos, estados dos itens e ações de entrega." loading="lazy" decoding="async">
+            </div>
+            <figcaption class="caption">Entregas do garçom. Dados fictícios de demonstração.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section id="caixa" aria-labelledby="caixa-title">
+      <div class="wrap area reverse">
+        <div class="area-text">
+          <p class="eyebrow">Caixa</p>
+          <h2 id="caixa-title">Cobrança pelo que foi entregue</h2>
+          <p>
+            O caixa enxerga as comandas abertas e calcula o valor cobrável com base nos itens já entregues.
+            Pagamentos parciais, divisão por pessoas e fechamento com liberação da mesa.
+          </p>
+          <ul>
+            <li>Formas: dinheiro, PIX, débito e crédito</li>
+            <li>Desconto e taxa de serviço com autorização de gerente quando necessário</li>
+            <li>Comprovante de consumo (não é nota fiscal)</li>
+            <li><strong>PIX:</strong> chave ou QR estático; a equipe confere o recebimento no aplicativo do banco e registra no sistema. Não há gateway nem confirmação automática</li>
+          </ul>
+        </div>
+        <div class="area-media">
+          <figure>
+            <div class="frame">
+              <img src="/assets/apresentacao/fechamento-caixa.webp" width="1440" height="900" alt="Fechamento de contas com comandas abertas, pagamento parcial e saldo restante." loading="lazy" decoding="async">
+            </div>
+            <figcaption class="caption">Caixa com comandas abertas e saldo. Dados de demonstração.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Administração em destaque -->
+    <section id="administracao" aria-labelledby="admin-title">
+      <div class="wrap area admin-wide">
+        <div class="area-text">
+          <p class="eyebrow">Administração</p>
+          <h2 id="admin-title">Visão da operação e controle do cardápio</h2>
+          <p>
+            O painel concentra indicadores, gestão do cardápio, mesas, praças, QR Codes, garçons e contas da equipe.
+            O dashboard pode ser reorganizado: arraste, redimensione e oculte cards conforme a leitura que a casa precisa.
+          </p>
+          <ul>
+            <li>Indicadores de faturamento, pedidos, ticket, pagamentos, produtos e entregas, com filtro de período</li>
+            <li>Categorias, produtos, preços, fotos, disponibilidade, estoque, adicionais e setor de produção</li>
+            <li>Importação de cardápio por CSV com prévia e validação</li>
+            <li>Mesas e praças, mapa, geração e download de QR Codes</li>
+            <li>Garçons com links individuais e métricas</li>
+            <li>Contas de staff e permissões por função</li>
+          </ul>
+        </div>
+        <div class="area-media">
+          <figure>
+            <div class="frame">
+              <img src="/assets/apresentacao/dashboard-admin.webp" width="1440" height="900" alt="Dashboard administrativo com indicadores de faturamento, pedidos, pagamentos, ocupação e itens em operação." loading="lazy" decoding="async">
+            </div>
+            <figcaption class="caption">Dashboard administrativo personalizável. Dados fictícios de demonstração.</figcaption>
+          </figure>
+          <figure style="margin-top:1.25rem">
+            <div class="frame">
+              <img src="/assets/apresentacao/gestao-cardapio.webp" width="1440" height="900" alt="Gestão do cardápio com categoria expandida e lista de produtos, preços e disponibilidade." loading="lazy" decoding="async">
+            </div>
+            <figcaption class="caption">Gestão do cardápio no admin. Dados de demonstração.</figcaption>
+          </figure>
+          <figure style="margin-top:1.25rem">
+            <div class="frame">
+              <img src="/assets/apresentacao/mapa-mesas.webp" width="1440" height="900" alt="Mapa de mesas com pesquisa por número e cartões de mesas ocupadas e livres." loading="lazy" decoding="async">
+            </div>
+            <figcaption class="caption">Mesas e praças no admin. Dados de demonstração.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Diferenciais comprovados -->
+    <section id="diferenciais" aria-labelledby="diff-title">
+      <div class="wrap">
+        <p class="eyebrow">O que o código faz</p>
+        <h2 id="diff-title">Diferenciais ancorados na operação</h2>
+        <div class="diff-grid">
+          <div class="diff-item">
+            <h3>Comanda acumulativa</h3>
+            <p>Novos pedidos da mesa entram na mesma sessão. O cliente continua pedindo sem abrir outra conta.</p>
+          </div>
+          <div class="diff-item">
+            <h3>Produção independente por setor</h3>
+            <p>Cozinha e bar têm filas separadas. O item avança no seu setor sem depender do outro.</p>
+          </div>
+          <div class="diff-item">
+            <h3>Controle e entrega por item</h3>
+            <p>Status, responsável e horário ficam registrados em cada etapa até a entrega na mesa.</p>
+          </div>
+          <div class="diff-item">
+            <h3>PWA do garçom com offline</h3>
+            <p>Pedidos feitos sem conexão ficam pendentes na fila local e só são confirmados depois da sincronização com o servidor. Conflitos exigem revisão.</p>
+          </div>
+          <div class="diff-item">
+            <h3>Pagamentos parciais e saldo</h3>
+            <p>O caixa registra o que já foi pago e acompanha o restante. Divisão por pessoas na interface.</p>
+          </div>
+          <div class="diff-item">
+            <h3>Dashboard personalizável</h3>
+            <p>Cards de indicadores podem ser movidos, redimensionados e ocultados para a leitura da casa.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Transparência e limites -->
+    <section id="limites" aria-labelledby="limites-title">
+      <div class="wrap">
+        <p class="eyebrow">Transparência</p>
+        <h2 id="limites-title">O que a versão atual faz — e o que não faz</h2>
+        <p class="lead">
+          A comunicação abaixo reflete o comportamento do código na versão atual.
+          Não há promessa de recurso que ainda não exista.
+        </p>
+        <div class="limits">
+          <details>
+            <summary>Um único estabelecimento</summary>
+            <p>O QR Admin é single-tenant. Uma instalação atende uma casa. Não há isolamento de dados entre vários estabelecimentos nem multi-loja.</p>
+          </details>
+          <details>
+            <summary>PIX sem gateway e sem confirmação automática</summary>
+            <p>O sistema usa chave ou QR estático. O cliente pode informar que pagou; o caixa confere no aplicativo do banco e registra. Não existe integração bancária que confirme o recebimento sozinha.</p>
+          </details>
+          <details>
+            <summary>Comprovante de consumo, não nota fiscal</summary>
+            <p>O comprovante registra o consumo da sessão. Não é documento fiscal (NF-e / NFC-e).</p>
+          </details>
+          <details>
+            <summary>Pedido offline do garçom</summary>
+            <p>A PWA guarda o pedido localmente. Ele permanece pendente até a sincronização bem-sucedida. Em caso de conflito, a equipe revisa — o sistema não marca como concluído automaticamente.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. FAQ -->
+    <section id="faq" aria-labelledby="faq-title">
+      <div class="wrap">
+        <p class="eyebrow">Perguntas</p>
+        <h2 id="faq-title">Perguntas frequentes</h2>
+        <div class="faq">
+          <details>
+            <summary>O cliente precisa instalar um aplicativo?</summary>
+            <p>Não. O cardápio abre no navegador a partir do QR Code da mesa.</p>
+          </details>
+          <details>
+            <summary>A comanda fica aberta para novos pedidos?</summary>
+            <p>Sim. A sessão da mesa é acumulativa: novos pedidos entram na mesma comanda até o fechamento no caixa.</p>
+          </details>
+          <details>
+            <summary>Cozinha e bar usam a mesma fila?</summary>
+            <p>Não. Cada setor tem a sua fila. Os itens avançam de forma independente.</p>
+          </details>
+          <details>
+            <summary>Como o garçom sabe que um item está pronto?</summary>
+            <p>A tela de entregas mostra os itens prontos. Há atualização em tempo real e aviso sonoro nas telas que suportam.</p>
+          </details>
+          <details>
+            <summary>O que acontece se o celular do garçom ficar sem internet?</summary>
+            <p>A PWA mantém uma fila local. O pedido fica pendente e é enviado quando a conexão volta. Só é considerado confirmado depois da resposta de sucesso do servidor. Conflitos pedem revisão.</p>
+          </details>
+          <details>
+            <summary>Como funciona o PIX?</summary>
+            <p>Chave ou QR estático. O cliente pode avisar o pagamento; a equipe confere no banco e registra no caixa. Não há confirmação automática nem gateway.</p>
+          </details>
+          <details>
+            <summary>Dá para receber pagamento parcial?</summary>
+            <p>Sim. O caixa registra pagamentos parciais nas formas suportadas (dinheiro, PIX, débito, crédito) e acompanha o saldo restante.</p>
+          </details>
+          <details>
+            <summary>Consigo importar o cardápio?</summary>
+            <p>Sim. Há importação por CSV com prévia e validação no painel administrativo.</p>
+          </details>
+          <details>
+            <summary>Gero os QR Codes das mesas pelo sistema?</summary>
+            <p>Sim. O admin gera, baixa e organiza os QR Codes das mesas e praças.</p>
+          </details>
+          <details>
+            <summary>O sistema atende vários estabelecimentos?</summary>
+            <p>Não nesta versão. Cada instalação corresponde a um único estabelecimento.</p>
+          </details>
+          <details>
+            <summary>O comprovante é nota fiscal?</summary>
+            <p>Não. É comprovante de consumo da sessão. A emissão de nota fiscal não faz parte desta versão.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Chamada final -->
+    <section id="proximo-passo" aria-labelledby="cta-title">
+      <div class="wrap">
+        <div class="cta-final">
+          <h2 id="cta-title">Próximo passo</h2>
+          <p class="lead" style="margin-inline: auto;">
+            Acesse o sistema em operação ou percorra a demonstração visual estática —
+            ela explica as telas sem criar pedidos nem alterar dados.
+          </p>
+          <div class="actions">
+            <a class="btn btn-primary" href="https://qradminn.up.railway.app/">Acessar o QR Admin</a>
+            <a class="btn btn-secondary" href="/guia-sistema.html">Abrir o guia demonstrativo</a>
+          </div>
+          <p class="contact">
+            Deivid Moura<br>
+            WhatsApp: <a href="https://wa.me/5547996162721">47 99616-2721</a><br>
+            E-mail: <a href="mailto:dejesusdemouradeivid@gmail.com">dejesusdemouradeivid@gmail.com</a>
+          </p>
+        </div>
+        <p class="demo-note">
+          As imagens desta página serão capturas reais de um ambiente de demonstração com dados fictícios.
+          Nenhuma captura mostra dados de produção.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="inner">
+      <span>QR Admin · operação de um único estabelecimento</span>
+      <nav aria-label="Rodapé">
+        <a href="/guia-sistema.html">Guia demonstrativo</a>
+        <a href="https://qradminn.up.railway.app/politica-de-privacidade.html">Privacidade</a>
+        <a href="https://qradminn.up.railway.app/termos-de-servico.html">Termos</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>
