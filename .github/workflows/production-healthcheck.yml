@@ -19,7 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
+      - name: Checkout (apenas para o notificador)
+        uses: actions/checkout@v4
+
       - name: Check production liveness
+        id: check
         env:
           HEALTHCHECK_URL: https://qradminn.up.railway.app/healthz
         run: |
@@ -51,3 +55,16 @@ jobs:
             process.exitCode = 1;
           }).finally(() => clearTimeout(timer));
           NODE
+
+      # Issue #43: um health check que só deixa o job vermelho não avisa ninguém.
+      # Este step roda apenas quando a checagem falha e nunca falha por si —
+      # senão mascararia a falha original registrada acima.
+      - name: Notificar falha no canal operacional
+        if: failure()
+        env:
+          ALERTA_WEBHOOK_URL: ${{ secrets.ALERTA_WEBHOOK_URL }}
+          ALERTA_TELEGRAM_TOKEN: ${{ secrets.ALERTA_TELEGRAM_TOKEN }}
+          ALERTA_TELEGRAM_CHAT_ID: ${{ secrets.ALERTA_TELEGRAM_CHAT_ID }}
+          HEALTHCHECK_URL: https://qradminn.up.railway.app/healthz
+          ALERTA_MOTIVO: "health check de produção falhou (ver log do job)"
+        run: node scripts/notificar-alerta.js
