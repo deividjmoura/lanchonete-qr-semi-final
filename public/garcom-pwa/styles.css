@@ -631,60 +631,6 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 }
 
 /* Tables Grid & My Tables */
-.my-tables-list {
-  padding: 12px 14px;
-  display: grid;
-  gap: 10px;
-}
-
-/* Uma mesa = uma superfície: título, cliente e ações em ícones. */
-.my-table-card {
-  border: 1px solid var(--brand-border);
-  border-radius: var(--radius-sm);
-  padding: 10px 12px;
-  background: color-mix(in srgb, var(--brand-surface) 55%, var(--surface));
-  display: grid;
-  gap: 8px;
-}
-
-.my-table-card-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
-}
-
-.my-table-card-head strong {
-  font-family: var(--font-display);
-  font-variation-settings: "SOFT" 80;
-  font-variant-numeric: tabular-nums;
-  font-size: 1rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.my-table-client {
-  color: var(--text-muted);
-  font-size: 0.78rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.my-table-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.table-icon-btn {
-  flex: 0 0 40px;
-  border-color: var(--line-strong);
-  background: var(--surface);
-}
-
 .table-grid {
   padding: 12px 14px;
   display: grid;
@@ -723,12 +669,6 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 .table-tile.taken {
   border-color: var(--status-warning-border);
   background: var(--status-warning-surface);
-}
-
-.table-tile.mine {
-  width: 100%;
-  border-color: var(--brand-border);
-  background: var(--brand-surface);
 }
 
 .table-actions {
@@ -1399,17 +1339,8 @@ dialog.sheet[open] {
   border-bottom-color: color-mix(in srgb, var(--line) 70%, transparent);
 }
 
-.my-table-card {
-  border-color: color-mix(in srgb, var(--brand-border) 55%, transparent);
-  box-shadow: var(--shadow-card);
-}
-
 .table-tile {
   border-color: color-mix(in srgb, var(--line) 78%, transparent);
-}
-
-.table-icon-btn {
-  border-color: color-mix(in srgb, var(--line) 70%, transparent);
 }
 
 .icon-action {
