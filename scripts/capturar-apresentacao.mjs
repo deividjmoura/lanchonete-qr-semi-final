@@ -38,8 +38,9 @@ const MOBILE = { width: 390, height: 844, deviceScaleFactor: 2 };
 
 function assertLocalBase(url) {
   const u = new URL(url);
-  if (!["localhost", "127.0.0.1"].includes(u.hostname) && !u.hostname.endsWith(".local")) {
-    console.warn("Aviso: BASE_URL não parece local. Confirme que não é produção.");
+  const hostsPermitidos = new Set(["localhost", "127.0.0.1", "::1"]);
+  if (!hostsPermitidos.has(u.hostname)) {
+    throw new Error("Capturas bloqueadas: BASE_URL precisa apontar para localhost/127.0.0.1. Nunca capture usando produção.");
   }
 }
 
@@ -67,22 +68,21 @@ async function settle(page, ms = 800) {
 
 async function shot(page, name, { fullPage = false } = {}) {
   fs.mkdirSync(OUT, { recursive: true });
-  const file = path.join(OUT, `${name}.webp`);
+  const png = path.join(OUT, `${name}.png`);
+  const webp = path.join(OUT, `${name}.webp`);
   await page.screenshot({
-    path: file,
-    type: "png", // troque para webp se o build do playwright suportar; senão converta depois
+    path: png,
+    type: "png",
     fullPage,
     animations: "disabled",
   });
-  // Preferência: converter PNG→WebP com sharp se disponível
   try {
     const sharp = (await import("sharp")).default;
-    const webp = path.join(OUT, `${name}.webp`);
-    await sharp(file).webp({ quality: 88 }).toFile(webp);
-    if (file.endsWith(".png") && file !== webp) fs.unlinkSync(file);
+    await sharp(png).webp({ quality: 88 }).toFile(webp);
+    fs.unlinkSync(png);
     console.log("ok", webp);
   } catch {
-    console.log("ok", file, "(sem sharp; mantenha png ou converta manualmente)");
+    console.warn("sharp indisponível; captura mantida em PNG:", png);
   }
 }
 
