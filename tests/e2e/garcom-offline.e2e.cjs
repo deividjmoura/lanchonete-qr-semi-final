@@ -369,6 +369,8 @@ async function main() {
       });
       db.close();
     });
+    // O botão de sincronizar vive no fim da aba Mesas.
+    await page.click('[data-tab="tables"]');
     await page.click('#syncBtn');
     const confirmado = await esperarEstado(
       (l) => l.some((o) => o.localId === interrompido.localId && o.status === 'confirmed'),
