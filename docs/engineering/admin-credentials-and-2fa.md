@@ -24,9 +24,39 @@ Política de senha (servidor é a fonte da verdade, `validarPoliticaSenha`): 12 
 - Não há migração de dados: `0024` só adiciona colunas/tabela. O login lê os novos campos via `to_jsonb`, então continua funcionando mesmo se a `0024` ainda não tiver sido aplicada (relevante enquanto o auto-migrate do `npm start` é best-effort, #6).
 - Páginas HTML legadas (`public/*.html`) não têm tela de troca; elas só são servidas quando `dist/` não existe. Com o SPA (caso normal), a tela está no `OpsShell`.
 
-## 2. Avaliação de 2FA para administradores (não implementado)
+## 2. 2FA para administradores — IMPLEMENTADO (TOTP)
 
-> Critério da #55: "implementar apenas após definir método e critérios de recuperação". Este capítulo é a proposta para decisão do responsável.
+> Critério da #55: "implementar apenas após definir método e critérios de recuperação". O método (TOTP) e a recuperação (10 códigos de uso único + desativação com senha) foram definidos pelo responsável e estão implementados. O texto abaixo é a avaliação original, mantida como registro da decisão; a seção **2.1** descreve o que existe em código.
+
+### 2.1 O que está implementado
+
+| Peça | Onde | Comportamento |
+|---|---|---|
+| Algoritmo | `db/totp.js` | RFC 6238 (HMAC-SHA1, 6 dígitos, passo de 30 s), sem dependência externa. Testado contra os **vetores oficiais do RFC 6238**. |
+| Segredo | coluna `staff.totp_segredo` | 160 bits, gravado **cifrado** (AES-256-GCM, chave `TOTP_ENC_KEY` fora do banco). Sem a chave, cifrar/decifrar falha com erro claro — **nunca** degrada para "sem 2FA". |
+| Ativação | `POST /api/me/2fa/iniciar` → `/ativar` | Dois passos: gera segredo (nada é gravado) e só liga depois que a pessoa prova um código válido. Exige `papel = admin`. |
+| Recuperação | tabela `staff_codigos_recuperacao` | 10 códigos gerados na ativação, exibidos **uma única vez**, guardados só como hash. Uso único garantido por `UPDATE ... WHERE usado_em IS NULL`. |
+| Login etapa 1 | `POST /api/login` | Com 2FA ativo responde `{ ok: false, mfaPendente: true }` e emite cookie de sessão **pendente** (`staff_sessoes.mfa_pendente = TRUE`, 5 minutos). |
+| Login etapa 2 | `POST /api/login/2fa` | Aceita TOTP ou código de recuperação, promove a sessão (token novo) e devolve `{ staff, home, csrfToken }`. |
+| Anti-replay | `staff.totp_ultimo_passo` | Código de passo já usado é recusado, inclusive em corrida (UPDATE condicional). |
+| Desativar | `POST /api/me/2fa/desativar` | Exige a senha de novo; apaga segredo e códigos; derruba as outras sessões. |
+| Auditoria | `staff_credencial_eventos` | `totp_ativado`, `totp_desativado`, `totp_verificado`, `totp_falhou`, `codigo_recuperacao_usado`. Sem código, segredo ou hash. |
+| Rate limit | rotas de 2FA | 5 tentativas/5 min por conta no login; 10/10 min para iniciar/ativar; 5/10 min para desativar. |
+
+**A garantia central:** uma sessão pendente **não autentica nenhuma rota**. `getStaffDaRequisicao` devolve `null` quando `mfa_pendente` é verdadeiro, então sem a etapa 2 não existe acesso — nem leitura, nem mutação. O teste `tests/postgres-totp-login.test.cjs` prova isso chamando quatro rotas protegidas com o cookie da etapa 1 e exigindo 401 em todas. Sem essa marca, o 2FA seria decoração: quem tem a senha ignoraria a etapa 2.
+
+**Escopo:** só `admin`. `caixa`, `cozinha` e `bar` operam em dispositivo compartilhado de balcão, onde 2FA por login traz atrito alto e ganho pequeno; a mitigação deles é senha exclusiva + troca obrigatória.
+
+**O que NÃO foi feito:** nenhuma conta real foi tocada; nenhum 2FA foi ativado em produção. A ativação é sempre um ato da própria conta, depois do deploy.
+
+### 2.2 Operação
+
+- Defina `TOTP_ENC_KEY` (32 bytes em hex ou base64) **antes** de oferecer 2FA. Gere com `openssl rand -hex 32`. Sem ela as rotas de 2FA respondem 503 e as contas que já têm 2FA ativo não conseguem entrar.
+- Guarde a chave junto do backup do banco. Perder a chave torna os segredos TOTP ilegíveis: a saída é entrar com um código de recuperação (que não depende da chave) ou outro admin desativar o 2FA.
+- **Contas de bootstrap:** `admin`, `cozinha`, `bar` e `caixa` compartilham o mesmo hash. Com 2FA, `admin` deixa de ser um login de grupo na prática — ative o 2FA numa conta admin individual.
+- Ainda **não** existe interface na SPA para ativar o 2FA: as rotas existem e estão testadas. A tela é o próximo passo natural.
+
+### 2.3 Avaliação original (registro da decisão)
 
 ### Ameaças que o 2FA cobre / não cobre
 
