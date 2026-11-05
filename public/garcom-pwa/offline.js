@@ -114,7 +114,8 @@ export async function probeBackend(url, fetchImpl = globalThis.fetch, timeoutMs 
   try {
     const res = await fetchImpl(url, { cache: 'no-store', signal: controller.signal, headers: { accept: 'application/json' } });
     if (res.status === 401 || res.status === 403) { const e = new Error('Link do garçom inválido ou desativado'); e.status = res.status; throw e; }
-    return res.ok;
+    // Qualquer resposta HTTP confirma alcance; erros HTTP não são falta de rede.
+    return true;
   } finally { clearTimeout(timer); }
 }
 

@@ -300,10 +300,16 @@ test('lease impede que duas abas enviem a mesma fila ao mesmo tempo', async () =
   db.close();
 });
 
-test('probeBackend trata 401/403 como erro de credencial e 5xx como offline', async () => {
+test('probeBackend distingue alcance HTTP de falha de rede e erro de credencial', async () => {
   const { probeBackend } = await carregar();
   assert.equal(await probeBackend('/api/x', async () => ({ ok: true, status: 200 })), true);
-  assert.equal(await probeBackend('/api/x', async () => ({ ok: false, status: 503 })), false);
+  for (const status of [404, 429, 500, 503]) {
+    assert.equal(await probeBackend('/api/x', async () => ({ ok: false, status })), true);
+  }
+  await assert.rejects(
+    () => probeBackend('/api/x', async () => ({ ok: false, status: 403 })),
+    (e) => e.status === 403
+  );
   await assert.rejects(
     () => probeBackend('/api/x', async () => ({ ok: false, status: 401 })),
     (e) => e.status === 401

@@ -42,7 +42,8 @@
     "db:restore-drill": "node scripts/backup-restore-drill.js",
     "diag:fotos": "node scripts/diagnostico-fotos.js",
     "pg:local": "node scripts/pg-local.mjs",
-    "test:paginas-publicas": "node scripts/verificar-paginas-publicas.mjs"
+    "test:paginas-publicas": "node scripts/verificar-paginas-publicas.mjs",
+    "seed:apresentacao": "node scripts/seed-apresentacao.cjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "2.1.10",
