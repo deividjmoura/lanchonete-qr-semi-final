@@ -73,10 +73,11 @@ Portanto, o purge atual não é uma anonimização: ele apaga registros operacio
 4. Dry-run com data de corte e contagens, revisado por pessoa autorizada.
 5. Execução transacional, idempotente e protegida contra concorrência.
 6. Registro da execução com corte, contagens, operador e resultado, sem copiar nomes, observações, tokens ou segredos.
-7. Testes PostgreSQL descartáveis provando que sessões abertas e registros fora do corte não são removidos.
-8. Plano de recuperação: depois do commit, rollback SQL não recupera dados apagados; a restauração depende de backup.
+7. Testes PostgreSQL descartáveis provando que sessões abertas e registros fora do corte permanecem intactos e que valores, pagamentos e autoria são preservados.
+8. Conferência do dry-run antes da confirmação manual.
+9. Plano de recuperação: os campos substituídos por [anonimizado] não são recuperáveis por rollback SQL depois do commit; a restauração depende de backup.
 
-O endpoint atual exige papel admin e opera em dry-run por padrão. Isso reduz risco operacional, mas não substitui aprovação de retenção nem backup restaurável.
+A rota exige papel admin, opera em dry-run por padrão e exige confirmação explícita para anonimizar. Isso reduz risco operacional, mas não substitui aprovação de retenção nem backup restaurável.
 
 ## 5. Atendimento a solicitações de titulares
 
@@ -89,15 +90,15 @@ O procedimento precisa ser definido pelo responsável. Como ponto de partida ope
 - [ ] Confirmar se o e-mail atualmente publicado como contato de privacidade é canal oficial, monitorado e autorizado para receber solicitações de titulares.
 - [ ] Confirmar fornecedores efetivamente contratados, suboperadores, local de armazenamento e transferências internacionais a partir dos contratos/configuração reais.
 - [ ] Aprovar prazos por classe, após validação contábil/jurídica.
-- [ ] Decidir se nomes/observações podem ser anonimizados antes do purge financeiro.
-- [ ] Decidir se avisos PIX e histórico de transferência devem sobreviver à exclusão da sessão.
+- [ ] Confirmar os campos pessoais a anonimizar e a data de corte apropriada; a ferramenta manual já está implementada.
+- [ ] Definir prazo de retenção e acesso para avisos PIX e histórico de transferência, que permanecem associados às contas preservadas.
 - [ ] Definir retenção e acesso às trilhas `auditoria_eventos` e `staff_credencial_eventos`.
 - [ ] Definir ciclo de vida de contas de staff, e-mails e vínculos Google após desligamento.
 - [ ] Confirmar a retenção real de logs no provedor e quem pode acessá-los.
 - [ ] Definir descarte de fotos e backups de fotos quando produtos forem arquivados/removidos.
 - [ ] Definir quem aprova e quem revisa a execução do purge.
 
-**Até essas decisões serem registradas, não habilitar purge automático, anonimização automática nem exclusão de fotos.** O comportamento atual permanece manual; esta atualização não altera runtime, schema, migrations, banco ou produção.
+**Até essas decisões serem registradas, não habilitar execução automática de anonimização nem exclusão de fotos.** A rotina atual é manual, com dry-run e confirmação explícita; não há cron nem prazo automático. Esta atualização documental não altera runtime, schema, migrations, banco ou produção.
 
 ## 7. Fontes técnicas consultadas
 
