@@ -268,10 +268,33 @@ const server = http.createServer(async (req, res) => {
     reqId = requestIdDaRequisicao(req);
     res.setHeader('X-Request-Id', reqId);
 
-    // Liveness check: confirma apenas que o processo HTTP está respondendo.
-    // Intencionalmente não consulta o banco nem expõe versão/configuração.
+    // Health check (#43): processo HTTP + conectividade do banco.
+    //
+    // Mudança de decisão registrada em 05/11/2026. Antes este endpoint respondia
+    // 'ok' sem tocar o banco, então um banco fora do ar passava no monitoring —
+    // exatamente o cenário em que o alerta precisava disparar.
+    //
+    // Continua read-only e barato por construção:
+    //   - único comando: SELECT 1 (sem tabela, sem join, sem escrita);
+    //   - statement_timeout de 1s, para não segurar conexão;
+    //   - se o pool não responder em HEALTH_DB_TIMEOUT_MS, responde 503 em vez
+    //     de pendurar a requisição;
+    //   - nada de versão, configuração ou detalhe interno na resposta.
     if (p === '/healthz' && req.method === 'GET') {
-      return json(res, 200, { status: 'ok' });
+      const timeoutMs = Number(process.env.HEALTH_DB_TIMEOUT_MS || 1000);
+      let client = null;
+      try {
+        client = await pool.connect();
+        await client.query(`SET LOCAL statement_timeout = ${Math.max(1, timeoutMs)}`);
+        await client.query('SELECT 1');
+        return json(res, 200, { status: 'ok', db: 'ok' });
+      } catch {
+        // Detalhe do erro não vai para a resposta: só para o log do processo.
+        console.error(`[healthz] banco indisponível (request ${reqId})`);
+        return json(res, 503, { status: 'degraded', db: 'unavailable' });
+      } finally {
+        if (client) client.release();
+      }
     }
 
     // CSP reports são opt-in e só ficam ativos quando o proprietário habilitar
@@ -1551,7 +1574,8 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/admin/produtos/ordem' && req.method === 'PUT') {
       try {
         const b = await body(req);
-        const out = await reordenarProdutos(b.categoriaId, b.ids || b.ordem || []);
+        const ator = await getStaffDaRequisicao(req);
+        const out = await reordenarProdutos(b.categoriaId, b.ids || b.ordem || [], ator, reqId);
         invalidarCardapio();
         return json(res, 200, out);
       } catch (e) {
@@ -1561,7 +1585,12 @@ const server = http.createServer(async (req, res) => {
     }
     if (p === '/api/admin/produtos' && req.method === 'POST') {
       try {
-        const out = await criarProduto(await body(req, { maxBytes: Number(process.env.FOTO_MAX_BODY_BYTES || 8 * 1024 * 1024) }));
+        const ator = await getStaffDaRequisicao(req);
+        const out = await criarProduto(
+          await body(req, { maxBytes: Number(process.env.FOTO_MAX_BODY_BYTES || 8 * 1024 * 1024) }),
+          ator,
+          reqId
+        );
         invalidarCardapio();
         return json(res, 201, out);
       } catch (e) {
@@ -1571,9 +1600,12 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/admin\/produtos\/(\d+)$/)) && req.method === 'PATCH') {
       try {
+        const ator = await getStaffDaRequisicao(req);
         const out = await atualizarProduto(
           Number(m[1]),
-          await body(req, { maxBytes: Number(process.env.FOTO_MAX_BODY_BYTES || 8 * 1024 * 1024) })
+          await body(req, { maxBytes: Number(process.env.FOTO_MAX_BODY_BYTES || 8 * 1024 * 1024) }),
+          ator,
+          reqId
         );
         invalidarCardapio();
         return json(res, 200, out);
@@ -1585,7 +1617,8 @@ const server = http.createServer(async (req, res) => {
 
     if ((m = p.match(/^\/api\/admin\/produtos\/(\d+)$/)) && req.method === 'DELETE') {
       try {
-        const out = await removerProduto(Number(m[1]));
+        const ator = await getStaffDaRequisicao(req);
+        const out = await removerProduto(Number(m[1]), ator, reqId);
         invalidarCardapio();
         return json(res, 200, out);
       } catch (e) {
@@ -1595,7 +1628,8 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/admin\/produtos\/(\d+)\/adicionais$/)) && req.method === 'POST') {
       try {
-        const out = await criarAdicional(Number(m[1]), await body(req));
+        const ator = await getStaffDaRequisicao(req);
+        const out = await criarAdicional(Number(m[1]), await body(req), ator, reqId);
         invalidarCardapio();
         return json(res, 201, out);
       } catch (e) {
@@ -1605,7 +1639,8 @@ const server = http.createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/admin\/adicionais\/(\d+)$/)) && req.method === 'DELETE') {
       try {
-        const out = await removerAdicional(Number(m[1]));
+        const ator = await getStaffDaRequisicao(req);
+        const out = await removerAdicional(Number(m[1]), ator, reqId);
         invalidarCardapio();
         return json(res, 200, out);
       } catch (e) {
@@ -1616,7 +1651,8 @@ const server = http.createServer(async (req, res) => {
     if ((m = p.match(/^\/api\/admin\/produtos\/(\d+)\/removiveis$/)) && req.method === 'PUT') {
       try {
         const b = await body(req);
-        const out = await setRemoviveis(Number(m[1]), b.ingredientes || b.removiveis || []);
+        const ator = await getStaffDaRequisicao(req);
+        const out = await setRemoviveis(Number(m[1]), b.ingredientes || b.removiveis || [], ator, reqId);
         invalidarCardapio();
         return json(res, 200, out);
       } catch (e) {
