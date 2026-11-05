@@ -14,7 +14,13 @@ if (!new Set(["localhost", "127.0.0.1", "::1"]).has(host)) {
   throw new Error("Teste bloqueado: BASE_URL precisa apontar para localhost/127.0.0.1.");
 }
 
-const browser = await chromium.launch({ channel: "chrome", headless: true });
+const packed = (await import("@sparticuz/chromium")).default;
+process.env.LD_LIBRARY_PATH ||= "/tmp/al2023/lib";
+const browser = await chromium.launch({
+  executablePath: process.env.CHROMIUM_PATH || await packed.executablePath(),
+  args: packed.args,
+  headless: true,
+});
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   const apiRequests = [];
