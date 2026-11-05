@@ -485,7 +485,7 @@ async function main() {
           assert.equal(await page.getByRole("button", { name: "Transferir mesa", exact: true }).count(), 0, "mesa sem responsável não oferece transferência");
           await page.locator("#closeTableDetails").click();
 
-          await page.locator("#tableSearch").fill("4");
+          await page.locator("#tableSearch").fill("12");
           await page.locator("#tableGrid .table-tile").first().click();
           await page.locator("#tableDetailsModal[open]").waitFor();
           assert.equal(await page.getByRole("button", { name: "Iniciar atendimento", exact: true }).count(), 1, "mesa sem pedido QR inicia atendimento");
