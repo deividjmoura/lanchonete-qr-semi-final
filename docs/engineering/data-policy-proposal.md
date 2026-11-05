@@ -12,14 +12,27 @@ Este documento descreve o que o código e as migrations versionadas mostram. Nã
 | Nome do cliente | `mesa_sessoes.cliente_nome`, `pedidos.cliente_nome`, `pix_avisos.cliente_nome` | Identificação da comanda e do aviso de PIX | Campo livre; pode ser apelido ou conter informação adicional inserida pelo cliente. |
 | Texto livre do pedido | `pedidos.observacao_geral`, `itens_pedido.observacao` | Instruções de preparo/atendimento | Pode conter dado pessoal não solicitado. Não tratar como campo necessariamente anônimo. |
 | Identificação de funcionário | `staff.nome/login/email`, `garcons.nome`, autoria em pedidos e eventos | Login, atendimento, atribuição e auditoria | A migration OAuth adiciona e-mail e identificador Google (`google_sub`) à conta staff. |
-| Credenciais e identificadores de sessão | `staff.senha_hash`, `staff_sessoes.token`, tokens de mesa/garçom | Autenticação e autorização | Hash de senha e tokens são dados de segurança. Nunca devem entrar em logs, relatórios ou exportações comuns. |
+| Credenciais e identificadores de sessão | `staff.senha_hash`, `staff_sessoes.token`, tokens de mesa/garçom e `localStorage.waiter-token` | Autenticação e autorização | Hashes e tokens são dados de segurança. O token do garçom é bearer e fica no armazenamento local do navegador; nunca deve entrar em logs, relatórios ou exportações comuns. |
 | Autoria operacional | `pedidos.garcom_registrou_id`, `garcom_entregou_id`, `mesa_atendimento_historico`, `auditoria_eventos` | Rastreabilidade de ações e atendimento | A trilha pode identificar funcionário e associar pessoa a horário/ação. |
 | Auditoria de credenciais | `staff_credencial_eventos` | Registrar troca/redefinição, ator e sessões revogadas | Schema proíbe guardar senha, hash, token ou IP nesses eventos. |
 | Dados financeiros | `mesa_sessoes`, `sessao_pagamentos`, avisos PIX e comprovantes | Cobrança, conciliação e comprovantes | Valores, forma, horários, operador e vínculos com sessão. Necessidade/prazo de guarda deve ser validado com contador. |
 | Dados de produto e estoque | `produtos`, fotos, categorias, estoque e movimentos | Operação do cardápio/estoque | Fotos podem conter data URL/Base64 no armazenamento legado; não são automaticamente parte do histórico de uma sessão. |
 | Logs técnicos | logs da aplicação e do provedor/proxy | Diagnóstico e segurança | Retenção, acesso e campos efetivamente registrados no provedor ainda precisam ser confirmados. |
+| Dados locais da PWA | IndexedDB `garcom-pwa-v1` (`orders`, `meta`, `leases`) e `localStorage` | Rascunhos offline, sincronização, isolamento por garçom, preferências, avisos e tentativa de pagamento pendente | Podem conter nome do cliente, mesa, itens, observações, valor/forma de pagamento, chave idempotente e token bearer do garçom. Não são removidos pelo purge do banco. |
 
 Não foi identificado no fluxo público de pedido um cadastro que exija CPF, telefone ou endereço do cliente. Isso não permite afirmar que esses dados nunca apareçam: campos livres podem recebê-los voluntariamente.
+
+### 1.1. Armazenamento local da PWA do garçom
+
+A inspeção de `public/garcom-pwa/offline.js` e `app.js` confirma:
+
+- IndexedDB `garcom-pwa-v1`, versão 2, com stores `orders`, `meta` e `leases`. A store `orders` mantém rascunhos com mesa, nome do cliente, itens, adicionais/remoções, observações, horários, estado de sincronização, chave de idempotência e `ownerToken` para separar a fila por garçom.
+- `localStorage` mantém `waiter-token` (credencial bearer), preferências de tema e notificações, identificadores de avisos já exibidos e tentativa de pagamento pendente com sessão, mesa, valor, forma de pagamento e chave idempotente.
+- A exportação de pedidos pendentes remove `ownerToken` do JSON exportado. Isso não significa que a credencial deixe de existir no IndexedDB original.
+- Não foi encontrada rotina de expurgo automático da store local de pedidos. O código preserva pendências para replay idempotente; a retenção efetiva depende do uso do app, do usuário e do navegador. Limpar dados do site/desinstalar pode eliminar pendências ainda não sincronizadas.
+- O Service Worker usa `garcom-pwa-shell-v37`, armazena somente arquivos estáticos do shell e ignora `/api/`; respostas de API não são cacheadas.
+
+A sessão interna de funcionário usa o cookie `lqr_session` com atributos `HttpOnly`, `SameSite=Lax`, `Secure` em produção e validade configurada de 12 horas. O código remove registros expirados de `staff_sessoes` em ciclos de 30 minutos. Isso não deve ser confundido com o token bearer individual do garçom salvo no navegador.
 
 ## 2. Relações que afetam exclusão
 
@@ -70,6 +83,9 @@ O procedimento precisa ser definido pelo responsável. Como ponto de partida ope
 ## 6. Decisões pendentes do responsável
 
 - [ ] Confirmar as finalidades e os campos que realmente precisam ser coletados no atendimento.
+- [ ] Confirmar a identificação legal do controlador (nome empresarial e CNPJ/endereço quando aplicável) e o estabelecimento a que esta instalação corresponde.
+- [ ] Confirmar se o e-mail atualmente publicado como contato de privacidade é canal oficial, monitorado e autorizado para receber solicitações de titulares.
+- [ ] Confirmar fornecedores efetivamente contratados, suboperadores, local de armazenamento e transferências internacionais a partir dos contratos/configuração reais.
 - [ ] Aprovar prazos por classe, após validação contábil/jurídica.
 - [ ] Decidir se nomes/observações podem ser anonimizados antes do purge financeiro.
 - [ ] Decidir se avisos PIX e histórico de transferência devem sobreviver à exclusão da sessão.
@@ -83,4 +99,4 @@ O procedimento precisa ser definido pelo responsável. Como ponto de partida ope
 
 ## 7. Fontes técnicas consultadas
 
-`db/purge.js`; migrations `0001`, `0009`, `0016`, `0019`, `0023`, `0024`, `0025`, `0028` e `0034`; módulos `db/auth.js`, `db/caixa.js`, `db/pix-cliente.js`, `db/auditoria.js` e `db/foto.js`. O inventário descreve o repositório, não uma inspeção do banco de produção.
+`db/purge.js`; migrations `0001`, `0009`, `0016`, `0019`, `0023`, `0024`, `0025`, `0028` e `0034`; módulos `db/auth.js`, `db/caixa.js`, `db/pix-cliente.js`, `db/auditoria.js` e `db/foto.js`; arquivos `public/garcom-pwa/app.js`, `offline.js` e `sw.js`. O inventário descreve o repositório, não uma inspeção do banco de produção.
