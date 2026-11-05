@@ -26,6 +26,7 @@ import { OpsShell } from "../components/OpsShell";
 import Dashboard from "./Dashboard";
 import MesasAdmin from "./admin/MesasAdmin";
 import { ImportarCardapio } from "./admin/ImportarCardapio";
+import { SegurancaConta } from "./admin/SegurancaConta";
 import { ControlesPaginacao, ListaLimitada, useLimiteLocal } from "../components/Paginacao";
 import { Badge, Btn, IconBtn, Input, Modal } from "../components/ui";
 import { usePaginacaoCursor } from "../hooks/usePaginacaoCursor";
@@ -2426,6 +2427,9 @@ function Funcoes() {
       {sub === "relatorio" && <Relatorio />}
       {sub === "senhas" && (
         <>
+          {/* #55 — 2FA da própria conta. Fica no topo porque é a proteção da
+              conta que o admin está usando agora, não de terceiros. */}
+          <SegurancaConta />
           <section className="rounded-md border border-line bg-surface-raised p-5">
             <h3 className="font-display text-2xl font-bold tracking-tight text-text">Logins e senhas</h3>
             <p className="mt-1 mb-4 text-sm text-text-muted">Redefina a senha de uma conta de acesso. As sessões anteriores dessa conta serão encerradas.</p>

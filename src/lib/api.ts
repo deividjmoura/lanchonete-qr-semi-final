@@ -145,7 +145,13 @@ export async function apiSend<T = unknown>(
   }
 
   const data: any = await parse(res);
-  if ((path === "/api/login" || path === "/api/me/senha" || path === "/api/admin/contas/senha") && typeof data?.csrfToken === "string") {
+  if (
+    (path === "/api/login" ||
+      path === "/api/login/2fa" ||
+      path === "/api/me/senha" ||
+      path === "/api/admin/contas/senha") &&
+    typeof data?.csrfToken === "string"
+  ) {
     csrfToken = data.csrfToken;
     // A sessão mudou para todas as abas deste navegador.
     avisarTrocaDeSessao();
@@ -212,11 +218,25 @@ export type ResumoImportCardapio = {
 export const api = {
   cardapio: () => apiGet<any[]>("/api/cardapio"),
   login: (usuario: string, senha: string) =>
-    apiSend<{ ok?: boolean; staff?: { papel: string; nome?: string; login?: string; deveTrocarSenha?: boolean }; home?: string; csrfToken?: string }>(
-      "/api/login",
-      "POST",
-      { usuario, senha }
-    ),
+    apiSend<{
+      ok?: boolean;
+      /** #55: senha correta, segundo fator pendente — a sessão NÃO autentica nada. */
+      mfaPendente?: boolean;
+      staff?: { papel: string; nome?: string; login?: string; deveTrocarSenha?: boolean };
+      home?: string;
+      csrfToken?: string;
+    }>("/api/login", "POST", { usuario, senha }),
+  /** #55 — etapa 2 do login: TOTP ou código de recuperação. */
+  loginSegundoFator: (codigo: string) =>
+    apiSend<{
+      ok: boolean;
+      staff: { id: number; papel: string; nome?: string; login?: string; deveTrocarSenha?: boolean };
+      home?: string;
+      csrfToken?: string;
+      via: "totp" | "recuperacao";
+      codigosRestantes?: number;
+    }>("/api/login/2fa", "POST", { codigo }),
+  cancelarSegundoFator: () => apiSend<{ ok: boolean }>("/api/login/2fa/cancelar", "POST"),
   logout: () => apiSend("/api/logout", "POST"),
   me: () =>
     apiGet<{
@@ -404,6 +424,25 @@ export const api = {
     if (cursor) q.set("cursor", cursor);
     return apiGet<Pagina<any>>(`/api/admin/pedidos?${q}`);
   },
+  /* ---------------------------------------------- #55 — 2FA da própria conta */
+  estado2fa: () =>
+    apiGet<{ ativo: boolean; ativadoEm: string | null; codigosRestantes: number; disponivel: boolean }>(
+      "/api/me/2fa"
+    ),
+  iniciar2fa: () =>
+    apiSend<{ segredo: string; uri: string; emissor: string; digitos: number; periodo: number }>(
+      "/api/me/2fa/iniciar",
+      "POST"
+    ),
+  ativar2fa: (segredo: string, codigo: string) =>
+    apiSend<{ ok: boolean; codigosRecuperacao: string[]; sessoesRevogadas: number }>(
+      "/api/me/2fa/ativar",
+      "POST",
+      { segredo, codigo }
+    ),
+  desativar2fa: (senha: string) =>
+    apiSend<{ desativado: boolean; sessoesRevogadas: number }>("/api/me/2fa/desativar", "POST", { senha }),
+
   /** #44: anonimiza dados pessoais de contas fechadas; não apaga valores. */
   purgeHistorico: (body: { before: string; confirm?: boolean; dryRun?: boolean }) =>
     apiSend<{

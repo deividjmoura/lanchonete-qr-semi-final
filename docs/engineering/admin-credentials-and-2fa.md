@@ -54,7 +54,24 @@ Política de senha (servidor é a fonte da verdade, `validarPoliticaSenha`): 12 
 - Defina `TOTP_ENC_KEY` (32 bytes em hex ou base64) **antes** de oferecer 2FA. Gere com `openssl rand -hex 32`. Sem ela as rotas de 2FA respondem 503 e as contas que já têm 2FA ativo não conseguem entrar.
 - Guarde a chave junto do backup do banco. Perder a chave torna os segredos TOTP ilegíveis: a saída é entrar com um código de recuperação (que não depende da chave) ou outro admin desativar o 2FA.
 - **Contas de bootstrap:** `admin`, `cozinha`, `bar` e `caixa` compartilham o mesmo hash. Com 2FA, `admin` deixa de ser um login de grupo na prática — ative o 2FA numa conta admin individual.
-- Ainda **não** existe interface na SPA para ativar o 2FA: as rotas existem e estão testadas. A tela é o próximo passo natural.
+- **Interface entregue:** o painel fica em Admin → Funções → **Logins** (`src/screens/admin/SegurancaConta.tsx`) e o login ganhou a etapa do código (`src/screens/Login.tsx`). Ver "2.4 Interface" abaixo.
+
+### 2.4 Interface
+
+| Onde | O que faz |
+|---|---|
+| Login (SPA) | Se o servidor responder `mfaPendente`, a tela troca para a etapa do código: esconde a grade de setores, aceita código do app **ou** código de recuperação, e oferece "Recomeçar o login" (que descarta a sessão pendente). |
+| Admin → Funções → Logins | Painel "Verificação em duas etapas": estado atual, quantos códigos restam, ativar (QR + chave em texto para quem não consegue escanear), desativar (pede a senha). |
+
+Decisões de UX que valem registro:
+
+- **O 2FA só liga depois do código.** Se a pessoa abandonar o meio do cadastro, nada muda na conta — o servidor não gravou segredo.
+- **Os 10 códigos exigem confirmação de que foram salvos.** A caixa "guardei os códigos" bloqueia o botão de concluir. A partir daquele instante eles não existem em nenhum outro lugar; fechar a tela sem salvar deixaria a conta dependente de outro admin.
+- **Um erro de código não é tratado como senha errada.** A etapa 2 tem mensagem própria e o botão de recomeçar, então um código digitado errado não devolve a pessoa para o começo sem explicação.
+- **Servidor sem `TOTP_ENC_KEY` mostra o motivo**, em vez de um botão que só produz erro.
+- **`autocomplete="one-time-code"`** no campo: iOS e Android oferecem o código do app direto do teclado.
+
+Verificação automatizada: `npm run smoke:2fa` renderiza as duas telas no servidor (esbuild + `renderToString`, sem Chromium) e `tests/interface-2fa.test.cjs` trava os contratos acima na fonte. O comportamento em si continua coberto por `tests/postgres-totp-login.test.cjs`, que fala HTTP com o servidor real.
 
 ### 2.3 Avaliação original (registro da decisão)
 
