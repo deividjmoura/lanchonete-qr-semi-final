@@ -16,7 +16,7 @@
 
 O Service Worker **nunca** intercepta `/api/`. Nenhuma resposta de API é
 cacheada: o servidor é a única fonte de verdade. O cache do shell é versionado
-(`garcom-pwa-shell-v18`); qualquer mudança no shell exige subir essa versão, ou
+(`garcom-pwa-shell-v37` no código consultado em 05/11/2026); qualquer mudança no shell exige subir essa versão, ou
 o aparelho continua executando JavaScript antigo.
 
 ## Entrega em três etapas, item por item
@@ -96,6 +96,14 @@ PWA ou perder o aparelho pode apagar pedidos não sincronizados. O app pede
 isso depende do navegador. **Rascunho offline não é pedido recebido pela
 cozinha** — a tela mostra isso explicitamente.
 
+### Dados mantidos no navegador
+
+- O banco local é o IndexedDB `garcom-pwa-v1` (versão 2), com as stores `orders`, `meta` e `leases`.
+- Um rascunho de pedido pode conter mesa, nome do cliente, itens/produtos, quantidades, adicionais, remoções, observações, chave de idempotência, horários, estado de sincronização e o identificador do garçom usado para isolar a fila.
+- O `localStorage` mantém o token individual do garçom (`waiter-token`), preferências de tema/notificações, identificadores de avisos já exibidos e uma tentativa de pagamento pendente (sessão, mesa, valor, forma e chave idempotente).
+- Não há prazo automático de expurgo implementado para a store local de pedidos. Limpar os dados do site, remover o perfil do navegador ou desinstalar o PWA pode apagar dados ainda não sincronizados; o armazenamento persistente é apenas uma solicitação ao navegador, não uma garantia de backup.
+- O Service Worker usa o cache `garcom-pwa-shell-v37` apenas para arquivos do shell. Ele não intercepta nem armazena respostas de `/api/`.
+
 ## Mesas e pedidos
 
 1. `GET /api/garcom/:token/mesas` traz mesas habilitadas, sessão e responsável.
@@ -169,9 +177,7 @@ parecia quebrado.
 
 ## Segurança
 
-- O token individual é credencial bearer e hoje aparece no caminho da rota.
-  Não compartilhar logs com tokens; não imprimir token em tela ou documentação.
-  Migração para sessão curta/cookie protegido segue recomendada.
+- O link individual pode trazer o token na query string; o app remove esse parâmetro da URL visível, mas mantém a credencial em `localStorage` (`waiter-token`) e a envia nas rotas da API. É um token bearer, não um cookie `HttpOnly`. Não compartilhar links, não registrar tokens em logs e não usar dispositivos compartilhados sem controle. Se houver suspeita de exposição, desativar/rotacionar o acesso individual no Admin.
 - 401/403 marcam a fila como conflito de autenticação e a tela mostra
   **LINK INVÁLIDO OU DESATIVADO**, sem descartar pedidos.
 - Toda permissão é revalidada no servidor, dentro da transação. Checagem de
