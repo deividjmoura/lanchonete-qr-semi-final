@@ -60,11 +60,16 @@ test('Caixa fecha quitação simples só quando não há pedidos ou avisos PIX p
  assert.match(caixa,/const quitada = sessao\.pedidosPendentes === 0/);
 });
 test('PWA tem JavaScript valido apos edicao de pedidos e notificacoes',()=>{cp.execFileSync(process.execPath,['--check',path.join(root,'public/garcom-pwa/app.js')]);});
-test('Garcom consulta status de todas as suas mesas, nao apenas entregas',()=>{
- const api=read('db/atendimento.js');const pwa=read('public/garcom-pwa/app.js');
- assert.match(api,/s\.garcom_responsavel_id=\$1/);assert.match(api,/s\.status='aberta'/);
- assert.match(pwa,/\/atendimentos/);assert.match(pwa,/renderMyTables/);
-});
+test('Salão completo substitui a lista duplicada de minhas mesas e centraliza ações no modal',()=>{
+ const api=read('db/atendimento.js');const pwa=read('public/garcom-pwa/app.js');const html=read('public/garcom-pwa/index.html');
+ assert.ok(api.includes('s.garcom_responsavel_id=$1'));assert.ok(api.includes("s.status='aberta'"));
+ assert.ok(pwa.includes("'/atendimentos'"));assert.ok(!pwa.includes('function renderMyTables'));
+ assert.ok(!html.includes('id="myTables"')&&!html.includes('Minhas mesas'));
+ const modal=pwa.slice(pwa.indexOf('function openTableDetails('),pwa.indexOf('function openTransferModal('));
+ assert.ok(modal.includes('openOrdersModal(m.numero)'));assert.ok(modal.includes('openBillingForSession(m.sessaoId,m.numero)'));
+ assert.ok(modal.includes('openTransferModal(m.numero)'));assert.ok(modal.includes('leaveTable(m.numero)'));
+ assert.ok(modal.includes("m.pedidoClienteQr?'Assumir mesa':'Iniciar atendimento'"));
+});;;
 test('Edicao valida pertencimento e so pode ocorrer antes do preparo',()=>{
  const api=read('db/atendimento.js'),ped=read('db/pedidos.js');
  assert.match(api,/editarPedidoGarcom/);assert.match(api,/garcom\.id\)/);
