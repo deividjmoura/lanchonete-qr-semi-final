@@ -220,3 +220,24 @@ o palco azul/violeta e os testes de identidade seguem valendo para o resto do si
 - **Atualização ativa do Service Worker (`public/garcom-pwa/app.js`):** registro com `{ updateViaCache: 'none' }` e checagem ativa (`swReg?.update()`) ao reconectar (`online`) ou retornar ao primeiro plano (`visibilitychange`).
 - **Quiet zone óptica em QR Codes (`.qr-quiet-zone`):** fundo `--qr-paper` (névoa elevada) e tinta `--qr-ink` (meia-noite) são **invariantes** em claro/escuro — o código impresso na tela não muda de tom quando o operador alterna o tema.
 
+
+### Admin no celular
+
+Abaixo de 640 px, o admin usa uma organização própria, isolada em
+`src/screens/admin/admin-responsive.css`:
+
+- Cabeçalho em duas linhas, gaveta de navegação existente e ações de toque de 44 px.
+- Produtos em cards: foto/nome/preço, controles de estoque e rodapé de ações.
+  Nomes de produtos e categorias quebram linha, sem depender de tooltip.
+- Criação de categoria em uma linha própria; importar CSV e adicionar produto
+  em duas colunas. Campos dos modais administrativos passam a uma coluna.
+- Tabelas de desempenho e relatórios viram registros verticais com rótulos.
+  Dados, totais, comprovantes e paginação são os mesmos do desktop; não há
+  duplicação de controles nem ocultação de colunas para fazer caber.
+- As tabelas largas continuam com rolagem local no desktop/tablet. A página
+  não usa `overflow-x: hidden` para mascarar conteúdo excedente.
+
+Acima desse breakpoint, o layout desktop permanece. O escopo `data-admin`
+impede que as regras do cabeçalho afetem caixa, cozinha, bar ou PWA.
+O E2E `admin-mobile.e2e.cjs` usa o build de produção e API sintética para
+verificar as cinco abas em 320, 390, 768 e 1440 px, estoque, modal e gaveta.

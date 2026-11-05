@@ -182,7 +182,7 @@ export function OpsShell({
   }, [menuAberto]);
 
   return (
-    <div className="ops-shell" data-regime={regime}>
+    <div className="ops-shell" data-regime={regime} data-admin={ativo.startsWith("admin-") ? "true" : undefined}>
       {temNav && menuAberto && (
         <button type="button" className="ops-sidebar-backdrop" aria-label="Fechar menu" onClick={fecharMenu} />
       )}
@@ -248,7 +248,7 @@ export function OpsShell({
 
       <div className={temNav ? "ops-main flex flex-col" : "min-h-dvh flex flex-col"}>
         <header className="ops-topbar sticky top-0 z-30 bg-transparent">
-          <div className="w-full px-4 sm:px-6 xl:px-10 2xl:px-12 py-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="ops-header-layout w-full px-4 sm:px-6 xl:px-10 2xl:px-12 py-3 flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0 flex items-center gap-3">
               {temNav ? (
                 <button
@@ -279,7 +279,7 @@ export function OpsShell({
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 ml-auto">
+            <div className="ops-header-actions flex flex-wrap items-center gap-2 ml-auto">
               {extra && <div className="flex flex-wrap items-center gap-1.5 mr-1">{extra}</div>}
               <nav
                 className="ops-toolbar-dock"

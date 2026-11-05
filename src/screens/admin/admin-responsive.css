@@ -1,0 +1,71 @@
+/* Mobile is a different arrangement, not a scaled-down desktop.
+   Scoped to admin so production/cashier/PWA retain their existing layout. */
+.admin-page { min-width: 0; }
+
+@media (max-width: 639px) {
+  .ops-shell[data-admin="true"] .ops-main { min-width: 0; }
+  .ops-shell[data-admin="true"] .ops-topbar {
+    background: var(--surface) !important;
+  }
+  .ops-shell[data-admin="true"] .ops-header-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    padding: 10px 12px 6px;
+  }
+  .ops-shell[data-admin="true"] .ops-header-layout h1 { font-size: 1.5rem; }
+  .ops-shell[data-admin="true"] .ops-header-actions {
+    margin: 0;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+  .ops-shell[data-admin="true"] .ops-toolbar-dock { gap: 3px; }
+  .ops-shell[data-admin="true"] .ops-toolbar-dock button {
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+  }
+  .ops-shell[data-admin="true"] main { padding: 12px 12px calc(24px + env(safe-area-inset-bottom)); }
+  .admin-page :is(input, select, textarea),
+  .admin-dialog :is(input, select, textarea) { min-width: 0; max-width: 100%; font-size: 16px; }
+  .admin-page :is(button, a), .admin-dialog button { touch-action: manipulation; }
+  .admin-page button, .admin-dialog button { min-height: 44px; }
+  .admin-page :is(h2, h3, p, label), .admin-dialog :is(h2, h3, p, label) { overflow-wrap: anywhere; }
+  .admin-page [role="group"] { flex-wrap: wrap; }
+
+  /* Category/product creation gets its own row; no fixed-width input pushing actions offscreen. */
+  .admin-catalog-toolbar { display: grid; gap: 12px; }
+  .admin-catalog-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-catalog-actions form { grid-column: 1 / -1; min-width: 0; }
+  .admin-catalog-actions form > input { flex: 1; width: 0; }
+  .admin-catalog-actions > button { width: 100%; justify-content: center; }
+
+  /* A product becomes a compact card: image + identity, stock row, action footer. */
+  .admin-page [data-drag-handle] .truncate { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+  .admin-product { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 10px; padding: 14px 12px; align-items: start; }
+  .admin-product > img { width: 48px; height: 48px; }
+  .admin-product-info { min-width: 0; }
+  .admin-product-info > div:first-child { flex-wrap: wrap; gap: 3px 8px; }
+  .admin-product-name { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+  .admin-product-info [role="group"] { margin-left: -58px; margin-top: 12px; }
+  .admin-product-info [role="group"] > button { flex: 1 1 auto; }
+  .admin-product-actions { grid-column: 1 / -1; justify-content: flex-end; padding-top: 8px; border-top: 1px solid var(--line); }
+  .admin-product-actions button { width: 44px; height: 44px; }
+
+  /* The same table data becomes labelled records. The column headers remain
+     available to assistive tech; no duplicated desktop/mobile actions. */
+  .admin-data-table { display: block; width: 100%; min-width: 0 !important; }
+  .admin-data-table thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .admin-data-table tbody { display: grid; gap: 12px; }
+  .admin-data-table tbody tr { display: grid; min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-raised); }
+  .admin-data-table td { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-width: 0; max-width: none; padding: 7px 0; text-align: right; white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+  .admin-data-table td::before { content: attr(data-label); flex: 0 0 45%; text-align: left; color: var(--text-muted); font-family: var(--font-sans, sans-serif); font-size: 11px; font-weight: 500; }
+  .admin-data-table td[colspan] { display: block; text-align: center; }
+  .admin-data-table td[colspan]::before { content: none; }
+
+  [data-admin-tabs] { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  [data-admin-tabs] button { min-width: 0; justify-content: center; }
+  .admin-dialog .grid-cols-2 { grid-template-columns: minmax(0, 1fr); }
+  .admin-dialog { border-radius: 16px; }
+}
