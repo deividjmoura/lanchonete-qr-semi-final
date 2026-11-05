@@ -44,7 +44,7 @@ html {
 body {
   margin: 0;
   min-height: 100svh;
-  padding-bottom: calc(128px + env(safe-area-inset-bottom));
+  padding-bottom: calc(66px + env(safe-area-inset-bottom));
   background: var(--surface);
   color: var(--text);
 }
@@ -126,26 +126,31 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   display: none;
 }
 
-/* Rodapé operacional: utilitários + navegação, sem faixa superior fixa. */
+/* A navegação principal permanece fixa. Atalhos utilitários vivem apenas
+   no rodapé rolável da aba Mesas, sem faixa presa acima da navegação. */
 .app-footer {
   position: fixed;
   z-index: 20;
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--surface-sidebar);
+  background: color-mix(in srgb, var(--surface-sidebar) 96%, transparent);
   border-top: 1px solid var(--sidebar-line);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-.utility-bar {
+.tables-utility-footer {
   max-width: 520px;
-  margin: 0 auto;
-  padding: 6px 8px 2px;
+  margin: 22px auto 10px;
+  padding: 12px 8px 4px;
+  border-top: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+}
+
+.utility-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 4px;
+  justify-content: center;
+  gap: 8px;
 }
 
 .utility-button {
