@@ -215,6 +215,22 @@ apresenta cada área do sistema com uma demonstração navegável.
 
 ---
 
+
+## Fornecedor do QR Admin
+
+O QR Admin é fornecido tecnicamente por **69.987.201 DEIVID DE JESUS DE MOURA**, Microempreendedor Individual (MEI), inscrito no **CNPJ 69.987.201/0001-20**, com situação cadastral ativa conforme Certificado da Condição de MEI emitido em 05/11/2026.
+
+- **Titular:** Deivid de Jesus de Moura.
+- **Contato profissional:** [deividmoura729249@gmail.com](mailto:deividmoura729249@gmail.com).
+- **Produto:** QR Admin — sistema de pedidos por QR Code e gestão operacional para estabelecimento.
+- **Aplicação em produção documentada:** [qradminn.up.railway.app](https://qradminn.up.railway.app/).
+- **Infraestrutura de aplicação documentada:** Railway.
+- **Autenticação externa opcional:** Google OAuth, quando habilitada pelo estabelecimento.
+
+O cadastro empresarial apresentado identifica o fornecedor, mas não substitui contrato de prestação de serviços, definição de escopo, níveis de suporte, prazos de atendimento ou instrumento específico de tratamento de dados. Esses pontos devem constar da contratação de cada estabelecimento. O estabelecimento cliente permanece responsável pelas informações comerciais da operação e, conforme a configuração e a relação concreta, pela definição das finalidades e meios essenciais do tratamento de dados de seus clientes e funcionários.
+
+O CNPJ e o nome empresarial são reproduzidos conforme o certificado cadastral. Dados pessoais não necessários à identificação comercial, como CPF e endereço residencial, não são publicados nesta documentação.
+
 ## Acesso e informações
 
 <box>
