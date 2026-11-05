@@ -16,6 +16,7 @@ import { Logo, ThemeToggle } from "../components/ui";
 import { ir } from "../router";
 import { usePub } from "../store/usePub";
 import { cn } from "../utils/cn";
+import "./login-fields.css";
 
 const PAPEIS = [
   { id: "cozinha", nome: "Cozinha", desc: "Fila da chapa", Icon: CookingPot },
@@ -226,7 +227,7 @@ export default function Login() {
                       </span>
                       <span
                         className={cn(
-                          "flex h-12 items-center gap-2.5 rounded-sm border bg-surface-sunken px-3.5 transition-colors",
+                          "login-credential flex h-12 items-center gap-2.5 rounded-sm border bg-surface-sunken px-3.5 transition-colors",
                           erro2fa ? "border-status-danger-border" : "border-line focus-within:border-brand",
                         )}
                       >
@@ -335,7 +336,7 @@ export default function Login() {
                     </span>
                     <span
                       className={cn(
-                        "flex items-center gap-2.5 rounded-sm border bg-surface-sunken px-3.5 h-12 transition-colors",
+                        "login-credential flex items-center gap-2.5 rounded-sm border bg-surface-sunken px-3.5 h-12 transition-colors",
                         erro
                           ? "border-status-danger-border"
                           : "border-line focus-within:border-brand",

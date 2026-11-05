@@ -23,6 +23,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { OpsShell } from "../components/OpsShell";
 import Dashboard from "./Dashboard";
+import "./admin/admin-responsive.css";
 import MesasAdmin from "./admin/MesasAdmin";
 import { ControlesEstoque, estoqueBaixo } from "./admin/ControlesEstoque";
 import { ImportarCardapio } from "./admin/ImportarCardapio";
@@ -113,6 +114,7 @@ export default function Admin({ secao }: { secao?: string }) {
       <AnimatePresence mode="wait">
         <motion.div
           key={aba}
+          className="admin-page"
           initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
@@ -197,7 +199,7 @@ function Cardapio() {
     <article
       key={p.id}
       className={cn(
-        "flex flex-wrap items-center gap-3.5 py-3 px-4 transition-opacity",
+        "admin-product flex flex-wrap items-center gap-3.5 py-3 px-4 transition-opacity",
         !p.ativo && "opacity-55",
       )}
     >
@@ -206,9 +208,9 @@ function Cardapio() {
         alt=""
         className="size-16 rounded-sm border border-line object-cover shrink-0"
       />
-      <div className="flex-1 min-w-40">
+      <div className="admin-product-info flex-1 min-w-40">
         <div className="flex items-baseline justify-between gap-2">
-          <p className="font-semibold text-text text-sm truncate">{p.nome}</p>
+          <p className="admin-product-name font-semibold text-text text-sm truncate">{p.nome}</p>
           <span className="font-mono text-xs font-bold text-brand-ink shrink-0">
             {BRL(p.preco)}
           </span>
@@ -225,7 +227,7 @@ function Cardapio() {
         <ControlesEstoque produto={p} />
       </div>
 
-      <div className="flex items-center gap-1.5 shrink-0">
+      <div className="admin-product-actions flex items-center gap-1.5 shrink-0">
         <button
           type="button"
           onClick={() => toggle(p.id)}
@@ -285,11 +287,11 @@ function Cardapio() {
           )}
         </ListaLimitada>
       )}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-line">
+      <div className="admin-catalog-toolbar flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-line">
         <p className="font-mono text-xs text-text-muted">
           {produtos.length} itens · {produtos.filter((p) => p.ativo).length} ativos
         </p>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="admin-catalog-actions flex flex-wrap items-center gap-2">
           <form
             className="flex gap-2"
             onSubmit={(e) => {
@@ -674,7 +676,7 @@ function ProdutoForm({
   ];
 
   return (
-    <Modal open={open} onClose={onClose} wide closeOnBackdrop={false}>
+    <Modal className="admin-dialog" open={open} onClose={onClose} wide closeOnBackdrop={false}>
       <div className="p-5 sm:p-6">
         <h3 className="font-display text-3xl font-bold tracking-tight text-text pb-3 border-b border-dashed border-line-strong mb-5">
           {editando ? "Editar produto" : "Novo produto"}
@@ -1132,7 +1134,7 @@ function Garcons() {
           </p>
         )}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1450px] text-sm text-left">
+          <table role="table" className="admin-data-table w-full min-w-[1450px] text-sm text-left">
             <thead className="border-b border-line font-mono text-[10px] uppercase tracking-wider text-text-muted">
               <tr>
                 <th className="py-2.5 pr-3">Garçom</th>
@@ -1156,48 +1158,48 @@ function Garcons() {
             <tbody className="divide-y divide-line">
               {metricas.map((g) => (
                 <tr key={g.id}>
-                  <td className="py-3 pr-3 font-semibold text-text">
+                  <td data-label="Garçom" className="py-3 pr-3 font-semibold text-text">
                     {g.nome}{g.removido && <span className="ml-1 text-xs font-normal text-text-muted">(removido)</span>}
                   </td>
-                  <td className="py-3 px-2 text-right font-mono">{g.pedidosRegistrados}</td>
-                  <td className="py-3 px-2 text-right font-mono">{g.pedidosComEntregaRegistrada}</td>
-                  <td className="py-3 px-2 text-right font-mono">{g.mesasAssumidas}</td>
-                  <td className="py-3 px-2 text-right font-mono">{g.itensAssumidos}</td>
-                  <td className="py-3 px-2 text-right font-mono">{g.itensRetirados}</td>
-                  <td className="py-3 px-2 text-right font-mono">{g.itensEntregues}</td>
-                  <td className="py-3 px-2 text-right font-mono">{g.transferenciasRecebidas}</td>
-                  <td className="py-3 px-2 text-right font-mono">{g.transferenciasRealizadas}</td>
-                  <td className="py-3 px-2 text-right font-mono">{g.atendimentos}</td>
-                  <td className="py-3 px-2 text-right font-mono">{BRL(g.ticketMedio)}</td>
-                  <td className="py-3 px-2 text-right font-mono">{BRL(g.vendasBrutas)}</td>
-                  <td className="py-3 px-2 text-right font-mono">{BRL(g.taxaServico)}</td>
-                  <td className="py-3 px-2 text-right font-mono text-status-danger-ink">− {BRL(g.descontos)}</td>
-                  <td className="py-3 px-2 text-right text-xs text-text-muted">
+                  <td data-label="Pedidos registrados" className="py-3 px-2 text-right font-mono">{g.pedidosRegistrados}</td>
+                  <td data-label="Pedidos entregues" className="py-3 px-2 text-right font-mono">{g.pedidosComEntregaRegistrada}</td>
+                  <td data-label="Mesas assumidas" className="py-3 px-2 text-right font-mono">{g.mesasAssumidas}</td>
+                  <td data-label="Itens assumidos" className="py-3 px-2 text-right font-mono">{g.itensAssumidos}</td>
+                  <td data-label="Retirados" className="py-3 px-2 text-right font-mono">{g.itensRetirados}</td>
+                  <td data-label="Entregues" className="py-3 px-2 text-right font-mono">{g.itensEntregues}</td>
+                  <td data-label="Transferências recebidas" className="py-3 px-2 text-right font-mono">{g.transferenciasRecebidas}</td>
+                  <td data-label="Transferências feitas" className="py-3 px-2 text-right font-mono">{g.transferenciasRealizadas}</td>
+                  <td data-label="Contas" className="py-3 px-2 text-right font-mono">{g.atendimentos}</td>
+                  <td data-label="Ticket médio" className="py-3 px-2 text-right font-mono">{BRL(g.ticketMedio)}</td>
+                  <td data-label="Vendas brutas" className="py-3 px-2 text-right font-mono">{BRL(g.vendasBrutas)}</td>
+                  <td data-label="Taxa de serviço" className="py-3 px-2 text-right font-mono">{BRL(g.taxaServico)}</td>
+                  <td data-label="Descontos" className="py-3 px-2 text-right font-mono text-status-danger-ink">− {BRL(g.descontos)}</td>
+                  <td data-label="Eventos adicionais" className="py-3 px-2 text-right text-xs text-text-muted">
                     {g.outrosEventos.length
                       ? g.outrosEventos.map((evento) => `${evento.acao}: ${evento.quantidade}`).join(" · ")
                       : "—"}
                   </td>
-                  <td className="py-3 pl-2 text-right font-mono font-bold text-brand-ink">{BRL(g.totalCobrado)}</td>
+                  <td data-label="Total cobrado" className="py-3 pl-2 text-right font-mono font-bold text-brand-ink">{BRL(g.totalCobrado)}</td>
                 </tr>
               ))}
               {metricas.length > 0 && (
                 <tr className="border-t-2 border-line-strong bg-surface-sunken font-semibold">
-                  <td className="py-3 pr-3 text-text">Total do período</td>
-                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.pedidosRegistrados}</td>
-                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.pedidosComEntregaRegistrada}</td>
-                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.mesasAssumidas}</td>
-                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.itensAssumidos}</td>
-                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.itensRetirados}</td>
-                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.itensEntregues}</td>
-                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.transferenciasRecebidas}</td>
-                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.transferenciasRealizadas}</td>
-                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.atendimentos}</td>
-                  <td className="py-3 px-2 text-right font-mono">{BRL(totaisMetricas.atendimentos ? totaisMetricas.totalCobrado / totaisMetricas.atendimentos : 0)}</td>
-                  <td className="py-3 px-2 text-right font-mono">{BRL(totaisMetricas.vendasBrutas)}</td>
-                  <td className="py-3 px-2 text-right font-mono">{BRL(totaisMetricas.taxaServico)}</td>
-                  <td className="py-3 px-2 text-right font-mono text-status-danger-ink">− {BRL(totaisMetricas.descontos)}</td>
-                  <td className="py-3 px-2 text-right font-mono">{totaisMetricas.outrosEventos}</td>
-                  <td className="py-3 pl-2 text-right font-mono font-bold text-brand-ink">{BRL(totaisMetricas.totalCobrado)}</td>
+                  <td data-label="Garçom" className="py-3 pr-3 text-text">Total do período</td>
+                  <td data-label="Pedidos registrados" className="py-3 px-2 text-right font-mono">{totaisMetricas.pedidosRegistrados}</td>
+                  <td data-label="Pedidos entregues" className="py-3 px-2 text-right font-mono">{totaisMetricas.pedidosComEntregaRegistrada}</td>
+                  <td data-label="Mesas assumidas" className="py-3 px-2 text-right font-mono">{totaisMetricas.mesasAssumidas}</td>
+                  <td data-label="Itens assumidos" className="py-3 px-2 text-right font-mono">{totaisMetricas.itensAssumidos}</td>
+                  <td data-label="Retirados" className="py-3 px-2 text-right font-mono">{totaisMetricas.itensRetirados}</td>
+                  <td data-label="Entregues" className="py-3 px-2 text-right font-mono">{totaisMetricas.itensEntregues}</td>
+                  <td data-label="Transferências recebidas" className="py-3 px-2 text-right font-mono">{totaisMetricas.transferenciasRecebidas}</td>
+                  <td data-label="Transferências feitas" className="py-3 px-2 text-right font-mono">{totaisMetricas.transferenciasRealizadas}</td>
+                  <td data-label="Contas" className="py-3 px-2 text-right font-mono">{totaisMetricas.atendimentos}</td>
+                  <td data-label="Ticket médio" className="py-3 px-2 text-right font-mono">{BRL(totaisMetricas.atendimentos ? totaisMetricas.totalCobrado / totaisMetricas.atendimentos : 0)}</td>
+                  <td data-label="Vendas brutas" className="py-3 px-2 text-right font-mono">{BRL(totaisMetricas.vendasBrutas)}</td>
+                  <td data-label="Taxa de serviço" className="py-3 px-2 text-right font-mono">{BRL(totaisMetricas.taxaServico)}</td>
+                  <td data-label="Descontos" className="py-3 px-2 text-right font-mono text-status-danger-ink">− {BRL(totaisMetricas.descontos)}</td>
+                  <td data-label="Eventos adicionais" className="py-3 px-2 text-right font-mono">{totaisMetricas.outrosEventos}</td>
+                  <td data-label="Total cobrado" className="py-3 pl-2 text-right font-mono font-bold text-brand-ink">{BRL(totaisMetricas.totalCobrado)}</td>
                 </tr>
               )}
               {!metricas.length && (
@@ -1562,7 +1564,7 @@ function Relatorio() {
           <h3 className="font-display text-xl font-bold tracking-tight text-text mb-3">
             Por dia
           </h3>
-          <table className="w-full text-left text-sm">
+          <table role="table" className="admin-data-table w-full text-left text-sm">
             <thead className="font-mono text-[10px] uppercase tracking-wider text-text-muted border-b border-line">
               <tr>
                 <th className="py-2 pr-3">Dia</th>
@@ -1576,18 +1578,18 @@ function Relatorio() {
             <tbody className="divide-y divide-line">
               {diasVisiveis.itens.map((d: any) => (
                 <tr key={d.dia}>
-                  <td className="py-2.5 pr-3 font-mono text-xs text-text">{d.dia}</td>
-                  <td className="py-2.5 pr-3 font-mono text-xs text-text-muted">{d.contas}</td>
-                  <td className="py-2.5 pr-3 font-mono text-xs text-text">
+                  <td data-label="Dia" className="py-2.5 pr-3 font-mono text-xs text-text">{d.dia}</td>
+                  <td data-label="Contas" className="py-2.5 pr-3 font-mono text-xs text-text-muted">{d.contas}</td>
+                  <td data-label="Vendas" className="py-2.5 pr-3 font-mono text-xs text-text">
                     {BRL(Number(d.vendasBrutas ?? d.faturamento ?? 0))}
                   </td>
-                  <td className="py-2.5 pr-3 font-mono text-xs text-brand-ink">
+                  <td data-label="Serviço" className="py-2.5 pr-3 font-mono text-xs text-brand-ink">
                     {BRL(Number(d.servicoTotal ?? 0))}
                   </td>
-                  <td className="py-2.5 pr-3 font-mono text-xs text-status-danger-ink">
+                  <td data-label="Descontos" className="py-2.5 pr-3 font-mono text-xs text-status-danger-ink">
                     − {BRL(Number(d.descontosTotal ?? 0))}
                   </td>
-                  <td className="py-2.5 font-mono text-xs font-bold text-status-success-ink">
+                  <td data-label="Total cobrado" className="py-2.5 font-mono text-xs font-bold text-status-success-ink">
                     {BRL(Number(d.totalCobrado ?? d.faturamento ?? 0))}
                   </td>
                 </tr>
@@ -1606,7 +1608,7 @@ function Relatorio() {
           <p className="text-xs text-text-muted mb-3">
             Comissão atribuída ao garçom responsável por cada sessão fechada no período.
           </p>
-          <table className="w-full text-left text-sm">
+          <table role="table" className="admin-data-table w-full text-left text-sm">
             <thead className="font-mono text-[10px] uppercase tracking-wider text-text-muted border-b border-line">
               <tr>
                 <th className="py-2 pr-3">Garçom</th>
@@ -1620,18 +1622,18 @@ function Relatorio() {
             <tbody className="divide-y divide-line">
               {garconsVisiveis.itens.map((g: any) => (
                 <tr key={String(g.garcomId ?? "sem-responsavel")}>
-                  <td className="py-2.5 pr-3 text-text">{g.garcomNome || "—"}</td>
-                  <td className="py-2.5 pr-3 font-mono text-xs text-text-muted">{g.contas}</td>
-                  <td className="py-2.5 pr-3 font-mono text-xs text-text">
+                  <td data-label="Garçom" className="py-2.5 pr-3 text-text">{g.garcomNome || "—"}</td>
+                  <td data-label="Contas" className="py-2.5 pr-3 font-mono text-xs text-text-muted">{g.contas}</td>
+                  <td data-label="Vendas" className="py-2.5 pr-3 font-mono text-xs text-text">
                     {BRL(Number(g.vendasBrutas ?? 0))}
                   </td>
-                  <td className="py-2.5 pr-3 font-mono text-xs font-bold text-brand-ink">
+                  <td data-label="Serviço (comissão)" className="py-2.5 pr-3 font-mono text-xs font-bold text-brand-ink">
                     {BRL(Number(g.servicoTotal ?? 0))}
                   </td>
-                  <td className="py-2.5 pr-3 font-mono text-xs text-status-danger-ink">
+                  <td data-label="Descontos" className="py-2.5 pr-3 font-mono text-xs text-status-danger-ink">
                     − {BRL(Number(g.descontosTotal ?? 0))}
                   </td>
-                  <td className="py-2.5 font-mono text-xs font-bold text-status-success-ink">
+                  <td data-label="Total cobrado" className="py-2.5 font-mono text-xs font-bold text-status-success-ink">
                     {BRL(Number(g.totalCobrado ?? 0))}
                   </td>
                 </tr>
@@ -1673,7 +1675,7 @@ function Relatorio() {
             {loading ? "Carregando…" : "Sem contas encerradas neste intervalo."}
           </p>
         ) : (
-          <table className="w-full text-left text-xs sm:text-sm">
+          <table role="table" className="admin-data-table w-full text-left text-xs sm:text-sm">
             <thead className="font-mono text-[10px] uppercase tracking-wider text-text-muted border-b border-line">
               <tr>
                 <th className="py-2 pr-2">#</th>
@@ -1688,21 +1690,21 @@ function Relatorio() {
             <tbody className="divide-y divide-line">
               {contasVisiveis.itens.map((c: any) => (
                 <tr key={c.id}>
-                  <td className="py-2.5 pr-2 font-mono text-xs text-text-muted">{c.id}</td>
-                  <td className="py-2.5 pr-2 font-mono text-xs text-text">{c.mesa}</td>
-                  <td className="py-2.5 pr-2 truncate max-w-[8rem] text-text">
+                  <td data-label="#" className="py-2.5 pr-2 font-mono text-xs text-text-muted">{c.id}</td>
+                  <td data-label="Mesa" className="py-2.5 pr-2 font-mono text-xs text-text">{c.mesa}</td>
+                  <td data-label="Cliente" className="py-2.5 pr-2 truncate max-w-[8rem] text-text">
                     {c.cliente || "—"}
                   </td>
-                  <td className="py-2.5 pr-2 font-mono text-xs font-bold text-status-success-ink">
+                  <td data-label="Cobrado" className="py-2.5 pr-2 font-mono text-xs font-bold text-status-success-ink">
                     {BRL(Number(c.valorCobrado ?? c.valor ?? 0))}
                   </td>
-                  <td className="py-2.5 pr-2 font-mono text-[11px] uppercase text-text-muted">
+                  <td data-label="Forma" className="py-2.5 pr-2 font-mono text-[11px] uppercase text-text-muted">
                     {c.forma || "—"}
                   </td>
-                  <td className="py-2.5 pr-2 font-mono text-[11px] text-text-muted">
+                  <td data-label="Fechada" className="py-2.5 pr-2 font-mono text-[11px] text-text-muted">
                     {c.fechadaEm ? String(c.fechadaEm).slice(0, 16).replace("T", " ") : "—"}
                   </td>
-                  <td className="py-2.5">
+                  <td data-label="Recibo" className="py-2.5">
                     <button
                       type="button"
                       title="Imprimir comprovante de consumo e pagamento"
@@ -2216,6 +2218,7 @@ function Funcoes() {
       )}
       <nav
         aria-label="Ferramentas administrativas"
+        data-admin-tabs
         className="inline-flex flex-wrap gap-1 rounded-sm bg-surface-sunken border border-line-strong p-1"
       >
         {subs.map((s) => {
@@ -2294,7 +2297,7 @@ function Funcoes() {
             )}
             {mensagemGoogle && <p role="status" className="mt-3 text-xs text-brand-ink">{mensagemGoogle}</p>}
           </section>
-          <Modal open={modalEmailsAberto} onClose={() => setModalEmailsAberto(false)} wide labelledBy="gerenciar-emails-titulo">
+          <Modal open={modalEmailsAberto} className="admin-dialog" onClose={() => setModalEmailsAberto(false)} wide labelledBy="gerenciar-emails-titulo">
             <div className="p-5 sm:p-6">
               <div className="border-b border-line pb-3">
                 <h2 id="gerenciar-emails-titulo" className="font-display text-2xl font-bold tracking-tight text-text">Gerenciar e-mails Google</h2>

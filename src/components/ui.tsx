@@ -203,6 +203,7 @@ export function Badge({
 }
 
 export function Modal({
+  className,
   open,
   onClose,
   children,
@@ -212,6 +213,7 @@ export function Modal({
   labelledBy,
   describedBy,
 }: {
+  className?: string;
   open: boolean;
   onClose: () => void;
   children: ReactNode;
@@ -276,6 +278,7 @@ export function Modal({
             className={cn(
               "relative my-auto w-full max-h-[calc(100dvh-24px)] overflow-y-auto overscroll-contain rounded-xl border border-line bg-surface-raised shadow-modal no-scrollbar",
               wide ? "sm:max-w-2xl" : "sm:max-w-md",
+              className,
             )}
           >
             <button
