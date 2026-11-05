@@ -1,6 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
-  ArrowLeft,
   ArrowClockwise,
   BeerStein,
   CashRegister,
@@ -10,9 +9,13 @@ import {
   SignIn,
   SquaresFour,
   WarningCircle,
+  FileText,
+  LockKey,
+  EnvelopeSimple,
+  WhatsappLogo,
 } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
-import { Logo, ThemeToggle } from "../components/ui";
+import { ThemeToggle } from "../components/ui";
 import { ir } from "../router";
 import { usePub } from "../store/usePub";
 import { cn } from "../utils/cn";
@@ -126,42 +129,43 @@ export default function Login() {
       data-regime="expressive"
       className="min-h-dvh flex flex-col justify-between p-4 sm:p-6 bg-surface text-text"
     >
-      <header className="mx-auto w-full max-w-5xl flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => ir("/")}
-          className="inline-flex min-h-10 items-center gap-2 rounded-full border border-line bg-surface-raised px-4 text-xs font-semibold text-text-muted hover:text-text hover:border-line-strong transition-colors"
-        >
-          <ArrowLeft size={15} weight="bold" /> Voltar
-        </button>
-        <ThemeToggle />
+      <header className="mx-auto flex w-full max-w-6xl justify-end">
+        <ThemeToggle className="login-icon-action" />
       </header>
 
-      <main className="my-auto py-8 flex items-center justify-center">
+      <main className="my-auto flex items-center justify-center py-10 sm:py-14">
         <motion.section
           initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: reduceMotion ? 0 : 0.16, ease: [0.22, 1.18, 0.36, 1] }}
           aria-labelledby="login-titulo"
-          className="w-full max-w-md rounded-xl border border-line bg-surface-raised shadow-card overflow-hidden"
+          className="login-panel w-full max-w-lg overflow-hidden"
         >
           {/* Cabeçalho da comanda de acesso */}
-          <div className="px-6 pt-6 pb-5 flex items-center justify-between gap-4 border-b border-line">
-            <Logo size="md" />
-            <div className="text-right">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-ink block">
-                Posto
-              </span>
-              <h1
-                id="login-titulo"
-                className="font-display text-xl font-bold tracking-tight text-text leading-tight mt-0.5"
-              >
-                Acesso Equipe
-              </h1>
-            </div>
+          <div className="login-brand mb-9 flex flex-col items-center text-center">
+            <img
+              src="/logo/qradmin-mark.png"
+              alt="QR Admin"
+              width="104"
+              height="104"
+              className="mb-4 h-24 w-24 object-contain sm:h-28 sm:w-28"
+              draggable={false}
+            />
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-ink">
+              QR Admin
+            </p>
+            <h1
+              id="login-titulo"
+              className="font-display text-3xl font-bold tracking-tight text-text leading-tight sm:text-4xl"
+            >
+              Acesso à equipe
+            </h1>
+            <p className="mt-2 max-w-sm text-sm leading-relaxed text-text-muted">
+              Selecione seu setor para continuar.
+            </p>
           </div>
 
-          <div className="p-6">
+          <div className="login-content mx-auto w-full max-w-md">
             {etapa === "credencial" && (
               <p className="text-xs font-semibold uppercase tracking-[0.08em] text-text-muted mb-3">
                 Selecione o setor
@@ -181,10 +185,10 @@ export default function Login() {
                       setErro(false);
                     }}
                     className={cn(
-                      "min-h-20 rounded-md border px-2.5 py-3 flex flex-col items-center justify-center gap-1.5 text-center transition-colors duration-150",
+                      "login-sector-button min-h-24 rounded-lg px-2.5 py-4 flex flex-col items-center justify-center gap-2 text-center transition-colors duration-150",
                       selecionado
-                        ? "bg-brand text-brand-contrast border-brand"
-                        : "bg-surface-sunken border-line text-text-muted hover:text-text hover:border-line-strong hover:bg-surface-hover",
+                        ? "is-selected bg-brand-surface text-brand-ink"
+                        : "text-text-muted hover:text-text hover:bg-surface-hover",
                     )}
                   >
                     <Icon size={22} weight={selecionado ? "fill" : "regular"} />
@@ -206,7 +210,7 @@ export default function Login() {
                   transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.22, 1, 0.36, 1] }}
                 >
                   <form
-                    className="mt-5 pt-5 border-t border-line space-y-3"
+                    className="login-form mt-7 space-y-4"
                     onSubmit={(e) => {
                       e.preventDefault();
                       void confirmarSegundoFator();
@@ -227,8 +231,8 @@ export default function Login() {
                       </span>
                       <span
                         className={cn(
-                          "login-credential flex h-12 items-center gap-2.5 rounded-sm border bg-surface-sunken px-3.5 transition-colors",
-                          erro2fa ? "border-status-danger-border" : "border-line focus-within:border-brand",
+                          "login-credential flex h-12 items-center gap-2.5 border-b bg-transparent px-1 transition-colors",
+                          erro2fa ? "border-status-danger-border" : "border-line-strong focus-within:border-brand",
                         )}
                       >
                         <Key
@@ -270,7 +274,7 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={busy}
-                      className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-sm border border-brand bg-brand text-sm font-bold text-brand-contrast transition-colors duration-150 hover:bg-brand-hover active:translate-y-px disabled:opacity-45"
+                      className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-brand px-5 text-sm font-bold text-brand-contrast transition-colors duration-150 hover:bg-brand-hover active:translate-y-px disabled:opacity-45"
                     >
                       <ShieldCheck size={18} weight="bold" />
                       {busy ? "Verificando…" : "Confirmar código"}
@@ -336,10 +340,10 @@ export default function Login() {
                     </span>
                     <span
                       className={cn(
-                        "login-credential flex items-center gap-2.5 rounded-sm border bg-surface-sunken px-3.5 h-12 transition-colors",
+                        "login-credential flex items-center gap-2.5 border-b bg-transparent px-1 h-12 transition-colors",
                         erro
                           ? "border-status-danger-border"
-                          : "border-line focus-within:border-brand",
+                          : "border-line-strong focus-within:border-brand",
                       )}
                     >
                       <Key
@@ -377,7 +381,7 @@ export default function Login() {
                   <button
                     type="submit"
                     disabled={busy}
-                    className="w-full min-h-12 rounded-sm bg-brand border border-brand text-brand-contrast font-bold text-sm inline-flex items-center justify-center gap-2 hover:bg-brand-hover active:translate-y-px disabled:opacity-45 transition-colors duration-150"
+                    className="w-full min-h-12 rounded-md bg-brand px-5 text-brand-contrast font-bold text-sm inline-flex items-center justify-center gap-2 hover:bg-brand-hover active:translate-y-px disabled:opacity-45 transition-colors duration-150"
                   >
                     <SignIn size={18} weight="bold" />
                     {busy ? "Autenticando…" : `Entrar em ${ativo.nome}`}
@@ -390,11 +394,11 @@ export default function Login() {
             {googleError && <p role="alert" className="mt-4 rounded-sm border border-status-danger-border bg-status-danger-surface px-3 py-2 text-xs font-semibold text-status-danger-ink">{googleError}</p>}
 
             {googleEnabled && etapa === "credencial" && (
-              <div className="mt-5 pt-5 border-t border-line">
+              <div className="login-google mt-7">
                 <button
                   type="button"
                   onClick={() => { window.location.assign("/api/auth/google"); }}
-                  className="w-full min-h-12 rounded-sm border border-line-strong bg-surface text-text font-semibold text-sm inline-flex items-center justify-center gap-2 hover:bg-surface-hover transition-colors"
+                  className="w-full min-h-12 rounded-md bg-surface-hover/70 text-text font-semibold text-sm inline-flex items-center justify-center gap-2 hover:bg-surface-hover transition-colors"
                 >
                   <span aria-hidden="true" className="font-bold text-base">G</span>
                   Continuar com Google
@@ -408,8 +412,24 @@ export default function Login() {
         </motion.section>
       </main>
 
-      <footer className="mx-auto w-full max-w-5xl text-center">
-        <p className="font-mono text-[11px] text-text-muted">QR Admin · Operação de salão</p>
+      <footer className="login-footer mx-auto w-full max-w-6xl pt-8">
+        <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+          <p className="text-xs text-text-muted">© {new Date().getFullYear()} QR Admin. Todos os direitos reservados.</p>
+          <nav aria-label="Informações legais e contato" className="flex items-center gap-2">
+            <a className="login-footer-link" href="/termos-de-uso.html" aria-label="Termos de uso" title="Termos de uso">
+              <FileText size={19} weight="regular" />
+            </a>
+            <a className="login-footer-link" href="/politica-de-privacidade.html" aria-label="Política de privacidade" title="Política de privacidade">
+              <LockKey size={19} weight="regular" />
+            </a>
+            <a className="login-footer-link" href="https://wa.me/5547996162721" target="_blank" rel="noopener noreferrer" aria-label="Contato pelo WhatsApp" title="WhatsApp">
+              <WhatsappLogo size={20} weight="regular" />
+            </a>
+            <a className="login-footer-link" href="mailto:dejesusdemouradeivid@gmail.com" aria-label="Contato por e-mail" title="E-mail">
+              <EnvelopeSimple size={19} weight="regular" />
+            </a>
+          </nav>
+        </div>
       </footer>
     </div>
   );
