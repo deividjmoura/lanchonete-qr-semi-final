@@ -105,20 +105,19 @@ async function rodapeNasTelas(browser, viewport, scheme) {
     await page.locator('#tableGrid .table-tile').first().waitFor();
     assert.equal(await page.locator('#tableGrid .table-tile').count(), 2, 'dois números = duas mesas');
 
-    // Minhas mesas: um cartão só, com título + cliente e ações em ícones.
-    const cartao = page.locator('#myTables .my-table-card').first();
-    await cartao.waitFor();
-    assert.equal(await page.locator('#myTables .my-table-card').count(), 1, 'uma superfície por mesa');
-    assert.match(await cartao.locator('strong').first().innerText(), /^Mesa 01$/);
-    assert.match(await cartao.locator('.my-table-client').innerText(), /Ana Prado/);
-    assert.equal(await cartao.locator('select').count(), 0, 'sem select de transferência no cartão');
-    const acoes = cartao.locator('.my-table-actions button');
-    assert.equal(await acoes.count(), 5, 'ações: pedido, pedidos, cobrar, transferir e sair');
-    for (let i = 0; i < 5; i++) {
-      const rotulo = await acoes.nth(i).getAttribute('aria-label');
-      assert.ok(rotulo && rotulo.length > 5, 'ação ' + i + ' tem rótulo acessível');
-      assert.equal((await acoes.nth(i).innerText()).trim(), '', 'ação ' + i + ' é só ícone');
+    // Não existe uma segunda lista de mesas: o salão é a única entrada.
+    assert.equal(await page.locator('#myTables').count(), 0, 'lista duplicada removida');
+    assert.equal(await page.getByText('Minhas mesas', { exact: true }).count(), 0);
+
+    // As ações da mesa responsável ficam no modal aberto pelo cartão do salão.
+    await page.locator('#tableSearch').fill('Ana Prado');
+    await page.locator('#tableGrid .table-tile').first().click();
+    detalhe = page.locator('#tableDetailsModal');
+    await detalhe.waitFor({ state: 'visible' });
+    for (const label of ['Ver pedidos', 'Cobrar', 'Transferir mesa', 'Deixar mesa']) {
+      assert.equal(await detalhe.getByRole('button', { name: label, exact: true }).count(), 1, label + ' no modal do responsável');
     }
+    await page.locator('#closeTableDetails').click();
 
     // Mesa livre: oferece iniciar atendimento, nunca transferência.
     await page.locator('#tableSearch').fill('2');
@@ -181,14 +180,19 @@ async function transferenciaNoModal(browser) {
   const state = { offline: false, transfers: [], transferStatus: 200 };
   const { context, page, erros } = await abrir(browser, state, { width: 390, height: 844 });
   try {
-    const cartao = page.locator('#myTables .my-table-card').first();
-    await cartao.waitFor();
-    const transferir = cartao.locator('button[aria-label^="Transferir mesa"]');
+    const modal = page.locator('#transferModal');
+    const abrirTransferencia = async () => {
+      await page.locator('#tableSearch').fill('1');
+      await page.locator('#tableGrid .table-tile').first().click();
+      const detalhe = page.locator('#tableDetailsModal');
+      await detalhe.waitFor({ state: 'visible' });
+      const transferir = detalhe.getByRole('button', { name: 'Transferir mesa', exact: true });
+      await transferir.click();
+      await modal.waitFor({ state: 'visible' });
+    };
 
     // Cancelar: nada vai para o servidor.
-    await transferir.click();
-    const modal = page.locator('#transferModal');
-    await modal.waitFor({ state: 'visible' });
+    await abrirTransferencia();
     assert.match(await page.locator('#transferSummary').innerText(), /Mesa 01 — Ana Prado/);
     assert.equal(state.transfers.length, 0, 'abrir o modal não envia requisição');
     assert.equal(await page.locator('#transferWaiter').inputValue(), '', 'ninguém pré-selecionado');
@@ -197,8 +201,7 @@ async function transferenciaNoModal(browser) {
     assert.equal(state.transfers.length, 0, 'cancelar não envia requisição');
 
     // Confirmar: um único POST com o garçom escolhido.
-    await transferir.click();
-    await modal.waitFor({ state: 'visible' });
+    await abrirTransferencia();
     await page.locator('#transferWaiter').selectOption('2');
     await page.locator('#confirmTransfer').click();
     await page.waitForFunction(() => document.querySelector('#transferModal')?.open === false, null, { timeout: 15000 });
@@ -208,8 +211,7 @@ async function transferenciaNoModal(browser) {
 
     // Recusa do servidor: modal permanece aberto com o erro, sem fechar na cara do garçom.
     state.transferStatus = 409;
-    await transferir.click();
-    await modal.waitFor({ state: 'visible' });
+    await abrirTransferencia();
     await page.locator('#transferWaiter').selectOption('2');
     await page.locator('#confirmTransfer').click();
     await page.waitForFunction(() => /Outro garçom assumiu/.test(document.querySelector('#transferMessage')?.textContent || ''));
