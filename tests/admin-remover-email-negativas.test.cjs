@@ -89,7 +89,9 @@ test('documentação descreve troca e desvinculação de conta Google', () => {
   assert.match(docs, /google_sub/);
   assert.match(docs, /DELETE \/api\/admin\/contas\/:id\/email/);
   assert.match(docs, /email_google_remocao_negada/);
-  assert.match(docs, /### Desvincular uma conta Google \(fora do escopo\)/);
+  assert.match(docs, /### Desvincular ou trocar o e-mail Google/);
+  assert.doesNotMatch(docs, /fora do escopo/);
+  assert.match(docs, /revoga as sessões/);
   assert.match(docs, /### Pendente de decisão do responsável/);
   assert.match(docs, /issue #48/);
   assert.match(docs, /issue #44/);
