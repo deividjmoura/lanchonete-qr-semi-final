@@ -11,6 +11,7 @@
 //   ... id inválido (:id = 0)                        → 400, sem evento
 //   ... sem sessão / papel não-admin / CSRF errado / origem hostil
 //                                                    → 401/403 no gate, sem evento e sem escrita
+//   ... sem Origin (cliente não-browser)             → aceito, mas ainda exige sessão e CSRF
 //   ... duas requisições simultâneas                  → exatamente um 200 e um 409
 //
 //   DATABASE_URL=postgres://.../qradmin_test NODE_ENV=test \
@@ -229,13 +230,33 @@ test('HTTP real: gates de sessão, papel, CSRF e origem recusam antes de qualque
   const origemHostil = await remover(alvo.id, { sessao: sAdmin, origin: 'http://evil.example' });
   assert.equal(origemHostil.status, 403, origemHostil.texto);
 
-  const semOrigem = await remover(alvo.id, { sessao: sAdmin, origin: null });
-  assert.ok([403, 400].includes(semOrigem.status), `sem Origin: ${semOrigem.status}`);
-
   assert.equal((await contaNoBanco(alvo.id)).email, email, 'e-mail intacto após as recusas');
   assert.equal((await eventos('email_google_removido', alvo.id)).length, 0);
   assert.equal((await eventos('email_google_remocao_negada', alvo.id)).length, 0,
     'recusa no gate de acesso não gera evento da operação');
+});
+
+test('HTTP real: sem Origin é aceito para cliente não-browser, mas continua exigindo sessão e CSRF', async () => {
+  // verificarOrigemRequisicao() só compara Origem/Referer quando algum deles
+  // vem na requisição, por compatibilidade com clientes que não são browser.
+  // O teste fixa esse comportamento: ausência de Origin não é atalho de acesso.
+  const admin = await criarConta('origin-admin', { papel: 'admin' });
+  const s = await sessao(admin.id);
+  const email = `sem-origem-${SUFIXO}@example.com`;
+  const alvo = await criarConta('origin-alvo', { email });
+
+  const semSessao = await remover(alvo.id, { origin: null });
+  assert.equal(semSessao.status, 401, semSessao.texto);
+
+  const csrfErrado = await remover(alvo.id, { sessao: s, origin: null, csrf: 'b'.repeat(64) });
+  assert.equal(csrfErrado.status, 403, csrfErrado.texto);
+
+  assert.equal((await contaNoBanco(alvo.id)).email, email, 'nenhuma escrita antes do 200');
+
+  const ok = await remover(alvo.id, { sessao: s, origin: null });
+  assert.equal(ok.status, 200, ok.texto);
+  assert.equal((await contaNoBanco(alvo.id)).email, null);
+  assert.equal((await eventos('email_google_removido', alvo.id)).length, 1);
 });
 
 test('HTTP real: duas remoções concorrentes produzem exatamente um sucesso', async () => {
