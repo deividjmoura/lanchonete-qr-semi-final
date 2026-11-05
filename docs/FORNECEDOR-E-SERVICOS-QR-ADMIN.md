@@ -15,7 +15,7 @@
 | Situação cadastral indicada no certificado | ATIVA |
 | Data de abertura | 05/11/2026 |
 | Forma de atuação declarada | Internet |
-| Contato profissional já utilizado na documentação do produto | deividmoura729249@gmail.com |
+| Contato profissional já utilizado na documentação do produto | dejesusdemouradeivid@gmail.com |
 
 Este documento não reproduz CPF, endereço comercial completo, capital social ou outros dados pessoais que não sejam necessários à identificação do fornecedor no contexto do software.
 
@@ -53,10 +53,12 @@ Limites funcionais que devem continuar explícitos na documentação comercial:
 
 | Componente | Uso documentado | Observação |
 |---|---|---|
-| Railway | Hospedagem/deploy da aplicação em produção | URL documentada: https://qradminn.up.railway.app/ |
-| PostgreSQL | Banco de dados da aplicação | Infraestrutura configurada para a instalação |
+| Railway | Hospedagem/deploy da aplicação em produção **e do banco PostgreSQL** da instalação | Confirmado pelo responsável em 05/11/2026. URL documentada: https://qradminn.up.railway.app/ |
+| PostgreSQL | Banco de dados da aplicação | Roda na mesma conta Railway da aplicação |
 | Google OAuth | Autenticação opcional de funcionários | Somente quando habilitada e configurada |
 | PIX | Registro manual de pagamentos | Não é provedor de processamento ou confirmação automática |
+
+Fontes e imagens do cardápio são servidas pelo próprio domínio: o `public/mesa.html` deixou de carregar Google Fonts em 05/11/2026 (as famílias Kalam e Special Elite passaram a ser hospedadas em `public/fonts/`).
 
 Esta tabela descreve componentes identificados no projeto. Não substitui inventário contratual de suboperadores, confirmação de região de processamento, acordos de tratamento, prazos de retenção ou avaliação de transferência internacional de dados.
 
@@ -70,14 +72,14 @@ Não afirmar que o fornecedor do software é o controlador dos dados dos consumi
 
 ## 6. Canais e condições ainda a formalizar
 
-O e-mail profissional já utilizado nas páginas legais é **deividmoura729249@gmail.com**. Não foram confirmados neste cadastro:
+O canal oficial de privacidade e contato profissional é **dejesusdemouradeivid@gmail.com**, confirmado pelo responsável em 05/11/2026 como monitorado, com compromisso de resposta em até 15 dias. Não foram confirmados neste cadastro:
 - telefone comercial ou WhatsApp de suporte;
 - domínio institucional ou endereço de site do fornecedor;
 - horários e prazo de resposta do suporte;
 - SLA, disponibilidade contratada e janela de manutenção;
 - preço, vencimento, reajuste e política de inadimplência aplicáveis a cada cliente;
 - procedimento de implantação, treinamento, backup, exportação e encerramento;
-- prazo de retenção e eliminação de dados por instalação;
+- ~~prazo de retenção e eliminação de dados por instalação~~ (definido em 05/11/2026 — ver `docs/engineering/data-policy-proposal.md`);
 - inventário jurídico completo de suboperadores e contratos de tratamento.
 
 Esses itens devem ser definidos em proposta/contrato e nas configurações efetivas de cada cliente. Não preencher por suposição.

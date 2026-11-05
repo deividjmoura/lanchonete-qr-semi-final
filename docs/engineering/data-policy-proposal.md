@@ -1,7 +1,7 @@
 # Proposta de política de dados pessoais e retenção
 
 **Issue:** [#44](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/44).  
-**Status:** inventário técnico e decisões pendentes. **Não é política aprovada nem parecer jurídico.**
+**Status:** inventário técnico com decisões do responsável registradas em **05/11/2026** (fornecedores, canal de privacidade e prazos por classe — §3.1 e §6). **Não é parecer jurídico**; os prazos ainda dependem de validação contábil/jurídica.
 
 Este documento descreve o que o código e as migrations versionadas mostram. Não presume que todas as migrations estejam aplicadas em todos os ambientes, nem que um prazo legal específico se aplique ao estabelecimento. Prazos só devem ser definidos pelo responsável com validação contábil/jurídica.
 
@@ -65,6 +65,18 @@ Portanto, o purge atual não é uma anonimização: ele apaga registros operacio
 | Fotos de cardápio | Prazo após substituição/arquivamento de produto e tratamento de backups | Retenção separada; verificar referências antes de excluir arquivos/objetos. |
 | Logs de aplicação/proxy | Prazo, responsáveis, acesso e campos coletados pelo provedor | Confirmar configuração real do provedor; não presumir retenção disponível. |
 
+### 3.1. Prazos aprovados pelo responsável em 05/11/2026
+
+| Classe | Prazo aprovado | O que o sistema faz hoje |
+|---|---|---|
+| Sessões, pedidos, itens e pagamentos informados | Até 12 meses após o fechamento da conta | Nada automático: a purga é manual, com data de corte e dry-run. |
+| Registros financeiros e comprovantes de consumo | Até 5 anos | Preservados pela purga (valor, forma e datas não são tocados). |
+| Trilhas `auditoria_eventos` e `staff_credencial_eventos` | Até 24 meses | Não há rotina de descarte; a trilha cresce sem prazo aplicado. |
+| Logs da aplicação e do provedor (Railway) | Até 90 dias | Depende da configuração do provedor; não há retenção própria na aplicação. |
+| Fila offline do PWA do garçom | Até sincronizar ou limpar navegador/aparelho | Sem expurgo automático (decisão de produto: preservar replay idempotente). |
+
+Os prazos acima são **política**, não mecanismo: nenhuma rotina roda por agendamento. Para aplicá-los, é preciso decidir quem executa a purga e com qual periodicidade (§4). O texto público correspondente está na seção 8 da Política de Privacidade.
+
 ## 4. Controles antes de qualquer exclusão
 
 1. Aprovação escrita do responsável para cada classe de dado e prazo.
@@ -80,15 +92,15 @@ O endpoint atual exige papel admin e opera em dry-run por padrão. Isso reduz ri
 
 ## 5. Atendimento a solicitações de titulares
 
-O procedimento precisa ser definido pelo responsável. Como ponto de partida operacional, a solicitação deve ser registrada sem duplicar o dado pessoal; a localização deve ocorrer por consulta somente leitura; e qualquer anonimização/exclusão deve respeitar a necessidade de preservar registros financeiros ou de auditoria quando houver fundamento aplicável. Não se deve prometer exclusão imediata sem avaliar vínculos, obrigações e direitos envolvidos.
+O canal já está definido (`dejesusdemouradeivid@gmail.com`, resposta em até 15 dias); o **procedimento interno** ainda precisa ser escrito pelo responsável. Como ponto de partida operacional, a solicitação deve ser registrada sem duplicar o dado pessoal; a localização deve ocorrer por consulta somente leitura; e qualquer anonimização/exclusão deve respeitar a necessidade de preservar registros financeiros ou de auditoria quando houver fundamento aplicável. Não se deve prometer exclusão imediata sem avaliar vínculos, obrigações e direitos envolvidos.
 
 ## 6. Decisões pendentes do responsável
 
 - [ ] Confirmar as finalidades e os campos que realmente precisam ser coletados no atendimento.
-- [ ] Confirmar a identificação legal do controlador (nome empresarial e CNPJ/endereço quando aplicável) e o estabelecimento a que esta instalação corresponde.
-- [ ] Confirmar se o e-mail atualmente publicado como contato de privacidade é canal oficial, monitorado e autorizado para receber solicitações de titulares.
-- [ ] Confirmar fornecedores efetivamente contratados, suboperadores, local de armazenamento e transferências internacionais a partir dos contratos/configuração reais.
-- [ ] Aprovar prazos por classe, após validação contábil/jurídica.
+- [x] Confirmar a identificação legal do controlador (nome empresarial e CNPJ/endereço quando aplicável) e o estabelecimento a que esta instalação corresponde. — **05/11/2026:** MEI `69.987.201 DEIVID DE JESUS DE MOURA`, CNPJ 69.987.201/0001-20 (`docs/FORNECEDOR-E-SERVICOS-QR-ADMIN.md`).
+- [x] Confirmar se o e-mail atualmente publicado como contato de privacidade é canal oficial, monitorado e autorizado para receber solicitações de titulares. — **05/11/2026:** `dejesusdemouradeivid@gmail.com`, com resposta em até 15 dias.
+- [x] Confirmar fornecedores efetivamente contratados, suboperadores, local de armazenamento e transferências internacionais a partir dos contratos/configuração reais. — **05/11/2026:** Railway (aplicação + PostgreSQL) e Google OAuth quando habilitado. Nenhum outro suboperador identificado; fotos de cardápio podem apontar para host externo cadastrado pelo estabelecimento. Região de processamento e contrato de tratamento **não** confirmados.
+- [x] Aprovar prazos por classe, após validação contábil/jurídica. — **05/11/2026:** prazos aprovados em §3.1; validação contábil/jurídica segue como etapa do responsável.
 - [ ] Decidir se nomes/observações podem ser anonimizados antes do purge financeiro.
 - [ ] Decidir se avisos PIX e histórico de transferência devem sobreviver à exclusão da sessão.
 - [ ] Definir retenção e acesso às trilhas `auditoria_eventos` e `staff_credencial_eventos`.

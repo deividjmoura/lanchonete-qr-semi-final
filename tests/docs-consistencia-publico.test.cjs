@@ -136,11 +136,29 @@ test('as páginas legais identificam o fornecedor real sem expor dados pessoais 
 
   assert.match(juntas, /69\.987\.201 DEIVID DE JESUS DE MOURA/);
   assert.match(juntas, /69\.987\.201\/0001-20/, 'deve usar o CNPJ confirmado no CCMEI');
-  assert.match(juntas, /deividmoura729249@gmail\.com/);
+  assert.match(juntas, /dejesusdemouradeivid@gmail\.com/);
   // Formato genérico: o CPF real nunca precisa aparecer no repositório, nem
   // dentro da asserção que o proíbe.
   assert.doesNotMatch(juntas, /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/, 'CPF não deve ser publicado');
-  assert.doesNotMatch(juntas, /mantidos por \d+ (dias|meses|anos)/i, 'prazo de retenção não pode ser inventado');
+  // Prazos definidos pelo responsável em 05/11/2026 (decisão registrada em
+  // docs/engineering/data-policy-proposal.md §3.1). Eles só podem aparecer se
+  // o texto também disser que dependem de validação contábil/jurídica.
+  assert.match(juntas, /até 12 meses após o fechamento da conta/i);
+  assert.match(juntas, /até 5 anos/);
+  assert.match(juntas, /até 90 dias/);
+  assert.match(
+    ler('public/politica-de-privacidade.html'),
+    /confirmad[oa]s? por contador e advogado/i,
+    'prazo sem validação declarada vira promessa jurídica',
+  );
+  // Fornecedores só entram na Política se estiverem confirmados.
+  assert.match(ler('public/politica-de-privacidade.html'), /Railway/);
+  assert.match(ler('public/politica-de-privacidade.html'), /Google<\/strong> \(OAuth\/OpenID Connect\)/);
+  // Nenhuma página pública pode depender de CDN de fonte de terceiro.
+  for (const arquivo of ['public/mesa.html', 'public/garcom-pwa/index.html', 'index.html']) {
+    assert.doesNotMatch(ler(arquivo), /fonts\.googleapis\.com|fonts\.gstatic\.com/, arquivo + ' sem Google Fonts');
+  }
+  assert.match(ler('public/mesa.html'), /\/mesa-fonts\.css/, 'fontes do cardápio são servidas pelo próprio domínio');
   assert.match(ler('public/politica-de-privacidade.html'), /controlador dos dados pessoais.*estabelecimento/i);
   assert.match(ler('public/politica-de-privacidade.html'), /fornecedor do software não se torna controlador/i);
   // O token do garçom precisa ser descrito como bearer no navegador, não como cookie HttpOnly.
