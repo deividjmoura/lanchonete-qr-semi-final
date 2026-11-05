@@ -87,6 +87,7 @@ const tables = Array.from({ length: 12 }, (_, i) => ({
   garcomResponsavelId: i < 2 ? 1 : null,
   garcomResponsavelNome: i < 2 ? "Ana" : null,
   clienteNome: i < 2 ? "Marina" : null,
+  pedidoClienteQr: i === 2,
 }));
 
 const orders = ["recebido", "em_producao", "concluido"].map((status, i) => ({
@@ -468,6 +469,29 @@ async function main() {
             await page.locator(`[data-tab="${tab}"]`).click();
             assert.equal(await page.locator(".page.active").getAttribute("data-page"), tab);
           }
+          // As ações de uma mesa ficam no modal do salão; a lista duplicada foi removida.
+          await page.locator("#tableSearch").fill("Marina");
+          await page.locator("#tableGrid .table-tile").first().click();
+          await page.locator("#tableDetailsModal[open]").waitFor();
+          for (const label of ["Ver pedidos", "Cobrar", "Transferir mesa", "Deixar mesa"]) {
+            assert.equal(await page.getByRole("button", { name: label, exact: true }).count(), 1, `mesa responsável: ${label}`);
+          }
+          await page.locator("#closeTableDetails").click();
+
+          await page.locator("#tableSearch").fill("3");
+          await page.locator("#tableGrid .table-tile").first().click();
+          await page.locator("#tableDetailsModal[open]").waitFor();
+          assert.equal(await page.getByRole("button", { name: "Assumir mesa", exact: true }).count(), 1, "pedido QR sem responsável pode ser assumido");
+          assert.equal(await page.getByRole("button", { name: "Transferir mesa", exact: true }).count(), 0, "mesa sem responsável não oferece transferência");
+          await page.locator("#closeTableDetails").click();
+
+          await page.locator("#tableSearch").fill("4");
+          await page.locator("#tableGrid .table-tile").first().click();
+          await page.locator("#tableDetailsModal[open]").waitFor();
+          assert.equal(await page.getByRole("button", { name: "Iniciar atendimento", exact: true }).count(), 1, "mesa sem pedido QR inicia atendimento");
+          assert.equal(await page.getByRole("button", { name: "Assumir mesa", exact: true }).count(), 0);
+          await page.locator("#closeTableDetails").click();
+
           await page.setViewportSize({ width: 375, height: 900 });
           await page.locator("#newOrderTables").click();
           const box = await inViewport(page, page.locator("#orderModal"));
