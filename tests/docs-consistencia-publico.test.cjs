@@ -119,6 +119,18 @@ test('o E2E de redefinição de senha clica no rótulo real da aba de logins', (
   assert.doesNotMatch(e2e, /name: 'Senhas', exact: true/, 'rótulo antigo da aba');
 });
 
+test('a aba Logins renderiza uma única seção de redefinição de senha', () => {
+  // A PR #254 uniu a aba Google à aba de senhas e deixou o bloco antigo no
+  // lugar: a tela passou a mostrar "Redefinir senha de um setor" duas vezes e
+  // o E2E morreu em strict mode. O painel é único e o botão também.
+  const ui = ler('src/screens/Admin.tsx');
+  const secoes = ui.match(/\{sub === "senhas" && \(/g) || [];
+  assert.equal(secoes.length, 1, 'apenas uma seção `sub === "senhas"`');
+  const botoes = ui.match(/Redefinir senha de um setor/g) || [];
+  assert.equal(botoes.length, 1, 'apenas um botão "Redefinir senha de um setor"');
+  assert.equal((ui.match(/<TrocarSenha obrigatorio/g) || []).length, 1);
+});
+
 test('as páginas legais não prometem o que o código não faz', () => {
   // Contrato mínimo de honestidade: nada de CNPJ, prazo de retenção ou fornecedor
   // inventado dentro das páginas públicas.

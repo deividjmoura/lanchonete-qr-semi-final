@@ -2417,19 +2417,6 @@ function Funcoes() {
       {sub === "estoque" && <Estoque />}
       {sub === "relatorio" && <Relatorio />}
       {sub === "senhas" && (
-        <section className="rounded-md border border-line bg-surface-raised p-5">
-          <h3 className="font-display text-2xl font-bold tracking-tight text-text">Logins e senhas</h3>
-          <p className="mt-1 mb-4 text-sm text-text-muted">
-            Redefina a senha de uma conta de acesso. As sessões anteriores dessa conta serão encerradas.
-          </p>
-          <Btn variant="secondary" onClick={() => setTrocandoSenha(true)}>
-            <Key size={16} /> Redefinir senha de um setor
-          </Btn>
-          {trocandoSenha && <TrocarSenha obrigatorio={false} onClose={() => setTrocandoSenha(false)} />}
-
-        </section>
-      )}
-      {sub === "senhas" && (
         <>
           <section className="rounded-md border border-line bg-surface-raised p-5">
             <h3 className="font-display text-2xl font-bold tracking-tight text-text">Logins e senhas</h3>
