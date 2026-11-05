@@ -28,7 +28,7 @@ O login Google **não cria funcionários**. Cada conta precisa ser ativa e ter u
 
 Com uma sessão autenticada como admin, abra **Admin → Funções → Logins**. A tela lista as contas ativas; informe o e-mail Google verificado de cada funcionário e salve. A API `GET /api/admin/contas` retorna `email` e `googleVinculado`, e a rota `PUT /api/admin/contas/email` valida o cadastro no servidor. E-mails são únicos sem distinção entre maiúsculas/minúsculas. Ao alterar o endereço de uma conta já vinculada, o vínculo Google anterior é removido e as sessões existentes são revogadas.
 
-O campo de e-mail permanece editável mesmo depois do primeiro vínculo. Ao salvar um endereço diferente, o sistema limpa o `google_sub` anterior e revoga as sessões da conta, exigindo novo login com o endereço atualizado. **Remover e-mail** limpa `staff.email` e `staff.google_sub` e também revoga as sessões, mas mantém a conta interna ativa para login com usuário e senha. As duas operações registram auditoria na mesma transação; a remoção usa `email_google_removido` e a troca usa `email_google_atualizado.
+O campo de e-mail permanece editável mesmo depois do primeiro vínculo. Ao salvar um endereço diferente, o sistema limpa o `google_sub` anterior e revoga as sessões da conta, exigindo novo login com o endereço atualizado. **Remover e-mail** limpa `staff.email` e `staff.google_sub` e também revoga as sessões, mas mantém a conta interna ativa para login com usuário e senha. As duas operações registram auditoria na mesma transação; a remoção usa `email_google_removido` e a troca usa `email_google_atualizado`.
 
 ## Ciclo de vida do e-mail pré-cadastrado
 
@@ -61,7 +61,7 @@ O campo continua editável depois do primeiro vínculo. Ao salvar um endereço d
 
 - prazo de retenção dos eventos de auditoria e quem pode consultá-los (issue #48);
 - política de ciclo de vida de e-mails de funcionários: prazo para remover um endereço que nunca fez login, quem aprova a remoção e como registrar o pedido do próprio funcionário (issue #44);
-- procedimento de suporte para desvincular uma conta Google, se isso for necessário.
+- quem, fora do administrador ativo, precisa aprovar a desvinculação de uma conta Google em caso de disputa (o produto já permite a ação; falta apenas a regra de processo).
 
 Nada disso está automatizado no código: não existe expiração, tarefa periódica nem remoção automática de e-mail.
 

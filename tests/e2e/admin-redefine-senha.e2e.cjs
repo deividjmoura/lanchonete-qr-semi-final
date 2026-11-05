@@ -138,10 +138,11 @@ async function main() {
     assert.equal(acessoComprovantes.lista, 200, 'admin pode listar comprovantes');
     assert.equal(acessoComprovantes.detalhe, 404, 'admin passa pela autorização do detalhe');
 
-    // A gestão de senhas agora fica em Admin > Funções, não no cabeçalho.
+    // A gestão de senhas e dos e-mails Google vive em Admin > Funções → Logins,
+    // não no cabeçalho nem em aba separada.
     assert.equal(await page.getByRole('button', { name: 'Redefinir senha de um setor' }).count(), 0);
     await page.getByRole('button', { name: 'Funções', exact: true }).click();
-    await page.getByRole('button', { name: 'Senhas', exact: true }).click();
+    await page.getByRole('button', { name: 'Logins', exact: true }).click();
     await page.getByRole('button', { name: 'Redefinir senha de um setor' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.waitFor();
