@@ -86,6 +86,11 @@ jobs:
       - name: Remoção de e-mail Google — rota HTTP e auditoria
         run: node --test tests/postgres-remover-email-google-http.test.cjs
 
+      # #48 fase 2: autoria financeira por identidade. Sem este step o arquivo não
+      # é executado por nenhum job e a PR aparece verde sem exercitar o código.
+      - name: Payment authorship by identity PostgreSQL tests (#48)
+        run: node --test tests/postgres-pagamento-operador-id.test.cjs
+
       - name: Produção parcial por item (cozinha/bar)
         if: ${{ hashFiles('tests/postgres-producao-parcial.test.cjs') != '' }}
         run: node --test tests/postgres-producao-parcial.test.cjs

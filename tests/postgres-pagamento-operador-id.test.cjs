@@ -27,6 +27,8 @@ let mesaId = null;
 let sessaoId = null;
 let opA = null;
 let opB = null;
+let produtoId = null;
+let categoriaId = null;
 
 test.before(async () => {
   const hash = await auth.hashSenha('Operador-Pagamento-0001');
@@ -59,9 +61,19 @@ test.before(async () => {
 
   // O pagamento é validado contra o consumo da sessão: sem pedido real não há
   // saldo e registrarPagamento recusa com "valor maior que o restante".
-  const { rows: prod } = await pool.query(
-    'SELECT id, preco FROM produtos ORDER BY id LIMIT 1'
+  // A fixture é criada aqui: num banco recém-migrado `produtos` está vazio, e
+  // depender de sobra de outro teste fazia este arquivo falhar quando rodado
+  // sozinho (`prod[0] === undefined`).
+  const { rows: categoria } = await pool.query(
+    'INSERT INTO categorias (nome) VALUES ($1) RETURNING id',
+    [`Categoria pagamento ${run}`]
   );
+  categoriaId = categoria[0].id;
+  const { rows: prod } = await pool.query(
+    'INSERT INTO produtos (categoria_id, nome, preco) VALUES ($1, $2, $3) RETURNING id, preco',
+    [categoriaId, `Produto pagamento ${run}`, 5]
+  );
+  produtoId = prod[0].id;
   const { rows: ped } = await pool.query(
     'INSERT INTO pedidos (sessao_id, status) VALUES ($1, $2) RETURNING id',
     [sessaoId, 'recebido']
@@ -83,6 +95,8 @@ test.after(async () => {
     await pool.query('DELETE FROM mesa_sessoes WHERE id = $1', [sessaoId]);
   }
   if (mesaId) await pool.query('DELETE FROM mesas WHERE id = $1', [mesaId]);
+  if (produtoId) await pool.query('DELETE FROM produtos WHERE id = $1', [produtoId]);
+  if (categoriaId) await pool.query('DELETE FROM categorias WHERE id = $1', [categoriaId]);
   if (ids.length) {
     await pool.query('UPDATE sessao_pagamentos SET operador_id = NULL WHERE operador_id = ANY($1::int[])', [ids]).catch(() => {});
     await pool.query('DELETE FROM auditoria_eventos WHERE ator_id = ANY($1::int[])', [ids]);
