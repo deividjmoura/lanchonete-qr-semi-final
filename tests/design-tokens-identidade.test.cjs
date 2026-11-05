@@ -58,7 +58,7 @@ test("tokens semânticos globais seguem a identidade azul/violeta nos dois temas
   // Violeta como ação primária e superfícies azuladas (nada de papel/madeira).
   assert.match(tokens, /--prim-violeta: #7c5cff;/);
   assert.match(tokens, /--prim-meia-noite: #0b101b;/);
-  assert.match(tokens, /--prim-nevoa: #eef1f8;/);
+  assert.match(tokens, /--prim-nevoa: #e4e8f1;/);
   assert.match(claro, /--brand: var\(--prim-violeta-escuro\)/);
   assert.match(escuro, /--brand: var\(--prim-violeta-claro\)/);
   assert.match(escuro, /--surface: var\(--prim-meia-noite\)/);
