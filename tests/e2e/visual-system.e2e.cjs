@@ -369,6 +369,18 @@ async function main() {
               footer.y + footer.height <= 900 + 1,
               "rodapé encostado na base da viewport",
             );
+            // Os controles rápidos saíram do rodapé fixo: agora ficam no fim da
+            // aba Mesas, no fluxo da página. O rodapé guarda só a navegação.
+            assert.equal(
+              await page.locator(".app-footer .utility-bar").count(),
+              0,
+              "utilitários não ficam mais no rodapé fixo",
+            );
+            assert.equal(
+              await page.locator("#page-tables .utility-bar").count(),
+              1,
+              "aba Mesas concentra os controles rápidos",
+            );
             const conexao = await inViewport(page, page.locator("#connection"));
             const syncBtn = await inViewport(page, page.locator("#syncBtn"));
             assert.ok(
