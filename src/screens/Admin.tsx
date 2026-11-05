@@ -2481,7 +2481,7 @@ function Funcoes() {
                   E-mail para cadastro
                   <input type="email" value={novoEmailGoogle} onChange={(e) => setNovoEmailGoogle(e.target.value)} placeholder="funcionario@gmail.com" required className="mt-1 block h-11 w-full rounded-sm border border-line-strong bg-surface-sunken px-3 text-sm text-text" />
                 </label>
-                <Btn block type="submit" disabled={!contaNovoEmail || !novoEmailGoogle.trim() || salvandoEmail !== null}>
+                <Btn full type="submit" disabled={!contaNovoEmail || !novoEmailGoogle.trim() || salvandoEmail !== null}>
                   <Plus size={15} weight="bold" /> {salvandoEmail ? "Salvando..." : "Cadastrar e-mail"}
                 </Btn>
               </form>
