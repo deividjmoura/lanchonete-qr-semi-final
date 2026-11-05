@@ -105,6 +105,12 @@ jobs:
       - name: Fila de produção render smoke (SSR, sem Chromium)
         run: npm run smoke:fila
 
+      # #55: telas de 2FA. O teste HTTP cobre o comportamento; este smoke cobre
+      # o que ele não vê — import quebrado, ícone inexistente e texto perdido no
+      # empacotamento das telas que o CI não abre em Chromium.
+      - name: Telas de 2FA render smoke (SSR, sem Chromium)
+        run: npm run smoke:2fa
+
       - name: dist/ integrity
         run: |
           test -f dist/index.html

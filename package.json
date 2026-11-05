@@ -35,6 +35,7 @@
     "smoke:panorama": "node scripts/ssr-smoke-panorama.mjs",
     "smoke:mesas": "node scripts/ssr-smoke-mesas-abertas.mjs",
     "smoke:fila": "node scripts/ssr-smoke-fila.mjs",
+    "smoke:2fa": "node scripts/ssr-smoke-2fa.mjs",
     "test:pg": "node scripts/run-pg-tests.js",
     "test:e2e": "node scripts/run-e2e-tests.js",
     "health:smoke": "node scripts/health-smoke.js",

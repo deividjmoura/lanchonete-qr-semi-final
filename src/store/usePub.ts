@@ -81,7 +81,15 @@ interface PubState {
 
   /* auth + som */
   login: (usuario: string, senha: string) => Role | null;
-  loginApi: (usuario: string, senha: string) => Promise<Role | null>;
+  /**
+   * #55: devolve o resultado do login. `pendente: true` = senha correta e o
+   * segundo fator ainda é necessário (nada é autenticado antes disso).
+   */
+  loginApi: (usuario: string, senha: string) => Promise<ResultadoLogin>;
+  /** #55 — conclui o login com o código TOTP ou de recuperação. */
+  concluirSegundoFatorApi: (codigo: string) => Promise<{ ok: true } | { ok: false; erro: string }>;
+  /** #55 — aborta a etapa 2 e descarta a sessão pendente. */
+  cancelarSegundoFatorApi: () => Promise<void>;
   /** Troca a própria senha. Retorna null em sucesso ou a mensagem de erro. */
   trocarSenhaApi: (senhaAtual: string, senhaNova: string) => Promise<string | null>;
   /** Admin redefine a senha de qualquer setor sem a senha antiga. */
@@ -92,6 +100,11 @@ interface PubState {
   /** Publica falha de operação na faixa de erro da própria tela (sem alert nativo). */
   reportarErro: (mensagem: string | null) => void;
 }
+
+export type ResultadoLogin =
+  | { ok: true; role: Role }
+  | { ok: false; motivo: 'credencial' }
+  | { ok: false; motivo: 'mfa'; pendente: true };
 
 type PendingPaymentAttempt = { valor: number; formaPagamento: string; idempotencyKey: string };
 const pendingPaymentAttempts = new Map<number, PendingPaymentAttempt>();
@@ -1058,18 +1071,47 @@ if (typeof window !== "undefined") {
     /* compat: preferir loginApi no Login.tsx */
     return null;
   },
-  loginApi: async (usuario: string, senha: string): Promise<Role | null> => {
+  loginApi: async (usuario: string, senha: string): Promise<ResultadoLogin> => {
     try {
       const out = await api.login(usuario, senha);
+      // #55: com 2FA ativo o servidor NÃO devolve identidade nem sessão
+      // utilizável — só a marca de que o segundo fator é necessário. Não há
+      // nada para guardar em `auth` nesta etapa.
+      if (out.mfaPendente) return { ok: false, motivo: "mfa", pendente: true };
       const r = (out.staff?.papel || "") as Role;
-      if (!r) return null;
+      if (!r) return { ok: false, motivo: "credencial" };
       const auth = { role: r, nome: out.staff?.nome || r, login: out.staff?.login || usuario, deveTrocar: Boolean(out.staff?.deveTrocarSenha) };
       sessionStorage.setItem("pub-auth", JSON.stringify(auth));
       set({ auth, lastError: null });
-      return r;
+      return { ok: true, role: r };
     } catch (e: any) {
       set({ lastError: e.message || "Login inválido" });
-      return null;
+      return { ok: false, motivo: "credencial" };
+    }
+  },
+  concluirSegundoFatorApi: async (codigo: string) => {
+    try {
+      const out = await api.loginSegundoFator(codigo);
+      const papel = out.staff?.papel as Role;
+      if (!papel) return { ok: false, erro: "Resposta inesperada do servidor." };
+      const auth = {
+        role: papel,
+        nome: out.staff?.nome || papel,
+        login: out.staff?.login || undefined,
+        deveTrocar: Boolean(out.staff?.deveTrocarSenha),
+      };
+      sessionStorage.setItem("pub-auth", JSON.stringify(auth));
+      set({ auth, lastError: null });
+      return { ok: true };
+    } catch (e: any) {
+      return { ok: false, erro: e?.message || "Não foi possível verificar o código." };
+    }
+  },
+  cancelarSegundoFatorApi: async () => {
+    try {
+      await api.cancelarSegundoFator();
+    } catch {
+      /* o cookie pendente também expira sozinho em 5 min */
     }
   },
   trocarSenhaApi: async (senhaAtual: string, senhaNova: string): Promise<string | null> => {

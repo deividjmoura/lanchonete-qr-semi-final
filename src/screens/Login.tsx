@@ -1,10 +1,12 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowLeft,
+  ArrowClockwise,
   BeerStein,
   CashRegister,
   CookingPot,
   Key,
+  ShieldCheck,
   SignIn,
   SquaresFour,
   WarningCircle,
@@ -24,6 +26,14 @@ const PAPEIS = [
 
 export default function Login() {
   const loginApi = usePub((s) => s.loginApi);
+  const concluirSegundoFatorApi = usePub((s) => s.concluirSegundoFatorApi);
+  const cancelarSegundoFatorApi = usePub((s) => s.cancelarSegundoFatorApi);
+  /* #55: em qual etapa do login estamos. `pendente` = a senha já foi aceita e
+     o servidor não liberou nenhuma sessão; falta o segundo fator. */
+  const [etapa, setEtapa] = useState<"credencial" | "segundo-fator">("credencial");
+  const [codigo2fa, setCodigo2fa] = useState("");
+  const [erro2fa, setErro2fa] = useState<string | null>(null);
+  const [viaRecuperacao, setViaRecuperacao] = useState(false);
   const [papel, setPapel] = useState<string | null>(null);
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState(false);
@@ -55,25 +65,57 @@ export default function Login() {
   }, []);
   const reduceMotion = useReducedMotion();
 
+  const destinoDoPapel = (role: string) =>
+    role === "admin" ? "/admin" : role === "cozinha" ? "/cozinha" : role === "bar" ? "/bar" : "/caixa";
+
   const entrar = async () => {
     if (!papel || busy) return;
     setBusy(true);
-    const role = await loginApi(papel, senha);
+    const resultado = await loginApi(papel, senha);
     setBusy(false);
-    if (!role) {
+
+    if (!resultado.ok && resultado.motivo === "mfa") {
+      // A senha está certa, mas NÃO existe sessão utilizável: o servidor só
+      // emitiu um cookie pendente de 5 minutos. A identidade nem foi revelada.
+      setEtapa("segundo-fator");
+      setCodigo2fa("");
+      setErro2fa(null);
+      return;
+    }
+    if (!resultado.ok) {
       setErro(true);
       setTimeout(() => setErro(false), 1600);
       return;
     }
-    ir(
-      role === "admin"
-        ? "/admin"
-        : role === "cozinha"
-          ? "/cozinha"
-          : role === "bar"
-            ? "/bar"
-            : "/caixa",
-    );
+    ir(destinoDoPapel(resultado.role));
+  };
+
+  const confirmarSegundoFator = async () => {
+    if (busy) return;
+    const codigo = codigo2fa.trim();
+    if (!codigo) {
+      setErro2fa("Digite o código de 6 dígitos ou um código de recuperação.");
+      return;
+    }
+    setBusy(true);
+    const r = await concluirSegundoFatorApi(codigo);
+    setBusy(false);
+    if (!r.ok) {
+      setErro2fa(r.erro);
+      setCodigo2fa("");
+      return;
+    }
+    const papelAtual = usePub.getState().auth?.role;
+    ir(papelAtual ? destinoDoPapel(papelAtual) : "/");
+  };
+
+  const voltarParaCredencial = async () => {
+    await cancelarSegundoFatorApi();
+    setEtapa("credencial");
+    setSenha("");
+    setCodigo2fa("");
+    setErro2fa(null);
+    setViaRecuperacao(false);
   };
 
   const ativo = PAPEIS.find((p) => p.id === papel);
@@ -119,10 +161,12 @@ export default function Login() {
           </div>
 
           <div className="p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-text-muted mb-3">
-              Selecione o setor
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            {etapa === "credencial" && (
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-text-muted mb-3">
+                Selecione o setor
+              </p>
+            )}
+            <div className={cn("grid grid-cols-2 sm:grid-cols-4 gap-2.5", etapa !== "credencial" && "hidden")}>
               {PAPEIS.map((p) => {
                 const selecionado = papel === p.id;
                 const Icon = p.Icon;
@@ -152,7 +196,112 @@ export default function Login() {
             </div>
 
             <AnimatePresence mode="wait">
-              {papel && ativo && (
+              {etapa === "segundo-fator" && (
+                <motion.div
+                  key="segundo-fator"
+                  initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <form
+                    className="mt-5 pt-5 border-t border-line space-y-3"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void confirmarSegundoFator();
+                    }}
+                  >
+                    <div className="flex items-start gap-2.5 rounded-sm border border-line bg-surface-sunken px-3 py-2.5">
+                      <ShieldCheck size={18} weight="fill" className="text-brand shrink-0 mt-0.5" />
+                      <p className="text-xs leading-relaxed text-text-muted">
+                        A senha foi aceita. Por segurança, esta conta exige um{" "}
+                        <strong className="text-text">segundo fator</strong> antes de liberar o
+                        acesso.
+                      </p>
+                    </div>
+
+                    <label htmlFor="login-2fa" className="block">
+                      <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
+                        {viaRecuperacao ? "Código de recuperação" : "Código do autenticador"}
+                      </span>
+                      <span
+                        className={cn(
+                          "flex h-12 items-center gap-2.5 rounded-sm border bg-surface-sunken px-3.5 transition-colors",
+                          erro2fa ? "border-status-danger-border" : "border-line focus-within:border-brand",
+                        )}
+                      >
+                        <Key
+                          size={18}
+                          className={erro2fa ? "shrink-0 text-status-danger-ink" : "shrink-0 text-text-muted"}
+                        />
+                        <input
+                          id="login-2fa"
+                          name="codigo"
+                          // `one-time-code` deixa o iOS/Android sugerir o código do app.
+                          autoComplete="one-time-code"
+                          inputMode={viaRecuperacao ? "text" : "numeric"}
+                          autoFocus
+                          value={codigo2fa}
+                          onChange={(e) => {
+                            setCodigo2fa(e.target.value);
+                            setErro2fa(null);
+                          }}
+                          placeholder={viaRecuperacao ? "xxxx-xxxx-xx" : "000000"}
+                          aria-describedby="login-2fa-ajuda"
+                          className={cn(
+                            "h-full flex-1 bg-transparent text-sm text-text placeholder:text-text-subtle focus:outline-none",
+                            !viaRecuperacao && "tracking-[0.35em] font-mono",
+                          )}
+                        />
+                      </span>
+                    </label>
+
+                    {erro2fa && (
+                      <p
+                        role="alert"
+                        className="flex items-center gap-2 rounded-sm border border-status-danger-border bg-status-danger-surface px-3 py-2 text-xs font-semibold text-status-danger-ink"
+                      >
+                        <WarningCircle size={16} weight="fill" className="shrink-0" />
+                        {erro2fa}
+                      </p>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={busy}
+                      className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-sm border border-brand bg-brand text-sm font-bold text-brand-contrast transition-colors duration-150 hover:bg-brand-hover active:translate-y-px disabled:opacity-45"
+                    >
+                      <ShieldCheck size={18} weight="bold" />
+                      {busy ? "Verificando…" : "Confirmar código"}
+                    </button>
+
+                    <p id="login-2fa-ajuda" className="text-center text-[11px] text-text-muted">
+                      Abra o app autenticador e use o código de 6 dígitos. Perdeu o aparelho?{" "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setViaRecuperacao((v) => !v);
+                          setCodigo2fa("");
+                          setErro2fa(null);
+                        }}
+                        className="font-semibold text-brand-ink underline-offset-2 hover:underline"
+                      >
+                        {viaRecuperacao ? "usar o autenticador" : "usar um código de recuperação"}
+                      </button>
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() => void voltarParaCredencial()}
+                      className="inline-flex w-full items-center justify-center gap-1.5 rounded-sm px-2 py-2 text-xs font-semibold text-text-muted transition-colors hover:text-text"
+                    >
+                      <ArrowClockwise size={14} weight="bold" /> Recomeçar o login
+                    </button>
+                  </form>
+                </motion.div>
+              )}
+
+              {etapa === "credencial" && papel && ativo && (
                 <motion.div
                   key={papel}
                   initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
@@ -239,7 +388,7 @@ export default function Login() {
 
             {googleError && <p role="alert" className="mt-4 rounded-sm border border-status-danger-border bg-status-danger-surface px-3 py-2 text-xs font-semibold text-status-danger-ink">{googleError}</p>}
 
-            {googleEnabled && (
+            {googleEnabled && etapa === "credencial" && (
               <div className="mt-5 pt-5 border-t border-line">
                 <button
                   type="button"
