@@ -29,7 +29,7 @@ export default function App() {
     <ConfirmacaoGlobal>
       <>
       <Toasts />
-      {rota.path === "home" && <Landing />}
+      {rota.path === "home" && <Login />}
       {rota.path === "login" && <Login />}
       {rota.path === "mesa" && <Mesa key={rota.params.token} token={rota.params.token || ""} />}
       {rota.path === "cozinha" && <Cozinha />}
