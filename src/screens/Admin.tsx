@@ -11,6 +11,7 @@ import {
   FileText,
   FileArrowUp,
   Key,
+  LinkSimple,
   Package,
   PencilSimple,
   Plus,
