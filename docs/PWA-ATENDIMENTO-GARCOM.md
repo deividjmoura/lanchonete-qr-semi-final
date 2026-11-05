@@ -33,9 +33,11 @@ O fluxo normal da PWA tem **duas ações visíveis**, sem botão extra de aceite
 1. **Retirar item** — ao clicar em um item `concluido`, o servidor registra o
    aceite implícito e a retirada na mesma transação e sob o mesmo lock:
    `concluido → aceito → retirado`. O primeiro garçom que fizer isso assume
-   aquele item. Se a mesa ainda não tiver responsável, esse mesmo garçom passa
-   a ser o responsável principal da mesa. Se outro garçom já aceitou o item,
-   a retirada é recusada; não há tomada concorrente.
+   aquele item. Se o pedido ainda não tiver garçom, ele passa a ser associado
+   a esse garçom; se a mesa ainda não tiver responsável, o mesmo garçom passa
+   a ser o responsável principal da mesa. Uma retirada colaborativa não transfere
+   uma mesa que já tenha responsável. Se outro garçom já aceitou o item, a
+   retirada é recusada; não há tomada concorrente.
 2. **Confirmar entrega** — somente o garçom que retirou o item pode confirmar
    que ele chegou ao cliente. Só então o valor entra na conta.
 
