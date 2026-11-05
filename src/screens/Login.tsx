@@ -9,7 +9,6 @@ import {
   SignIn,
   SquaresFour,
   WarningCircle,
-  FileText,
   EnvelopeSimple,
   WhatsappLogo,
 } from "@phosphor-icons/react";
