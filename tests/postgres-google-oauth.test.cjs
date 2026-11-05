@@ -9,7 +9,7 @@ assert.equal(new URL(process.env.DATABASE_URL || 'postgres://x/none').pathname, 
   'Integração bloqueada: database deve ser qradmin_test');
 
 const pool = require('../db/pool');
-const { removerEmailGoogleStaff } = require('../db/admin');
+const { removerEmailGoogleStaff, definirEmailGoogleStaff } = require('../db/admin');
 const run = `oauth${process.pid}${crypto.randomBytes(4).toString('hex')}`;
 const ids = [];
 
@@ -86,10 +86,10 @@ test('PostgreSQL real: admin remove e-mail pré-autorizado com auditoria na mesm
   assert.equal(Number(evento.rows[0].ator_id), adminId);
   assert.equal(evento.rows[0].alvo_id, String(alvoId));
   assert.equal(evento.rows[0].acao, 'email_google_removido');
-  assert.deepEqual(evento.rows[0].contexto, { emailRemovido: true, googleVinculado: false });
+  assert.deepEqual(evento.rows[0].contexto, { emailRemovido: true, googleDesvinculado: false, sessoesRevogadas: 0 });
 });
 
-test('PostgreSQL real: remoção recusa não-admin, conta vinculada, inativa ou sem e-mail', async () => {
+test('PostgreSQL real: remoção desvincula Google e revoga sessões; recusa não-admin, inativa ou sem vínculo', async () => {
   const adminId = await criarStaff('remove-check-admin', null, 'admin');
   const caixaId = await criarStaff('remove-check-caixa');
   const alvoNaoAutorizado = await criarStaff('remove-nao-autorizado', `nao-autorizado-${run}@example.com`);
@@ -100,10 +100,17 @@ test('PostgreSQL real: remoção recusa não-admin, conta vinculada, inativa ou 
 
   const vinculado = await criarStaff('remove-vinculado', `vinculado-${run}@example.com`);
   await pool.query('UPDATE staff SET google_sub = $2 WHERE id = $1', [vinculado, `linked-${run}`]);
-  await assert.rejects(
-    () => removerEmailGoogleStaff(vinculado, { id: adminId }, `req-vinculado-${run}`),
-    (error) => error.status === 409
-  );
+  const tokenVinculado = `token-vinculado-${run}`;
+  await pool.query("INSERT INTO staff_sessoes (token, staff_id, token_hash, expira_em) VALUES ($1, $2, $3, now() + interval '1 hour')", [tokenVinculado, vinculado, crypto.createHash('sha256').update(tokenVinculado).digest('hex')]);
+  const desvinculado = await removerEmailGoogleStaff(vinculado, { id: adminId }, `req-vinculado-${run}`);
+  assert.equal(desvinculado.email, null);
+  assert.equal(desvinculado.googleVinculado, false);
+  assert.equal(desvinculado.googleDesvinculado, true);
+  assert.equal(desvinculado.sessoesRevogadas, 1);
+  const identidade = await pool.query('SELECT email, google_sub FROM staff WHERE id = $1', [vinculado]);
+  assert.equal(identidade.rows[0].email, null);
+  assert.equal(identidade.rows[0].google_sub, null);
+  assert.equal((await pool.query('SELECT 1 FROM staff_sessoes WHERE token = $1', [tokenVinculado])).rowCount, 0);
 
   const inativo = await criarStaff('remove-inativo', `inativo-${run}@example.com`);
   await pool.query('UPDATE staff SET ativo = FALSE WHERE id = $1', [inativo]);
@@ -139,4 +146,19 @@ test('PostgreSQL real: remoções concorrentes do mesmo e-mail não geram segund
     [String(alvoId), requestA, requestB]
   );
   assert.equal(eventos.rowCount, 1);
+});
+
+test('PostgreSQL real: trocar e-mail de conta vinculada desfaz identidade anterior e revoga sessões', async () => {
+  const adminId = await criarStaff('update-admin', null, 'admin');
+  const alvoId = await criarStaff('update-linked', `antes-${run}@example.com`);
+  await pool.query('UPDATE staff SET google_sub = $2 WHERE id = $1', [alvoId, `sub-update-${run}`]);
+  const token = `token-update-${run}`;
+  const hash = crypto.createHash('sha256').update(token).digest('hex');
+  await pool.query("INSERT INTO staff_sessoes (token, staff_id, token_hash, expira_em) VALUES ($1, $2, $3, now() + interval '1 hour')", [token, alvoId, hash]);
+  const atualizado = await definirEmailGoogleStaff(alvoId, `depois-${run}@example.com`, { id: adminId }, `req-update-${run}`);
+  assert.equal(atualizado.email, `depois-${run}@example.com`);
+  assert.equal(atualizado.googleVinculado, false);
+  assert.equal(atualizado.googleDesvinculado, true);
+  assert.equal(atualizado.sessoesRevogadas, 1);
+  assert.equal((await pool.query('SELECT 1 FROM staff_sessoes WHERE token = $1', [token])).rowCount, 0);
 });

@@ -26,9 +26,9 @@ Nunca commitar o JSON de credenciais, Client Secret ou qualquer segredo em arqui
 
 O login Google **não cria funcionários**. Cada conta precisa ser ativa e ter um e-mail previamente cadastrado pelo administrador. A migration `0034_staff_google_oauth.sql` adiciona `staff.email` e `staff.google_sub`.
 
-Com uma sessão autenticada como admin, abra **Admin → Funções → Google**. A tela lista as contas ativas; informe o e-mail Google verificado de cada funcionário e salve. A API `GET /api/admin/contas` retorna `email` e `googleVinculado`, e a rota `PUT /api/admin/contas/email` valida o cadastro no servidor. E-mails são únicos sem distinção entre maiúsculas/minúsculas. Uma conta Google já vinculada não pode ser transferida por esta rota.
+Com uma sessão autenticada como admin, abra **Admin → Funções → Logins**. A tela lista as contas ativas; informe o e-mail Google verificado de cada funcionário e salve. A API `GET /api/admin/contas` retorna `email` e `googleVinculado`, e a rota `PUT /api/admin/contas/email` valida o cadastro no servidor. E-mails são únicos sem distinção entre maiúsculas/minúsculas. Ao alterar o endereço de uma conta já vinculada, o vínculo Google anterior é removido e as sessões existentes são revogadas.
 
-Se o e-mail pré-cadastrado estiver incorreto, o administrador pode usar **Remover e-mail** na mesma tela. A operação limpa somente `staff.email` de uma conta ativa cujo `google_sub` ainda seja nulo e registra o evento `email_google_removido` na trilha de auditoria, na mesma transação. Ela não desativa o funcionário, não altera senha/sessões e não desvincula identidades Google já associadas. Para autorizar outro endereço, cadastre o novo e-mail e aguarde o primeiro login verificado.
+O campo de e-mail permanece editável mesmo depois do primeiro vínculo. Ao salvar um endereço diferente, o sistema limpa o `google_sub` anterior e revoga as sessões da conta, exigindo novo login com o endereço atualizado. **Remover e-mail** limpa `staff.email` e `staff.google_sub` e também revoga as sessões, mas mantém a conta interna ativa para login com usuário e senha. As duas operações registram auditoria na mesma transação; a remoção usa `email_google_removido` e a troca usa `email_google_atualizado.
 
 ## Ciclo de vida do e-mail pré-cadastrado
 
@@ -38,25 +38,24 @@ Se o e-mail pré-cadastrado estiver incorreto, o administrador pode usar **Remov
 |---|---|---|---|
 | Sem acesso Google | `NULL` | `NULL` | Cadastrar um e-mail (`PUT /api/admin/contas/email`) |
 | Aguardando o primeiro login | preenchido | `NULL` | Trocar o e-mail (`PUT`) ou remover (`DELETE /api/admin/contas/:id/email`) |
-| Já vinculada | preenchido | preenchido | Nada nesta tela: nem trocar, nem remover |
+| Já vinculada | preenchido | preenchido | Trocar o e-mail (desvincula a identidade anterior) ou remover e-mail (desvincula e limpa os dois campos) |
 
 ### Remoção do e-mail (`DELETE /api/admin/contas/:id/email`)
 
-O botão aparece somente para conta ativa com e-mail e sem vínculo Google. Antes de enviar, a tela pede confirmação identificando funcionário e o efeito da ação; o estado só muda depois da resposta do servidor.
+O botão aparece quando a conta ativa tem e-mail ou identidade Google vinculada. A tela pede confirmação antes de enviar.
 
 Garantias da rota:
 
 - `exigirAcesso(req, 'admin')` revalida sessão, papel admin, origem permitida e token CSRF;
-- o `id` vem do caminho da URL e é validado antes da escrita; `0` ou valores fora do formato retornam erro de cliente;
-- `google_sub IS NULL` é condição **da própria escrita** (`UPDATE staff SET email = NULL WHERE id = $1 AND ativo = TRUE AND google_sub IS NULL AND email IS NOT NULL`), sob `FOR UPDATE` na mesma transação — o servidor não confia no estado enviado pela UI;
-- apenas `email` é alterado: senha, papel, estado ativo e sessões permanecem iguais;
-- sucesso grava `email_google_removido`; recusas decididas dentro da operação gravam `email_google_remocao_negada` com `resultado = 'negado'`, o motivo (`ator_sem_permissao`, `conta_inexistente`, `conta_inativa`, `conta_vinculada_google`, `conta_sem_email`, `concorrencia`) e o status devolvido, sempre com ator, alvo e `request_id` e **sem** endereço de e-mail ou segredo no contexto (#48);
-- requisições barradas antes da operação (sem sessão, CSRF ou origem inválidos, papel não-admin) não alcançam o cadastro e, por isso, não geram evento: são recusadas no gate de acesso;
-- respostas previstas: `401` sem sessão, `403` sem papel admin ou CSRF/origem inválidos, `400` id inválido, `404` conta inexistente, `409` conta inativa, já vinculada, sem e-mail cadastrado ou alteração concorrente.
+- o `id` vem do caminho da URL e é validado antes da escrita;
+- sob `FOR UPDATE`, a mesma transação limpa `staff.email` e `staff.google_sub`;
+- quando havia identidade Google, as sessões da conta são revogadas; a conta interna permanece ativa e pode continuar usando usuário e senha;
+- sucesso grava `email_google_removido`; recusas decididas dentro da operação gravam `email_google_remocao_negada` com `resultado = 'negado'`, motivo, ator, alvo e `request_id`, sem endereço de e-mail ou segredo no contexto;
+- requisições barradas antes da operação (sem sessão, CSRF ou origem inválidos, papel não-admin) são recusadas no gate de acesso.
 
-### Desvincular uma conta Google (fora do escopo)
+### Desvincular ou trocar o e-mail Google
 
-Limpar `google_sub` não é feito por esta ação. Uma conta já vinculada tem identidade Google imutável; desvincular exige um fluxo separado, deliberado, autenticado e auditado, com análise de impacto no login e na recuperação de acesso. Enquanto esse fluxo não existir, a orientação é ajustar a conta correta pela administração em vez de reaproveitar a vinculada.
+O campo continua editável depois do primeiro vínculo. Ao salvar um endereço diferente, o servidor atualiza `staff.email`, limpa o `google_sub` anterior e revoga as sessões abertas para que a conta faça um novo login com o endereço atualizado. O endereço novo continua sujeito à regra de unicidade e à validação de formato.
 
 ### Pendente de decisão do responsável
 

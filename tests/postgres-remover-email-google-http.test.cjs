@@ -5,7 +5,7 @@
 //
 //   DELETE /api/admin/contas/:id/email (admin)        → 200, email limpo, auditoria 'sucesso'
 //   ... repetido (conta já sem e-mail)               → 409 + auditoria 'negado' (conta_sem_email)
-//   ... conta já vinculada ao Google                 → 409 (conta_vinculada_google), nada muda
+//   ... conta já vinculada ao Google                 → 200, vínculo e sessões removidos
 //   ... conta inativa                                → 409 (conta_inativa)
 //   ... conta inexistente                            → 404 (conta_inexistente)
 //   ... id inválido (:id = 0)                        → 400, sem evento
@@ -138,7 +138,7 @@ test('HTTP real: admin remove o e-mail e a auditoria correlaciona requisição, 
   assert.equal(Number(evento.ator_id), admin.id);
   assert.equal(evento.ator_nome, admin.nome);
   assert.equal(evento.request_id, reqId);
-  assert.deepEqual(evento.contexto, { emailRemovido: true, googleVinculado: false });
+  assert.deepEqual(evento.contexto, { emailRemovido: true, googleDesvinculado: false, sessoesRevogadas: 0 });
   await trilhaSemEmail(alvo.id, emailAntigo);
 });
 
@@ -163,22 +163,23 @@ test('HTTP real: repetir a remoção é 409 e fica registrado como negado, sem t
   assert.equal((await eventos('email_google_removido', alvo.id)).length, 1, 'uma única remoção efetiva');
 });
 
-test('HTTP real: conta já vinculada ao Google não perde o e-mail e a recusa é auditada', async () => {
+test('HTTP real: conta vinculada ao Google é desvinculada e suas sessões são revogadas', async () => {
   const admin = await criarConta('goog-admin', { papel: 'admin' });
   const s = await sessao(admin.id);
   const email = `vinculada-${SUFIXO}@example.com`;
   const sub = `sub-vinculado-${SUFIXO}`;
   const alvo = await criarConta('goog-alvo', { email, googleSub: sub });
-
+  await sessao(alvo.id);
   const r = await remover(alvo.id, { sessao: s });
-
-  assert.equal(r.status, 409, r.texto);
+  assert.equal(r.status, 200, r.texto);
   const conta = await contaNoBanco(alvo.id);
-  assert.equal(conta.email, email);
-  assert.equal(conta.google_sub, sub);
-  assert.equal((await eventos('email_google_removido', alvo.id)).length, 0);
-  const [negado] = await eventos('email_google_remocao_negada', alvo.id);
-  assert.equal(negado.contexto.motivo, 'conta_vinculada_google');
+  assert.equal(conta.email, null);
+  assert.equal(conta.google_sub, null);
+  assert.equal(conta.ativo, true);
+  assert.equal((await pool.query('SELECT 1 FROM staff_sessoes WHERE staff_id = $1', [alvo.id])).rowCount, 0);
+  const [evento] = await eventos('email_google_removido', alvo.id);
+  assert.equal(evento.resultado, 'sucesso');
+  assert.deepEqual(evento.contexto, { emailRemovido: true, googleDesvinculado: true, sessoesRevogadas: 1 });
   await trilhaSemEmail(alvo.id, email);
 });
 
