@@ -1,6 +1,7 @@
 // CRUD de cardápio e listagem de mesas para o painel admin.
 const pool = require('./pool');
 const { resolverFotoUrl } = require('./foto-serve');
+const { registrarEvento } = require('./auditoria');
 const { numeroFinito, numeroInteiroPositivo } = require('./validacao');
 
 function normalizeFotoUrl(raw) {
@@ -28,6 +29,19 @@ class ErroAdmin extends Error {
     super(message);
     this.status = status;
   }
+}
+
+async function obterAdminAtivo(client, ator) {
+  if (!ator) return null;
+  const result = await client.query(
+    'SELECT id, nome, papel, ativo FROM staff WHERE id=$1 FOR SHARE',
+    [ator.id]
+  );
+  const admin = result.rows[0];
+  if (!admin?.ativo || admin.papel !== 'admin') {
+    throw new ErroAdmin(403, 'Apenas um administrador ativo pode alterar o cardápio.');
+  }
+  return admin;
 }
 
 async function listMesas() {
@@ -408,18 +422,40 @@ async function getCardapioAdmin() {
   }));
 }
 
-async function criarCategoria({ nome, ordem = 0 }) {
+async function criarCategoria({ nome, ordem = 0 }, ator = null, requestId = null) {
   const n = String(nome || '').trim();
   if (!n) throw new ErroAdmin(400, 'Nome da categoria é obrigatório');
   const ordemNumero = numeroFinito(ordem, 'ordem', { inteiro: true, minimo: 0 });
-  const { rows } = await pool.query(
-    'INSERT INTO categorias (nome, ordem) VALUES ($1, $2) RETURNING id, nome, ordem',
-    [n, ordemNumero]
-  );
-  return rows[0];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const admin = await obterAdminAtivo(client, ator);
+    const { rows } = await client.query(
+      'INSERT INTO categorias (nome, ordem) VALUES ($1, $2) RETURNING id, nome, ordem',
+      [n, ordemNumero]
+    );
+    const categoria = rows[0];
+    await registrarEvento(client, {
+      atorTipo: admin ? 'staff' : 'sistema',
+      atorId: admin ? Number(admin.id) : null,
+      atorNome: admin?.nome || null,
+      acao: 'categoria_criada',
+      alvoTipo: 'categoria',
+      alvoId: String(categoria.id),
+      requestId,
+      contexto: { nome: categoria.nome, ordem: Number(categoria.ordem) },
+    });
+    await client.query('COMMIT');
+    return categoria;
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
-async function atualizarCategoria(id, { nome, ordem }) {
+async function atualizarCategoria(id, { nome, ordem }, ator = null, requestId = null) {
   const campos = [];
   const vals = [];
   let i = 1;
@@ -435,13 +471,44 @@ async function atualizarCategoria(id, { nome, ordem }) {
     vals.push(ordemNumero);
   }
   if (!campos.length) throw new ErroAdmin(400, 'Nada para atualizar');
-  vals.push(id);
-  const { rows } = await pool.query(
-    `UPDATE categorias SET ${campos.join(', ')} WHERE id = $${i} RETURNING id, nome, ordem`,
-    vals
-  );
-  if (!rows[0]) throw new ErroAdmin(404, 'Categoria não encontrada');
-  return rows[0];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const admin = await obterAdminAtivo(client, ator);
+    const anterior = (await client.query(
+      'SELECT id, nome, ordem FROM categorias WHERE id=$1 FOR UPDATE', [id]
+    )).rows[0];
+    if (!anterior) throw new ErroAdmin(404, 'Categoria não encontrada');
+    vals.push(id);
+    const { rows } = await client.query(
+      `UPDATE categorias SET ${campos.join(', ')} WHERE id = $${i} RETURNING id, nome, ordem`,
+      vals
+    );
+    const categoria = rows[0];
+    await registrarEvento(client, {
+      atorTipo: admin ? 'staff' : 'sistema',
+      atorId: admin ? Number(admin.id) : null,
+      atorNome: admin?.nome || null,
+      acao: 'categoria_atualizada',
+      alvoTipo: 'categoria',
+      alvoId: String(id),
+      requestId,
+      contexto: {
+        nomeAnterior: anterior.nome,
+        nomeNovo: categoria.nome,
+        ordemAnterior: Number(anterior.ordem),
+        ordemNova: Number(categoria.ordem),
+        camposAlterados: [nome !== undefined ? 'nome' : null, ordem !== undefined ? 'ordem' : null].filter(Boolean).join(','),
+      },
+    });
+    await client.query('COMMIT');
+    return categoria;
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
 async function criarProduto(body) {
