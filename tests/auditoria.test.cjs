@@ -175,6 +175,22 @@ test('habilitação de mesas registra admin e mudança de quantidade antes do co
   assert.match(server, /ativarMesas\(payload\.quantidade, staff, reqId\)/);
 });
 
+test('criação e edição de categoria gravam autoria na transação e recebem request ID', () => {
+  const admin = fs.readFileSync(path.join(__dirname, '..', 'db', 'admin.js'), 'utf8');
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  for (const [nome, acao] of [['criarCategoria', 'categoria_criada'], ['atualizarCategoria', 'categoria_atualizada']]) {
+    const inicio = admin.indexOf(`async function ${nome}(`);
+    const evento = admin.indexOf(`acao: '${acao}'`, inicio);
+    const commit = admin.indexOf("await client.query('COMMIT')", evento);
+    assert.ok(inicio >= 0 && evento > inicio && commit > evento, `${nome}: evento deve anteceder o commit`);
+    assert.match(admin.slice(inicio, commit), /obterAdminAtivo\(client, ator\)/);
+    assert.match(admin.slice(inicio, commit), /registrarEvento\(client, \{/);
+    assert.match(admin.slice(inicio, commit), /requestId,/);
+  }
+  assert.match(server, /criarCategoria\(await body\(req\), staff, reqId\)/);
+  assert.match(server, /atualizarCategoria\(Number\(m\[1\]\), await body\(req\), staff, reqId\)/);
+});
+
 test('migration 0025 cria a tabela sem colunas de segredo e com índices de consulta', () => {
   const sql = fs.readFileSync(
     path.join(__dirname, '..', 'db', 'migrations', '0025_auditoria_eventos.sql'),
