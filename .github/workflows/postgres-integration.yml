@@ -104,6 +104,11 @@ jobs:
       - name: Praças removal PostgreSQL tests
         run: node --test tests/postgres-pracas-remocao.test.cjs
 
+      # #44: a purga ANONIMIZA. O valor cobrado, a forma de pagamento, a data e
+      # a autoria têm de sobreviver — o DELETE anterior destruía a conciliação.
+      - name: Purga anonimiza e preserva o financeiro (#44)
+        run: node --test tests/postgres-purge-anonimiza.test.cjs
+
       - name: Produção parcial por item (cozinha/bar)
         if: ${{ hashFiles('tests/postgres-producao-parcial.test.cjs') != '' }}
         run: node --test tests/postgres-producao-parcial.test.cjs

@@ -404,8 +404,20 @@ export const api = {
     if (cursor) q.set("cursor", cursor);
     return apiGet<Pagina<any>>(`/api/admin/pedidos?${q}`);
   },
+  /** #44: anonimiza dados pessoais de contas fechadas; não apaga valores. */
   purgeHistorico: (body: { before: string; confirm?: boolean; dryRun?: boolean }) =>
-    apiSend<any>("/api/admin/historico/purge", "POST", body),
+    apiSend<{
+      dryRun: boolean;
+      anonimizado: boolean;
+      before: string;
+      sessoes: number;
+      pedidos: number;
+      itens: number;
+      pixAvisos?: number;
+      contasPreservadas: number;
+      pagamentosPreservados: number;
+      message?: string;
+    }>("/api/admin/historico/purge", "POST", body),
 };
 
 /** SSE — invalida/recarrega quando o servidor emite update. */

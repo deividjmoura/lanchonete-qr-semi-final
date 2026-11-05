@@ -46,6 +46,9 @@ import { BRL } from "../lib/utils";
 import { confirmarAcao } from "../lib/confirmacao";
 import { cn } from "../utils/cn";
 
+/** #44: sentinela gravada pela purga no lugar do dado pessoal. */
+const ANONIMIZADO = "[anonimizado]";
+
 const ABAS = [
   { id: "painel", label: "Dashboard" },
   { id: "cardapio", label: "Cardápio" },
@@ -2341,7 +2344,8 @@ function Funcoes() {
     try {
       const out = await api.purgeHistorico({ before: purgeBefore, dryRun: true, confirm: false });
       setPurgeMsg(
-        `Prévia: ${out.sessoes ?? out.count ?? out.wouldDelete ?? JSON.stringify(out)} — sessões fechadas antes de ${purgeBefore}.`,
+        `Prévia: ${out.sessoes ?? 0} sessão(ões), ${out.pedidos ?? 0} pedido(s) e ${out.itens ?? 0} item(ns) com dados pessoais antes de ${purgeBefore}. ` +
+          `${out.contasPreservadas ?? 0} conta(s) e ${out.pagamentosPreservados ?? 0} pagamento(s) serão preservados.`,
       );
     } catch (e: any) {
       setPurgeMsg(e.message || "Erro na prévia");
@@ -2356,16 +2360,16 @@ function Funcoes() {
       return;
     }
     const confirmado = await confirmarAcao({
-      titulo: "Apagar histórico definitivamente?",
-      mensagem: `Serão removidas as contas fechadas antes de ${purgeBefore}, incluindo os registros históricos vinculados. Mesas abertas e pedidos em andamento não entram nesta operação. Esta exclusão não pode ser desfeita.`,
-      confirmar: "Apagar histórico",
+      titulo: "Anonimizar dados pessoais?",
+      mensagem: `Os nomes de cliente e as observações livres das contas fechadas antes de ${purgeBefore} serão substituídos por "${ANONIMIZADO}". Valor, forma de pagamento, data e autoria dos lançamentos NÃO são alterados: as contas continuam em Relatório, Comprovantes e Histórico. Mesas abertas e pedidos em andamento não entram nesta operação. Esta troca não pode ser desfeita.`,
+      confirmar: "Anonimizar",
       perigo: true,
     });
     if (!confirmado) return;
     setBusy(true);
     try {
       const out = await api.purgeHistorico({ before: purgeBefore, dryRun: false, confirm: true });
-      setPurgeMsg(`Removido: ${JSON.stringify(out)}`);
+      setPurgeMsg(out.message || `Anonimizado até ${purgeBefore}.`);
     } catch (e: any) {
       setPurgeMsg(e.message || "Erro ao purgar");
     } finally {
@@ -2521,12 +2525,13 @@ function Funcoes() {
       {sub === "purge" && (
         <section className="rounded-md border border-status-danger-border bg-surface-raised p-5">
           <h3 className="font-display text-2xl font-bold tracking-tight text-text mb-1">
-            Limpar histórico antigo
+            Anonimizar histórico antigo
           </h3>
           <p className="text-xs text-text-muted mb-4">
-            Remove definitivamente sessões já encerradas antes da data escolhida. Mesas abertas não
-            são afetadas. As contas removidas somem também de Relatório, Comprovantes recentes e
-            Histórico — confira a prévia antes de apagar.
+            Substitui por {ANONIMIZADO} os nomes de cliente e as observações livres das contas
+            encerradas antes da data escolhida. Valor, forma de pagamento, data e autoria são
+            preservados — as contas continuam em Relatório, Comprovantes recentes e Histórico.
+            Mesas abertas não são afetadas. Confira a prévia antes de executar.
           </p>
           <div className="flex flex-wrap gap-3 items-end">
             <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
@@ -2542,7 +2547,7 @@ function Funcoes() {
               Ver prévia
             </Btn>
             <Btn size="sm" variant="danger" disabled={busy} onClick={() => void executarPurge()}>
-              Apagar definitivamente
+              Anonimizar
             </Btn>
           </div>
           {purgeMsg && <p className="mt-3 font-mono text-xs text-brand-ink">{purgeMsg}</p>}

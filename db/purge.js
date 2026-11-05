@@ -1,6 +1,23 @@
-// Limpeza de histórico: remove sessões fechadas e TODO o que depende delas.
+// Purga do histórico: ANONIMIZA sessões fechadas antigas, sem apagar o registro
+// financeiro.
+//
+// Decisão do responsável na issue #44: a purga remove dados pessoais
+// (`cliente_nome`, observações livres) e PRESERVA valor, forma de pagamento e
+// data. Antes esta função apagava sessões, pedidos, itens e pagamentos — o que
+// destruía exatamente a evidência de conciliação e de disputa que a operação
+// precisa manter.
+//
+// O que a purga NÃO faz, de propósito:
+//   - não inventa prazo de retenção (o `before` é sempre informado por quem
+//     executa; nada roda em agendamento automático);
+//   - não toca em sessão aberta nem em pedido de mesa ativa;
+//   - não apaga autoria: `operador_id`, `garcom_*`, valores, formas e datas
+//     continuam intactos. Autoria não é dado do cliente.
+//   - não presume base legal: o que é "dado pessoal" aqui é só o que foi
+//     digitado pelo cliente ou sobre ele.
 const pool = require('./pool');
 const { registrarEvento } = require('./auditoria');
+const { colunaExiste } = require('./conta');
 
 class ErroPurge extends Error {
   constructor(message, status = 400) {
@@ -9,16 +26,20 @@ class ErroPurge extends Error {
   }
 }
 
+// Sentinela do que sobrou. Não é string vazia: NULL significaria "cliente não
+// informou" e apagaria a diferença entre "nunca teve nome" e "foi anonimizado".
+const ANONIMIZADO = '[anonimizado]';
+
+const SESSOES_ALVO = `s.status = 'fechada' AND s.fechada_em::date < $1::date`;
+
 /**
- * Conta o que seria apagado (dry-run) ou executa o purge.
- * Só mexe em sessões **fechadas** com fechada_em::date < before.
- * Nunca apaga sessão aberta nem pedido de mesa ativa.
+ * Conta o que seria anonimizado (dry-run) ou executa a anonimização.
  *
- * Apaga de TODOS os lugares: pedidos, itens, pagamentos parciais, sessões.
- * (relatório/dashboard passam a não enxergar esses dados)
+ * Só toca em sessões **fechadas** com `fechada_em::date < before`.
+ * `before` = YYYY-MM-DD, exclusivo.
  *
- * @param {{ before: string, confirm?: boolean, dryRun?: boolean }} opts
- * before = YYYY-MM-DD (exclusivo: apaga tudo com data de fechamento **antes** desse dia)
+ * @param {{ before: string, confirm?: boolean, dryRun?: boolean,
+ *           ator?: {id:number, nome?:string}, requestId?: string }} opts
  */
 async function purgeHistorico(opts = {}) {
   const before = opts.before;
@@ -31,119 +52,132 @@ async function purgeHistorico(opts = {}) {
 
   const client = await pool.connect();
   try {
+    // A coluna `pix_avisos.cliente_nome` pode não existir em bancos antigos;
+    // a purga degrada limpo em vez de estourar.
+    const temPixCliente = await colunaExiste('pix_avisos', 'cliente_nome')(client).catch(() => false);
+
     const { rows: counts } = await client.query(
       `SELECT
-         (SELECT COUNT(*)::int FROM mesa_sessoes
-           WHERE status = 'fechada' AND fechada_em::date < $1::date) AS sessoes,
+         (SELECT COUNT(*)::int FROM mesa_sessoes s
+           WHERE ${SESSOES_ALVO} AND s.cliente_nome IS NOT NULL
+             AND s.cliente_nome <> $2) AS sessoes,
          (SELECT COUNT(*)::int FROM pedidos p
            JOIN mesa_sessoes s ON s.id = p.sessao_id
-           WHERE s.status = 'fechada' AND s.fechada_em::date < $1::date) AS pedidos,
+           WHERE ${SESSOES_ALVO}
+             AND (p.cliente_nome IS NOT NULL AND p.cliente_nome <> $2
+                  OR p.observacao_geral IS NOT NULL AND p.observacao_geral <> $2)) AS pedidos,
          (SELECT COUNT(*)::int FROM itens_pedido ip
            JOIN pedidos p ON p.id = ip.pedido_id
            JOIN mesa_sessoes s ON s.id = p.sessao_id
-           WHERE s.status = 'fechada' AND s.fechada_em::date < $1::date) AS itens,
+           WHERE ${SESSOES_ALVO} AND ip.observacao IS NOT NULL
+             AND ip.observacao <> $2) AS itens,
+         (SELECT COUNT(*)::int FROM mesa_sessoes s
+           WHERE ${SESSOES_ALVO}) AS "contasPreservadas",
          (SELECT COUNT(*)::int FROM sessao_pagamentos sp
            JOIN mesa_sessoes s ON s.id = sp.sessao_id
-           WHERE s.status = 'fechada' AND s.fechada_em::date < $1::date) AS pagamentos`,
-      [before]
+           WHERE ${SESSOES_ALVO}) AS "pagamentosPreservados"`,
+      [before, ANONIMIZADO]
     );
+
     const preview = {
       before,
       sessoes: counts[0].sessoes,
       pedidos: counts[0].pedidos,
       itens: counts[0].itens,
-      pagamentos: counts[0].pagamentos,
+      contasPreservadas: counts[0].contasPreservadas,
+      pagamentosPreservados: counts[0].pagamentosPreservados,
     };
 
     if (dryRun) {
-      return { dryRun: true, deleted: false, ...preview };
+      return { dryRun: true, anonimizado: false, ...preview };
     }
 
-    if (preview.sessoes === 0 && preview.pedidos === 0) {
+    if (preview.contasPreservadas === 0) {
       return {
         dryRun: false,
-        deleted: true,
+        anonimizado: false,
         ...preview,
-        message: 'Nada para apagar neste período.',
+        message: 'Nada para anonimizar neste período.',
       };
     }
 
     await client.query('BEGIN');
 
-    // Filhos dos itens
-    await client.query(
-      `DELETE FROM itens_pedido_adicionais
-       WHERE item_pedido_id IN (
-         SELECT ip.id FROM itens_pedido ip
-         JOIN pedidos p ON p.id = ip.pedido_id
-         JOIN mesa_sessoes s ON s.id = p.sessao_id
-         WHERE s.status = 'fechada' AND s.fechada_em::date < $1::date
-       )`,
-      [before]
+    // Observação do item: pode conter nome, telefone ou recado do cliente.
+    const itens = await client.query(
+      `UPDATE itens_pedido ip
+          SET observacao = $2
+        FROM pedidos p
+        JOIN mesa_sessoes s ON s.id = p.sessao_id
+       WHERE ip.pedido_id = p.id
+         AND ${SESSOES_ALVO}
+         AND ip.observacao IS NOT NULL
+         AND ip.observacao <> $2
+       RETURNING ip.id`,
+      [before, ANONIMIZADO]
     );
 
-    await client.query(
-      `DELETE FROM itens_pedido_remocoes
-       WHERE item_pedido_id IN (
-         SELECT ip.id FROM itens_pedido ip
-         JOIN pedidos p ON p.id = ip.pedido_id
-         JOIN mesa_sessoes s ON s.id = p.sessao_id
-         WHERE s.status = 'fechada' AND s.fechada_em::date < $1::date
-       )`,
-      [before]
+    // Pedido: nome e observação geral. `observacao_geral` é campo livre — é o
+    // lugar mais provável de alguém ter escrito um telefone.
+    const pedidos = await client.query(
+      `UPDATE pedidos p
+          SET cliente_nome = CASE WHEN p.cliente_nome IS NOT NULL THEN $2 ELSE NULL END,
+              observacao_geral = CASE WHEN p.observacao_geral IS NOT NULL THEN $2 ELSE NULL END
+         FROM mesa_sessoes s
+       WHERE s.id = p.sessao_id
+         AND ${SESSOES_ALVO}
+         AND (p.cliente_nome IS NOT NULL AND p.cliente_nome <> $2
+              OR p.observacao_geral IS NOT NULL AND p.observacao_geral <> $2)
+       RETURNING p.id`,
+      [before, ANONIMIZADO]
     );
 
-    await client.query(
-      `DELETE FROM itens_pedido
-       WHERE pedido_id IN (
-         SELECT p.id FROM pedidos p
-         JOIN mesa_sessoes s ON s.id = p.sessao_id
-         WHERE s.status = 'fechada' AND s.fechada_em::date < $1::date
-       )`,
-      [before]
+    // Sessão: nome do cliente. Valor, forma, desconto, taxa e datas ficam.
+    const sessoes = await client.query(
+      `UPDATE mesa_sessoes s
+          SET cliente_nome = $2
+        WHERE ${SESSOES_ALVO}
+          AND s.cliente_nome IS NOT NULL
+          AND s.cliente_nome <> $2
+       RETURNING s.id`,
+      [before, ANONIMIZADO]
     );
 
-    await client.query(
-      `DELETE FROM pedidos
-       WHERE sessao_id IN (
-         SELECT id FROM mesa_sessoes
-         WHERE status = 'fechada' AND fechada_em::date < $1::date
-       )`,
-      [before]
-    );
-
-    // Pagamentos parciais das sessões (além do CASCADE, explícito para clareza)
-    await client.query(
-      `DELETE FROM sessao_pagamentos
-       WHERE sessao_id IN (
-         SELECT id FROM mesa_sessoes
-         WHERE status = 'fechada' AND fechada_em::date < $1::date
-       )`,
-      [before]
-    );
-
-    const delSess = await client.query(
-      `DELETE FROM mesa_sessoes
-       WHERE status = 'fechada' AND fechada_em::date < $1::date
-       RETURNING id`,
-      [before]
-    );
+    // Avisos de PIX do cliente: nome informado no "já paguei".
+    let pixAvisos = 0;
+    if (temPixCliente) {
+      const r = await client.query(
+        `UPDATE pix_avisos pa
+            SET cliente_nome = $2
+           FROM mesa_sessoes s
+          WHERE s.id = pa.sessao_id
+            AND ${SESSOES_ALVO}
+            AND pa.cliente_nome IS NOT NULL
+            AND pa.cliente_nome <> $2
+         RETURNING pa.id`,
+        [before, ANONIMIZADO]
+      );
+      pixAvisos = r.rowCount;
+    }
 
     const ator = opts.ator && Number.isInteger(opts.ator.id) ? opts.ator : null;
     await registrarEvento(client, {
       atorTipo: ator ? 'staff' : 'sistema',
       atorId: ator ? ator.id : null,
       atorNome: ator ? ator.nome || null : null,
-      acao: 'historico_purgado',
+      acao: 'historico_anonimizado',
       alvoTipo: 'historico',
       alvoId: before,
       requestId: opts.requestId || null,
       contexto: {
         before,
-        sessoes: delSess.rowCount,
-        pedidos: preview.pedidos,
-        itens: preview.itens,
-        pagamentos: preview.pagamentos,
+        sessoesAnonimizadas: sessoes.rowCount,
+        pedidosAnonimizados: pedidos.rowCount,
+        itensAnonimizados: itens.rowCount,
+        pixAvisosAnonimizados: pixAvisos,
+        // Prova de que nada financeiro foi removido nesta operação.
+        contasPreservadas: preview.contasPreservadas,
+        pagamentosPreservados: preview.pagamentosPreservados,
       },
     });
 
@@ -151,16 +185,19 @@ async function purgeHistorico(opts = {}) {
 
     return {
       dryRun: false,
-      deleted: true,
+      anonimizado: true,
       before,
-      sessoes: delSess.rowCount,
-      pedidos: preview.pedidos,
-      itens: preview.itens,
-      pagamentos: preview.pagamentos,
+      sessoes: sessoes.rowCount,
+      pedidos: pedidos.rowCount,
+      itens: itens.rowCount,
+      pixAvisos,
+      contasPreservadas: preview.contasPreservadas,
+      pagamentosPreservados: preview.pagamentosPreservados,
       message:
-        `Removido de TODOS os lugares: ${delSess.rowCount} sessão(ões), ` +
-        `${preview.pedidos} pedido(s), ${preview.pagamentos} pagamento(s) ` +
-        `fechados antes de ${before}. Histórico, relatório e dashboard não mostram mais esses dados.`,
+        `Anonimizado: ${sessoes.rowCount} sessão(ões), ${pedidos.rowCount} pedido(s), ` +
+        `${itens.rowCount} item(ns) e ${pixAvisos} aviso(s) de PIX fechados antes de ${before}. ` +
+        `Valor, forma de pagamento, datas e autoria foram preservados — ` +
+        `${preview.contasPreservadas} conta(s) continuam em Relatório e Comprovantes.`,
     };
   } catch (e) {
     try {
@@ -172,4 +209,4 @@ async function purgeHistorico(opts = {}) {
   }
 }
 
-module.exports = { purgeHistorico, ErroPurge };
+module.exports = { purgeHistorico, ErroPurge, ANONIMIZADO };
