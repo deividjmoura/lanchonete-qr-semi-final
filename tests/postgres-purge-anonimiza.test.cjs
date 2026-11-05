@@ -24,13 +24,16 @@ const { purgeHistorico } = require('../db/purge');
 const { relatorioVendas } = require('../db/relatorio');
 
 const run = crypto.randomUUID().slice(0, 8);
-const criados = { mesas: [], sessoes: [], staff: [] };
+const criados = { mesas: [], sessoes: [], staff: [], categorias: [], produtos: [] };
 let staffId = null;
 let antigaId = null;   // fechada há muito tempo: entra no corte
 let recenteId = null;  // fechada agora: fica fora do corte
 let abertaId = null;   // aberta: nunca é tocada
 
 const CORTE = '2026-01-01';
+// Base de numeração de mesa única por execução (a coluna é UNIQUE e o banco
+// pode guardar resíduo de outra suíte).
+const BASE_MESA = 900000 + (Number(process.pid) % 90) * 10 + Math.floor(Math.random() * 9);
 // request IDs únicos por execução: a tabela de auditoria é compartilhada e não
 // roda em transação descartável a cada teste.
 const REQ1 = `qa-purge-1-${run}`;
@@ -44,6 +47,19 @@ test.before(async () => {
   );
   staffId = staff[0].id;
   criados.staff.push(staffId);
+
+  // O CI aplica só as migrations (sem db:seed): categoria e produto precisam
+  // ser criados aqui, senão `produto_id` sai NULL.
+  const { rows: cat } = await pool.query(
+    'INSERT INTO categorias (nome, ordem) VALUES ($1, 0) RETURNING id',
+    [`CI Purga ${run}`]
+  );
+  criados.categorias.push(cat[0].id);
+  const { rows: prod } = await pool.query(
+    'INSERT INTO produtos (categoria_id, nome, preco, disponivel) VALUES ($1, $2, 50, TRUE) RETURNING id',
+    [cat[0].id, `Item purga ${run}`]
+  );
+  criados.produtos.push(prod[0].id);
 
   const criarConta = async (numero, status, fechadaEm, nomeCliente) => {
     const { rows: mesa } = await pool.query(
@@ -61,9 +77,9 @@ test.before(async () => {
     return sess[0].id;
   };
 
-  antigaId = await criarConta(91001, 'fechada', '2025-06-15T20:00:00Z', 'Cliente Antiga ' + run);
-  recenteId = await criarConta(91002, 'fechada', '2026-02-20T20:00:00Z', 'Cliente Recente ' + run);
-  abertaId = await criarConta(91003, 'aberta', null, 'Cliente Aberta ' + run);
+  antigaId = await criarConta(BASE_MESA, 'fechada', '2025-06-15T20:00:00Z', 'Cliente Antiga ' + run);
+  recenteId = await criarConta(BASE_MESA + 1, 'fechada', '2026-02-20T20:00:00Z', 'Cliente Recente ' + run);
+  abertaId = await criarConta(BASE_MESA + 2, 'aberta', null, 'Cliente Aberta ' + run);
 
   // Pedido + item + observação livre (o lugar onde telefone costuma vazar).
   for (const sessaoId of [antigaId, recenteId, abertaId]) {
@@ -75,8 +91,8 @@ test.before(async () => {
     await pool.query(
       `INSERT INTO itens_pedido (pedido_id, produto_id, quantidade, preco_unitario,
                                  status, observacao)
-       VALUES ($1, (SELECT id FROM produtos ORDER BY id LIMIT 1), 1, 50, 'entregue', $2)`,
-      [ped[0].id, `sem cebola, falar com Maria ${sessaoId}`]
+       VALUES ($1, $2, 1, 50, 'entregue', $3)`,
+      [ped[0].id, criados.produtos[0], `sem cebola, falar com Maria ${sessaoId}`]
     );
     // Pagamento com autoria: precisa SOBREVIVER à purga inteiro.
     await pool.query(
@@ -111,6 +127,8 @@ test.after(async () => {
     await pool.query('DELETE FROM mesa_sessoes WHERE id = ANY($1::int[])', [sessoes]);
   }
   if (criados.mesas.length) await pool.query('DELETE FROM mesas WHERE id = ANY($1::int[])', [criados.mesas]);
+  if (criados.produtos.length) await pool.query('DELETE FROM produtos WHERE id = ANY($1::int[])', [criados.produtos]);
+  if (criados.categorias.length) await pool.query('DELETE FROM categorias WHERE id = ANY($1::int[])', [criados.categorias]);
   if (criados.staff.length) await pool.query('DELETE FROM staff WHERE id = ANY($1::int[])', [criados.staff]);
   await pool.query(
     `DELETE FROM auditoria_eventos

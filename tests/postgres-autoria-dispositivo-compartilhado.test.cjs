@@ -95,8 +95,10 @@ test.before(async () => {
   );
   criados.produtos.push(prod[0].id);
 
+  // `max(numero)` é NULL em banco recém-migrado (o CI não roda db:seed), e a
+  // coluna é NOT NULL: coalesce é obrigatório para a suíte rodar do zero.
   const { rows: mesa } = await pool.query(
-    "INSERT INTO mesas (numero, token, status) VALUES ((SELECT max(numero)+1 FROM mesas), $1, 'ocupada') RETURNING id",
+    "INSERT INTO mesas (numero, token, status) VALUES ((SELECT coalesce(max(numero),0)+1 FROM mesas), $1, 'ocupada') RETURNING id",
     [randomUUID()]
   );
   criados.mesas.push(mesa[0].id);
