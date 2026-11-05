@@ -10,7 +10,6 @@ import {
   SquaresFour,
   WarningCircle,
   FileText,
-  LockKey,
   EnvelopeSimple,
   WhatsappLogo,
 } from "@phosphor-icons/react";
@@ -127,13 +126,11 @@ export default function Login() {
   return (
     <div
       data-regime="expressive"
-      className="min-h-dvh flex flex-col justify-between p-4 sm:p-6 bg-surface text-text"
+      className="login-viewport flex h-[100dvh] min-h-0 flex-col overflow-hidden p-3 sm:p-5 bg-surface text-text"
     >
-      <header className="mx-auto flex w-full max-w-6xl justify-end">
-        <ThemeToggle className="login-icon-action" />
-      </header>
+      <header className="login-header mx-auto flex w-full max-w-6xl justify-end" aria-hidden="true" />
 
-      <main className="my-auto flex items-center justify-center py-10 sm:py-14">
+      <main className="login-main my-auto flex min-h-0 flex-1 items-center justify-center py-2 sm:py-3">
         <motion.section
           initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -245,7 +242,6 @@ export default function Login() {
                           // `one-time-code` deixa o iOS/Android sugerir o código do app.
                           autoComplete="one-time-code"
                           inputMode={viaRecuperacao ? "text" : "numeric"}
-                          autoFocus
                           value={codigo2fa}
                           onChange={(e) => {
                             setCodigo2fa(e.target.value);
@@ -356,7 +352,6 @@ export default function Login() {
                         name="password"
                         id="login-senha"
                         autoComplete="current-password"
-                        autoFocus
                         value={senha}
                         onChange={(e) => {
                           setSenha(e.target.value);
@@ -412,22 +407,21 @@ export default function Login() {
         </motion.section>
       </main>
 
-      <footer className="login-footer mx-auto w-full max-w-6xl pt-8">
-        <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-          <p className="text-xs text-text-muted">© {new Date().getFullYear()} QR Admin. Todos os direitos reservados.</p>
-          <nav aria-label="Informações legais e contato" className="flex items-center gap-2">
-            <a className="login-footer-link" href="/termos-de-uso.html" aria-label="Termos de uso" title="Termos de uso">
-              <FileText size={19} weight="regular" />
-            </a>
-            <a className="login-footer-link" href="/politica-de-privacidade.html" aria-label="Política de privacidade" title="Política de privacidade">
-              <LockKey size={19} weight="regular" />
-            </a>
+      <footer className="login-footer mx-auto w-full max-w-6xl">
+        <div className="login-footer-inner flex flex-col items-center justify-between gap-2 sm:flex-row">
+          <div className="login-footer-legal flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            <a href="/termos-de-uso.html" className="login-footer-text-link">Termos de uso</a>
+            <a href="/politica-de-privacidade.html" className="login-footer-text-link">Política de privacidade</a>
+            <span className="text-xs text-text-muted">© {new Date().getFullYear()} QR Admin. Todos os direitos reservados.</span>
+          </div>
+          <nav aria-label="Contato e aparência" className="flex items-center gap-1">
             <a className="login-footer-link" href="https://wa.me/5547996162721" target="_blank" rel="noopener noreferrer" aria-label="Contato pelo WhatsApp" title="WhatsApp">
-              <WhatsappLogo size={20} weight="regular" />
+              <WhatsappLogo size={19} weight="regular" />
             </a>
             <a className="login-footer-link" href="mailto:dejesusdemouradeivid@gmail.com" aria-label="Contato por e-mail" title="E-mail">
-              <EnvelopeSimple size={19} weight="regular" />
+              <EnvelopeSimple size={18} weight="regular" />
             </a>
+            <ThemeToggle className="login-icon-action" />
           </nav>
         </div>
       </footer>
