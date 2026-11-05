@@ -12,7 +12,7 @@ import {
   EnvelopeSimple,
   WhatsappLogo,
 } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ThemeToggle } from "../components/ui";
 import { ir } from "../router";
 import { usePub } from "../store/usePub";
@@ -27,6 +27,34 @@ const PAPEIS = [
 ] as const;
 
 export default function Login() {
+  const paginaRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const pagina = paginaRef.current;
+    if (!pagina) return;
+    const viewport = window.visualViewport;
+    const atualizar = () => {
+      const altura = viewport?.height ?? window.innerHeight;
+      pagina.style.setProperty("--login-height", `${altura}px`);
+      pagina.style.setProperty("--login-top", `${viewport?.offsetTop ?? 0}px`);
+      pagina.dataset.compact = altura < 600 ? "true" : "false";
+    };
+    const overflowBody = document.body.style.overflow;
+    const overflowHtml = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    atualizar();
+    viewport?.addEventListener("resize", atualizar);
+    viewport?.addEventListener("scroll", atualizar);
+    window.addEventListener("resize", atualizar);
+    return () => {
+      viewport?.removeEventListener("resize", atualizar);
+      viewport?.removeEventListener("scroll", atualizar);
+      window.removeEventListener("resize", atualizar);
+      document.body.style.overflow = overflowBody;
+      document.documentElement.style.overflow = overflowHtml;
+    };
+  }, []);
+
   const loginApi = usePub((s) => s.loginApi);
   const concluirSegundoFatorApi = usePub((s) => s.concluirSegundoFatorApi);
   const cancelarSegundoFatorApi = usePub((s) => s.cancelarSegundoFatorApi);
@@ -124,8 +152,9 @@ export default function Login() {
 
   return (
     <div
+      ref={paginaRef}
       data-regime="expressive"
-      className="login-viewport flex h-[100dvh] min-h-0 flex-col overflow-hidden p-3 sm:p-5 bg-surface text-text"
+      className="login-page login-viewport flex h-[100dvh] min-h-0 flex-col overflow-hidden p-3 sm:p-5 bg-surface text-text"
     >
       <header className="login-header mx-auto flex w-full max-w-6xl justify-end" aria-hidden="true" />
 
@@ -135,7 +164,7 @@ export default function Login() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: reduceMotion ? 0 : 0.16, ease: [0.22, 1.18, 0.36, 1] }}
           aria-labelledby="login-titulo"
-          className="login-panel w-full max-w-lg overflow-hidden"
+          className="login-card login-panel w-full max-w-lg overflow-hidden"
         >
           {/* Cabeçalho da comanda de acesso */}
           <div className="login-brand mb-9 flex flex-col items-center text-center">
@@ -161,13 +190,13 @@ export default function Login() {
             </p>
           </div>
 
-          <div className="login-content mx-auto w-full max-w-md">
+          <div className="login-card-content login-content mx-auto w-full max-w-md">
             {etapa === "credencial" && (
               <p className="text-xs font-semibold uppercase tracking-[0.08em] text-text-muted mb-3">
                 Selecione o setor
               </p>
             )}
-            <div className={cn("grid grid-cols-2 sm:grid-cols-4 gap-2.5", etapa !== "credencial" && "hidden")}>
+            <div className={cn("login-sectors grid grid-cols-2 sm:grid-cols-4 gap-2.5", etapa !== "credencial" && "hidden")}>
               {PAPEIS.map((p) => {
                 const selecionado = papel === p.id;
                 const Icon = p.Icon;
