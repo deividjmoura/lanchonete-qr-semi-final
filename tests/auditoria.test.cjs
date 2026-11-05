@@ -225,4 +225,9 @@ test('remoção de e-mail Google exige admin, preserva vínculos existentes e au
   assert.ok(api.includes('"DELETE"'));
   assert.ok(ui.includes('conta.email && !conta.googleVinculado'));
   assert.ok(ui.includes('titulo: "Remover e-mail autorizado?"'));
+  assert.ok(ui.includes('{ id: "google" as const, label: "Google", Icon: LinkSimple }'));
+  assert.ok(ui.includes('if (sub !== "google") return;'));
+  assert.ok(ui.includes('{sub === "google" && ('));
+  assert.ok(ui.includes("Identidade Google já vinculada."));
+  assert.ok(ui.includes("Nenhum e-mail Google pré-cadastrado para esta conta."));
 });
