@@ -26,7 +26,7 @@ Nunca commitar o JSON de credenciais, Client Secret ou qualquer segredo em arqui
 
 O login Google **não cria funcionários**. Cada conta precisa ser ativa e ter um e-mail previamente cadastrado pelo administrador. A migration `0034_staff_google_oauth.sql` adiciona `staff.email` e `staff.google_sub`.
 
-Com uma sessão autenticada como admin, abra **Admin → Funções → Logins**. A tela lista as contas ativas; informe o e-mail Google verificado de cada funcionário e salve. A API `GET /api/admin/contas` retorna `email` e `googleVinculado`, e a rota `PUT /api/admin/contas/email` valida o cadastro no servidor. E-mails são únicos sem distinção entre maiúsculas/minúsculas. Uma conta Google já vinculada não pode ser transferida por esta rota.
+Com uma sessão autenticada como admin, abra **Admin → Funções → Logins**. A tela lista as contas ativas; informe o e-mail Google verificado de cada funcionário e salve. A API `GET /api/admin/contas` retorna `email` e `googleVinculado`, e a rota `PUT /api/admin/contas/email` valida o cadastro no servidor. E-mails são únicos sem distinção entre maiúsculas/minúsculas. Ao alterar o endereço de uma conta já vinculada, o vínculo Google anterior é removido e as sessões existentes são revogadas.
 
 O campo de e-mail permanece editável mesmo depois do primeiro vínculo. Ao salvar um endereço diferente, o sistema limpa o `google_sub` anterior e revoga as sessões da conta, exigindo novo login com o endereço atualizado. **Remover e-mail** limpa `staff.email` e `staff.google_sub` e também revoga as sessões, mas mantém a conta interna ativa para login com usuário e senha. As duas operações registram auditoria na mesma transação; a remoção usa `email_google_removido` e a troca usa `email_google_atualizado.
 
