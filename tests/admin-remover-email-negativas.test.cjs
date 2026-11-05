@@ -77,7 +77,9 @@ test('o sucesso continua na mesma transação da escrita (evento antes do COMMIT
   const evento = bloco.indexOf("acao: 'email_google_removido'");
   const commit = bloco.indexOf("await client.query('COMMIT')");
   assert.ok(escrita > 0 && evento > escrita && commit > evento, 'escrita → evento → COMMIT');
-  assert.match(bloco, /WHERE id = \$1 AND ativo = TRUE AND \(email IS NOT NULL OR google_sub IS NOT NULL\)/);\n  assert.match(bloco, /google_sub = NULL/);\n  assert.match(bloco, /DELETE FROM staff_sessoes WHERE staff_id = \$1/);
+  assert.match(bloco, /WHERE id = \$1 AND ativo = TRUE AND \(email IS NOT NULL OR google_sub IS NOT NULL\)/);
+  assert.match(bloco, /google_sub = NULL/);
+  assert.match(bloco, /DELETE FROM staff_sessoes WHERE staff_id = \$1/);
   assert.match(bloco, /FOR UPDATE/);
 });
 
