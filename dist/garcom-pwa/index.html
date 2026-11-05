@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#f0e6d2">
+<meta name="theme-color" content="#e4e8f1">
 <script src="./theme-init.js"></script>
 <meta name="description" content="QR Admin · atendimento de salão online e offline">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -12,10 +12,10 @@
 <style id="critical-pwa-layout">
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
-body{margin:0;background:var(--surface);color:var(--text);padding-bottom:calc(156px + env(safe-area-inset-bottom))}
+body{margin:0;background:var(--surface);color:var(--text);padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 .workspace{max-width:1040px;margin:0 auto;padding:12px 14px 32px}
-.app-footer{position:fixed;bottom:0;left:0;right:0;z-index:20;background:var(--surface-sidebar);border-top:1px solid var(--surface-sidebar-border);padding-bottom:env(safe-area-inset-bottom)}
-.utility-bar{display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 8px 4px;border-bottom:1px solid var(--surface-sidebar-border)}
+.app-footer{position:fixed;bottom:0;left:0;right:0;z-index:20;background:var(--surface-sidebar);padding-bottom:env(safe-area-inset-bottom)}
+.utility-bar{display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:14px 2px 4px;margin-top:12px;border:0;background:transparent}
 .page{display:none!important}
 .page.active{display:block!important}
 .quick-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
@@ -88,6 +88,27 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
         <div id="tableGrid" class="table-grid" hidden></div>
       </div>
     </div>
+
+  <div class="utility-bar" role="group" aria-label="Utilitários do rodapé">
+    <span id="connection" class="connection-indicator" role="status" aria-live="polite" data-net="checking" title="Verificando conexão com o servidor">
+      <svg class="pwa-icon" aria-hidden="true"><use class="connection-icon" href="./icons.svg#clock-regular"></use></svg>
+      <span class="connection-label sr-only">Verificando conexão com o servidor…</span>
+    </span>
+    <button id="syncBtn" class="icon-action sync-button utility-button" type="button" aria-label="Sincronizar pendências com o servidor" title="Sincronizar pendências com o servidor" data-sync-state="idle">
+      <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#arrows-clockwise-regular"></use></svg>
+    </button>
+    <button id="openNotificationSettings" class="icon-action notification-settings-button utility-button" type="button" aria-label="Avisos e instalação" aria-haspopup="dialog" aria-controls="notificationConsent" title="Avisos e instalação">
+      <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#bell-regular"></use></svg>
+    </button>
+    <button id="themeToggleBtn" class="icon-action utility-button" type="button" aria-label="Alternar tema claro e escuro" title="Alternar tema claro e escuro">
+      <svg class="pwa-icon theme-icon-light" aria-hidden="true"><use href="./icons.svg#moon-regular"></use></svg>
+      <svg class="pwa-icon theme-icon-dark" aria-hidden="true"><use href="./icons.svg#sun-regular"></use></svg>
+    </button>
+    <button id="helpBtn" class="icon-action utility-button" type="button" aria-label="Ajuda: o que faz cada ícone do rodapé" aria-haspopup="dialog" aria-controls="helpModal" title="Ajuda">
+      <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#question-regular"></use></svg>
+    </button>
+    <span id="syncFeedback" class="sr-only" role="status" aria-live="polite"></span>
+  </div>
   </section>
 
   <section class="page" id="page-orders" data-page="orders" aria-label="Meus pedidos">
@@ -197,26 +218,6 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
 </main>
 
 <footer class="app-footer" aria-label="Controles do atendimento">
-  <div class="utility-bar" role="group" aria-label="Utilitários do rodapé">
-    <span id="connection" class="connection-indicator" role="status" aria-live="polite" data-net="checking" title="Verificando conexão com o servidor">
-      <svg class="pwa-icon" aria-hidden="true"><use class="connection-icon" href="./icons.svg#clock-regular"></use></svg>
-      <span class="connection-label sr-only">Verificando conexão com o servidor…</span>
-    </span>
-    <button id="syncBtn" class="icon-action sync-button utility-button" type="button" aria-label="Sincronizar pendências com o servidor" title="Sincronizar pendências com o servidor" data-sync-state="idle">
-      <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#arrows-clockwise-regular"></use></svg>
-    </button>
-    <button id="openNotificationSettings" class="icon-action notification-settings-button utility-button" type="button" aria-label="Avisos e instalação" aria-haspopup="dialog" aria-controls="notificationConsent" title="Avisos e instalação">
-      <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#bell-regular"></use></svg>
-    </button>
-    <button id="themeToggleBtn" class="icon-action utility-button" type="button" aria-label="Alternar tema claro e escuro" title="Alternar tema claro e escuro">
-      <svg class="pwa-icon theme-icon-light" aria-hidden="true"><use href="./icons.svg#moon-regular"></use></svg>
-      <svg class="pwa-icon theme-icon-dark" aria-hidden="true"><use href="./icons.svg#sun-regular"></use></svg>
-    </button>
-    <button id="helpBtn" class="icon-action utility-button" type="button" aria-label="Ajuda: o que faz cada ícone do rodapé" aria-haspopup="dialog" aria-controls="helpModal" title="Ajuda">
-      <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#question-regular"></use></svg>
-    </button>
-    <span id="syncFeedback" class="sr-only" role="status" aria-live="polite"></span>
-  </div>
   <nav class="bottom-nav" aria-label="Navegação do garçom">
   <button type="button" class="active" data-tab="tables" aria-current="page">
     <svg class="nav-svg icon-regular" aria-hidden="true"><use href="./icons.svg#squares-four-regular"></use></svg>
@@ -385,7 +386,7 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
   <div class="sheet-top">
     <div>
       <span class="section-eyebrow">AJUDA RÁPIDA</span>
-      <h2 id="helpTitle">Ícones do rodapé</h2>
+      <h2 id="helpTitle">Controles rápidos</h2>
     </div>
     <button type="button" id="closeHelp" class="close-button" aria-label="Fechar ajuda">×</button>
   </div>
@@ -394,7 +395,7 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
       <img class="brand-mark" src="./brand-mark.webp" alt="" width="28" height="28">
       <strong>QR Admin · Atendimento</strong>
     </div>
-    <p class="muted small-copy">Todo o controle do atendimento fica no rodapé, ao alcance do polegar. A barra inferior com quatro abas continua trocando as áreas de trabalho.</p>
+    <p class="muted small-copy">Os controles rápidos aparecem no final da aba Mesas. A navegação inferior continua disponível em todas as áreas.</p>
     <ul class="help-list">
       <li>
         <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#wifi-high-regular"></use></svg>

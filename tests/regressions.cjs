@@ -77,9 +77,14 @@ test('tema respeita sistema sem armazenamento e preferência salva', () => {
 test('tema claro mantém o fundo suave separado da superfície dos cartões', () => {
   const t = theme();
   t.aplicarTema('claro');
-  assert.equal(t.root.style.values['--surface'], '#eef1f8');
-  assert.equal(t.root.style.values['--surface-raised'], '#f8faff');
-  assert.equal(t.meta.content, '#eef1f8');
+  assert.equal(t.root.style.values['--surface'], '#e4e8f1');
+  assert.equal(t.root.style.values['--surface-raised'], '#edf0f6');
+  assert.notEqual(
+    t.root.style.values['--surface'],
+    t.root.style.values['--surface-raised'],
+    'fundo da página e cartão não podem se confundir',
+  );
+  assert.equal(t.meta.content, '#e4e8f1');
 });
 test('inicialização antes do React respeita sistema com armazenamento bloqueado', () => {
   const script = fs.readFileSync('public/garcom-pwa/theme-init.js', 'utf8');
@@ -87,15 +92,25 @@ test('inicialização antes do React respeita sistema com armazenamento bloquead
   vm.runInNewContext(script, context);
   assert.equal(context.document.documentElement.dataset.theme, 'escuro');
   assert.equal(context.document.documentElement.classList.contains('dark'), true);
-  assert.equal(context.document.documentElement.style.values['--surface'], '#0b101b');
+  assert.equal(context.document.documentElement.style.colorScheme, 'dark');
+  assert.deepEqual(
+    context.document.documentElement.style.values,
+    {},
+    'o bootstrap não fixa tokens inline: os valores vêm do design-tokens.css e precisam continuar trocáveis',
+  );
 });
 test('bootstrap compartilhado aplica o tema claro antes do primeiro paint', () => {
   const script = fs.readFileSync('public/garcom-pwa/theme-init.js', 'utf8');
   const context = { document: { documentElement: criarRoot() }, localStorage: { getItem() { return 'claro'; } }, window: { matchMedia: () => ({ matches: false }) } };
   vm.runInNewContext(script, context);
   assert.equal(context.document.documentElement.dataset.theme, 'claro');
-  assert.equal(context.document.documentElement.style.values['--surface'], '#eef1f8');
-  assert.equal(context.document.documentElement.style.values['--surface-raised'], '#f8faff');
+  assert.equal(context.document.documentElement.classList.contains('dark'), false);
+  assert.equal(context.document.documentElement.style.colorScheme, 'light');
+  assert.deepEqual(
+    context.document.documentElement.style.values,
+    {},
+    'tokens inline travariam a troca de tema (bug corrigido na #262)',
+  );
 });
 test('tema normaliza valores legados light/dark de builds anteriores', () => {
   assert.equal(theme({ saved: 'dark', dark: false }).temaAtual(), 'escuro');
