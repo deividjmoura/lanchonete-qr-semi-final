@@ -89,6 +89,17 @@ Todas exigem token de garçom ativo e sessão aberta.
 | Cancelar item | `POST /api/admin/itens/:id/cancelar` | `{motivo}` (3–300 chars) |
 | Devolver aceite à fila | `POST /api/admin/itens/:id/liberar-aceite` | — |
 
+No fluxo normal da PWA, **Retirar item** é a primeira ação visível para um
+item pronto. Ao receber `POST /retirar` para item em `concluido`, o servidor
+grava aceite implícito (`concluido → aceito`) e retirada (`aceito → retirado`)
+na mesma transação. O primeiro garçom que retirar assume o item e preenche `pedidos.garcom_id`
+se o pedido ainda não tiver garçom. Se a sessão ainda não tiver responsável,
+também assume a mesa; uma retirada colaborativa não transfere uma mesa já
+atribuída. Não há botão extra de aceite
+na PWA. A rota `/assumir-entrega` permanece disponível para consumidores
+explícitos da API, mas não é chamada pela interface normal.
+
+
 Semântica e erros:
 
 - `itemIds` é **tudo ou nada**: id de outro pedido → **404**; item em estado
@@ -96,12 +107,12 @@ Semântica e erros:
 - Sem `itemIds`, a rota aplica a etapa a todos os itens elegíveis do pedido.
 - `etapa:"entrega_direta"` (padrão do endpoint legado `entregar`) entrega
   diretamente itens prontos **sem dono** ou do próprio garçom; item de outro
-  garçom → **403**. O PWA atual usa o fluxo em três etapas.
+  garçom → **403**. A PWA atual usa retirada com aceite implícito; não há etapa separada de aceite na interface.
 - A fila é **compartilhada**: não esconde item pronto por causa do dono da mesa
   nem da origem do pedido. Cada item traz `podeAceitar`, `podeRetirar`,
   `podeEntregar` calculados para o garçom autenticado, mais os nomes/ids dos
   atores. O pedido traz `itensProntos` e `itensPendentesProducao`.
-- Corrida de aceite: exatamente um garçom vence; os demais recebem **409**.
+- Concorrência de retirada/aceite implícito: os locks e a transação garantem que somente um garçom assume o item; tentativas incompatíveis recebem **403/409**.
 
 ## Pedido do garçom e idempotência offline
 

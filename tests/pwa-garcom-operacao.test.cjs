@@ -7,6 +7,7 @@ const app=fs.readFileSync(path.join(root,'public/garcom-pwa/app.js'),'utf8');
 const server=fs.readFileSync(path.join(root,'server.js'),'utf8');
 const backend=fs.readFileSync(path.join(root,'db/atendimento.js'),'utf8');
 const sw=fs.readFileSync(path.join(root,'public/garcom-pwa/sw.js'),'utf8');
+const pwaDoc=fs.readFileSync(path.join(root,'docs/PWA-ATENDIMENTO-GARCOM.md'),'utf8');
 
 test('PWA e backend têm rota explícita para iniciar mesa vazia',()=>{
  assert.match(backend,/async function iniciarAtendimentoGarcom/);
@@ -74,6 +75,8 @@ test('pedidos diretos prontos ficam visíveis para todos e são assumidos uma ú
  assert.match(app,/Retirar item/);
  assert.doesNotMatch(app,/Aceitar item/);
  assert.match(app,/Confirmar entrega/);
+ assert.match(pwaDoc,/sem aceite separado/);
+ assert.doesNotMatch(pwaDoc,/Entrega em três etapas/);
 });
 test('Service Worker não reaproveita shell anterior às correções',()=>{
  // Piso de versão, não valor exato: cada correção do shell precisa subir o

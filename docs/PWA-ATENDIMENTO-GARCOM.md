@@ -19,35 +19,48 @@ cacheada: o servidor é a única fonte de verdade. O cache do shell é versionad
 (`garcom-pwa-shell-v39` no código consultado em 05/11/2026); qualquer mudança no shell exige subir essa versão, ou
 o aparelho continua executando JavaScript antigo.
 
-## Entrega em três etapas, item por item
+## Fila compartilhada de prontos e retirada sem aceite separado
 
-Na aba **Entregas**, cada item pronto tem sua própria ação:
+A aba **Entregas** consulta a fila compartilhada de pedidos em sessões abertas.
+Um pedido passa a aparecer para todos os garçons ativos quando pelo menos um
+dos seus itens chega a `concluido`, `aceito` ou `retirado`. A consulta não
+filtra pelo responsável da mesa nem pela origem do pedido. Os outros itens do
+mesmo pedido continuam visíveis para dar contexto, mas só os itens prontos ou
+já assumidos pelo próprio garçom oferecem ação.
 
-1. **Aceitar item** — o garçom assume a entrega daquele item. O primeiro aceite
-   numa mesa sem responsável torna esse garçom o responsável principal, decidido
-   no servidor. Aceites seguintes de outros garçons são colaboração e **não**
-   transferem a mesa.
-2. **Retirar** — confirma a retirada no balcão. Só quem aceitou pode retirar.
-   O item fica `retirado`: saiu da produção, mas **ainda não** foi à mesa e
-   **ainda não** é cobrável.
-3. **Confirmar entrega** — só quem retirou pode entregar. A partir daí o valor
-   do item entra na conta.
+O fluxo normal da PWA tem **duas ações visíveis**, sem botão extra de aceite:
 
-Há também **Aceitar todos os prontos** (agrupa apenas os itens `concluido`
-daquele pedido) e **Histórico de movimentação**, que mostra a trilha real de
-atores e horários por item.
+1. **Retirar item** — ao clicar em um item `concluido`, o servidor registra o
+   aceite implícito e a retirada na mesma transação e sob o mesmo lock:
+   `concluido → aceito → retirado`. O primeiro garçom que fizer isso assume
+   aquele item. Se o pedido ainda não tiver garçom, ele passa a ser associado
+   a esse garçom; se a mesa ainda não tiver responsável, o mesmo garçom passa
+   a ser o responsável principal da mesa. Uma retirada colaborativa não transfere
+   uma mesa que já tenha responsável. Se outro garçom já aceitou o item, a
+   retirada é recusada; não há tomada concorrente.
+2. **Confirmar entrega** — somente o garçom que retirou o item pode confirmar
+   que ele chegou ao cliente. Só então o valor entra na conta.
 
-Cada item libera assim que o setor conclui: se o bar termina antes da cozinha,
-a bebida aparece na hora e pode ser entregue enquanto o prato ainda é produzido.
+A rota explícita `assumir-entrega` continua disponível no contrato da API, mas
+não é uma etapa separada na interface normal da PWA. O botão **Retirar item**
+já expressa a intenção de assumir e retirar, sem confirmação intermediária.
+
+O **Histórico de movimentação** mostra a trilha real de atores e horários por
+item, incluindo o motivo `Aceite implícito na retirada`.
+
+Cada item libera assim que seu setor conclui: se o bar termina antes da cozinha,
+a bebida aparece na hora e pode ser retirada enquanto o prato ainda é produzido.
 
 ## Confirmação em lote
 
-Cada pedido oferece um botão de lote por etapa — **aceitar**, **retirar** e
-**entregar** — com a contagem de itens, inclusive quando há um item só. O lote
-nunca mistura etapas nem inclui item que já pertence a outro garçom: a retirada
-exige que o aceite seja seu e a entrega exige que a retirada seja sua. Cada
-lote é uma única chamada por pedido, preservando a atomicidade do servidor.
-Falha em um lote avisa na própria tela e reabilita os botões.
+Cada pedido oferece os lotes **Retirar todos** e **Confirmar entrega de
+todos**, com a contagem de itens elegíveis. A retirada inclui itens `concluido`
+e itens `aceito` pelo próprio garçom; para um item ainda `concluido`, o
+servidor registra aceite implícito e retirada na mesma transação. A entrega
+inclui somente itens `retirado` pelo próprio garçom. A PWA não exibe um lote
+separado de aceite. Cada lote é uma única chamada por pedido, preservando a
+atomicidade do servidor. Falha em um lote avisa na própria tela e reabilita os
+botões.
 
 ## Fila offline
 
