@@ -3,83 +3,61 @@
 **Issues relacionadas:** [#40](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/40)
 e [#6](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/6).
 
-## Fluxo de release verificado
+## Fluxo de release
 
-Evidência registrada em 2026-10-26, lida
-diretamente da configuração do Railway no projeto `exquisite-nurturing`:
+O fluxo de produção deve manter as migrations como gate anterior à abertura da porta HTTP:
 
-1. **Pre-deploy:** `npm run db:migrate && npm run db:seed` — aplica as
-   migrations versionadas em `db/migrations/*.sql`; o seed é não destrutivo
-   sem `FORCE_SEED` (não definida no serviço).
-2. **Start do container:** `npm run start:prod` →
-   `node scripts/start-production.js`.
-3. O runner (`scripts/start-production.js`) executa `db/migrate.js` de novo
-   (idempotente) e **só carrega `server.js` se o processo sair com código 0**.
-   Erro de spawn, saída não-zero ou timeout de 30 s encerram com
-   `process.exitCode = 1` sem abrir a porta — o deploy falha e o tráfego não
-   é recebido por uma versão incompatível com o schema.
-4. `npm start`, `npm run start:api` e `npm run start:prod` apontam todos para
-   o mesmo gate. `node server.js`/`npm run server` permanecem como caminho de
-   desenvolvimento local e não devem ser usados como comando de produção.
-5. O auto-migrate best-effort dentro do `listen` do `server.js` existe apenas
-   como rede de segurança para o modo desenvolvimento; no fluxo de produção
-   real o gate roda antes de qualquer `listen`.
+1. **Pre-deploy:** npm run db:migrate && npm run db:seed aplica as migrations versionadas em db/migrations/*.sql. O seed é não destrutivo para cardápio existente quando executado sem FORCE_SEED.
+2. **Start do container:** npm run start:prod executa node scripts/start-production.js.
+3. O runner executa db/migrate.js novamente (idempotente) e só carrega server.js se o processo terminar com código 0.
+4. Erro de spawn, saída não-zero ou timeout de 30 segundos encerram o processo sem abrir a porta. A aplicação não recebe tráfego com schema potencialmente incompatível.
+5. npm start, npm run start:api e npm run start:prod apontam para o mesmo gate. node server.js/npm run server permanecem caminhos de desenvolvimento local e não devem ser usados como comando de produção.
 
 ## Matriz de validação
 
-| Cenário | Onde é provado | Resultado esperado |
+| Cenário | Evidência | Resultado esperado |
 |---|---|---|
-| Migration bem-sucedida em banco limpo | CI `postgres-migrations` e `postgres-integration` (PostgreSQL 16 descartável) | Aplica toda a cadeia 0001→atual |
-| Já aplicada (idempotência) | Job `postgres-migrations` roda `db:migrate` duas vezes | Segunda execução: "Nenhuma migration pendente" |
-| Falha de SQL | `tests/start-production.test.cjs` com spawn injetado retornando status 1 | Servidor não inicia, exit 1, mensagem de erro sem segredos |
-| Timeout/erro de spawn | Mesmo arquivo, `error` simulado (inclusive `ETIMEDOUT`) | Servidor não inicia, exit 1 |
-| Caminho feliz do gate | Mesmo arquivo, status 0 | `loadServer()` chamado após a mensagem de sucesso |
+| Migration em banco limpo | CI postgres-migrations e postgres-integration | Aplica a cadeia de migrations versionadas |
+| Migration já aplicada | Job executa db:migrate duas vezes | Segunda execução informa que não há migration pendente |
+| Falha de SQL | tests/start-production.test.cjs | Servidor não inicia, exit 1 e erro sem segredos |
+| Timeout/erro de spawn | tests/start-production.test.cjs | Servidor não inicia, exit 1 |
+| Caminho feliz | tests/start-production.test.cjs | loadServer() só é chamado após migrations concluídas |
 
-## Observabilidade da versão do schema
+## Observabilidade do schema e do banco
 
-- A tabela `schema_migrations (filename, applied_at)` registra cada migration
-  aplicada. Consulta somente leitura para diagnóstico:
-  `SELECT filename, applied_at FROM schema_migrations ORDER BY filename;`
-- O runner imprime cada arquivo aplicado e o total ao final; o gate registra
-  "Migrations verificadas" antes de iniciar o servidor.
-- O endpoint `GET /healthz` é apenas liveness de processo e não expõe versão;
-  um readiness com checagem de banco pode ser adicionado sem expor dados
-  (ver `observabilidade-alertas.md`).
+A tabela schema_migrations (filename, applied_at) registra migrations aplicadas. Consulta read-only para diagnóstico:
+
+~~~sql
+SELECT filename, applied_at
+FROM schema_migrations
+ORDER BY filename;
+~~~
+
+O endpoint GET /healthz executa SELECT 1 com timeout curto e valida conectividade básica com o PostgreSQL:
+
+- banco acessível: 200 {"status":"ok","db":"ok"};
+- banco indisponível ou consulta excedendo o limite: 503 {"status":"degraded","db":"unavailable"}.
+
+A resposta não revela versão do schema, host, usuário ou detalhes internos. O limite de espera é configurável por HEALTH_DB_TIMEOUT_MS (padrão 1000 ms). Detalhes: [observabilidade e alertas](./observabilidade-alertas.md).
 
 ## Regras de compatibilidade (expand/contract)
 
 Toda migration nova deve seguir:
 
-1. **Aditiva primeiro:** colunas/tabelas novas entram com `IF NOT EXISTS`,
-   defaults seguros e sem `NOT NULL` sem default em tabela existente.
-2. **Duas fases para mudança destrutiva:** a versão nova do código passa a
-   escrever no formato novo mantendo leitura do antigo; só depois de
-   implantada e validada é que uma migration posterior remove o formato
-   legado (contract). Nunca renomear coluna em uma única etapa.
-3. **Sem DDL dentro de handler de requisição:** DDL só existe em
-   `db/migrations/*.sql` (ADR-011).
-4. **Uma transação por migration** (já é o comportamento do runner, com
-   rollback automático em falha).
+1. **Aditiva primeiro:** colunas/tabelas novas entram com IF NOT EXISTS, defaults seguros e sem NOT NULL sem default em tabela existente.
+2. **Duas fases para mudança destrutiva:** a versão nova do código passa a escrever no formato novo mantendo leitura do antigo; só depois de implantada e validada é que uma migration posterior remove o formato legado.
+3. **Sem DDL dentro de handler de requisição:** DDL fica em db/migrations/*.sql.
+4. **Uma transação por migration:** o runner aplica cada arquivo em transação, com rollback em falha.
 
 ## Plano de rollback
 
-- O rollback de **código** é o redeploy da versão anterior no Railway; como o
-  gate roda migrations antes do `listen`, uma versão antiga nunca sobe se
-  exigir um schema que não existe.
-- Migrations aditivas (padrão atual, inclusive 0022–0025) normalmente não
-  precisam desfazer: o código antigo ignora colunas/tabelas novas.
-- Se uma migration falhar, o runner já devolve rollback SQL da transação; o
-  deploy não recebe tráfego. A correção é uma **nova migration** consertando
-  o estado — nunca editar um arquivo já aplicado, porque ele não volta a
-  rodar (está em `schema_migrations`).
-- Antes de migration não retrocompatível, registrar na PR: backup recente
-  (ver `backup-restore.md`), janela de manutenção e o SQL de reversão
-  testado em banco descartável.
+- Rollback de **código** é o redeploy da versão anterior no Railway.
+- Migrations aditivas normalmente não precisam ser desfeitas: o código anterior ignora colunas/tabelas novas.
+- Se uma migration falhar, a transação é revertida e o deploy não recebe tráfego. Corrija com uma **nova migration**; não edite arquivo já aplicado, pois ele não será executado novamente.
+- Antes de migration não retrocompatível, registre na PR: backup recente, janela de manutenção e SQL de reversão testado em banco descartável.
 
-## O que permanece como responsabilidade operacional
+## Responsabilidades operacionais
 
-- Manter o pre-deploy e o comando de start apontando para os scripts
-  versionados; qualquer mudança nessa configuração exige atualização deste
-  documento e validação do gate.
-- Executar o drill de backup/restore real do provedor (issue #41) antes do
-  go-live: rollback de banco não pode depender apenas do rollback de código.
+- Manter pre-deploy e start apontando para os scripts versionados.
+- Confirmar a configuração do health check do provedor para /healthz.
+- Executar e registrar o drill real de backup/restore do provedor (issue #41) antes do go-live; rollback de banco não pode depender apenas do rollback de código.
