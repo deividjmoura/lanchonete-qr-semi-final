@@ -87,6 +87,7 @@ async function shot(page, name, { fullPage = false } = {}) {
   fs.mkdirSync(OUT, { recursive: true });
   const png = path.join(OUT, `${name}.png`);
   const webp = path.join(OUT, `${name}.webp`);
+  await page.addStyleTag({ content: "*, *::before, *::after { cursor: none !important; }" });
   await page.screenshot({
     path: png,
     type: "png",
@@ -129,7 +130,6 @@ async function main() {
     locale: "pt-BR",
   });
   const page = await context.newPage();
-  await page.addStyleTag({ content: "*, *::before, *::after { cursor: none !important; }" });
 
   // --- Cliente ---
   if (mesaToken) {
