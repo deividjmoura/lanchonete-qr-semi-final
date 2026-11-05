@@ -233,6 +233,10 @@ export const api = {
     apiSend<{ ok: boolean; staff: { id: number; nome: string; login: string; email: string } }>(
       "/api/admin/contas/email", "PUT", { id, email }
     ),
+  removerEmailGoogle: (id: number) =>
+    apiSend<{ ok: boolean; staff: { id: number; nome: string; login: string; email: null } }>(
+      `/api/admin/contas/${id}/email`, "DELETE"
+    ),
   /** Redefinição pelo admin: não pede a senha antiga, porque ela foi esquecida. */
   redefinirSenha: (login: string, senhaNova: string) =>
     apiSend<{ ok: boolean; login: string; papel: string; propriaConta: boolean; sessoesRevogadas?: number; csrfToken?: string | null }>(
