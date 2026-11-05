@@ -49,6 +49,11 @@ jobs:
             if (!payload || payload.status !== "ok") {
               throw new Error("Unexpected health payload");
             }
+            // Desde a revogação de 05/11/2026 o endpoint também sonda o banco.
+            // Um processo vivo com banco caído não pode passar no monitoring.
+            if (payload.db !== "ok") {
+              throw new Error("Banco indisponível segundo /healthz: " + payload.db);
+            }
             console.log("Production liveness OK; read-only GET /healthz.");
           }).catch((error) => {
             console.error("Production health check failed:", error.message);
