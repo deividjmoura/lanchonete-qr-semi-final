@@ -141,7 +141,7 @@ async function main() {
     // A gestão de senhas agora fica em Admin > Funções, não no cabeçalho.
     assert.equal(await page.getByRole('button', { name: 'Redefinir senha de um setor' }).count(), 0);
     await page.getByRole('button', { name: 'Funções', exact: true }).click();
-    await page.getByRole('button', { name: 'Senhas', exact: true }).click();
+    await page.getByRole('button', { name: 'Logins', exact: true }).click();
     await page.getByRole('button', { name: 'Redefinir senha de um setor' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.waitFor();
