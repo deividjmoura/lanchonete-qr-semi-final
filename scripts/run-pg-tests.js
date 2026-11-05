@@ -57,6 +57,8 @@ const suites = [
   // HTTP real, que é onde a ausência de um import derrubava tudo com 500.
   'postgres-sse-tickets.test.cjs',
   'postgres-sse-ticket-http.test.cjs',
+  // Cadastro e remoção do e-mail Google pré-autorizado, com auditoria transacional.
+  'postgres-google-oauth.test.cjs',
 ];
 
 // O drill de backup precisa de pg_dump/psql no PATH. Em ambiente local com
