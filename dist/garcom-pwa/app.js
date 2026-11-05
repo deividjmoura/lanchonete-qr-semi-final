@@ -397,10 +397,11 @@ $('#themeToggleBtn')?.addEventListener('click',()=>{
  const root=document.documentElement;
  const next=root.getAttribute('data-theme')==='escuro'?'claro':'escuro';
  root.setAttribute('data-theme',next);
+ root.classList.toggle('dark',next==='escuro');
  root.style.colorScheme=next==='escuro'?'dark':'light';
  try{localStorage.setItem('qradmin-tema',next);}catch{}
  const meta=document.querySelector('meta[name="theme-color"]');
- if(meta)meta.setAttribute('content',next==='escuro'?'#141813':'#f0e6d2');
+ if(meta)meta.setAttribute('content',next==='escuro'?'#0b101b':'#e4e8f1');
 });
 
 for (const btn of document.querySelectorAll('[data-tab]')) {

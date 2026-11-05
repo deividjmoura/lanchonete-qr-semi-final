@@ -211,6 +211,8 @@ async function notificationFlows(browser) {
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await screenshot(page, 'pwa-entregas-320');
 
+  // Os controles rápidos vivem no fim da aba Mesas, então voltamos para ela.
+  await page.locator('[data-tab="tables"]').click();
   await page.locator('#openNotificationSettings').click();
   assert.equal(await page.locator('#notificationConsent').getAttribute('open'), '');
   assert.match(await page.locator('#notificationStatus').textContent(), /não instalado/i);

@@ -44,7 +44,7 @@ html {
 body {
   margin: 0;
   min-height: 100svh;
-  padding-bottom: calc(128px + env(safe-area-inset-bottom));
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
   background: var(--surface);
   color: var(--text);
 }
@@ -1397,3 +1397,14 @@ dialog.sheet[open] {
     transform: none !important;
   }
 }
+
+
+/* Ajustes de conforto visual e controles no fluxo da aba Mesas. */
+body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+.app-footer { border: 0; box-shadow: 0 -8px 24px -24px var(--text); }
+.utility-bar { max-width: 100%; justify-content: flex-end; margin: 14px 0 2px; padding: 10px 2px 2px; border: 0; background: transparent; }
+.utility-button { flex-basis: 38px; }
+.ledger-block { border-color: color-mix(in srgb, var(--line) 38%, transparent); box-shadow: 0 5px 18px -14px var(--text); }
+.ledger-head { border-bottom-color: color-mix(in srgb, var(--line) 42%, transparent); }
+.table-tile, .order, .billing-summary, .pix-box { border-color: color-mix(in srgb, var(--line) 48%, transparent); }
+.sheet { border-color: color-mix(in srgb, var(--line) 45%, transparent); }

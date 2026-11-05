@@ -12,16 +12,18 @@ const sprite = fs.readFileSync(path.join(root, 'icons.svg'), 'utf8');
 
 /* ---------------------------------------------------------------- layout */
 
-test('PWA não tem cabeçalho fixo: tema, sync, ajuda, conexão e avisos vivem no rodapé', () => {
+test('PWA mantém navegação fixa e controles discretos no fluxo da aba Mesas', () => {
   assert.doesNotMatch(html, /class="app-header"/, 'faixa superior removida');
   assert.doesNotMatch(html, /class="waiter-strip"/, 'faixa do garçom removida');
   assert.doesNotMatch(css, /\.waiter-strip-inner\s*\{/, 'CSS da faixa do garçom removido');
 
   const footer = html.slice(html.indexOf('<footer class="app-footer"'), html.indexOf('</footer>'));
+  const mesas = html.slice(html.indexOf('id="page-tables"'), html.indexOf('id="page-orders"'));
   for (const id of ['connection', 'syncBtn', 'themeToggleBtn', 'helpBtn', 'openNotificationSettings']) {
-    assert.match(footer, new RegExp('id="' + id + '"'), id + ' fica no rodapé');
+    assert.match(mesas, new RegExp('id="' + id + '"'), id + ' fica no final da aba Mesas');
   }
-  assert.match(footer, /class="utility-bar"/);
+  assert.match(mesas, /class="utility-bar"/);
+  assert.doesNotMatch(footer, /class="utility-bar"/);
   assert.match(footer, /class="bottom-nav"/, 'as quatro abas continuam no rodapé');
   for (const tab of ['tables', 'orders', 'deliveries', 'billing']) {
     assert.match(footer, new RegExp('data-tab="' + tab + '"'));
@@ -49,7 +51,7 @@ test('Indicador de conexão mostra apenas ícone com texto para leitor de tela',
   assert.equal(texto(semRotulo), '', 'sem texto visível: todo o rótulo fica no sr-only');
 });
 
-test('Painel de ajuda explica cada ícone do rodapé e mostra quem está atendendo', () => {
+test('Painel de ajuda explica os controles rápidos e mostra quem está atendendo', () => {
   assert.match(html, /id="helpModal"/);
   const painel = html.slice(html.indexOf('id="helpModal"'), html.indexOf('</dialog>', html.indexOf('id="helpModal"')));
   for (const texto of ['Conexão', 'Sincronizar', 'Avisos', 'Tema', 'Ajuda']) {

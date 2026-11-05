@@ -11,18 +11,18 @@ export const EVENTO_TEMA = "qradmin-tema";
 
 export const TOKENS_TEMA: Record<Tema, Record<string, string>> = {
   claro: {
-    "--surface": "#eef1f8",
-    "--surface-raised": "#f8faff",
-    "--surface-sunken": "#e0e5f1",
+    "--surface": "#e4e8f1",
+    "--surface-raised": "#edf0f6",
+    "--surface-sunken": "#d8deea",
     "--surface-sidebar": "#0b101b",
     "--text": "#121829",
     "--text-muted": "#48536d",
     "--brand": "#5b3fc4",
-    "--brand-contrast": "#f8faff",
+    "--brand-contrast": "#edf0f6",
     "--brand-ink": "#4a32a6",
     "--accent": "#0a5a63",
-    "--line": "#c7cfe0",
-    "--line-strong": "#a5b0c8",
+    "--line": "#b8c2d4",
+    "--line-strong": "#98a6bd",
   },
   escuro: {
     "--surface": "#0b101b",
@@ -89,7 +89,7 @@ export function aplicarTema(tema: Tema): Tema {
 
 export const QR_SVG_COLORS = {
   fg: "#0b101b",
-  bg: "#f8faff",
+  bg: "#edf0f6",
 } as const;
 
 export function alternarTema(): Tema {
