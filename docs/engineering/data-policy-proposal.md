@@ -38,7 +38,7 @@ O ciclo de vida do e-mail de autenticação Google de funcionário é separado d
 
 ## 2. Comportamento atual da anonimização do histórico
 
-A rotina db/purge.js **anonimiza dados pessoais; não apaga as contas nem os registros financeiros**. A ferramenta está disponível no painel administrativo, na área Funções/limpeza do histórico, e é executada manualmente.
+A rotina db/purge.js **anonimiza dados pessoais; não apaga as contas nem os registros financeiros**. A ferramenta está disponível em **Administração > Funções > Limpar** e é executada manualmente.
 
 - O corte é exclusivo: somente sessões fechadas com fechada_em::date < before entram no escopo.
 - Sem confirm: true, a operação é dry-run e retorna contagens sem alterar dados.
