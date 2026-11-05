@@ -39,7 +39,8 @@
     "test:e2e": "node scripts/run-e2e-tests.js",
     "health:smoke": "node scripts/health-smoke.js",
     "db:restore-drill": "node scripts/backup-restore-drill.js",
-    "diag:fotos": "node scripts/diagnostico-fotos.js"
+    "diag:fotos": "node scripts/diagnostico-fotos.js",
+    "pg:local": "node scripts/pg-local.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "2.1.10",
