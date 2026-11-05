@@ -255,16 +255,72 @@ function hashTokenSessao(token) {
   return crypto.createHash('sha256').update(String(token)).digest('hex');
 }
 
-async function criarSessao(staffId, db = pool) {
+// Sessão pendente do 2FA dura 5 minutos: é o tempo de digitar o código, não uma
+// sessão utilizável. Passou disso, o login recomeça do zero.
+const TTL_SESSAO_PENDENTE_MS = 5 * 60 * 1000;
+
+/**
+ * Cria sessão de staff.
+ *
+ * `mfaPendente: true` grava a sessão já marcada como **não autenticada**:
+ * `getStaffDaRequisicao` a recusa, então ela não abre nenhuma rota. Serve só
+ * para ligar a etapa 1 (senha) à etapa 2 (código).
+ */
+async function criarSessao(staffId, db = pool, { mfaPendente = false } = {}) {
   const token = crypto.randomBytes(32).toString('hex');
   const tokenHash = hashTokenSessao(token);
-  const expira = new Date(Date.now() + SESSION_TTL_MS);
+  const expira = new Date(Date.now() + (mfaPendente ? TTL_SESSAO_PENDENTE_MS : SESSION_TTL_MS));
   await db.query(
-    `INSERT INTO staff_sessoes (token, token_hash, staff_id, expira_em)
-     VALUES ($1, $2, $3, $4)`,
-    [token, tokenHash, staffId, expira]
+    `INSERT INTO staff_sessoes (token, token_hash, staff_id, expira_em, mfa_pendente)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [token, tokenHash, staffId, expira, Boolean(mfaPendente)]
   );
   return token;
+}
+
+/**
+ * Promove a sessão pendente a sessão completa: token novo, TTL cheio, marca
+ * limpa. O token pendente é apagado, então um cookie capturado antes do
+ * segundo fator não vira acesso.
+ */
+async function completarSessaoPendente(tokenPendente, staffId, db = pool) {
+  const removidas = await db.query(
+    `DELETE FROM staff_sessoes
+      WHERE staff_id = $1 AND mfa_pendente = TRUE
+        AND (token_hash = $2 OR token = $3)`,
+    [staffId, hashTokenSessao(tokenPendente), tokenPendente]
+  );
+  if (removidas.rowCount === 0) {
+    throw new ErroAuth(401, 'Sessão de verificação expirada. Entre novamente.', 'MFA_SESSAO_EXPIRADA');
+  }
+  return criarSessao(staffId, db);
+}
+
+/**
+ * Lê a sessão pendente do cookie SEM autenticá-la.
+ * Usada apenas por /api/login/2fa e /api/login/2fa/cancelar.
+ */
+async function sessaoPendenteDaRequisicao(req) {
+  const token = parseCookies(req)[SESSION_COOKIE];
+  if (!token) return null;
+  const tokenHash = hashTokenSessao(token);
+  const { rows } = await pool.query(
+    `SELECT s.id, s.nome, s.login, s.papel, s.ativo, ss.expira_em,
+            COALESCE(ss.mfa_pendente, FALSE) AS mfa_pendente
+       FROM staff_sessoes ss
+       JOIN staff s ON s.id = ss.staff_id
+      WHERE ss.token_hash = $1 OR ss.token = $2
+      ORDER BY CASE WHEN ss.token_hash = $1 THEN 0 ELSE 1 END
+      LIMIT 1`,
+    [tokenHash, token]
+  );
+  const row = rows[0];
+  if (!row || !row.ativo || !row.mfa_pendente) return null;
+  if (new Date(row.expira_em).getTime() <= Date.now()) {
+    await destruirSessao(token);
+    return null;
+  }
+  return { token, staff: { id: row.id, nome: row.nome, login: row.login, papel: row.papel } };
 }
 
 async function destruirSessao(token) {
@@ -282,7 +338,9 @@ async function getStaffDaRequisicao(req) {
 
   const { rows } = await pool.query(
     `SELECT s.id, s.nome, s.login, s.papel, s.ativo, ss.expira_em,
-            ss.token AS token_registro, ss.token_hash, ${SQL_FLAGS_SENHA}
+            ss.token AS token_registro, ss.token_hash,
+            -- #55: sessão que ainda não passou pelo segundo fator NÃO autentica.
+            COALESCE(ss.mfa_pendente, FALSE) AS mfa_pendente, ${SQL_FLAGS_SENHA}
      FROM staff_sessoes ss
      JOIN staff s ON s.id = ss.staff_id
      WHERE ss.token_hash = $1 OR ss.token = $2
@@ -293,6 +351,10 @@ async function getStaffDaRequisicao(req) {
   const row = rows[0];
   if (!row || !row.ativo) {
     if (token) await destruirSessao(token);
+    return null;
+  }
+  if (row.mfa_pendente) {
+    // Não destrói: a etapa 2 do login ainda precisa deste token.
     return null;
   }
   if (new Date(row.expira_em).getTime() <= Date.now()) {
@@ -921,6 +983,9 @@ setInterval(() => {
 }, 30 * 60 * 1000).unref();
 
 module.exports = {
+  TTL_SESSAO_PENDENTE_MS,
+  completarSessaoPendente,
+  sessaoPendenteDaRequisicao,
   ErroAuth,
   SESSION_COOKIE,
   PAPEIS,
