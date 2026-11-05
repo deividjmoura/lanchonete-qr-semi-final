@@ -35,6 +35,19 @@ const OUT = path.resolve(ROOT, process.env.OUT_DIR || "public/assets/apresentaca
 
 const DESKTOP = { width: 1440, height: 900 };
 const MOBILE = { width: 390, height: 844, deviceScaleFactor: 2 };
+const CAPTURAS_OBRIGATORIAS = [
+  "cardapio-cliente",
+  "personalizacao-produto",
+  "comanda-cliente",
+  "dashboard-admin",
+  "gestao-cardapio",
+  "mapa-mesas",
+  "fila-cozinha",
+  "fila-bar",
+  "entregas-garcom",
+  "fechamento-caixa",
+];
+const capturasFeitas = [];
 
 function assertLocalBase(url) {
   const u = new URL(url);
@@ -63,6 +76,10 @@ async function launchBrowser() {
 
 async function settle(page, ms = 800) {
   await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await Promise.all(Array.from(document.images, (img) => img.decode().catch(() => {})));
+  });
   await page.waitForTimeout(ms);
 }
 
@@ -80,6 +97,7 @@ async function shot(page, name, { fullPage = false } = {}) {
   await sharp(png).webp({ quality: 88 }).toFile(webp);
   fs.unlinkSync(png);
   console.log("ok", webp);
+  capturasFeitas.push(name);
 }
 
 async function loginStaff(page, user, pass) {
@@ -101,9 +119,8 @@ async function main() {
   const mesaToken = process.env.MESA_TOKEN;
   const garcomToken = process.env.GARCOM_TOKEN;
 
-  if (!adminPass) {
-    console.error("Defina ADMIN_PASS (senha do staff de teste após seed).");
-    process.exit(1);
+  if (!adminPass || !mesaToken || !garcomToken) {
+    throw new Error("Defina ADMIN_PASS, MESA_TOKEN e GARCOM_TOKEN do banco isolado antes de capturar.");
   }
 
   const browser = await launchBrowser();
@@ -112,6 +129,7 @@ async function main() {
     locale: "pt-BR",
   });
   const page = await context.newPage();
+  await page.addStyleTag({ content: "*, *::before, *::after { cursor: none !important; }" });
 
   // --- Cliente ---
   if (mesaToken) {
@@ -120,20 +138,16 @@ async function main() {
     await shot(page, "cardapio-cliente");
     // Abrir primeiro produto disponível (ajuste seletor)
     const produto = page.locator("[data-produto], .produto, button:has-text('Adicionar')").first();
-    if (await produto.count()) {
-      await produto.click();
-      await settle(page, 600);
-      await shot(page, "personalizacao-produto");
-    }
+    if (!(await produto.count())) throw new Error("Não encontrei produto para capturar a personalização.");
+    await produto.click();
+    await settle(page, 600);
+    await shot(page, "personalizacao-produto");
     // Carrinho / comanda se houver botão
     const carrinho = page.locator("button:has-text('Carrinho'), button:has-text('Comanda'), [data-carrinho]").first();
-    if (await carrinho.count()) {
-      await carrinho.click();
-      await settle(page, 600);
-      await shot(page, "comanda-cliente");
-    }
-  } else {
-    console.warn("MESA_TOKEN ausente — pulando capturas de cliente.");
+    if (!(await carrinho.count())) throw new Error("Não encontrei acesso ao carrinho/comanda do cliente.");
+    await carrinho.click();
+    await settle(page, 600);
+    await shot(page, "comanda-cliente");
   }
 
   // --- Staff ---
@@ -167,9 +181,10 @@ async function main() {
     await page.goto(`${BASE}/#/garcom/${garcomToken}`, { waitUntil: "domcontentloaded" });
     await settle(page, 1000);
     await shot(page, "entregas-garcom");
-  } else {
-    console.warn("GARCOM_TOKEN ausente — pulando captura do garçom.");
   }
+
+  const faltando = CAPTURAS_OBRIGATORIAS.filter((nome) => !capturasFeitas.includes(nome));
+  if (faltando.length) throw new Error("Capturas obrigatórias ausentes: " + faltando.join(", "));
 
   await browser.close();
   console.log("Capturas em", OUT);
