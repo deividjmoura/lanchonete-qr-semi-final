@@ -1,7 +1,7 @@
 // CRUD de cardápio e listagem de mesas para o painel admin.
 const pool = require('./pool');
 const { resolverFotoUrl } = require('./foto-serve');
-const { registrarEvento } = require('./auditoria');
+const { registrarEvento, registrarEventoIndependente } = require('./auditoria');
 const { numeroFinito, numeroInteiroPositivo } = require('./validacao');
 
 function normalizeFotoUrl(raw) {
@@ -51,22 +51,43 @@ async function obterAdminAtivo(client, ator) {
 async function removerEmailGoogleStaff(idBruto, ator, requestId = null) {
   const id = numeroInteiroPositivo(idBruto, 'funcionário');
   const client = await pool.connect();
+  // Motivo da recusa, quando houver: a negativa também precisa ficar na trilha.
+  let negado = null;
   try {
     await client.query('BEGIN');
-    const admin = await obterAdminAtivo(client, ator);
-    if (!admin) throw new ErroAdmin(403, 'Apenas um administrador ativo pode remover e-mails.');
+    let admin;
+    try {
+      admin = await obterAdminAtivo(client, ator);
+    } catch (e) {
+      if (e instanceof ErroAdmin) negado = 'ator_sem_permissao';
+      throw e;
+    }
+    if (!admin) {
+      negado = 'ator_sem_permissao';
+      throw new ErroAdmin(403, 'Apenas um administrador ativo pode remover e-mails.');
+    }
 
     const { rows } = await client.query(
       'SELECT id, nome, login, email, google_sub, ativo FROM staff WHERE id=$1 FOR UPDATE',
       [id]
     );
     const alvo = rows[0];
-    if (!alvo) throw new ErroAdmin(404, 'Funcionário não encontrado.');
-    if (!alvo.ativo) throw new ErroAdmin(409, 'Não é possível remover o e-mail de um funcionário inativo.');
+    if (!alvo) {
+      negado = 'conta_inexistente';
+      throw new ErroAdmin(404, 'Funcionário não encontrado.');
+    }
+    if (!alvo.ativo) {
+      negado = 'conta_inativa';
+      throw new ErroAdmin(409, 'Não é possível remover o e-mail de um funcionário inativo.');
+    }
     if (alvo.google_sub) {
+      negado = 'conta_vinculada_google';
       throw new ErroAdmin(409, 'Esta conta já está vinculada ao Google. A remoção simples não pode desvincular essa identidade.');
     }
-    if (!alvo.email) throw new ErroAdmin(409, 'Este funcionário não possui e-mail Google cadastrado.');
+    if (!alvo.email) {
+      negado = 'conta_sem_email';
+      throw new ErroAdmin(409, 'Este funcionário não possui e-mail Google cadastrado.');
+    }
 
     const atualizado = await client.query(
       `UPDATE staff
@@ -76,6 +97,7 @@ async function removerEmailGoogleStaff(idBruto, ator, requestId = null) {
       [id]
     );
     if (!atualizado.rows[0]) {
+      negado = 'concorrencia';
       throw new ErroAdmin(409, 'O cadastro mudou durante a operação. Atualize a lista e tente novamente.');
     }
 
@@ -93,6 +115,21 @@ async function removerEmailGoogleStaff(idBruto, ator, requestId = null) {
     return atualizado.rows[0];
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {});
+    // A operação foi desfeita, mas a tentativa recusada é evidência: registra
+    // fora da transação, com o motivo, sem e-mail e sem segredo (#48/#239).
+    if (negado && ator && Number.isInteger(ator.id)) {
+      await registrarEventoIndependente({
+        atorTipo: 'staff',
+        atorId: Number(ator.id),
+        atorNome: ator.nome || null,
+        acao: 'email_google_remocao_negada',
+        alvoTipo: 'staff',
+        alvoId: String(id),
+        resultado: 'negado',
+        requestId,
+        contexto: { motivo: negado, statusHttp: Number(e && e.status) || null },
+      }).catch(() => {});
+    }
     throw e;
   } finally {
     client.release();
