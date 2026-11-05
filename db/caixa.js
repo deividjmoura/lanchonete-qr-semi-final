@@ -15,6 +15,25 @@ const { registrarEvento } = require('./auditoria');
 const pagamentosTemIdempotencyKey = colunaExiste('sessao_pagamentos', 'idempotency_key');
 const pagamentosTemPixAviso = colunaExiste('sessao_pagamentos', 'pix_aviso_id');
 const pagamentosTemOperadorNome = colunaExiste('sessao_pagamentos', 'operador_nome');
+const pagamentosTemOperadorId = colunaExiste('sessao_pagamentos', 'operador_id');
+
+// #48: operador_id é FK para staff(id). Só o ator cuja conta foi comprovadamente
+// resolvida em `staff` pode ser vinculado: `atorId` de garçom aponta para
+// `garcons`, e gravar esse número em operador_id (a) violaria a FK e (b)
+// criaria autoria falsa — o id de um garçom coincidiria com outro funcionário.
+// A autoria do garçom continua registrada em auditoria_eventos.ator_id, que é
+// polimórfica por ator_tipo.
+async function operadorIdDeStaff(client, opcoes) {
+  if (!opcoes || !Number.isInteger(opcoes.atorId)) return null;
+  const tipo = opcoes.atorTipo || 'staff';
+  if (tipo !== 'staff') return null;
+  try {
+    const { rows } = await client.query('SELECT 1 FROM staff WHERE id = $1', [opcoes.atorId]);
+    return rows.length ? opcoes.atorId : null;
+  } catch {
+    return null;
+  }
+}
 const sessoesTemFechamentoKey = colunaExiste('mesa_sessoes', 'fechamento_idempotency_key');
 
 const FORMAS = new Set(['dinheiro', 'pix', 'cartao_debito', 'cartao_credito']);
@@ -148,9 +167,11 @@ async function lerSessoesAbertas(client) {
   const totaisEntregues = await totaisEntreguesPorSessao(client, sessaoIds);
 
   const temOperadorPagamento = await pagamentosTemOperadorNome(client).catch(() => false);
+  const temOperadorIdPagamento = await pagamentosTemOperadorId(client).catch(() => false);
   const { rows: pagRows } = await client.query(
     `SELECT id, sessao_id, valor, forma_pagamento, criado_em,
-            ${temOperadorPagamento ? 'operador_nome' : 'NULL::text AS operador_nome'}
+            ${temOperadorPagamento ? 'operador_nome' : 'NULL::text AS operador_nome'},
+            ${temOperadorIdPagamento ? 'operador_id' : 'NULL::int AS operador_id'}
      FROM sessao_pagamentos
      WHERE sessao_id = ANY($1::int[])
      ORDER BY criado_em, id`,
@@ -166,6 +187,7 @@ async function lerSessoesAbertas(client) {
       formaPagamento: p.forma_pagamento,
       criadoEm: p.criado_em,
       operadorNome: p.operador_nome || null,
+      operadorId: p.operador_id != null ? Number(p.operador_id) : null,
     });
   }
 
@@ -426,6 +448,14 @@ async function registrarPagamento(sessaoIdBruto, body, operadorNome = null, garc
       await client.query('UPDATE sessao_pagamentos SET operador_nome = $2 WHERE id = $1', [ins[0].id, operadorNome]);
       ins[0].operador_nome = operadorNome;
     }
+    // #48: o vínculo por IDENTIDADE. Nome é retrato histórico; renomear a conta
+    // ou haver homônimos não pode mais tornar o pagamento inatribuível.
+    const temOperadorIdLancamento = await pagamentosTemOperadorId(client).catch(() => false);
+    const operadorIdLancamento = await operadorIdDeStaff(client, opcoes);
+    if (temOperadorIdLancamento && operadorIdLancamento) {
+      await client.query('UPDATE sessao_pagamentos SET operador_id = $2 WHERE id = $1', [ins[0].id, operadorIdLancamento]);
+      ins[0].operador_id = operadorIdLancamento;
+    }
     const valorPago = Number((jaPago + valor).toFixed(2));
     let sessaoFechada = false;
     if (Math.abs(valorDevido - valorPago) <= 0.009) {
@@ -659,8 +689,16 @@ async function fecharSessao(sessaoIdBruto, body, operadorNome = null, opcoes = {
     const falta = Number((valorCobrado - valorPago).toFixed(2));
     if (falta > 0.009) {
       const temOperadorNoFechamento = await pagamentosTemOperadorNome(client).catch(() => false);
+      const temOperadorIdFechamento = await pagamentosTemOperadorId(client).catch(() => false);
       const operador = typeof operadorNome === 'string' ? operadorNome.trim().slice(0, 120) || null : null;
-      if (temOperadorNoFechamento) {
+      const operadorIdFechamento = await operadorIdDeStaff(client, opcoes);
+      if (temOperadorNoFechamento && temOperadorIdFechamento) {
+        await client.query(
+          `INSERT INTO sessao_pagamentos (sessao_id, valor, forma_pagamento, operador_nome, operador_id)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [sessaoId, falta, forma, operador, operadorIdFechamento]
+        );
+      } else if (temOperadorNoFechamento) {
         await client.query(
           `INSERT INTO sessao_pagamentos (sessao_id, valor, forma_pagamento, operador_nome)
            VALUES ($1, $2, $3, $4)`,
@@ -851,6 +889,20 @@ async function confirmarPixAviso(sessaoIdBruto, avisoIdBruto, operadorNome = nul
            RETURNING id, valor, forma_pagamento, criado_em`,
           [sessaoId, valor]
         );
+
+    // #48: quem confirmou o PIX também precisa ficar vinculado por identidade.
+    const temOperadorNoPix = await pagamentosTemOperadorNome(client).catch(() => false);
+    const temOperadorIdPix = await pagamentosTemOperadorId(client).catch(() => false);
+    const operadorPix = typeof operadorNome === 'string' ? operadorNome.trim().slice(0, 120) || null : null;
+    const operadorIdPix = await operadorIdDeStaff(client, opcoes);
+    if (temOperadorNoPix && operadorPix) {
+      await client.query('UPDATE sessao_pagamentos SET operador_nome = $2 WHERE id = $1', [ins[0].id, operadorPix]);
+      ins[0].operador_nome = operadorPix;
+    }
+    if (temOperadorIdPix && operadorIdPix) {
+      await client.query('UPDATE sessao_pagamentos SET operador_id = $2 WHERE id = $1', [ins[0].id, operadorIdPix]);
+      ins[0].operador_id = operadorIdPix;
+    }
 
     await client.query(
       `UPDATE pix_avisos SET status = 'confirmado', confirmado_em = now() WHERE id = $1`,

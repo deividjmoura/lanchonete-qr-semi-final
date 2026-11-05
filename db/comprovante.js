@@ -2,6 +2,7 @@ const pool = require('./pool');
 const { colunaExiste } = require('./conta');
 const { limitePagina, criarCursor, lerCursor } = require('./paginacao');
 const pagamentosTemOperadorNome = colunaExiste('sessao_pagamentos', 'operador_nome');
+const pagamentosTemOperadorId = colunaExiste('sessao_pagamentos', 'operador_id');
 class ErroComprovante extends Error { constructor(status,message){super(message);this.status=status;} }
 async function comprovanteSessao(idBruto) {
   const id=Number(idBruto);
@@ -33,9 +34,11 @@ async function comprovanteSessao(idBruto) {
       WHERE p.sessao_id=$1 AND ip.status='entregue'
       ORDER BY p.criado_em,p.id,ip.id`,[id]);
     const temOperadorPagamento=await pagamentosTemOperadorNome(client).catch(()=>false);
+    const temOperadorIdPagamento=await pagamentosTemOperadorId(client).catch(()=>false);
     const {rows:pagamentos}=await client.query(`
       SELECT id,valor,forma_pagamento,criado_em,
-             ${temOperadorPagamento?'operador_nome':'NULL::text AS operador_nome'}
+             ${temOperadorPagamento?'operador_nome':'NULL::text AS operador_nome'},
+             ${temOperadorIdPagamento?'operador_id':'NULL::int AS operador_id'}
       FROM sessao_pagamentos
       WHERE sessao_id=$1 ORDER BY criado_em,id`,[id]);
     await client.query('COMMIT');
@@ -51,7 +54,7 @@ async function comprovanteSessao(idBruto) {
         total:Number((i.quantidade*(Number(i.preco_unitario)+Number(i.adicionais))).toFixed(2))})),
       desconto:Number(s.desconto||0),taxa:Number(s.taxa_servico||0),
       totalConsumo:Number(s.valor_total||0),valorCobrado:cobrado,
-      pagamentos:pagamentos.map(p=>({id:p.id,valor:Number(p.valor),forma:p.forma_pagamento,criadoEm:p.criado_em,operadorNome:p.operador_nome||null})),
+      pagamentos:pagamentos.map(p=>({id:p.id,valor:Number(p.valor),forma:p.forma_pagamento,criadoEm:p.criado_em,operadorNome:p.operador_nome||null,operadorId:p.operador_id!=null?Number(p.operador_id):null})),
       valorPago:Number(pago.toFixed(2)),saldo:Number((cobrado-pago).toFixed(2)),
       documentoFiscal:false };
   }catch(e){try{await client.query('ROLLBACK')}catch(_){} throw e}
