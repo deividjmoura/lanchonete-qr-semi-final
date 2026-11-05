@@ -86,7 +86,7 @@ test('PostgreSQL real: admin remove e-mail pré-autorizado com auditoria na mesm
   assert.equal(Number(evento.rows[0].ator_id), adminId);
   assert.equal(evento.rows[0].alvo_id, String(alvoId));
   assert.equal(evento.rows[0].acao, 'email_google_removido');
-  assert.deepEqual(evento.rows[0].contexto, { emailRemovido: true, googleVinculado: false });
+  assert.deepEqual(evento.rows[0].contexto, { emailRemovido: true, googleDesvinculado: false, sessoesRevogadas: 0 });
 });
 
 test('PostgreSQL real: remoção desvincula Google e revoga sessões; recusa não-admin, inativa ou sem vínculo', async () => {
