@@ -73,7 +73,7 @@ O caixa acompanha comandas abertas e calcula o consumo cobrável com base nos it
 - Registra pagamentos parciais em dinheiro, PIX, débito e crédito.
 - Permite dividir o pagamento em lançamentos e acompanha o saldo restante.
 - Aplica desconto e taxa de serviço conforme as permissões.
-- Exige reautenticação de um administrador/gerente para desconto maior que zero ou ajuste da taxa padrão, com motivo e registro de auditoria.
+- Exige reautenticação com login e senha de uma conta **admin ativa** (autorização de gerente) para desconto maior que zero ou ajuste da taxa padrão, com motivo e registro de auditoria.
 - Registra cancelamentos com motivo e emite comprovante de consumo.
 - Fecha a comanda e libera a mesa quando não há pendências.
 
@@ -94,7 +94,7 @@ O painel administrativo reúne:
 - **Garçons:** cadastro, links/tokens de acesso e acompanhamento da operação.
 - **Logins e permissões:** contas internas por perfil, troca/redefinição de senha e opção de vincular Google OAuth quando configurada.
 - **Operação:** acompanhamento de comandas, responsabilidades, transferências, entregas e relatórios disponíveis.
-- **Histórico:** prévia e anonimização manual de dados pessoais em contas fechadas anteriores à data de corte, preservando pagamentos, valores, formas, datas e autoria.
+- **Funções > Limpar:** prévia e anonimização manual de dados pessoais em contas fechadas anteriores à data de corte, preservando pagamentos, valores, formas, datas e autoria.
 
 O login Google é opcional e não cria contas: o administrador precisa cadastrar e vincular previamente o e-mail verificado a uma conta ativa. Veja [Configuração do login Google](docs/engineering/google-oauth-setup.md).
 
@@ -110,7 +110,7 @@ As regras críticas são validadas no servidor; a interface não é a autoridade
 - **GET /healthz** executa uma sondagem read-only **SELECT 1** no PostgreSQL com timeout curto; responde 200 quando aplicação e banco estão acessíveis e 503 quando a dependência está indisponível.
 - Inicialização de produção bloqueia a abertura do servidor se as migrations falharem.
 
-A ferramenta de anonimização do histórico substitui nomes de clientes e observações livres por uma sentinela nas contas fechadas anteriores à data informada. Ela é manual, oferece dry-run e não apaga pagamentos, valores, formas, datas ou autoria; não existe agendamento automático. A trilha de auditoria é persistida, mas **não existe uma tela administrativa geral para pesquisar todos os eventos**. A consulta técnica permanece por banco/relatórios autorizados. A política final de retenção dos eventos ainda depende de decisão operacional e validação aplicável.
+A ferramenta **Administração > Funções > Limpar** substitui nomes de clientes e observações livres por uma sentinela nas contas fechadas anteriores à data informada. Ela é manual, oferece dry-run e não apaga pagamentos, valores, formas, datas ou autoria; não existe agendamento automático. A trilha de auditoria é persistida, mas **não existe uma tela administrativa geral para pesquisar todos os eventos**. A consulta técnica permanece por banco/relatórios autorizados. A política final de retenção dos eventos ainda depende de decisão operacional e validação aplicável.
 
 ## Fluxo ponta a ponta
 
@@ -204,10 +204,28 @@ O primeiro login exige troca da senha de bootstrap. Não existe senha padrão. N
 | **npm run health:smoke** | Smoke HTTP read-only; exige **HEALTHCHECK_URL** terminada em **/healthz** |
 | **npm run db:restore-drill** | Ensaio de backup/restauração; exige ferramentas PostgreSQL e banco descartável |
 | **npm run db:migrate** | Aplica migrations pendentes |
-| **npm run pg:local** | Sobe PostgreSQL descartável local para as suítes de integração (encerre com Ctrl+C) |
+| **npm run pg:local** | Sobe PostgreSQL local dedicado aos testes (encerre com Ctrl+C; os dados ficam em `.tmp-pgdata` entre execuções) |
 | **npm run db:seed** | Popula dados iniciais de demonstração, sem sobrescrever cardápio existente por padrão |
 
-**Atenção:** **npm run test:pg**, **npm run db:restore-drill** e scripts de carga/segurança podem criar ou alterar dados. Use somente bancos descartáveis explicitamente preparados para teste. Não aponte scripts mutáveis para produção sem autorização e plano de execução.
+**Banco PostgreSQL local para testes:** `npm run pg:local` inicia um PostgreSQL embarcado na porta `55433`, com o banco `qradmin_test`. Em outro terminal, aplique o schema e rode a suíte:
+
+~~~bash
+DATABASE_URL=postgres://postgres:postgres@127.0.0.1:55433/qradmin_test npm run db:migrate
+DATABASE_URL=postgres://postgres:postgres@127.0.0.1:55433/qradmin_test npm run test:pg
+~~~
+
+O diretório `.tmp-pgdata` é mantido entre execuções; o banco não é apagado automaticamente ao encerrar o processo. Remova esse diretório somente quando tiver certeza de que não precisa dos dados de teste. **Atenção:** `npm run test:pg`, `npm run test:e2e`, `npm run db:restore-drill` e scripts de smoke, carga ou segurança podem criar/alterar dados. Use exclusivamente bancos descartáveis de teste. Nunca aponte esses scripts para produção.
+
+### Scripts adicionais
+
+- `npm run test:regression`: alias da regressão executada por `npm test`.
+- `npm run test:smoke` e `npm run test:full`: cenários de smoke da aplicação.
+- `npm run test:dia`: cenário operacional prolongado.
+- `npm run test:carga`, `npm run test:carga70` e `npm run test:carga60`: cenários de carga; exigem ambiente de teste isolado.
+- `npm run test:seguranca`: verificações de segurança; use ambiente isolado.
+- `npm run smoke:panorama`, `npm run smoke:mesas` e `npm run smoke:fila`: smoke das telas SSR correspondentes.
+- `npm run fotos:dry`: prévia da correção de fotos; `npm run fotos:fix` e `npm run fotos:sync` executam operações de manutenção; `npm run diag:fotos` gera diagnóstico.
+- `npm run db:reset-senha`: ferramenta administrativa de redefinição de senha; não execute sem entender o alvo e o efeito.
 
 ## Documentação do projeto
 
