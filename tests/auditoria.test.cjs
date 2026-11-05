@@ -204,3 +204,25 @@ test('migration 0025 cria a tabela sem colunas de segredo e com índices de cons
   const soColunas = sql.split('\n').filter((linha) => !linha.trim().startsWith('--')).join('\n');
   assert.doesNotMatch(soColunas, /senha|hash|token|segredo/i);
 });
+
+
+test('remoção de e-mail Google exige admin, preserva vínculos existentes e audita antes do commit', () => {
+  const admin = fs.readFileSync(path.join(__dirname, '..', 'db', 'admin.js'), 'utf8');
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const api = fs.readFileSync(path.join(__dirname, '..', 'src', 'lib', 'api.ts'), 'utf8');
+  const ui = fs.readFileSync(path.join(__dirname, '..', 'src', 'screens', 'Admin.tsx'), 'utf8');
+  const inicio = admin.indexOf('async function removerEmailGoogleStaff(');
+  const evento = admin.indexOf("acao: 'email_google_removido'", inicio);
+  const commit = admin.indexOf("await client.query('COMMIT')", evento);
+
+  assert.ok(inicio >= 0 && evento > inicio && commit > evento);
+  assert.ok(admin.slice(inicio, commit).includes('obterAdminAtivo(client, ator)'));
+  assert.ok(admin.slice(inicio, commit).includes('google_sub IS NULL AND email IS NOT NULL'));
+  assert.ok(server.includes("if (emailGoogleStaffMatch && req.method === 'DELETE')"));
+  assert.ok(server.includes("exigirAcesso(req, 'admin')"));
+  assert.ok(server.includes('removerEmailGoogleStaff(id, ator, reqId)'));
+  assert.ok(api.includes('removerEmailGoogle: (id: number)'));
+  assert.ok(api.includes('"DELETE"'));
+  assert.ok(ui.includes('conta.email && !conta.googleVinculado'));
+  assert.ok(ui.includes('titulo: "Remover e-mail autorizado?"'));
+});

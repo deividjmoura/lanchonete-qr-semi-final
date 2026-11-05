@@ -28,6 +28,8 @@ O login Google **não cria funcionários**. Cada conta precisa ser ativa e ter u
 
 Com uma sessão autenticada como admin, abra **Funções → Senhas → Acesso com Google**. A tela lista as contas ativas; informe o e-mail Google verificado de cada funcionário e salve. A API `GET /api/admin/contas` retorna `email` e `googleVinculado`, e a rota `PUT /api/admin/contas/email` valida o cadastro no servidor. E-mails são únicos sem distinção entre maiúsculas/minúsculas. Uma conta Google já vinculada não pode ser transferida por esta rota.
 
+Se o e-mail pré-cadastrado estiver incorreto, o administrador pode usar **Remover e-mail** na mesma tela. A operação limpa somente `staff.email` de uma conta ativa cujo `google_sub` ainda seja nulo e registra o evento `email_google_removido` na trilha de auditoria, na mesma transação. Ela não desativa o funcionário, não altera senha/sessões e não desvincula identidades Google já associadas. Para autorizar outro endereço, cadastre o novo e-mail e aguarde o primeiro login verificado.
+
 No primeiro login, o Google fornece o e-mail verificado e o identificador imutável `sub`. O servidor vincula o `sub` à conta staff correspondente. Contas inativas, e-mails não verificados, e-mails não cadastrados ou identidades já vinculadas a outro funcionário são recusados.
 
 ## Google OAuth consent screen

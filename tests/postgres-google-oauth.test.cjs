@@ -9,15 +9,16 @@ assert.equal(new URL(process.env.DATABASE_URL || 'postgres://x/none').pathname, 
   'Integração bloqueada: database deve ser qradmin_test');
 
 const pool = require('../db/pool');
+const { removerEmailGoogleStaff } = require('../db/admin');
 const run = `oauth${process.pid}${crypto.randomBytes(4).toString('hex')}`;
 const ids = [];
 
-async function criarStaff(sufixo, email = null) {
+async function criarStaff(sufixo, email = null, papel = 'caixa') {
   const login = `${run}-${sufixo}`;
   const { rows } = await pool.query(
     `INSERT INTO staff (nome, login, senha_hash, papel, email)
-     VALUES ($1, $2, $3, 'caixa', $4) RETURNING id`,
-    [`OAuth ${sufixo}`, login, `hash-ficticio-${login}`, email]
+     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+    [`OAuth ${sufixo}`, login, `hash-ficticio-${login}`, papel, email]
   );
   ids.push(rows[0].id);
   return rows[0].id;
@@ -64,4 +65,78 @@ test('PostgreSQL real: duas contas concorrentes não conseguem reivindicar o mes
   assert.equal(results.filter((result) => result.status === 'rejected' && result.reason?.code === '23505').length, 1);
   const owners = await pool.query('SELECT id FROM staff WHERE google_sub = $1', [sub]);
   assert.equal(owners.rowCount, 1);
+});
+
+
+test('PostgreSQL real: admin remove e-mail pré-autorizado com auditoria na mesma transação', async () => {
+  const adminId = await criarStaff('remove-admin', null, 'admin');
+  const alvoId = await criarStaff('remove-alvo', `remove-${run}@example.com`);
+  const requestId = `req-remove-${run}`;
+
+  const atualizado = await removerEmailGoogleStaff(alvoId, { id: adminId }, requestId);
+  assert.equal(Number(atualizado.id), alvoId);
+  assert.equal(atualizado.email, null);
+
+  const evento = await pool.query(
+    `SELECT ator_id, alvo_id, acao, request_id, contexto
+       FROM auditoria_eventos WHERE request_id = $1`,
+    [requestId]
+  );
+  assert.equal(evento.rowCount, 1);
+  assert.equal(Number(evento.rows[0].ator_id), adminId);
+  assert.equal(evento.rows[0].alvo_id, String(alvoId));
+  assert.equal(evento.rows[0].acao, 'email_google_removido');
+  assert.deepEqual(evento.rows[0].contexto, { emailRemovido: true, googleVinculado: false });
+});
+
+test('PostgreSQL real: remoção recusa não-admin, conta vinculada, inativa ou sem e-mail', async () => {
+  const adminId = await criarStaff('remove-check-admin', null, 'admin');
+  const caixaId = await criarStaff('remove-check-caixa');
+  const alvoNaoAutorizado = await criarStaff('remove-nao-autorizado', `nao-autorizado-${run}@example.com`);
+  await assert.rejects(
+    () => removerEmailGoogleStaff(alvoNaoAutorizado, { id: caixaId }, `req-nao-admin-${run}`),
+    (error) => error.status === 403
+  );
+
+  const vinculado = await criarStaff('remove-vinculado', `vinculado-${run}@example.com`);
+  await pool.query('UPDATE staff SET google_sub = $2 WHERE id = $1', [vinculado, `linked-${run}`]);
+  await assert.rejects(
+    () => removerEmailGoogleStaff(vinculado, { id: adminId }, `req-vinculado-${run}`),
+    (error) => error.status === 409
+  );
+
+  const inativo = await criarStaff('remove-inativo', `inativo-${run}@example.com`);
+  await pool.query('UPDATE staff SET ativo = FALSE WHERE id = $1', [inativo]);
+  await assert.rejects(
+    () => removerEmailGoogleStaff(inativo, { id: adminId }, `req-inativo-${run}`),
+    (error) => error.status === 409
+  );
+
+  const semEmail = await criarStaff('remove-sem-email');
+  await assert.rejects(
+    () => removerEmailGoogleStaff(semEmail, { id: adminId }, `req-vazio-${run}`),
+    (error) => error.status === 409
+  );
+});
+
+test('PostgreSQL real: remoções concorrentes do mesmo e-mail não geram segunda auditoria', async () => {
+  const adminId = await criarStaff('remove-conc-admin', null, 'admin');
+  const alvoId = await criarStaff('remove-conc-alvo', `conc-remove-${run}@example.com`);
+  const requestA = `req-remove-a-${run}`;
+  const requestB = `req-remove-b-${run}`;
+
+  const resultados = await Promise.allSettled([
+    removerEmailGoogleStaff(alvoId, { id: adminId }, requestA),
+    removerEmailGoogleStaff(alvoId, { id: adminId }, requestB),
+  ]);
+  assert.equal(resultados.filter((r) => r.status === 'fulfilled').length, 1);
+  assert.equal(resultados.filter((r) => r.status === 'rejected' && r.reason?.status === 409).length, 1);
+
+  const eventos = await pool.query(
+    `SELECT id FROM auditoria_eventos
+      WHERE acao = 'email_google_removido' AND alvo_id = $1
+        AND request_id IN ($2, $3)`,
+    [String(alvoId), requestA, requestB]
+  );
+  assert.equal(eventos.rowCount, 1);
 });

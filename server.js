@@ -22,6 +22,7 @@ const {
 const { informarPixPago, ErroPixCliente } = require('./db/pix-cliente');
 const {
   ErroAdmin,
+  removerEmailGoogleStaff,
   listMesas,
   listarPracas,
   criarPraca,
@@ -1186,6 +1187,24 @@ const server = http.createServer(async (req, res) => {
         throw e;
       }
     }
+    // Remove apenas o e-mail pré-autorizado de uma conta ainda não vinculada.
+    // exigirAcesso aplica sessão, papel, origem e CSRF; a transação revalida o admin.
+    const emailGoogleStaffMatch = p.match(/^\/api\/admin\/contas\/(\d+)\/email$/);
+    if (emailGoogleStaffMatch && req.method === 'DELETE') {
+      const ator = await exigirAcesso(req, 'admin');
+      const id = Number(emailGoogleStaffMatch[1]);
+      if (!Number.isSafeInteger(id) || id <= 0) {
+        return json(res, 400, { error: 'Funcionário inválido.' });
+      }
+      try {
+        const staff = await removerEmailGoogleStaff(id, ator, reqId);
+        return json(res, 200, { ok: true, staff });
+      } catch (e) {
+        if (e instanceof ErroAdmin) return json(res, e.status, { error: e.message });
+        throw e;
+      }
+    }
+
     /* Redefinição de senha de qualquer setor, sem exigir a senha antiga
        (o caso de uso é justamente a senha esquecida). A autorização é o papel
        admin, revalidado dentro da transação em redefinirSenhaStaff(). */

@@ -2260,6 +2260,7 @@ function Funcoes() {
   const [emailsGoogle, setEmailsGoogle] = useState<Record<number, string>>({});
   const [carregandoContas, setCarregandoContas] = useState(false);
   const [salvandoEmail, setSalvandoEmail] = useState<number | null>(null);
+  const [removendoEmail, setRemovendoEmail] = useState<number | null>(null);
   const [mensagemGoogle, setMensagemGoogle] = useState<string | null>(null);
   const [histFrom, setHistFrom] = useState(() => {
     const d = new Date();
@@ -2292,6 +2293,31 @@ function Funcoes() {
       setMensagemGoogle("E-mail autorizado salvo. O vínculo Google será concluído no primeiro login.");
     } catch (e: any) { setMensagemGoogle(e.message || "Não foi possível salvar o e-mail."); }
     finally { setSalvandoEmail(null); }
+  };
+
+  const removerEmailGoogle = async (id: number) => {
+    const conta = contasGoogle.find((item) => item.id === id);
+    if (!conta?.email || conta.googleVinculado) return;
+    const confirmado = await confirmarAcao({
+      titulo: "Remover e-mail autorizado?",
+      mensagem: `O e-mail pré-cadastrado de ${conta.nome} será removido. A conta continuará ativa, mas não poderá entrar pelo Google até que um novo e-mail seja cadastrado. Esta ação não desvincula contas Google existentes.`,
+      confirmar: "Remover e-mail",
+      perigo: true,
+    });
+    if (!confirmado) return;
+
+    setRemovendoEmail(id);
+    setMensagemGoogle(null);
+    try {
+      const atualizado = await api.removerEmailGoogle(id);
+      setContasGoogle((lista) => lista.map((c) => c.id === id ? { ...c, email: atualizado.staff.email } : c));
+      setEmailsGoogle((lista) => ({ ...lista, [id]: "" }));
+      setMensagemGoogle(`E-mail autorizado de ${conta.nome} removido.`);
+    } catch (e: any) {
+      setMensagemGoogle(e.message || "Não foi possível remover o e-mail.");
+    } finally {
+      setRemovendoEmail(null);
+    }
   };
 
   const subs = [
@@ -2409,7 +2435,14 @@ function Funcoes() {
                   <div key={conta.id} className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(12rem,1fr)_auto] gap-2 items-end rounded-sm border border-line p-3">
                     <div><p className="text-sm font-semibold text-text">{conta.nome}</p><p className="text-xs text-text-muted">{conta.papel} · {conta.login} · {conta.googleVinculado ? "Google vinculado" : "Aguardando primeiro login"}</p></div>
                     <label className="text-[11px] font-semibold text-text-muted">E-mail Google<input type="email" value={emailsGoogle[conta.id] || ""} disabled={Boolean(conta.googleVinculado)} onChange={(e) => setEmailsGoogle((v) => ({ ...v, [conta.id]: e.target.value }))} placeholder="funcionario@gmail.com" className="mt-1 block h-10 w-full rounded-sm border border-line-strong bg-surface-sunken px-3 text-sm text-text disabled:opacity-60" /></label>
-                    <Btn size="sm" disabled={Boolean(conta.googleVinculado) || salvandoEmail === conta.id || !emailsGoogle[conta.id]?.trim()} onClick={() => void salvarEmailGoogle(conta.id)}>{salvandoEmail === conta.id ? "Salvando..." : "Salvar e-mail"}</Btn>
+                    <div className="flex flex-wrap gap-2">
+                      <Btn size="sm" disabled={Boolean(conta.googleVinculado) || salvandoEmail === conta.id || removendoEmail === conta.id || !emailsGoogle[conta.id]?.trim()} onClick={() => void salvarEmailGoogle(conta.id)}>{salvandoEmail === conta.id ? "Salvando..." : "Salvar e-mail"}</Btn>
+                      {conta.email && !conta.googleVinculado && (
+                        <Btn size="sm" variant="danger" disabled={salvandoEmail === conta.id || removendoEmail === conta.id} onClick={() => void removerEmailGoogle(conta.id)}>
+                          {removendoEmail === conta.id ? "Removendo..." : "Remover e-mail"}
+                        </Btn>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
