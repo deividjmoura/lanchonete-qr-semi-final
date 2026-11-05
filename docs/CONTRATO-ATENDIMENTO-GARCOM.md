@@ -92,8 +92,10 @@ Todas exigem token de garçom ativo e sessão aberta.
 No fluxo normal da PWA, **Retirar item** é a primeira ação visível para um
 item pronto. Ao receber `POST /retirar` para item em `concluido`, o servidor
 grava aceite implícito (`concluido → aceito`) e retirada (`aceito → retirado`)
-na mesma transação. O primeiro garçom que retirar assume o item e, se a sessão
-ainda não tiver responsável, também assume a mesa. Não há botão extra de aceite
+na mesma transação. O primeiro garçom que retirar assume o item e preenche `pedidos.garcom_id`
+se o pedido ainda não tiver garçom. Se a sessão ainda não tiver responsável,
+também assume a mesa; uma retirada colaborativa não transfere uma mesa já
+atribuída. Não há botão extra de aceite
 na PWA. A rota `/assumir-entrega` permanece disponível para consumidores
 explícitos da API, mas não é chamada pela interface normal.
 
