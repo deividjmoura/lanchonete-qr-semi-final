@@ -13,19 +13,18 @@ import {
   Info,
   Key,
   LinkSimple,
-  Package,
   PencilSimple,
   Plus,
   Printer,
   Receipt,
   Trash,
   UserPlus,
-  WarningCircle,
 } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { OpsShell } from "../components/OpsShell";
 import Dashboard from "./Dashboard";
 import MesasAdmin from "./admin/MesasAdmin";
+import { ControlesEstoque, estoqueBaixo } from "./admin/ControlesEstoque";
 import { ImportarCardapio } from "./admin/ImportarCardapio";
 import { SegurancaConta } from "./admin/SegurancaConta";
 import { ControlesPaginacao, ListaLimitada, useLimiteLocal } from "../components/Paginacao";
@@ -108,7 +107,7 @@ export default function Admin({ secao }: { secao?: string }) {
       ativo={`admin-${aba}`}
       regime="expressive"
       kicker="Gestão"
-      titulo={abaAtual.label}
+      titulo={aba === "cardapio" ? "Cardápio & Estoque" : abaAtual.label}
       toolbarAction={aba === "painel" ? <IconBtn active={dashboardEditMode} label={dashboardEditMode ? "Concluir edição do dashboard" : "Editar dashboard"} aria-pressed={dashboardEditMode} onClick={() => setDashboardEditMode((value) => !value)} className="ops-dashboard-edit-toggle">{dashboardEditMode ? <Check size={20} weight="bold" /> : <PencilSimple size={20} weight="bold" />}</IconBtn> : undefined}
     >
       <AnimatePresence mode="wait">
@@ -132,6 +131,7 @@ export default function Admin({ secao }: { secao?: string }) {
 
 /* ================= CARDÁPIO ================= */
 function Cardapio() {
+  const lastError = usePub((s) => s.lastError);
   const produtos = usePub((s) => s.produtos);
   const categorias = usePub((s) => s.categorias);
   const toggle = usePub((s) => s.toggleProduto);
@@ -164,6 +164,9 @@ function Cardapio() {
   const [importarAberto, setImportarAberto] = useState(false);
   const hydrateCardapio = usePub((s) => s.hydrateCardapio);
 
+  useEffect(() => { void hydrateCardapio(); }, [hydrateCardapio]);
+  const baixos = produtos.filter(estoqueBaixo);
+
   const catsOrdenadas = [...categorias].sort((a, b) => a.ordem - b.ordem);
   const nomesCat = new Set(catsOrdenadas.map((c) => c.nome));
   const orfaos = produtos.filter((p) => !nomesCat.has(p.categoria));
@@ -194,7 +197,7 @@ function Cardapio() {
     <article
       key={p.id}
       className={cn(
-        "flex items-center gap-3.5 py-3 px-4 transition-opacity",
+        "flex flex-wrap items-center gap-3.5 py-3 px-4 transition-opacity",
         !p.ativo && "opacity-55",
       )}
     >
@@ -203,7 +206,7 @@ function Cardapio() {
         alt=""
         className="size-16 rounded-sm border border-line object-cover shrink-0"
       />
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-40">
         <div className="flex items-baseline justify-between gap-2">
           <p className="font-semibold text-text text-sm truncate">{p.nome}</p>
           <span className="font-mono text-xs font-bold text-brand-ink shrink-0">
@@ -219,6 +222,7 @@ function Cardapio() {
           )}
           {!p.ativo && <Badge tone="neutral">pausado</Badge>}
         </div>
+        <ControlesEstoque produto={p} />
       </div>
 
       <div className="flex items-center gap-1.5 shrink-0">
@@ -260,6 +264,27 @@ function Cardapio() {
 
   return (
     <div className="space-y-4">
+      {lastError && (
+        <p role="alert" className="rounded-sm border border-status-danger-border bg-status-danger-surface px-3 py-2 text-xs font-semibold text-status-danger-ink">{lastError}</p>
+      )}
+      {baixos.length > 0 && (
+        <ListaLimitada itens={baixos} tamanho={5}>
+          {({ itens, temMais, expandida, carregarMais, recolher }) => (
+            <section role="region" aria-label="Produtos com estoque baixo" className="rounded-sm border border-status-danger-border bg-status-danger-surface px-4 py-3">
+              <p className="text-sm font-semibold text-status-danger-ink">{baixos.length} {baixos.length === 1 ? "item com estoque baixo" : "itens com estoque baixo"}</p>
+              <ul className="mt-2 space-y-2">
+                {itens.map((p) => (
+                  <li key={p.id} className="border-t border-status-danger-border pt-2">
+                    <p className="text-sm text-status-danger-ink">{p.nome} · {p.estoque} un. · mínimo {p.estoqueMinimo ?? 0}{!p.ativo ? " · pausado" : ""}</p>
+                    <ControlesEstoque produto={p} />
+                  </li>
+                ))}
+              </ul>
+              <ControlesPaginacao temMais={temMais} expandida={expandida} carregarMais={carregarMais} recolher={recolher} className="pt-2" />
+            </section>
+          )}
+        </ListaLimitada>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-line">
         <p className="font-mono text-xs text-text-muted">
           {produtos.length} itens · {produtos.filter((p) => p.ativo).length} ativos
@@ -1258,206 +1283,6 @@ function Garcons() {
 /* Panorama, mapa/QR Codes e modal vivem em src/screens/admin/MesasAdmin.
    A aba continua restrita ao administrador pelo gate de papel acima. */
 
-/* ================= ESTOQUE ================= */
-function Estoque() {
-  const produtos = usePub((s) => s.produtos);
-  const categorias = usePub((s) => s.categorias);
-  const setEstoque = usePub((s) => s.setEstoque);
-  const ativar = usePub((s) => s.ativarControleEstoque);
-  const hydrateCardapio = usePub((s) => s.hydrateCardapio);
-  const reportarErro = usePub((s) => s.reportarErro);
-  const [abertas, setAbertas] = useState<Set<number | string>>(() => new Set());
-
-  useEffect(() => {
-    void hydrateCardapio();
-  }, [hydrateCardapio]);
-
-  const pedirQtd = (titulo: string, atual?: number) => {
-    const raw = window.prompt(titulo, atual != null ? String(atual) : "10");
-    if (raw == null) return null;
-    const n = Math.floor(Number(String(raw).replace(",", ".")));
-    if (!Number.isFinite(n) || n < 0) {
-      reportarErro("Quantidade inválida");
-      return null;
-    }
-    return n;
-  };
-
-  const ordemCat = useMemo(
-    () => [...categorias].sort((a, b) => a.ordem - b.ordem),
-    [categorias],
-  );
-
-  const grupos = useMemo(() => {
-    const byName = new Map<string, typeof produtos>();
-    for (const p of produtos) {
-      const k = p.categoria || "Outros";
-      if (!byName.has(k)) byName.set(k, []);
-      byName.get(k)!.push(p);
-    }
-    const ordered: { id: number | string; nome: string; itens: typeof produtos }[] = [];
-    for (const c of ordemCat) {
-      const itens = byName.get(c.nome) || [];
-      if (itens.length) {
-        ordered.push({ id: c.id, nome: c.nome, itens });
-        byName.delete(c.nome);
-      }
-    }
-    for (const [nome, itens] of byName) {
-      if (itens.length) ordered.push({ id: nome, nome, itens });
-    }
-    return ordered;
-  }, [produtos, ordemCat]);
-
-  const toggle = (id: number | string) => {
-    setAbertas((prev) => {
-      const n = new Set(prev);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
-  };
-
-  const controlados = produtos.filter((p) => p.estoque !== null);
-  const baixos = controlados.filter((p) => (p.estoque ?? 0) <= (p.estoqueMinimo ?? 0));
-  const gruposVisiveis = useLimiteLocal(grupos);
-
-  return (
-    <div role="region" aria-label="Estoque" className="space-y-4">
-      {baixos.length > 0 && (
-        <ListaLimitada itens={baixos} tamanho={5}>
-          {({ itens, temMais, expandida, carregarMais, recolher }) => (
-            <div className="rounded-sm border border-status-danger-border bg-status-danger-surface px-4 py-3">
-              <div className="flex items-center gap-3">
-                <WarningCircle size={18} weight="fill" className="text-status-danger-ink shrink-0" />
-                <p className="text-xs text-status-danger-ink">
-                  <strong>{baixos.length} {baixos.length === 1 ? "item" : "itens"} com estoque baixo:</strong>{" "}
-                  {itens.map((x) => `${x.nome} (${x.estoque})`).join(" · ")}
-                </p>
-              </div>
-              <ControlesPaginacao temMais={temMais} expandida={expandida} carregarMais={carregarMais} recolher={recolher} className="pt-2" />
-            </div>
-          )}
-        </ListaLimitada>
-      )}
-
-      {grupos.length === 0 && <p className="text-sm text-text-muted py-6 text-center">Nenhum produto cadastrado no estoque.</p>}
-      {gruposVisiveis.itens.map((g) => {
-        const open = abertas.has(g.id);
-        const nCtrl = g.itens.filter((x) => x.estoque !== null).length;
-        return (
-          <section
-            key={String(g.id)}
-            className="rounded-md border border-line bg-surface-raised overflow-hidden"
-          >
-            <button
-              type="button"
-              aria-expanded={open}
-              onClick={() => toggle(g.id)}
-              className="w-full flex items-center gap-2.5 px-4 py-3 text-left hover:bg-surface-hover"
-            >
-              {open ? (
-                <CaretDown size={16} weight="bold" className="text-brand-ink" />
-              ) : (
-                <CaretRight size={16} weight="bold" className="text-text-muted" />
-              )}
-              <span className="font-display text-xl font-bold tracking-tight text-text flex-1">
-                {g.nome}
-              </span>
-              <Badge tone="neutral">
-                {g.itens.length} · {nCtrl} c/ estoque
-              </Badge>
-            </button>
-            {open && (
-              <ListaLimitada itens={g.itens}>
-                {({ itens, temMais, expandida, carregarMais, recolher }) => (
-                  <>
-                    <div className="border-t border-dashed border-line-strong divide-y divide-line">
-                      {itens.map((p) => {
-                        const controla = p.estoque !== null;
-                        const q = p.estoque ?? 0;
-                        return (
-                          <div key={p.id} className="flex items-center gap-3 px-4 py-3">
-                            <img
-                              src={p.foto}
-                              alt=""
-                              className="size-11 rounded-sm border border-line object-cover shrink-0"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-text truncate">{p.nome}</p>
-                              <p className="font-mono text-[11px] text-text-muted">
-                                {controla ? (
-                                  <span
-                                    className={
-                                      q <= (p.estoqueMinimo ?? 0) ? "text-status-danger-ink font-bold" : "text-status-success-ink"
-                                    }
-                                  >
-                                    {q} un.
-                                  </span>
-                                ) : (
-                                  "sem controle"
-                                )}
-                              </p>
-                            </div>
-                            {controla ? (
-                              <div className="flex flex-wrap gap-1.5 justify-end">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const n = pedirQtd(`Quantas unidades ENTRARAM?\n(atual: ${q})`, 10);
-                                    if (n != null) setEstoque(p.id, q + n);
-                                  }}
-                                  className="min-h-9 px-2.5 rounded-sm bg-status-success-surface border border-status-success-border text-status-success-ink font-mono text-xs font-bold"
-                                >
-                                  + entrada
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const n = pedirQtd("Definir estoque absoluto:", q);
-                                    if (n != null) setEstoque(p.id, n);
-                                  }}
-                                  className="min-h-9 px-2.5 rounded-sm bg-surface-sunken border border-line text-text font-mono text-xs font-semibold"
-                                >
-                                  definir
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setEstoque(p.id, Math.max(0, q - 1))}
-                                  className="min-h-9 px-2.5 rounded-sm bg-surface-sunken border border-line text-text-muted font-mono text-xs font-semibold"
-                                >
-                                  −1
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const n = pedirQtd("Ativar estoque. Quantas unidades tem agora?", 20);
-                                  if (n != null) ativar(p.id, n);
-                                }}
-                                className="min-h-9 px-3 rounded-sm border border-brand-border bg-brand-surface text-brand-ink font-mono text-xs font-bold"
-                              >
-                                Ativar + qtd
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <ControlesPaginacao temMais={temMais} expandida={expandida} carregarMais={carregarMais} recolher={recolher} className="px-4 py-3 border-t border-line" />
-                  </>
-                )}
-              </ListaLimitada>
-            )}
-          </section>
-        );
-      })}
-      <ControlesPaginacao {...gruposVisiveis} />
-    </div>
-  );
-}
-
 /* ================= RELATÓRIO ================= */
 function Relatorio() {
   const reportarErro = usePub((s) => s.reportarErro);
@@ -2259,7 +2084,7 @@ function Funcoes() {
   const lastError = usePub((s) => s.lastError);
   const reportarErro = usePub((s) => s.reportarErro);
   const reduceMotion = useReducedMotion();
-  const [sub, setSub] = useState<"estoque" | "relatorio" | "historico" | "senhas" | "purge">("estoque");
+  const [sub, setSub] = useState<"relatorio" | "historico" | "senhas" | "purge">("relatorio");
   const [trocandoSenha, setTrocandoSenha] = useState(false);
   const [contasGoogle, setContasGoogle] = useState<Array<{ id: number; nome: string; login: string; papel: string; email?: string | null; googleVinculado?: boolean }>>([]);
   const [carregandoContas, setCarregandoContas] = useState(false);
@@ -2331,7 +2156,6 @@ function Funcoes() {
   };
 
   const subs = [
-    { id: "estoque" as const, label: "Estoque", Icon: Package },
     { id: "relatorio" as const, label: "Relatório", Icon: FileText },
     { id: "historico" as const, label: "Histórico", Icon: Receipt },
     { id: "senhas" as const, label: "Logins", Icon: Key },
@@ -2425,7 +2249,6 @@ function Funcoes() {
         })}
       </nav>
 
-      {sub === "estoque" && <Estoque />}
       {sub === "relatorio" && <Relatorio />}
       {sub === "senhas" && (
         <>
