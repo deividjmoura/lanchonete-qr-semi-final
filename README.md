@@ -214,7 +214,7 @@ DATABASE_URL=postgres://postgres:postgres@127.0.0.1:55433/qradmin_test npm run d
 DATABASE_URL=postgres://postgres:postgres@127.0.0.1:55433/qradmin_test npm run test:pg
 ~~~
 
-O diretório `.tmp-pgdata` é mantido entre execuções; o banco não é apagado automaticamente ao encerrar o processo. Remova esse diretório somente quando tiver certeza de que não precisa dos dados de teste. **Atenção:** `npm run test:pg`, `npm run test:e2e`, `npm run db:restore-drill` e scripts de smoke, carga ou segurança podem criar/alterar dados. Use exclusivamente bancos descartáveis de teste. Nunca aponte esses scripts para produção.
+O diretório `.tmp-pgdata` é mantido entre execuções; o banco não é apagado automaticamente ao encerrar o processo. Remova esse diretório somente quando tiver certeza de que não precisa dos dados de teste. **Atenção:** `npm run test:pg`, `npm run test:e2e`, `npm run db:restore-drill`, `npm run test:smoke`, `npm run test:full`, `npm run test:dia`, os cenários de carga e `npm run test:seguranca` podem criar/alterar dados. Use exclusivamente bancos/ambientes isolados de teste. Nunca aponte esses scripts para produção.
 
 ### Scripts adicionais
 
