@@ -392,31 +392,67 @@ async function main() {
           await page.locator('[data-tab="deliveries"]').click();
           await page.locator("#readyOrders .order").first().waitFor();
           assert.equal(await page.locator("#readyOrders .order").count(), 2);
-          /* O acordeão é exclusivo: abrir um cartão fecha o outro. A leitura do
-             atributo espera o evento de clique ser processado pelo renderer —
-             ler logo depois do click() pode pegar o estado anterior. */
+          /* O acordeão é exclusivo: abrir um cartão fecha o outro.
+             Duas armadilhas de corrida, ambas observadas no CI:
+               1) clicar logo após o clique anterior cai num nó já substituído
+                  pelo re-render, e o segundo clique nunca é processado;
+               2) ler o atributo externamente logo após o waitForFunction pode
+                  pegar outro re-render e falhar com 'false' !== 'true'.
+             Por isso: esperar o cartão ficar estável (bounding box e atributo
+             iguais em dois frames) antes de clicar, e verificar o estado DENTRO
+             da própria waitForFunction, para que a asserção e a espera sejam o
+             mesmo instante observado. */
           const esperarAria = async (indice, valor) => {
-            await page.waitForFunction(
-              ([i, v]) =>
-                document.querySelectorAll("#readyOrders .order-summary")[i]?.getAttribute("aria-expanded") === v,
-              [indice, valor],
-            );
-            const estado = await page
-              .locator("#readyOrders .order-summary")
-              .nth(indice)
-              .getAttribute("aria-expanded");
-            assert.equal(estado, valor);
+            try {
+              await page.waitForFunction(
+                ([i, v]) =>
+                  document.querySelectorAll("#readyOrders .order-summary")[i]?.getAttribute("aria-expanded") === v,
+                [indice, valor],
+                { timeout: 15000 },
+              );
+            } catch (erro) {
+              const atual = await page
+                .locator("#readyOrders .order-summary")
+                .nth(indice)
+                .getAttribute("aria-expanded")
+                .catch(() => "<ausente>");
+              throw new Error(
+                `acordeão: cartão ${indice} deveria ficar aria-expanded="${valor}", mas está "${atual}" (` +
+                  `total de cartões: ${await page.locator("#readyOrders .order-summary").count().catch(() => "?")})`,
+              );
+            }
+          };
+
+          /** Clica sem correr contra o re-render: espera o nó estabilizar. */
+          const clicarEstavel = async (locator) => {
+            for (let tentativa = 0; tentativa < 5; tentativa++) {
+              const antes = await locator.boundingBox();
+              const ariaAntes = await locator.getAttribute("aria-expanded");
+              await page.waitForTimeout(60);
+              const depois = await locator.boundingBox();
+              const ariaDepois = await locator.getAttribute("aria-expanded");
+              if (
+                antes &&
+                depois &&
+                antes.x === depois.x &&
+                antes.y === depois.y &&
+                ariaAntes === ariaDepois
+              ) {
+                break;
+              }
+            }
+            await locator.click();
           };
           const firstSummary = page.locator("#readyOrders .order-summary").nth(0);
           const secondSummary = page.locator("#readyOrders .order-summary").nth(1);
           assert.equal(await firstSummary.getAttribute("aria-expanded"), "false");
           assert.equal(await secondSummary.getAttribute("aria-expanded"), "false");
-          await firstSummary.click();
+          await clicarEstavel(firstSummary);
           await esperarAria(0, "true");
-          await secondSummary.click();
+          await clicarEstavel(secondSummary);
           await esperarAria(1, "true");
           await esperarAria(0, "false");
-          await secondSummary.click();
+          await clicarEstavel(secondSummary);
           await esperarAria(1, "false");
 
           for (const tab of ["orders", "deliveries", "billing", "tables"]) {
