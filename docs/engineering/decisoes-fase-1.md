@@ -19,7 +19,7 @@ Hoje existem dois repositórios públicos: `lanchonete-qr-semi-final` (onde est�
 - **Custo:** 🟢 R$ 0 · **Esforço:** ⚡ 10 min
 - **Recomendação: A.** Não apague o outro — coloque aviso no README (a issue proíbe remoção sem autorização).
 
-**Escolhi: ____ · Data: ____**
+**Escolhi: 1-A · Data: 05/11/2026** ✅ `lanchonete-qr-semi-final` é o canônico.
 
 ---
 
@@ -39,7 +39,7 @@ O repositório está público, **sem `LICENSE`** e sem `license` no `package.jso
 
 > ⚠️ Não existe "sem licença" viável. O estado atual é o pior para adoção: público mas sem permissão de uso.
 
-**Escolhi: ____ · Data: ____**
+**Escolhi: 2-A (proprietária) · Data: 05/11/2026** ✅ Implementado: `LICENSE` + `license: UNLICENSED` no `package.json`.
 
 ---
 
@@ -55,7 +55,9 @@ O repositório está público, **sem `LICENSE`** e sem `license` no `package.jso
 - **Recomendação:** se escolher licença **proprietária (1-A)**, a coerência pede **privado (3-B)**. Se escolher MIT/AGPL, mantenha público.
 - **Restrição da issue:** não mudar visibilidade sem decisão explícita e registrada.
 
-**Escolhi: ____ · Data: ____**
+**Escolhi: decidir junto do item 2 → coerente com 2-A, o repositório deve ir a privado.** ⚠️ Ação de conta: `gh repo edit --visibility private`. Não executada por não ser reversível sem aval.
+
+**Data: 05/11/2026**
 
 ---
 
@@ -75,7 +77,9 @@ O repositório está público, **sem `LICENSE`** e sem `license` no `package.jso
 
 > **Boa notícia:** a marca "Delicia's" **já foi removida** no PR #130 e há teste (`tests/branding-neutral.test.cjs`) impedindo o retorno. Essa parte de #45 está resolvida.
 
-**Escolhi: ____ · Data: ____**
+**Escolhi: pendente — depende de você levantar a origem das 35 imagens.** A marca Delicia's já está resolvida (PR #130).
+
+**Data: ____**
 
 ---
 
@@ -113,7 +117,10 @@ O código de health/smoke **já existe** (`scripts/health-smoke.js`, `production
 - **Custo:** 🟢 R$ 0 · **Esforço:** ⚡⚡
 - **Recomendação: 5.1-B + 5.2-B + 5.3-A.**
 
-**Escolhi: ____ · Data: ____**
+**Escolhi: 5.1-B (Telegram) + 5.2-B (`SELECT 1`) + 5.3-A (3 falhas em 5 min) · Data: 05/11/2026**
+
+✅ Notificador implementado (PR #244). Falta: criar bot no @BotFather e cadastrar `ALERTA_TELEGRAM_TOKEN` + `ALERTA_TELEGRAM_CHAT_ID`. Passo a passo em `execucao-fase-2.md` §2.1.
+⚠️ `SELECT 1` no `/healthz` ainda **não** foi feito: `tests/healthcheck.test.cjs` proíbe tocar o banco. Escolher 5.2-B exige alterar esse teste — mudança de decisão registrada, aguardando seu ok.
 
 ---
 
@@ -155,7 +162,13 @@ Esta é a decisão mais impactante na operação diária. Hoje existem logins ge
 - **Recomendação: 6-C + 6.1-C + 6.2-A + 6.3-A.**
 - **Pendente de #44:** por quanto tempo manter a trilha de auditoria. **Não decida isoladamente.**
 
-**Escolhi: ____ · Data: ____**
+**Escolhi: 6-A (conta individual para todos) + 6.2-B (todo desconto exige gerente) · Data: 05/11/2026**
+
+✅ Criação e desativação de conta implementadas (`db/auth.js`, migration `0037`, rotas `POST /api/admin/contas` e `.../desativar`, 15 testes).
+
+⚠️ **Escolher 6-A removeu a opção de PIN.** Na prática isso significa login a cada troca de turno no tablet compartilhado. Se virar atrito real na operação, o caminho de volta é o híbrido (6-C) — o modelo de dados já suporta, porque a conta individual é o que permite atribuir autoria.
+
+⬜ **Ainda falta o principal da issue:** instrumentar pagamento, desconto e cancelamento para gravar o ator na mesma transação. Hoje só existem eventos para categoria e produto.
 
 ---
 
@@ -200,21 +213,25 @@ O fluxo de troca de senha **já foi entregue**. Falta decidir o 2FA.
 - **Custo:** 🟢 R$ 0 · **Esforço:** ⚡ (decidir); implementação ⚡⚡
 - **Recomendação: 7-A + 7.2-A + 7.3-A + 7.4 (A + C).**
 
-**Escolhi: ____ · Data: ____**
+**Escolhi: recomendação técnica aceita → 7-A (só admins) + 7.2-A (TOTP) + 7.3-A (seed cifrada) + 7.4-A+C (códigos de recuperação + break-glass por CLI) · Data: 05/11/2026**
+
+Registrado como decisão delegada ("pode escolher a melhor opção"). A implementação depende de aprovação de escopo: exige `otplib` (ou similar), cifragem da seed com chave fora do banco e uma tela de enrollment.
 
 ---
 
 ## Consolidação — preencha e use para criar as sub-issues
 
-| # | Decisão | Escolha | Issue | Vira tarefa de código? |
+| # | Decisão | Escolha | Issue | Status |
 |---|---|---|---|---|
-| 1 | Repositório canônico | | #45 | não |
-| 2 | Licença | | #45 | não (criar arquivo) |
-| 3 | Visibilidade | | #45 | não |
-| 4 | Fonte das imagens demo | | #45 | não |
-| 5 | Alerta: canal / banco / limiar / responsável | | #43 | sim (pequena) |
-| 6 | Identidade: modelo / escopo / desconto / aprovação | | #48 | **sim (principal)** |
-| 7 | 2FA: escopo / método / custódia / recuperação | | #55 | **sim** |
+| 1 | Repositório canônico | **semi-final** | #45 | ✅ registrado |
+| 2 | Licença | **proprietária** | #45 | ✅ `LICENSE` + `UNLICENSED` |
+| 3 | Visibilidade | **privado** (coerente com 2) | #45 | ⚠️ ação de conta pendente |
+| 4 | Fonte das imagens demo | **pendente** | #45 | ⬜ você |
+| 5 | Alerta: Telegram / `SELECT 1` / 3-em-5min | **B + B + A** | #43 | ✅ notificador · ⚠️ `SELECT 1` bloqueado por teste |
+| 6 | Identidade: individual / desconto com gerente | **A + B** | #48 | ✅ criação de conta · ⬜ autoria financeira |
+| 7 | 2FA: admins / TOTP / seed cifrada / recuperação | **A + A + A + A+C** | #55 | ⬜ aprovação de dependência |
+
+**Legenda:** ✅ implementado · ⚠️ parcial ou bloqueado · ⬜ pendente
 
 ---
 
