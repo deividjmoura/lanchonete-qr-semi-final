@@ -63,6 +63,8 @@ const suites = [
   'postgres-autoria-dispositivo-compartilhado.test.cjs',
   // #44: a purga anonimiza e preserva valor/forma/data/autoria.
   'postgres-purge-anonimiza.test.cjs',
+  // #55: 2FA de admin — senha sozinha não pode gerar sessão utilizável.
+  'postgres-totp-login.test.cjs',
 ];
 
 // O drill de backup precisa de pg_dump/psql no PATH. Em ambiente local com

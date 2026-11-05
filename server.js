@@ -67,6 +67,8 @@ const {
   autenticar,
   autorizarGerente,
   criarSessao,
+  completarSessaoPendente,
+  sessaoPendenteDaRequisicao,
   destruirSessao,
   getStaffDaRequisicao,
   exigirAcesso,
@@ -112,6 +114,8 @@ const { resumoDia, topProdutosHoje } = require('./db/dashboard');
 const { dashboardGeral } = require('./db/dashboard-geral');
 const { relatorioVendas } = require('./db/relatorio');
 const { purgeHistorico, ErroPurge } = require('./db/purge');
+const totp = require('./db/totp');
+const totpContas = require('./db/totp-contas');
 const { processarUploadFoto, ErroFoto } = require('./db/foto');
 const { carregarFotoProduto } = require('./db/foto-serve');
 const { cancelarItem, liberarAceite } = require('./db/itens-operacoes');
@@ -857,6 +861,19 @@ const server = http.createServer(async (req, res) => {
       try {
         await garantirStaffSeed();
         const staff = await autenticar(loginInformado, b.senha);
+        // #55: admin com 2FA ativo NÃO recebe sessão utilizável nesta etapa.
+        // Ganha uma sessão PENDENTE (mfa_pendente = TRUE) que não abre nenhuma
+        // rota; só /api/login/2fa a promove, e ela dura 5 minutos.
+        if (await totpContas.exigeSegundoFator(pool, staff.id)) {
+          const tokenPendente = await criarSessao(staff.id, pool, { mfaPendente: true });
+          res.setHeader('Set-Cookie', cookieDeSessao(tokenPendente));
+          return json(res, 200, {
+            ok: false,
+            mfaPendente: true,
+            // Sem nome/papel: antes do segundo fator não se revela nada sobre a conta.
+            csrfToken: csrfTokenParaSessao(tokenPendente),
+          });
+        }
         const token = await criarSessao(staff.id);
         res.setHeader('Set-Cookie', cookieDeSessao(token));
         return json(res, 200, {
@@ -869,6 +886,60 @@ const server = http.createServer(async (req, res) => {
         if (e instanceof ErroAuth) return json(res, e.status, { error: e.message });
         throw e;
       }
+    }
+    // ---------------------------------------------------------------- #55 2FA
+    // Etapa 2 do login: consome a sessão PENDENTE (não autenticada) e só então
+    // emite a sessão completa. Rate limit próprio por conta pendente.
+    if (p === '/api/login/2fa' && req.method === 'POST') {
+      const pendente = await sessaoPendenteDaRequisicao(req);
+      if (!pendente) {
+        res.setHeader('Set-Cookie', cookieDeLogout());
+        return json(res, 401, {
+          error: 'Verificação expirada. Entre novamente.',
+          code: 'MFA_SESSAO_EXPIRADA',
+        });
+      }
+      if (!golpePermitido(`mfa:${pendente.staff.id}`, { janelaMs: 5 * 60 * 1000, max: 5 })) {
+        return json(res, 429, { error: 'Muitas tentativas. Aguarde alguns minutos.' });
+      }
+      const b = await body(req);
+      let resultado;
+      try {
+        resultado = await totpContas.verificarSegundoFator(pendente.staff.id, b && b.codigo);
+      } catch (e) {
+        if (e instanceof totp.ErroTotp) {
+          if (e.status === 503) return json(res, 503, { error: e.message, code: e.code });
+          // Segredo ilegível/chave trocada: a conta não pode entrar, mas a
+          // mensagem não expõe detalhe de cripto.
+          return json(res, e.status, { error: e.message, code: e.code || null });
+        }
+        throw e;
+      }
+      if (!resultado.ok) {
+        return json(res, 401, {
+          error: 'Código inválido. Use o código do app ou um código de recuperação.',
+          code: 'MFA_CODIGO_INVALIDO',
+          via: resultado.via,
+        });
+      }
+      const token = await completarSessaoPendente(pendente.token, pendente.staff.id);
+      const staff = await getStaffDaRequisicao({
+        headers: { cookie: `${SESSION_COOKIE}=${token}` },
+      });
+      res.setHeader('Set-Cookie', cookieDeSessao(token));
+      return json(res, 200, {
+        ok: true,
+        staff,
+        home: homeDoPapel(staff.papel),
+        csrfToken: csrfTokenParaSessao(token),
+        via: resultado.via,
+        codigosRestantes: resultado.via === 'recuperacao' ? resultado.restantes : undefined,
+      });
+    }
+    if (p === '/api/login/2fa/cancelar' && req.method === 'POST') {
+      await destruirSessao(parseCookies(req)[SESSION_COOKIE]);
+      res.setHeader('Set-Cookie', cookieDeLogout());
+      return json(res, 200, { ok: true });
     }
     if (p === '/api/logout' && req.method === 'POST') {
       verificarProtecaoCSRF(req);
@@ -883,6 +954,89 @@ const server = http.createServer(async (req, res) => {
       if (!staff) return json(res, 401, { error: 'Não autenticado' });
       const sessionToken = parseCookies(req)[SESSION_COOKIE];
       return json(res, 200, { staff, home: homeDoPapel(staff.papel), csrfToken: csrfTokenParaSessao(sessionToken) });
+    }
+
+    // ---------------------------------------------------- #55 2FA (própria conta)
+    if (p === '/api/me/2fa' && req.method === 'GET') {
+      const staff = await exigirSessao(req);
+      return json(res, 200, {
+        ...(await totpContas.estadoTotp(pool, staff.id)),
+        // Só é possível configurar com a chave de cifra presente no servidor.
+        disponivel: Boolean(String(process.env.TOTP_ENC_KEY || '').trim()),
+      });
+    }
+
+    // Passo 1 da ativação: gera o segredo e devolve o que o QR precisa.
+    // NADA é gravado — quem não confirmar o código não muda o estado da conta.
+    if (p === '/api/me/2fa/iniciar' && req.method === 'POST') {
+      const staff = await exigirSessao(req);
+      if (staff.papel !== 'admin') {
+        return json(res, 403, { error: '2FA está disponível apenas para administradores.' });
+      }
+      if (!golpePermitido(`2fa-iniciar:${staff.id}`, { janelaMs: 10 * 60 * 1000, max: 10 })) {
+        return json(res, 429, { error: 'Muitas tentativas. Aguarde alguns minutos.' });
+      }
+      let inicio;
+      try {
+        inicio = totp.iniciarAtivacao(staff.login);
+      } catch (e) {
+        if (e instanceof totp.ErroTotp) return json(res, e.status, { error: e.message, code: e.code });
+        throw e;
+      }
+      return json(res, 200, {
+        segredo: inicio.segredo,
+        uri: inicio.uri,
+        emissor: 'Lanchonete QR',
+        digitos: totp.DIGITOS,
+        periodo: totp.PASSO_SEGUNDOS,
+      });
+    }
+
+    // Passo 2: confirma o código e só então liga o 2FA.
+    if (p === '/api/me/2fa/ativar' && req.method === 'POST') {
+      const staff = await exigirSessao(req);
+      if (!golpePermitido(`2fa-ativar:${staff.id}`, { janelaMs: 10 * 60 * 1000, max: 10 })) {
+        return json(res, 429, { error: 'Muitas tentativas. Aguarde alguns minutos.' });
+      }
+      const b = await body(req);
+      try {
+        const out = await totpContas.ativarTotp(staff.id, b && b.segredo, b && b.codigo, {
+          tokenSessaoAtual: parseCookies(req)[SESSION_COOKIE],
+        });
+        return json(res, 200, {
+          ok: true,
+          // Texto em claro UMA vez: só o hash fica no banco.
+          codigosRecuperacao: out.codigosRecuperacao,
+          sessoesRevogadas: out.sessoesRevogadas,
+        });
+      } catch (e) {
+        if (e instanceof totp.ErroTotp) return json(res, e.status, { error: e.message, code: e.code });
+        throw e;
+      }
+    }
+
+    // Desativar exige a senha de novo: é o mesmo princípio de reautenticação
+    // da troca de senha (o segundo fator já foi exigido no login).
+    if (p === '/api/me/2fa/desativar' && req.method === 'POST') {
+      const staff = await exigirSessao(req);
+      if (!golpePermitido(`2fa-desativar:${staff.id}`, { janelaMs: 10 * 60 * 1000, max: 5 })) {
+        return json(res, 429, { error: 'Muitas tentativas. Aguarde alguns minutos.' });
+      }
+      const b = await body(req);
+      try {
+        await autenticar(staff.login, b && b.senha);
+      } catch {
+        return json(res, 403, { error: 'Senha incorreta.', code: 'SENHA_INCORRETA' });
+      }
+      try {
+        const out = await totpContas.desativarTotp(staff.id, {
+          tokenSessaoAtual: parseCookies(req)[SESSION_COOKIE],
+        });
+        return json(res, 200, out);
+      } catch (e) {
+        if (e instanceof totp.ErroTotp) return json(res, e.status, { error: e.message, code: e.code });
+        throw e;
+      }
     }
 
     if (p === '/api/me/senha' && req.method === 'POST') {

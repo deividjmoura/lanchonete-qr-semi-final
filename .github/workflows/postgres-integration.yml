@@ -109,6 +109,12 @@ jobs:
       - name: Purga anonimiza e preserva o financeiro (#44)
         run: node --test tests/postgres-purge-anonimiza.test.cjs
 
+      # #55: o 2FA de admin de ponta a ponta. O caso que mais importa aqui é o
+      # da etapa 1: senha correta NÃO pode gerar sessão utilizável, senão o
+      # segundo fator vira decoração.
+      - name: 2FA de administrador — login em duas etapas (#55)
+        run: node --test tests/postgres-totp-login.test.cjs
+
       - name: Produção parcial por item (cozinha/bar)
         if: ${{ hashFiles('tests/postgres-producao-parcial.test.cjs') != '' }}
         run: node --test tests/postgres-producao-parcial.test.cjs
