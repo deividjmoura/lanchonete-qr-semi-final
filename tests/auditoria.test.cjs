@@ -206,28 +206,24 @@ test('migration 0025 cria a tabela sem colunas de segredo e com índices de cons
 });
 
 
-test('remoção de e-mail Google exige admin, preserva vínculos existentes e audita antes do commit', () => {
+test('gerenciamento de e-mail Google permite desvincular e fica na aba Logins', () => {
   const admin = fs.readFileSync(path.join(__dirname, '..', 'db', 'admin.js'), 'utf8');
   const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   const api = fs.readFileSync(path.join(__dirname, '..', 'src', 'lib', 'api.ts'), 'utf8');
   const ui = fs.readFileSync(path.join(__dirname, '..', 'src', 'screens', 'Admin.tsx'), 'utf8');
-  const inicio = admin.indexOf('async function removerEmailGoogleStaff(');
-  const evento = admin.indexOf("acao: 'email_google_removido'", inicio);
-  const commit = admin.indexOf("await client.query('COMMIT')", evento);
-
-  assert.ok(inicio >= 0 && evento > inicio && commit > evento);
-  assert.ok(admin.slice(inicio, commit).includes('obterAdminAtivo(client, ator)'));
-  assert.ok(admin.slice(inicio, commit).includes('google_sub IS NULL AND email IS NOT NULL'));
+  assert.ok(admin.includes('async function definirEmailGoogleStaff('));
+  assert.ok(admin.includes('async function removerEmailGoogleStaff('));
+  assert.ok(admin.includes('google_sub = NULL'));
+  assert.ok(admin.includes("DELETE FROM staff_sessoes WHERE staff_id = $1"));
+  assert.ok(admin.includes('registrarEventoIndependente'));
   assert.ok(server.includes("if (emailGoogleStaffMatch && req.method === 'DELETE')"));
-  assert.ok(server.includes("exigirAcesso(req, 'admin')"));
+  assert.ok(server.includes('definirEmailGoogleStaff(id, email, ator, reqId)'));
   assert.ok(server.includes('removerEmailGoogleStaff(id, ator, reqId)'));
   assert.ok(api.includes('removerEmailGoogle: (id: number)'));
-  assert.ok(api.includes('"DELETE"'));
-  assert.ok(ui.includes('conta.email && !conta.googleVinculado'));
-  assert.ok(ui.includes('titulo: "Remover e-mail autorizado?"'));
-  assert.ok(ui.includes('{ id: "google" as const, label: "Google", Icon: LinkSimple }'));
-  assert.ok(ui.includes('if (sub !== "google") return;'));
-  assert.ok(ui.includes('{sub === "google" && ('));
-  assert.ok(ui.includes("Identidade Google já vinculada."));
-  assert.ok(ui.includes("Nenhum e-mail Google pré-cadastrado para esta conta."));
+  assert.ok(ui.includes('{ id: "senhas" as const, label: "Logins", Icon: Key }'));
+  assert.ok(!ui.includes('{ id: "google" as const, label: "Google"'));
+  assert.ok(ui.includes('if (sub !== "senhas") return;'));
+  assert.ok(ui.includes('{sub === "senhas" && ('));
+  assert.ok(ui.includes('Desvincular e remover'));
+  assert.ok(!ui.includes('disabled={Boolean(conta.googleVinculado)}'));
 });

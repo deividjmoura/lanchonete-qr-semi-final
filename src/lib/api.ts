@@ -230,11 +230,11 @@ export const api = {
   contasStaff: () =>
     apiGet<Array<{ id: number; nome: string; login: string; papel: string; email?: string | null; googleVinculado?: boolean; deveTrocarSenha?: boolean }>>("/api/admin/contas"),
   definirEmailGoogle: (id: number, email: string) =>
-    apiSend<{ ok: boolean; staff: { id: number; nome: string; login: string; email: string } }>(
+    apiSend<{ ok: boolean; staff: { id: number; nome: string; login: string; email: string | null; googleVinculado?: boolean; googleDesvinculado?: boolean; sessoesRevogadas?: number } }>(
       "/api/admin/contas/email", "PUT", { id, email }
     ),
   removerEmailGoogle: (id: number) =>
-    apiSend<{ ok: boolean; staff: { id: number; nome: string; login: string; email: null } }>(
+    apiSend<{ ok: boolean; staff: { id: number; nome: string; login: string; email: null; googleVinculado?: boolean; googleDesvinculado?: boolean; sessoesRevogadas?: number } }>(
       `/api/admin/contas/${id}/email`, "DELETE"
     ),
   /** Redefinição pelo admin: não pede a senha antiga, porque ela foi esquecida. */

@@ -13,6 +13,11 @@
  * exatamente a versão declarada em `public/garcom-pwa/sw.js`. Documentos datados
  * de diagnóstico/auditoria ficam de fora de propósito: eles registram o estado de
  * uma data e devem continuar citando a versão daquela data.
+ *
+ * O mesmo princípio vale para o que as páginas públicas afirmam sobre segurança
+ * (o texto não pode negar uma capacidade que o código já tem) e para o rótulo das
+ * abas clicadas pelos E2E — a aba "Senhas" virou "Logins" e derrubou o E2E de
+ * redefinição de senha, porque nada ligava o texto do teste ao da interface.
  */
 
 const test = require('node:test');
@@ -79,6 +84,51 @@ test('cópias legais em dist/ são idênticas às de public/', () => {
       `dist/${arquivo} precisa ser cópia exata de public/${arquivo}`
     );
   }
+});
+
+test('a política de privacidade acompanha o que o admin realmente faz com o vínculo Google', () => {
+  const admin = ler('db/admin.js');
+  const paginas = ['public/politica-de-privacidade.html', 'public/termos-de-servico.html']
+    .map((arquivo) => ler(arquivo))
+    .join('\n');
+
+  // Texto antigo, quando a remoção só limpava `email`: hoje seria mentira.
+  assert.doesNotMatch(paginas, /não desvincula uma identidade Google/i);
+
+  const desvincula = /google_sub = NULL/.test(admin);
+  if (desvincula) {
+    assert.match(
+      ler('public/politica-de-privacidade.html'),
+      /vínculo Google anterior é desfeito e as sessões dessa conta são encerradas/,
+      'se o código desvincula o Google, a Política precisa dizer isso'
+    );
+    assert.match(ler('docs/engineering/data-policy-proposal.md'), /sessões daquela conta são revogadas/);
+  }
+});
+
+test('o E2E de redefinição de senha clica no rótulo real da aba de logins', () => {
+  const ui = ler('src/screens/Admin.tsx');
+  const e2e = ler('tests/e2e/admin-redefine-senha.e2e.cjs');
+  const rotulo = ui.match(/\{ id: "senhas" as const, label: "([^"]+)"/);
+  assert.ok(rotulo, 'Admin.tsx declara a aba de senhas/logins');
+
+  assert.ok(
+    e2e.includes(`getByRole('button', { name: '${rotulo[1]}', exact: true })`),
+    `o E2E precisa clicar na aba "${rotulo[1]}" — renomear a aba sem atualizar o teste deixa o CI vermelho`
+  );
+  assert.doesNotMatch(e2e, /name: 'Senhas', exact: true/, 'rótulo antigo da aba');
+});
+
+test('a aba Logins renderiza uma única seção de redefinição de senha', () => {
+  // A PR #254 uniu a aba Google à aba de senhas e deixou o bloco antigo no
+  // lugar: a tela passou a mostrar "Redefinir senha de um setor" duas vezes e
+  // o E2E morreu em strict mode. O painel é único e o botão também.
+  const ui = ler('src/screens/Admin.tsx');
+  const secoes = ui.match(/\{sub === "senhas" && \(/g) || [];
+  assert.equal(secoes.length, 1, 'apenas uma seção `sub === "senhas"`');
+  const botoes = ui.match(/Redefinir senha de um setor/g) || [];
+  assert.equal(botoes.length, 1, 'apenas um botão "Redefinir senha de um setor"');
+  assert.equal((ui.match(/<TrocarSenha obrigatorio/g) || []).length, 1);
 });
 
 test('as páginas legais não prometem o que o código não faz', () => {
