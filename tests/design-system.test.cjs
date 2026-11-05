@@ -118,23 +118,26 @@ test("tokens semânticos atendem contraste WCAG AA nos dois temas", () => {
   }
 });
 
-test("PWA implementa ação única de sincronização no cabeçalho, faixa compacta do garçom e sprite Phosphor", () => {
+test("PWA concentra conexão, sincronização, tema, avisos e ajuda no rodapé, com sprite Phosphor", () => {
   const pwaHtml = read("public/garcom-pwa/index.html");
-  const pwaCss = read("public/garcom-pwa/styles.css");
   const syncMatches = pwaHtml.match(/id="syncBtn"/g) || [];
   assert.equal(syncMatches.length, 1, "deve existir exatamente um botão de sincronização");
+  assert.doesNotMatch(pwaHtml, /class="app-header"/, "a faixa superior fixa foi removida");
+  const footer = pwaHtml.slice(pwaHtml.indexOf('<footer class="app-footer"'), pwaHtml.indexOf("</footer>"));
   assert.match(
-    pwaHtml,
-    /id="connection"[\s\S]{0,160}id="syncBtn"[^>]*aria-label="[^"]+"[^>]*title="[^"]+"/,
-    "#syncBtn precisa ficar imediatamente à direita do indicador de conexão no cabeçalho global",
+    footer,
+    /id="connection"[\s\S]{0,480}id="syncBtn"[^>]*aria-label="[^"]+"[^>]*title="[^"]+"/,
+    "#syncBtn precisa ficar imediatamente à direita do indicador de conexão no rodapé",
   );
+  for (const id of ["themeToggleBtn", "helpBtn", "openNotificationSettings"]) {
+    assert.match(footer, new RegExp('id="' + id + '"'), id + " também vive no rodapé");
+  }
+  const main = pwaHtml.slice(pwaHtml.indexOf('<main class="workspace">'), pwaHtml.indexOf("</main>"));
   assert.doesNotMatch(
-    pwaHtml.slice(pwaHtml.indexOf('<main class="workspace">')),
+    main,
     /Sincronizar/i,
     "nenhum botão visual Sincronizar repetido nas páginas individuais",
   );
-  assert.match(pwaHtml, /class="waiter-strip"/, "identificação compacta do garçom");
-  assert.match(pwaCss, /\.waiter-strip-inner\s*\{[^}]*min-height:\s*28px/);
   assert.match(pwaHtml, /icons\.svg#squares-four-regular/);
   assert.match(pwaHtml, /icons\.svg#squares-four-fill/);
 });

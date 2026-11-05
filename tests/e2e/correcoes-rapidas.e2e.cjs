@@ -196,6 +196,10 @@ async function notificationFlows(browser) {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('dialog', (dialog) => dialog.accept());
   await page.goto(base + '/garcom-pwa/?token=novo', { waitUntil: 'load' });
+  await page.locator('.app-footer .bottom-nav').waitFor();
+  assert.equal(await page.locator('.app-header').count(), 0, 'sem faixa superior');
+  assert.equal(await page.locator('#tableGrid').isVisible(), false, 'salão completo oculto antes da busca');
+  await page.locator('#tableSearch').fill('1');
   await page.locator('#tableGrid .table-tile').first().waitFor();
   assert.equal(await page.locator('#notificationConsent[open]').count(), 0, 'primeira visita não bloqueia o atendimento');
   assert.equal(await page.evaluate(() => window.__permissionCalls), 0, 'nunca solicita permissão automaticamente');
