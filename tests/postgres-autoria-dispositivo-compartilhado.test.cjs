@@ -95,8 +95,10 @@ test.before(async () => {
   );
   criados.produtos.push(prod[0].id);
 
+  // `max(numero) + 1` numa tabela vazia é NULL e viola o NOT NULL de
+  // `mesas.numero`: o teste só passava onde outra suíte já tinha deixado mesas.
   const { rows: mesa } = await pool.query(
-    "INSERT INTO mesas (numero, token, status) VALUES ((SELECT max(numero)+1 FROM mesas), $1, 'ocupada') RETURNING id",
+    "INSERT INTO mesas (numero, token, status) VALUES ((SELECT coalesce(max(numero),0)+1 FROM mesas), $1, 'ocupada') RETURNING id",
     [randomUUID()]
   );
   criados.mesas.push(mesa[0].id);

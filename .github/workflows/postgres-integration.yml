@@ -91,6 +91,19 @@ jobs:
       - name: Payment authorship by identity PostgreSQL tests (#48)
         run: node --test tests/postgres-pagamento-operador-id.test.cjs
 
+      # Cada um destes arquivos existia na árvore sem nenhum job que o
+      # executasse — a suíte "verde" não cobria o que eles provam.
+      - name: Cardápio authorship PostgreSQL tests (#48)
+        run: node --test tests/postgres-autoria-cardapio.test.cjs
+      - name: Shared-device authorship PostgreSQL tests (#48)
+        run: node --test tests/postgres-autoria-dispositivo-compartilhado.test.cjs
+      - name: Individual staff accounts PostgreSQL tests
+        run: node --test tests/postgres-contas-individuais.test.cjs
+      - name: Health check with database PostgreSQL tests
+        run: node --test tests/postgres-healthz-banco.test.cjs
+      - name: Praças removal PostgreSQL tests
+        run: node --test tests/postgres-pracas-remocao.test.cjs
+
       - name: Produção parcial por item (cozinha/bar)
         if: ${{ hashFiles('tests/postgres-producao-parcial.test.cjs') != '' }}
         run: node --test tests/postgres-producao-parcial.test.cjs
