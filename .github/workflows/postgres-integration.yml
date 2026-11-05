@@ -1,13 +1,21 @@
 name: PostgreSQL integration
 
+# Branches de trabalho são validadas pelo PR; a main é validada após o merge.
+# Evita executar o mesmo trabalho no push da branch e no pull_request.
 on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, 'hardening/**', 'test/**', 'arena/**', 'fix/**']
+    branches: [main]
 
 permissions:
   contents: read
+
+# Cancela apenas execuções antigas deste workflow no mesmo PR/ref.
+# PRs independentes e outros workflows nunca compartilham o grupo.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   postgres-integration:
