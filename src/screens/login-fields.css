@@ -95,3 +95,66 @@
 .login-credential > input:-webkit-autofill {
   -webkit-box-shadow: 0 0 0 1000px var(--surface) inset;
 }
+
+
+/* A tela de acesso ocupa a viewport; foco/teclado não desloca a página. */
+.login-viewport {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+.login-header { flex: 0 0 1.5rem; }
+.login-main { min-height: 0; flex: 1 1 auto; padding-block: clamp(2px, 1dvh, 12px); }
+.login-footer {
+  flex: 0 0 auto;
+  border-top: 1px solid color-mix(in srgb, var(--line) 58%, transparent);
+  padding-top: .4rem;
+  padding-bottom: max(.15rem, env(safe-area-inset-bottom));
+}
+.login-footer-inner { gap: .25rem .75rem; }
+.login-footer-legal { min-width: 0; }
+.login-footer-text-link {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.login-footer-text-link:hover { color: var(--brand-ink); text-decoration: underline; text-underline-offset: 3px; }
+.login-footer-link, .login-icon-action {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+}
+.login-footer-link { border-radius: 999px; }
+.login-icon-action { padding: 0 !important; }
+.login-viewport:has(.login-credential input:focus) .login-header,
+.login-viewport:has(.login-credential input:focus) .login-footer { display: none; }
+.login-viewport:has(.login-credential input:focus) .login-main { padding-block: 0; }
+.login-viewport:has(.login-credential input:focus) .login-brand { margin-bottom: .5rem; }
+.login-viewport:has(.login-credential input:focus) .login-brand img {
+  width: 52px;
+  height: 52px;
+  margin-bottom: .15rem;
+}
+.login-viewport:has(.login-credential input:focus) .login-brand p { margin-bottom: .1rem; }
+.login-viewport:has(.login-credential input:focus) .login-brand h1 { font-size: 1.45rem; }
+.login-viewport:has(.login-credential input:focus) .login-brand > p:last-child { display: none; }
+@media (max-height: 700px) {
+  .login-viewport { padding-top: .4rem; padding-bottom: .4rem; }
+  .login-brand { margin-bottom: .75rem; }
+  .login-brand img { width: 68px; height: 68px; margin-bottom: .3rem; }
+  .login-brand h1 { font-size: 1.65rem; }
+  .login-content .login-sector-button { min-height: 4.25rem; padding-block: .5rem; }
+  .login-content .login-form { margin-top: .6rem; padding-top: .6rem; }
+}
+@media (max-width: 639px) {
+  .login-footer-inner { align-items: center; }
+  .login-footer-legal { justify-content: center; }
+}
+@media (max-height: 560px) {
+  .login-viewport:has(.login-credential input:focus) .login-brand img { display: none; }
+  .login-viewport:has(.login-credential input:focus) .login-brand { margin-bottom: .25rem; }
+}
