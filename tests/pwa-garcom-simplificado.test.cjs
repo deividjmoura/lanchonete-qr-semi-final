@@ -127,30 +127,20 @@ test('aviso de offline só aparece quando o SyncEngine confirma queda de conexã
   assert.equal(offlineNotice.hidden, true, 'volta a esconder quando o servidor responde');
 });
 
-/* --------------------------------------------------- cartão único por mesa */
+/* ------------------------------------ ações no modal e lista única do salão */
 
-test('cada mesa tem um único cartão "Mesa NN — Cliente" com ações em ícones', () => {
-  assert.match(js, /className='my-table-card'/, 'um cartão por mesa');
-  assert.doesNotMatch(js, /className='my-table-row'/, 'sem linha duplicando o cartão');
-  assert.doesNotMatch(css, /\.my-table-row\s*\{/, 'CSS da linha duplicada removido');
-  assert.match(js, /title\.textContent='Mesa '\+String\(m\.numero\)\.padStart\(2,'0'\)/);
-  assert.match(js, /client\.textContent='— '\+\(m\.clienteNome\|\|'Cliente na mesa'\)/);
-  for (const [rotulo, icone] of [
-    ['Novo pedido', 'plus-bold'],
-    ['Ver pedidos', 'list-checks-regular'],
-    ['Cobrar', 'currency-circle-dollar-regular'],
-    ['Transferir', 'swap-regular'],
-    ['Deixar mesa', 'sign-out-regular'],
-  ]) {
-    assert.ok(js.includes("'" + rotulo), 'ação ' + rotulo + ' presente');
-    assert.ok(js.includes("'" + icone + "'"), 'ícone ' + icone + ' usado nas ações');
-    assert.ok(sprite.includes('id="' + icone + '"'), 'ícone ' + icone + ' existe no sprite');
-  }
-  assert.match(js, /btn\.setAttribute\('aria-label',label\)/, 'ações em ícone têm rótulo acessível');
-  assert.match(js, /btn\.title=label/, 'ações em ícone têm dica de título');
-  // O select de transferência saiu dos cartões e do modal de detalhes.
-  assert.doesNotMatch(js, /select\.className='secondary small'/);
-  assert.doesNotMatch(js, /label\.className='field';label\.textContent='Transferir para outro garçom'/);
+test('salão completo substitui a lista duplicada e centraliza ações no modal', () => {
+  assert.doesNotMatch(html, /id="myTables"|Minhas mesas/);
+  assert.doesNotMatch(js, /function renderMyTables|className='my-table-card'/);
+  assert.doesNotMatch(css, /my-table-card|my-table-actions|my-tables-list/);
+  const modal = js.slice(js.indexOf('function openTableDetails('), js.indexOf('function openTransferModal('));
+  for (const action of [
+    'openOrdersModal(m.numero)',
+    'openBillingForSession(m.sessaoId,m.numero)',
+    'openTransferModal(m.numero)',
+    'leaveTable(m.numero)',
+  ]) assert.ok(modal.includes(action), action + ' está disponível no modal');
+  assert.ok(modal.includes("m.pedidoClienteQr?'Assumir mesa':'Iniciar atendimento'"));
 });
 
 /* ------------------------------------------- transferência em modal único */
