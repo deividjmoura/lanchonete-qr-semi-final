@@ -525,6 +525,10 @@
       padding-top: 1rem;
       border-top: 1px dashed var(--line);
     }
+  
+    /* Rolagem discreta sem trilho visível; a navegação continua funcionando. */
+    html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
+    *::-webkit-scrollbar { display: none; width: 0; height: 0; }
   </style>
 </head>
 <body>
