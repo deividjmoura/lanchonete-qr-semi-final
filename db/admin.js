@@ -44,6 +44,61 @@ async function obterAdminAtivo(client, ator) {
   return admin;
 }
 
+/**
+ * Remove somente o e-mail pré-autorizado de uma conta ativa ainda não vinculada
+ * ao Google. A mutação e a auditoria pertencem à mesma transação.
+ */
+async function removerEmailGoogleStaff(idBruto, ator, requestId = null) {
+  const id = numeroInteiroPositivo(idBruto, 'funcionário');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const admin = await obterAdminAtivo(client, ator);
+    if (!admin) throw new ErroAdmin(403, 'Apenas um administrador ativo pode remover e-mails.');
+
+    const { rows } = await client.query(
+      'SELECT id, nome, login, email, google_sub, ativo FROM staff WHERE id=$1 FOR UPDATE',
+      [id]
+    );
+    const alvo = rows[0];
+    if (!alvo) throw new ErroAdmin(404, 'Funcionário não encontrado.');
+    if (!alvo.ativo) throw new ErroAdmin(409, 'Não é possível remover o e-mail de um funcionário inativo.');
+    if (alvo.google_sub) {
+      throw new ErroAdmin(409, 'Esta conta já está vinculada ao Google. A remoção simples não pode desvincular essa identidade.');
+    }
+    if (!alvo.email) throw new ErroAdmin(409, 'Este funcionário não possui e-mail Google cadastrado.');
+
+    const atualizado = await client.query(
+      `UPDATE staff
+          SET email = NULL
+        WHERE id = $1 AND ativo = TRUE AND google_sub IS NULL AND email IS NOT NULL
+        RETURNING id, nome, login, email`,
+      [id]
+    );
+    if (!atualizado.rows[0]) {
+      throw new ErroAdmin(409, 'O cadastro mudou durante a operação. Atualize a lista e tente novamente.');
+    }
+
+    await registrarEvento(client, {
+      atorTipo: 'staff',
+      atorId: Number(admin.id),
+      atorNome: admin.nome || null,
+      acao: 'email_google_removido',
+      alvoTipo: 'staff',
+      alvoId: String(id),
+      requestId,
+      contexto: { emailRemovido: true, googleVinculado: false },
+    });
+    await client.query('COMMIT');
+    return atualizado.rows[0];
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 async function listMesas() {
   const { rows } = await pool.query(
     `SELECT m.id, m.numero, m.token, m.status, m.praca_id, pr.nome AS praca_nome,
@@ -871,6 +926,7 @@ async function removerCategoria(id) {
 
 module.exports = {
   ErroAdmin,
+  removerEmailGoogleStaff,
   listMesas,
   listarPracas,
   criarPraca,
