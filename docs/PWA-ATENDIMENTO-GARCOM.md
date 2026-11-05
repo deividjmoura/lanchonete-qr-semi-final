@@ -177,7 +177,7 @@ parecia quebrado.
 
 ## Segurança
 
-- O link individual pode trazer o token na query string; o app remove esse parâmetro da URL visível, mas mantém a credencial em `localStorage` (`waiter-token`) e a envia nas rotas da API. É um token bearer, não um cookie `HttpOnly`. Não compartilhar links, não registrar tokens em logs e não usar dispositivos compartilhados sem controle. Se houver suspeita de exposição, desativar/rotacionar o acesso individual no Admin.
+- O link individual pode trazer o token na query string; o app remove esse parâmetro da URL visível, mas mantém a credencial em `localStorage` (`waiter-token`) e a envia nas rotas da API. É um token bearer, não um cookie `HttpOnly`. Não compartilhar links, não registrar tokens em logs e não usar dispositivos compartilhados sem controle. Se houver suspeita de exposição, desativar o cadastro do garçom no Admin para bloquear o acesso.
 - 401/403 marcam a fila como conflito de autenticação e a tela mostra
   **LINK INVÁLIDO OU DESATIVADO**, sem descartar pedidos.
 - Toda permissão é revalidada no servidor, dentro da transação. Checagem de
