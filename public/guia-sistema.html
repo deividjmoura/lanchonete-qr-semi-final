@@ -222,6 +222,34 @@
     /* Rolagem discreta sem trilho visível; a navegação continua funcionando. */
     html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
     *::-webkit-scrollbar { display: none; width: 0; height: 0; }
+  
+    /* Conteúdo ocupa a largura útil em cada viewport, sem coluna estreita fixa. */
+    html, body { width: 100%; max-width: 100%; overflow-x: clip; }
+    .shell { width: 100%; min-width: 0; grid-template-columns: minmax(0, 1fr); }
+    .content, .content-inner, .sidebar { min-width: 0; width: 100%; max-width: none; }
+    .content-inner { max-width: none; }
+    .content { padding-left: clamp(1rem, 4vw, 2.5rem); padding-right: clamp(1rem, 4vw, 2.5rem); }
+    .frame, figure { min-width: 0; max-width: 100%; }
+    .frame img { display: block; width: 100%; max-width: 100%; height: auto; }
+    .frame--portrait { width: min(100%, 360px); }
+    .panel, .alert, details.rule { min-width: 0; overflow-wrap: anywhere; }
+    @media (min-width: 860px) {
+      .shell { grid-template-columns: minmax(210px, 240px) minmax(0, 1fr); }
+      .sidebar { position: sticky; top: 0; height: 100dvh; overflow-y: auto; }
+      .content { padding-top: clamp(1.5rem, 3vw, 3rem); }
+    }
+    @media (max-width: 859px) {
+      .sidebar { padding: 1rem; }
+      .sidebar .brand { margin-bottom: .75rem; }
+      .sidebar .note { margin-top: .75rem; }
+      .content { padding-top: 1.25rem; padding-bottom: 2rem; }
+    }
+    @media (max-width: 420px) {
+      .flow-mini { grid-template-columns: minmax(0, 1fr); }
+      .content { padding-left: .9rem; padding-right: .9rem; }
+      .panel { padding: .9rem; }
+    }
+
   </style>
 </head>
 <body>

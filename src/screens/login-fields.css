@@ -28,6 +28,113 @@
   .login-credential > input { font-size: 16px; }
 }
 
+/* Login: composição aberta, com foco na marca e sem caixas concorrentes. */
+.login-panel {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.login-brand img {
+  filter: drop-shadow(0 12px 22px rgb(8 13 28 / 14%));
+}
+.login-sector-button {
+  border: 1px solid transparent;
+  background: transparent;
+}
+.login-sector-button:hover {
+  border-color: transparent;
+}
+.login-sector-button.is-selected {
+  background: var(--brand-surface);
+  color: var(--brand-ink);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand) 20%, transparent);
+}
+.login-icon-action,
+.login-footer-link {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transition: color 150ms ease, background-color 150ms ease, transform 150ms ease;
+}
+.login-icon-action:hover,
+.login-footer-link:hover {
+  color: var(--brand-ink) !important;
+  background: var(--brand-surface) !important;
+  transform: translateY(-1px);
+}
+.login-icon-action:focus-visible,
+.login-footer-link:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+.login-footer {
+  border-top: 1px solid color-mix(in srgb, var(--line) 58%, transparent);
+}
+.login-footer-link {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--text-muted);
+}
+.login-form,
+.login-google {
+  border: 0;
+}
+.login-credential {
+  border-radius: 0;
+}
+.login-credential:focus-within {
+  outline: 0;
+  border-color: var(--brand);
+  box-shadow: 0 1px 0 var(--brand);
+}
+.login-credential > input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--surface) inset;
+}
+
+
+/* A tela de acesso ocupa a viewport; foco/teclado não desloca a página. */
+.login-viewport {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+.login-header { flex: 0 0 1.5rem; }
+.login-main { min-height: 0; flex: 1 1 auto; padding-block: clamp(2px, 1dvh, 12px); }
+.login-footer {
+  flex: 0 0 auto;
+  border-top: 1px solid color-mix(in srgb, var(--line) 58%, transparent);
+  padding-top: .4rem;
+  padding-bottom: max(.15rem, env(safe-area-inset-bottom));
+}
+.login-footer-inner { gap: .25rem .75rem; }
+.login-footer-legal { min-width: 0; }
+.login-footer-text-link {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.login-footer-text-link:hover { color: var(--brand-ink); text-decoration: underline; text-underline-offset: 3px; }
+.login-footer-link, .login-icon-action {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+}
+.login-footer-link { border-radius: 999px; }
+.login-icon-action { padding: 0 !important; }
+@media (max-width: 639px) {
+  .login-footer-inner { align-items: center; }
+  .login-footer-legal { justify-content: center; }
+}
+
 /* Use the visible viewport, not the layout viewport hidden behind a mobile
    keyboard. Only the form body may scroll when physical space is insufficient;
    the document, brand and footer remain stationary and visible. */
@@ -48,28 +155,19 @@
 .login-page > header, .login-page > footer { flex-shrink: 0; }
 .login-main { min-height: 0; margin: 0; padding-block: 8px; }
 .login-card { display: flex; flex-direction: column; min-height: 0; max-height: 100%; }
-.login-brand-row { flex: none; min-width: 0; }
-.login-brand-row .brand-logo { flex-shrink: 0; }
-.login-brand-row .brand-mark { width: 40px; height: 40px; flex: 0 0 40px; }
-.login-brand-row .brand-mark img { width: 32px; height: 32px; flex-shrink: 0; }
-.login-brand-row > .text-right { min-width: 0; }
+.login-brand { flex: none; }
+.login-brand img { flex-shrink: 0; }
 .login-card-content { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; scroll-padding-block: 12px; }
 .login-card-content input { scroll-margin-block: 12px; }
 
 @media (max-width: 639px) {
   .login-page { padding-inline: 12px; gap: 8px; }
-  .login-brand-row { padding: 14px 12px; gap: 8px; }
-  .login-brand-row .brand-logo { padding: 8px; gap: 8px; }
-  .login-brand-row .brand-logo > span:last-child > span:first-child { font-size: 16px; }
-  .login-brand-row .brand-logo > span:last-child > span:last-child { font-size: 10px; }
-  .login-brand-row h1 { font-size: 18px; }
-  .login-card-content { padding: 16px; }
 }
 /* Compact only when available height shrinks (keyboard/landscape). Never scale
    the logo or the entire page, and never remove footer/auth/error controls. */
 .login-page[data-compact="true"] { gap: 4px; padding-top: max(6px, env(safe-area-inset-top)); padding-bottom: max(6px, env(safe-area-inset-bottom)); }
 .login-page[data-compact="true"] .login-main { padding-block: 0; }
-.login-page[data-compact="true"] .login-brand-row { padding-block: 8px; }
+.login-page[data-compact="true"] .login-brand { margin-bottom: 8px; }
 .login-page[data-compact="true"] .login-card-content { padding-block: 10px; }
 .login-page[data-compact="true"] .login-sectors { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 .login-page[data-compact="true"] .login-sectors button { min-height: 60px; padding: 8px 3px; }

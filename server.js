@@ -1898,12 +1898,9 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(302, { Location: legacyParaSpa[p] });
         return res.end();
       }
-      /* A página inicial do produto é o login. A apresentação comercial
-         permanece disponível em /apresentacao.html e não dá acesso direto ao sistema. */
-      if (p === '/') {
-        res.writeHead(302, { Location: '/#/login', 'Cache-Control': 'no-store' });
-        return res.end();
-      }
+      /* GET / deve cair no fallback da SPA abaixo.
+         Redirecionar para /#/login no servidor cria loop, pois o fragmento
+         não é enviado em requisições HTTP. A rota home é resolvida no React. */
     }
 
     /* auth de páginas legadas (só quando NÃO há SPA) */

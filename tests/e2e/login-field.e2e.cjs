@@ -10,17 +10,17 @@ async function check(page, id) {
   await input.focus();
   const style = await input.evaluate((el) => {
     const p = el.parentElement, a = el.getBoundingClientRect(), b = p.getBoundingClientRect();
-    return { innerOutline: getComputedStyle(el).outlineStyle, outerOutline: getComputedStyle(p).outlineStyle,
+    return { innerOutline: getComputedStyle(el).outlineStyle, outerOutline: getComputedStyle(p).outlineStyle, outerShadow: getComputedStyle(p).boxShadow,
       inside: a.x >= b.x && a.right <= b.right && a.y >= b.y && a.bottom <= b.bottom,
       page: document.documentElement.scrollWidth, width: innerWidth };
   });
   assert.equal(style.innerOutline, 'none', 'sem retângulo de foco dentro do campo');
-  assert.equal(style.outerOutline, 'solid', 'foco acessível no conjunto ícone/campo');
+  assert.ok(style.outerOutline === 'solid' || style.outerShadow !== 'none', 'foco acessível no conjunto ícone/campo');
   assert.ok(style.inside, 'input cabe no contêiner');
   assert.ok(style.page <= style.width + 1, 'sem overflow de página');
 }
 async function checkViewport(page, width) {
-  const original = await page.locator('.brand-mark').boundingBox();
+  const original = await page.locator('.login-brand img').boundingBox();
   for (const height of [420, 320, 900]) {
     await page.setViewportSize({ width, height });
     await page.waitForTimeout(100);
@@ -29,7 +29,7 @@ async function checkViewport(page, width) {
         const r = document.querySelector(selector).getBoundingClientRect();
         return { top: r.top, bottom: r.bottom, width: r.width, height: r.height };
       };
-      return { footer: rect('.login-page > footer'), logo: rect('.brand-mark'),
+      return { footer: rect('.login-page > footer'), logo: rect('.login-brand img'),
         card: rect('.login-card'), width: innerWidth, height: innerHeight,
         scrollWidth: document.documentElement.scrollWidth,
         scrollHeight: document.documentElement.scrollHeight,
@@ -54,7 +54,7 @@ async function checkViewport(page, width) {
   await page.waitForTimeout(100);
   const visible = await page.locator('.login-page > footer').boundingBox();
   assert.ok(visible.y >= 20 && visible.y + visible.height <= 341, 'rodapé acompanha visualViewport');
-  const logo = await page.locator('.brand-mark').boundingBox();
+  const logo = await page.locator('.login-brand img').boundingBox();
   assert.equal(logo.width, original.width);
   assert.equal(logo.height, original.height);
   await page.evaluate(() => {
