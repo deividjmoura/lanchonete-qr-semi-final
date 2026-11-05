@@ -89,7 +89,7 @@ O painel administrativo reúne:
 
 - **Dashboard:** indicadores operacionais e financeiros, como faturamento, pedidos, ticket médio, pagamentos, produtos, entregas, mesas e garçons.
 - **Painel personalizável:** organização, redimensionamento, ocultação/exibição e ajuste de títulos/legendas dos cards disponíveis.
-- **Cardápio:** categorias, produtos, preços, fotos, disponibilidade, estoque, adicionais, ingredientes removíveis e setor de produção.
+- **Cardápio:** a página **Cardápio & Estoque** reúne categorias, produtos, preços, fotos, disponibilidade, adicionais, ingredientes removíveis e setor de produção. Cada produto permite ativar o controle de estoque, registrar entrada, definir quantidade e retirar uma unidade. O alerta reúne itens com saldo menor ou igual ao mínimo (inclusive esgotados), com ajuste direto. O mínimo e a desativação do controle continuam na edição do produto. Estoque não é mais uma ferramenta de **Funções**; o menu lateral permanece **Cardápio**.
 - **Mesas e praças:** configuração, ocupação, consumo e geração de QR Codes.
 - **Garçons:** cadastro, links/tokens de acesso e acompanhamento da operação.
 - **Logins e permissões:** contas internas por perfil, troca/redefinição de senha e opção de vincular Google OAuth quando configurada.
