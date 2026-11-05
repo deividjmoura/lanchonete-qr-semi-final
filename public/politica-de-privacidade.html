@@ -22,7 +22,7 @@
 <body>
 <header><div><div class="eyebrow">QRAdmin · Transparência</div><h1>Política de Privacidade</h1><p>Como os dados são tratados durante o uso do sistema de pedidos e operação.</p></div></header>
 <main>
-  <p class="updated">Última atualização: 3 de novembro de 2026</p>
+  <p class="updated">Última atualização: 5 de novembro de 2026</p>
   <p>Esta Política explica como dados pessoais são tratados no QRAdmin, sistema de pedidos por QR Code e gestão operacional utilizado por um estabelecimento. Ela se aplica às pessoas que acessam o cardápio, fazem pedidos ou utilizam as áreas de administração e operação.</p>
 
   <h2>1. Quem é responsável pelo tratamento</h2>
@@ -33,9 +33,9 @@
     <li><strong>Pedidos e atendimento:</strong> nome informado pelo cliente, mesa ou identificador da comanda, produtos, adicionais, observações, quantidades, preços e horários dos pedidos.</li>
     <li><strong>Pagamentos:</strong> valores, forma de pagamento escolhida, registros de pagamentos parciais e situação de fechamento da comanda. O sistema não recebe credenciais bancárias e não confirma automaticamente o crédito de uma transferência PIX.</li>
     <li><strong>Equipe:</strong> dados de identificação e acesso dos funcionários, como nome, login, função, estado da conta e registros de ações operacionais.</li>
-    <li><strong>Autenticação:</strong> identificadores de sessão e dados técnicos necessários para autenticar e proteger o acesso. Se o login Google estiver habilitado, poderão ser tratados o endereço de e-mail e o identificador da conta Google para confirmar a identidade do funcionário autorizado.</li>
+    <li><strong>Autenticação:</strong> identificadores de sessão e dados técnicos necessários para autenticar e proteger o acesso. Se o login Google estiver habilitado, poderão ser tratados o endereço de e-mail previamente autorizado e o identificador da conta Google para confirmar a identidade do funcionário. O administrador pode remover o e-mail pré-autorizado antes do primeiro vínculo; essa ação não desvincula uma identidade Google já associada.</li>
     <li><strong>Dados técnicos:</strong> endereço IP e informações de requisição que possam aparecer em registros de segurança, diagnóstico e prevenção de abuso.</li>
-    <li><strong>Dados locais do dispositivo:</strong> preferências da interface e, na PWA do garçom, dados operacionais temporários necessários à fila offline e à sincronização posterior.</li>
+    <li><strong>Dados locais do dispositivo:</strong> na PWA do garçom, rascunhos de pedidos e dados de sincronização (mesa, nome informado, itens, quantidades, adicionais, remoções, observações, horários, estado e chave de idempotência), credencial individual de acesso, preferências de tema/notificações, avisos já exibidos e dados mínimos de tentativas de pagamento pendentes.</li>
   </ul>
   <p>O sistema é destinado a uma única instalação de estabelecimento e não deve ser usado para cadastrar dados pessoais excessivos ou informações sensíveis que não sejam necessárias ao atendimento.</p>
 
@@ -53,10 +53,11 @@
   <p>Conforme o contexto, o tratamento poderá se apoiar nas bases legais previstas na Lei nº 13.709/2018 (LGPD), incluindo execução de procedimentos relacionados ao atendimento e à relação de consumo, cumprimento de obrigação legal ou regulatória, exercício regular de direitos, legítimo interesse com respeito aos direitos do titular e consentimento quando ele for efetivamente solicitado e necessário.</p>
 
   <h2>5. Compartilhamento e operadores</h2>
-  <p>Os dados podem ser processados por fornecedores necessários à operação, como hospedagem da aplicação, infraestrutura de banco de dados e, quando habilitado, Google para autenticação. Esses fornecedores tratam dados conforme seus próprios contratos, políticas e medidas de segurança. O controlador não vende dados pessoais. Dados também poderão ser compartilhados quando exigido por lei, ordem válida de autoridade ou para exercício regular de direitos.</p>
+  <p>Os dados podem ser processados por fornecedores necessários à operação, como hospedagem da aplicação, infraestrutura de banco de dados e, quando habilitado, Google para autenticação. Esses fornecedores tratam dados conforme seus próprios contratos, políticas e medidas de segurança. Dados também poderão ser compartilhados quando exigido por lei, ordem válida de autoridade ou para exercício regular de direitos. A existência de qualquer compartilhamento adicional, inclusive para publicidade ou marketing, deve ser informada pelo controlador de forma transparente.</p>
 
   <h2>6. Cookies, sessões e armazenamento local</h2>
-  <p>O sistema utiliza mecanismos técnicos necessários ao funcionamento, como cookies de sessão e proteção contra requisições indevidas. A PWA pode armazenar dados operacionais no dispositivo para permitir continuidade temporária quando a conexão falhar. Esses dados locais podem permanecer no aparelho até serem sincronizados ou removidos pelo usuário ou pelo navegador. Não utilize dispositivos compartilhados sem encerrar a sessão.</p>
+  <p>O sistema utiliza mecanismos técnicos necessários ao funcionamento, como cookie de sessão de funcionário e proteção contra requisições indevidas. Na PWA do garçom, o navegador usa IndexedDB para manter a fila local e localStorage para a credencial individual de acesso, preferências, avisos e uma tentativa de pagamento pendente. A fila pode conter nome informado pelo cliente, mesa, itens, observações e identificadores usados para sincronização idempotente. A credencial individual é um token de acesso do tipo bearer armazenado no navegador, não um cookie HttpOnly; links e dispositivos devem ser protegidos contra uso por terceiros.</p>
+  <p>O Service Worker armazena apenas arquivos estáticos necessários para abrir a interface; respostas da API não são armazenadas em cache. Um rascunho offline só é recebido pelo servidor depois que a sincronização é concluída e confirmada por uma resposta com identificador do pedido. Não há garantia de backup dos dados locais: limpar os dados do site, remover o perfil do navegador ou desinstalar o PWA pode apagar pedidos ainda não sincronizados. O código não define prazo automático de expurgo para a fila local; o espaço disponível e a retenção dependem do navegador e do usuário. Evite dispositivos compartilhados e não compartilhe o link individual do garçom.</p>
 
   <h2>7. Armazenamento e retenção</h2>
   <p>Os dados são mantidos na infraestrutura configurada pelo estabelecimento e por seus fornecedores. O prazo de retenção varia conforme a finalidade, a necessidade operacional e as obrigações legais aplicáveis. Registros de pedidos, pagamentos e auditoria podem ser mantidos pelo período necessário à gestão do estabelecimento e à defesa de direitos. Quando deixam de ser necessários, os dados deverão ser eliminados ou anonimizados, ressalvadas as hipóteses legais de conservação.</p>
