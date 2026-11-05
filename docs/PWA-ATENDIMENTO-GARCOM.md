@@ -16,7 +16,7 @@
 
 O Service Worker **nunca** intercepta `/api/`. Nenhuma resposta de API é
 cacheada: o servidor é a única fonte de verdade. O cache do shell é versionado
-(`garcom-pwa-shell-v40` no código consultado em 05/11/2026); qualquer mudança no shell exige subir essa versão, ou
+(`garcom-pwa-shell-v41` no código consultado em 05/11/2026); qualquer mudança no shell exige subir essa versão, ou
 o aparelho continua executando JavaScript antigo.
 
 ## Fila compartilhada de prontos e retirada sem aceite separado
@@ -85,7 +85,10 @@ Garantias implementadas e cobertas por teste:
   em todo reenvio. O servidor devolve o mesmo pedido; o estoque baixa uma vez.
 - **Conectividade medida de verdade.** O motor consulta o backend
   (`probeBackend`), em vez de confiar em `navigator.onLine`, que mente em Wi-Fi
-  sem saída e em redes com proxy.
+  sem saída e em redes com proxy. Uma resposta HTTP (inclusive 404, 429 ou 5xx)
+  confirma alcance, não sucesso da operação; 401/403 exigem autenticação.
+  Falhas de rede/timeout continuam acionando o modo offline. Os erros de envio
+  continuam sujeitos a conflito/backoff, sem remover pedidos da fila.
 - **Retomada automática.** Ao voltar a resposta do servidor, a fila esvazia
   sozinha. Também há reenvio ao voltar o foco, ao evento `online` e por timer
   periódico de 15 s.
@@ -115,7 +118,7 @@ cozinha** — a tela mostra isso explicitamente.
 - Um rascunho de pedido pode conter mesa, nome do cliente, itens/produtos, quantidades, adicionais, remoções, observações, chave de idempotência, horários, estado de sincronização e o identificador do garçom usado para isolar a fila.
 - O `localStorage` mantém o token individual do garçom (`waiter-token`), preferências de tema/notificações, identificadores de avisos já exibidos e uma tentativa de pagamento pendente (sessão, mesa, valor, forma e chave idempotente).
 - Não há prazo automático de expurgo implementado para a store local de pedidos. Limpar os dados do site, remover o perfil do navegador ou desinstalar o PWA pode apagar dados ainda não sincronizados; o armazenamento persistente é apenas uma solicitação ao navegador, não uma garantia de backup.
-- O Service Worker usa o cache `garcom-pwa-shell-v40` apenas para arquivos do shell. Ele não intercepta nem armazena respostas de `/api/`.
+- O Service Worker usa o cache `garcom-pwa-shell-v41` apenas para arquivos do shell. Ele não intercepta nem armazena respostas de `/api/`.
 
 ## Mesas e pedidos
 

@@ -170,17 +170,8 @@
       overflow: hidden;
       margin: 1rem 0 0.4rem;
     }
-    .frame-placeholder {
-      aspect-ratio: 16 / 10;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 0.35rem;
-      padding: 1rem; text-align: center;
-      color: var(--text-muted); font-size: 0.8rem;
-    }
-    .frame-placeholder strong {
-      font-family: var(--font-mono); font-size: 0.65rem;
-      letter-spacing: 0.08em; text-transform: uppercase; color: var(--brand-ink);
-    }
+    .frame--portrait { max-width: 360px; margin-inline: auto; }
+    .frame--portrait img { aspect-ratio: 390 / 844; object-fit: contain; }
     .caption { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.25rem; }
     .flow-mini { display: grid; gap: 0.5rem; margin: 1rem 0; }
     @media (min-width: 560px) { .flow-mini { grid-template-columns: repeat(4, 1fr); } }
@@ -227,7 +218,7 @@
       .sidebar nav { display: none; }
       .sidebar.nav-open nav { display: flex; }
     }
-  
+
     /* Rolagem discreta sem trilho visível; a navegação continua funcionando. */
     html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
     *::-webkit-scrollbar { display: none; width: 0; height: 0; }
@@ -307,10 +298,7 @@
             </ul>
           </div>
           <div class="frame">
-            <div class="frame-placeholder" role="img" aria-label="Placeholder: cardápio do cliente">
-              <strong>cardapio-cliente</strong>
-              <span>Captura do cardápio aberto por uma mesa (a inserir)</span>
-            </div>
+            <img src="/assets/apresentacao/cardapio-cliente.webp" width="1440" height="900" alt="Cardápio digital da mesa 18 com categorias, fotos, preços e comanda lateral." loading="lazy" decoding="async">
           </div>
           <p class="caption">Cardápio do cliente — ambiente de demonstração com dados fictícios.</p>
         </section>
@@ -330,10 +318,7 @@
             </ul>
           </div>
           <div class="frame">
-            <div class="frame-placeholder" role="img" aria-label="Placeholder: fila da cozinha">
-              <strong>fila-cozinha</strong>
-              <span>Fila da cozinha com estados variados (a inserir)</span>
-            </div>
+            <img src="/assets/apresentacao/fila-cozinha.webp" width="1440" height="900" alt="Fila da cozinha com comandas em produção e itens aguardando preparo, identificados por mesa." loading="lazy" decoding="async">
           </div>
           <p class="caption">Fila da cozinha. Dados de demonstração.</p>
         </section>
@@ -352,10 +337,7 @@
             </ul>
           </div>
           <div class="frame">
-            <div class="frame-placeholder" role="img" aria-label="Placeholder: fila do bar">
-              <strong>fila-bar</strong>
-              <span>Fila do bar (a inserir)</span>
-            </div>
+            <img src="/assets/apresentacao/fila-bar.webp" width="1440" height="900" alt="Fila do bar com bebida em produção e pedido aguardando preparo." loading="lazy" decoding="async">
           </div>
           <p class="caption">Fila do bar. Dados de demonstração.</p>
         </section>
@@ -383,11 +365,8 @@
               a equipe revisa. O offline <strong>não confirma automaticamente</strong>.
             </p>
           </div>
-          <div class="frame">
-            <div class="frame-placeholder" role="img" aria-label="Placeholder: entregas do garçom">
-              <strong>entregas-garcom</strong>
-              <span>Itens prontos e entregas (a inserir)</span>
-            </div>
+          <div class="frame frame--portrait">
+            <img src="/assets/apresentacao/entregas-garcom.webp" width="390" height="844" alt="PWA móvel do garçom com pedidos prontos, estados dos itens e ações de entrega." loading="lazy" decoding="async">
           </div>
           <p class="caption">Área do garçom. Dados fictícios de demonstração.</p>
         </section>
@@ -416,10 +395,7 @@
             </p>
           </div>
           <div class="frame">
-            <div class="frame-placeholder" role="img" aria-label="Placeholder: fechamento no caixa">
-              <strong>fechamento-caixa</strong>
-              <span>Comandas e pagamentos (a inserir)</span>
-            </div>
+            <img src="/assets/apresentacao/fechamento-caixa.webp" width="1440" height="900" alt="Fechamento de contas com comandas abertas, pagamento parcial e saldo restante." loading="lazy" decoding="async">
           </div>
           <p class="caption">Caixa. Dados de demonstração.</p>
         </section>
@@ -440,10 +416,7 @@
             </ul>
           </div>
           <div class="frame">
-            <div class="frame-placeholder" role="img" aria-label="Placeholder: dashboard admin">
-              <strong>dashboard-admin</strong>
-              <span>Dashboard administrativo (a inserir)</span>
-            </div>
+            <img src="/assets/apresentacao/dashboard-admin.webp" width="1440" height="900" alt="Dashboard administrativo com indicadores de faturamento, pedidos, pagamentos, ocupação e itens em operação." loading="lazy" decoding="async">
           </div>
           <p class="caption">Dashboard. Dados fictícios de demonstração.</p>
         </section>

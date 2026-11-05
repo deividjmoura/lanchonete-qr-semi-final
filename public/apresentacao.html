@@ -271,26 +271,8 @@
       object-fit: cover;
       background: var(--surface-sunken);
     }
-    .frame-placeholder {
-      aspect-ratio: 16 / 10;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      padding: 1.5rem;
-      text-align: center;
-      background: var(--surface-sunken);
-      color: var(--text-muted);
-      font-size: 0.875rem;
-    }
-    .frame-placeholder strong {
-      font-family: var(--font-mono);
-      font-size: 0.7rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--brand-ink);
-    }
+    .frame--portrait { max-width: 360px; margin-inline: auto; }
+    .frame--portrait img { aspect-ratio: 390 / 844; object-fit: contain; }
     .caption {
       font-size: 0.8rem;
       color: var(--text-muted);
@@ -525,7 +507,7 @@
       padding-top: 1rem;
       border-top: 1px dashed var(--line);
     }
-  
+
     /* Rolagem discreta sem trilho visível; a navegação continua funcionando. */
     html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
     *::-webkit-scrollbar { display: none; width: 0; height: 0; }
@@ -566,10 +548,7 @@
         <div class="area-media">
           <figure>
             <div class="frame">
-              <div class="frame-placeholder" role="img" aria-label="Captura pendente: cardápio do cliente aberto pela mesa">
-                <strong>cardapio-cliente</strong>
-                <span>Captura real do cardápio aberto por QR da mesa (a inserir)</span>
-              </div>
+              <img src="/assets/apresentacao/cardapio-cliente.webp" width="1440" height="900" alt="Cardápio digital da mesa 18 com categorias, fotos, preços e comanda lateral." decoding="async" fetchpriority="high">
             </div>
             <figcaption class="caption">Cardápio no navegador do cliente — sem instalar aplicativo. Dados de demonstração.</figcaption>
           </figure>
@@ -674,19 +653,13 @@
         <div class="area-media">
           <figure>
             <div class="frame">
-              <div class="frame-placeholder" role="img" aria-label="Captura pendente: personalização de produto">
-                <strong>personalizacao-produto</strong>
-                <span>Produto aberto com adicionais e opções (a inserir)</span>
-              </div>
+              <img src="/assets/apresentacao/personalizacao-produto.webp" width="1440" height="900" alt="Personalização do X-Bacon da Casa com cheddar extra, ingrediente removido e observação para a cozinha." loading="lazy" decoding="async">
             </div>
             <figcaption class="caption">Personalização no cardápio do cliente. Dados fictícios de demonstração.</figcaption>
           </figure>
           <figure style="margin-top:1.25rem">
             <div class="frame">
-              <div class="frame-placeholder" role="img" aria-label="Captura pendente: comanda ou carrinho do cliente">
-                <strong>comanda-cliente</strong>
-                <span>Carrinho ou comanda da mesa com itens (a inserir)</span>
-              </div>
+              <img src="/assets/apresentacao/comanda-cliente.webp" width="1440" height="900" alt="Comanda da mesa 18 com um X-Bacon personalizado, nome do cliente e total do envio." loading="lazy" decoding="async">
             </div>
             <figcaption class="caption">Comanda do cliente na mesa. Dados fictícios de demonstração.</figcaption>
           </figure>
@@ -713,19 +686,13 @@
         <div class="area-media">
           <figure>
             <div class="frame">
-              <div class="frame-placeholder" role="img" aria-label="Captura pendente: fila da cozinha">
-                <strong>fila-cozinha</strong>
-                <span>Fila da cozinha com itens em estados diferentes (a inserir)</span>
-              </div>
+              <img src="/assets/apresentacao/fila-cozinha.webp" width="1440" height="900" alt="Fila da cozinha com comandas em produção e itens aguardando preparo, identificados por mesa." loading="lazy" decoding="async">
             </div>
             <figcaption class="caption">Fila da cozinha — controle por item. Dados de demonstração.</figcaption>
           </figure>
           <figure style="margin-top:1.25rem">
             <div class="frame">
-              <div class="frame-placeholder" role="img" aria-label="Captura pendente: fila do bar">
-                <strong>fila-bar</strong>
-                <span>Fila do bar com itens em estados diferentes (a inserir)</span>
-              </div>
+              <img src="/assets/apresentacao/fila-bar.webp" width="1440" height="900" alt="Fila do bar com bebida em produção e pedido aguardando preparo." loading="lazy" decoding="async">
             </div>
             <figcaption class="caption">Fila do bar — preparo independente. Dados de demonstração.</figcaption>
           </figure>
@@ -752,11 +719,8 @@
         </div>
         <div class="area-media">
           <figure>
-            <div class="frame">
-              <div class="frame-placeholder" role="img" aria-label="Captura pendente: entregas do garçom">
-                <strong>entregas-garcom</strong>
-                <span>Tela de itens prontos e entregas (a inserir)</span>
-              </div>
+            <div class="frame frame--portrait">
+              <img src="/assets/apresentacao/entregas-garcom.webp" width="390" height="844" alt="PWA móvel do garçom com pedidos prontos, estados dos itens e ações de entrega." loading="lazy" decoding="async">
             </div>
             <figcaption class="caption">Entregas do garçom. Dados fictícios de demonstração.</figcaption>
           </figure>
@@ -783,10 +747,7 @@
         <div class="area-media">
           <figure>
             <div class="frame">
-              <div class="frame-placeholder" role="img" aria-label="Captura pendente: fechamento de contas no caixa">
-                <strong>fechamento-caixa</strong>
-                <span>Tela de comandas e pagamentos parciais (a inserir)</span>
-              </div>
+              <img src="/assets/apresentacao/fechamento-caixa.webp" width="1440" height="900" alt="Fechamento de contas com comandas abertas, pagamento parcial e saldo restante." loading="lazy" decoding="async">
             </div>
             <figcaption class="caption">Caixa com comandas abertas e saldo. Dados de demonstração.</figcaption>
           </figure>
@@ -816,28 +777,19 @@
         <div class="area-media">
           <figure>
             <div class="frame">
-              <div class="frame-placeholder" role="img" aria-label="Captura pendente: dashboard administrativo">
-                <strong>dashboard-admin</strong>
-                <span>Dashboard com indicadores e histórico (a inserir)</span>
-              </div>
+              <img src="/assets/apresentacao/dashboard-admin.webp" width="1440" height="900" alt="Dashboard administrativo com indicadores de faturamento, pedidos, pagamentos, ocupação e itens em operação." loading="lazy" decoding="async">
             </div>
             <figcaption class="caption">Dashboard administrativo personalizável. Dados fictícios de demonstração.</figcaption>
           </figure>
           <figure style="margin-top:1.25rem">
             <div class="frame">
-              <div class="frame-placeholder" role="img" aria-label="Captura pendente: gestão do cardápio">
-                <strong>gestao-cardapio</strong>
-                <span>Gestão de categorias e produtos (a inserir)</span>
-              </div>
+              <img src="/assets/apresentacao/gestao-cardapio.webp" width="1440" height="900" alt="Cardápio & Estoque com categoria expandida, produtos, preços e ativação de controle de estoque." loading="lazy" decoding="async">
             </div>
-            <figcaption class="caption">Gestão do cardápio no admin. Dados de demonstração.</figcaption>
+            <figcaption class="caption">Cardápio & Estoque no admin. Dados de demonstração.</figcaption>
           </figure>
           <figure style="margin-top:1.25rem">
             <div class="frame">
-              <div class="frame-placeholder" role="img" aria-label="Captura pendente: mapa ou panorama de mesas">
-                <strong>mapa-mesas</strong>
-                <span>Mapa ou panorama de mesas e praças (a inserir)</span>
-              </div>
+              <img src="/assets/apresentacao/mapa-mesas.webp" width="1440" height="900" alt="Mapa de mesas com pesquisa por número e cartões de mesas ocupadas e livres." loading="lazy" decoding="async">
             </div>
             <figcaption class="caption">Mesas e praças no admin. Dados de demonstração.</figcaption>
           </figure>

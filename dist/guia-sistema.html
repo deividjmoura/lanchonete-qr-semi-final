@@ -1,40 +1,505 @@
-<!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121722"><meta name="description" content="Guia visual interativo do QR Admin, sem operações reais."><title>Guia do sistema · QR Admin</title>
-<style>
-:root{color-scheme:dark;--bg:#121722;--line:#303b4d;--text:#edf1fa;--muted:#9aa8bd;--accent:#9b7cff;--cyan:#67dce5}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 72% -20%,#292548 0,transparent 38%),var(--bg);color:var(--text);font:14px/1.5 Inter,system-ui,sans-serif}button{font:inherit;color:inherit}.layout{min-height:100vh;display:grid;grid-template-columns:76px 1fr}.sidebar{position:sticky;top:0;height:100vh;padding:16px 10px;display:flex;flex-direction:column;align-items:center;gap:20px}.brand{width:42px;height:42px;border-radius:14px;background:#f1f4fb;color:#192131;display:grid;place-items:center;font-size:21px;font-weight:900}.nav{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%}.nav button,.top-actions button,.metric{border:1px solid transparent;background:transparent;cursor:pointer;display:grid;place-items:center;transition:.16s}.nav button{width:46px;height:46px;border-radius:15px;color:#aab7cb;font-size:20px}.nav button:hover,.nav button:focus-visible{color:#fff;border-color:#6653aa;transform:scale(1.08);outline:none}.nav .spacer{flex:1}.main{min-width:0}.topbar{height:76px;display:flex;align-items:center;justify-content:space-between;padding:12px clamp(18px,3vw,42px);border-bottom:1px solid #273143;background:#121722e8;position:sticky;top:0;z-index:5}.eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#b6a5ff;font-weight:700}.topbar h1{font:700 27px Georgia,serif;margin:4px 0}.top-actions{display:flex;gap:8px}.top-actions button{width:40px;height:40px;border-radius:50%;border-color:#303b4d;color:#aebbd0;font-size:17px}.content{padding:28px clamp(18px,3vw,42px) 48px;max-width:1500px;margin:auto}.intro{display:flex;justify-content:space-between;align-items:end;gap:24px;margin-bottom:22px}.intro h2{font:700 22px Georgia,serif;margin:0 0 5px}.intro p{margin:0;color:var(--muted);max-width:720px}.notice{border:1px solid #4c4772;background:#24223b;padding:12px 15px;border-radius:12px;color:#d8d0ff;margin-bottom:22px}.section-label{font-size:10px;letter-spacing:.17em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:26px 0 12px}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.metric{display:flex;align-items:flex-start;gap:12px;text-align:left;padding:16px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(145deg,#1b2432,#171e2a);min-height:100px}.metric:hover,.metric:focus-visible{border-color:#7562b5;outline:none}.mi{width:34px;height:34px;border-radius:10px;background:#9b7cff20;color:#b5a2ff;display:grid;place-items:center;font-size:17px;flex-shrink:0}.metric strong{display:block;font:700 20px Georgia,serif}.metric small{display:block;color:var(--muted);margin-top:4px}.panels{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}.panel{border:1px solid var(--line);border-radius:16px;background:#171e2bd9;padding:18px}.panel h3{font:700 18px Georgia,serif;margin:0 0 14px}.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.flow span{padding:8px 11px;border:1px solid #39475d;border-radius:9px;background:#1d2737;color:#dbe5f5;font-size:12px}.flow b{color:#8873d4}.feature-list{display:grid;gap:10px}.feature{display:flex;gap:10px;align-items:flex-start;color:#c8d2e1}.feature i{font-style:normal;color:var(--cyan)}.hint{font-size:12px;color:var(--muted);margin-top:12px}.popover{position:fixed;z-index:30;width:min(310px,calc(100vw - 28px));padding:13px 15px;border-radius:12px;background:#f5f3ff;color:#202033;box-shadow:0 16px 45px #0008;border:1px solid #d7d0fa;display:none;transform:translate(-50%,calc(-100% - 13px));pointer-events:none}.popover[data-open=true]{display:block}.popover strong{display:block;font-size:13px;margin-bottom:4px}.popover p{font-size:12px;line-height:1.5;margin:0;color:#42415a}.popover:after{content:"";position:absolute;left:calc(50% - 7px);bottom:-7px;width:12px;height:12px;background:#f5f3ff;transform:rotate(45deg);border-right:1px solid #d7d0fa;border-bottom:1px solid #d7d0fa}.footer{border-top:1px solid #273143;padding:20px clamp(18px,3vw,42px);color:var(--muted);font-size:12px}
-@media(max-width:900px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.panels{grid-template-columns:1fr}.intro{display:block}}@media(max-width:560px){.layout{grid-template-columns:58px 1fr}.sidebar{padding:12px 5px}.nav button{width:42px;height:42px}.topbar{height:68px;padding:10px 12px}.topbar h1{font-size:21px}.top-actions button{width:34px;height:34px}.content{padding:20px 13px 34px}.metric{padding:12px;min-height:92px}.metric strong{font-size:17px}}
-</style></head><body><div class="layout"><aside class="sidebar" aria-label="Menu demonstrativo"><div class="brand">Q</div><nav class="nav" aria-label="Áreas do sistema">
-<button type="button" data-title="Cozinha" data-help="Exibe a fila de preparo da cozinha. A equipe inicia e conclui cada item individualmente; o andamento é atualizado para o salão sem esperar os itens do bar." aria-label="Cozinha">♨</button>
-<button type="button" data-title="Bar" data-help="Mostra somente os itens destinados ao bar. Permite iniciar e concluir bebidas por item, mantendo a fila independente da cozinha." aria-label="Bar">🍺</button>
-<button type="button" data-title="Caixa" data-help="Lista comandas abertas, itens entregues, valores pagos e saldo restante. Registra pagamentos parciais, descontos e taxa de serviço, e encerra a comanda quando não há pendências." aria-label="Caixa">▣</button>
-<button type="button" data-title="Dashboard" data-help="Apresenta indicadores operacionais e financeiros por dia, semana ou mês: faturamento, pedidos, ticket médio, contas, pagamentos, produtos, entregas e situação das mesas." aria-label="Dashboard">▥</button>
-<button type="button" data-title="Cardápio" data-help="Administra categorias e produtos, preços, descrições, fotos, adicionais, removíveis, disponibilidade, estoque e setor de produção. Preços e disponibilidade são revalidados pelo servidor." aria-label="Cardápio">☷</button>
-<button type="button" data-title="Mesas e QR Codes" data-help="Configura mesas, praças e QR Codes fixos. O panorama mostra mesas livres ou ocupadas, consumo em aberto, pedidos e tempos operacionais. Clicar em um card mostra os detalhes da mesa." aria-label="Mesas">▦</button>
-<button type="button" data-title="Garçons" data-help="Cadastra garçons, gera links individuais de acesso e permite ativar ou desativar cada conta. Atribuição, transferência de mesa e histórico de responsabilidade ficam registrados." aria-label="Garçons">♙</button>
-<button type="button" data-title="Funções e equipe" data-help="Área de funções e controles administrativos disponíveis ao perfil administrador. O acesso às telas é limitado pelo papel autenticado de cada usuário." aria-label="Funções">⠿</button>
-</nav><div class="nav spacer"></div><nav class="nav" aria-label="Ajuda"><button type="button" data-title="Sobre este guia" data-help="Esta página é apenas demonstrativa. Nenhum botão navega para o sistema real, autentica usuários, consulta dados ou altera pedidos." aria-label="Sobre este guia">ⓘ</button></nav></aside>
-<div class="main"><header class="topbar"><div><div class="eyebrow">GUIA INTERATIVO · QR ADMIN</div><h1>Central de operação</h1></div><div class="top-actions">
-<button type="button" data-title="Tema" data-help="No sistema real, alterna entre os temas visuais disponíveis. Neste guia, o controle é ilustrativo e não altera o tema." aria-label="Tema">☼</button>
-<button type="button" data-title="Alertas sonoros" data-help="Ativa ou silencia avisos sonoros e mensagens de voz para eventos relevantes, como novos pedidos, itens prontos e avisos de PIX." aria-label="Alertas sonoros">◖))</button>
-<button type="button" data-title="Página inicial" data-help="No sistema real, retorna à página inicial ou à área inicial correspondente ao perfil autenticado. Aqui apenas mostra esta explicação." aria-label="Página inicial">⌂</button>
-<button type="button" data-title="Sair" data-help="Encerra a sessão autenticada e encaminha a equipe para a tela de login. Este guia não mantém sessão e não executa logout." aria-label="Sair">⇥</button>
-</div></header><main class="content">
-<div class="intro"><div><h2>Conheça cada parte do sistema</h2><p>Uma visão visual das áreas do QR Admin. Clique nos ícones para abrir uma explicação sobre a função de cada um.</p></div><div class="hint">Demonstração sem conexão com o banco ou com a API.</div></div>
-<div class="notice"><strong>Modo demonstração:</strong> todos os controles desta página são informativos. Os cliques apenas abrem balões explicativos; nenhuma operação real é executada.</div>
-<div class="section-label">Resumo do fluxo</div><div class="metrics">
-<button class="metric" type="button" data-title="Pedidos por QR Code" data-help="O cliente escaneia o QR fixo da mesa, abre o cardápio no navegador, escolhe produtos e adicionais, informa o nome e envia o pedido para a comanda daquela mesa."><span class="mi">⌗</span><span><strong>QR → Pedido</strong><small>Cliente escolhe e envia</small></span></button>
-<button class="metric" type="button" data-title="Produção por setor" data-help="Cada item é encaminhado ao setor definido no produto: cozinha ou bar. Os setores trabalham em filas independentes e atualizam o estado de cada item."><span class="mi">♨</span><span><strong>Produção</strong><small>Cozinha e bar separados</small></span></button>
-<button class="metric" type="button" data-title="Entrega progressiva" data-help="Quando um item fica pronto, ele aparece imediatamente na fila compartilhada do garçom. O fluxo é aceitar, retirar e entregar. Cada etapa registra responsável e horário."><span class="mi">♙</span><span><strong>Entrega</strong><small>Item por item</small></span></button>
-<button class="metric" type="button" data-title="Fechamento da comanda" data-help="O caixa cobra apenas os itens entregues, registra pagamentos e fecha a comanda. O total é calculado no servidor; itens ainda não entregues não entram na cobrança."><span class="mi">▣</span><span><strong>Caixa</strong><small>Pagamento e encerramento</small></span></button></div>
-<div class="section-label">Como as áreas se conectam</div><div class="panels">
-<section class="panel"><h3>Fluxo principal</h3><div class="flow"><span>Cliente escaneia QR</span><b>→</b><span>Cardápio e carrinho</span><b>→</b><span>Comanda da mesa</span><b>→</b><span>Cozinha / Bar</span><b>→</b><span>Garçom</span><b>→</b><span>Caixa</span></div><p class="hint">A comanda é acumulativa: uma mesa pode receber vários pedidos durante a visita. Cada item avança de forma independente.</p></section>
-<section class="panel"><h3>Regras importantes</h3><div class="feature-list"><div class="feature"><i>●</i><span>O cliente acompanha o pedido, mas não confirma pagamento nesta versão.</span></div><div class="feature"><i>●</i><span>O status de cada item controla preparo, entrega e cobrança.</span></div><div class="feature"><i>●</i><span>O PIX usa chave/QR estático; a equipe confirma o recebimento no banco.</span></div><div class="feature"><i>●</i><span>O PWA do garçom mantém fila local e sincroniza quando a conexão retorna.</span></div></div></section></div>
-<div class="section-label">Detalhes por perfil</div><div class="panels">
-<section class="panel"><h3>Cliente · cardápio público</h3><div class="feature-list"><div class="feature"><i>01</i><span>Abre o cardápio pelo QR da mesa, sem instalar aplicativo.</span></div><div class="feature"><i>02</i><span>Pesquisa produtos, escolhe adicionais e removíveis disponíveis e monta o carrinho.</span></div><div class="feature"><i>03</i><span>Informa o nome e envia o pedido para a comanda da mesa.</span></div><div class="feature"><i>04</i><span>Acompanha o andamento dos itens até a entrega.</span></div></div></section>
-<section class="panel"><h3>Garçom · PWA de atendimento</h3><div class="feature-list"><div class="feature"><i>01</i><span>Visualiza mesas, pedidos e fila compartilhada de itens prontos.</span></div><div class="feature"><i>02</i><span>Aceita, retira e entrega cada item, com autoria e horário registrados.</span></div><div class="feature"><i>03</i><span>Pode lançar pedidos e auxiliar no atendimento e na cobrança conforme as permissões.</span></div><div class="feature"><i>04</i><span>Usa fila offline persistente: pedidos aguardam conexão e são reenviados com idempotência.</span></div></div></section>
-<section class="panel"><h3>Caixa · pagamentos</h3><div class="feature-list"><div class="feature"><i>01</i><span>Consulta comandas abertas e itens efetivamente entregues.</span></div><div class="feature"><i>02</i><span>Registra pagamentos parciais em dinheiro, PIX, débito ou crédito.</span></div><div class="feature"><i>03</i><span>Aplica desconto e taxa de serviço conforme autorização e regras do sistema.</span></div><div class="feature"><i>04</i><span>Emite comprovante de consumo não fiscal e encerra a comanda sem pendências.</span></div></div></section>
-<section class="panel"><h3>Administração · gestão</h3><div class="feature-list"><div class="feature"><i>01</i><span>Dashboard com indicadores e histórico por período.</span></div><div class="feature"><i>02</i><span>Gestão de categorias, produtos, preços, fotos, estoque e adicionais.</span></div><div class="feature"><i>03</i><span>Cadastro de mesas, praças, QR Codes e garçons.</span></div><div class="feature"><i>04</i><span>Relatórios, histórico, transferência de responsável e controles de operação.</span></div></div></section></div>
-<p class="hint">O QR Admin é uma instalação para um único estabelecimento. Esta demonstração descreve as funções documentadas da versão atual e não representa uma integração ou promessa de recursos futuros.</p></main><footer class="footer">QR Admin · Guia de funções do sistema · Página demonstrativa independente</footer></div></div>
-<div class="popover" id="helpBubble" role="status" aria-live="polite"><strong id="bubbleTitle"></strong><p id="bubbleText"></p></div>
-<script>(()=>{const bubble=document.getElementById("helpBubble"),title=document.getElementById("bubbleTitle"),text=document.getElementById("bubbleText");let active=null;function close(){bubble.dataset.open="false";active=null}function show(button){if(active===button){close();return}active=button;title.textContent=button.dataset.title||button.getAttribute("aria-label")||"Função";text.textContent=button.dataset.help||"Este controle representa uma função do QR Admin.";const r=button.getBoundingClientRect();bubble.dataset.open="true";bubble.style.left=Math.max(160,Math.min(innerWidth-160,r.left+r.width/2))+"px";bubble.style.top=Math.max(120,r.top)+"px"}document.querySelectorAll("button[data-help]").forEach(button=>button.addEventListener("click",event=>{event.preventDefault();event.stopPropagation();show(button)}));document.addEventListener("click",event=>{if(!bubble.contains(event.target))close()});document.addEventListener("keydown",event=>{if(event.key==="Escape")close()});window.addEventListener("resize",close);window.addEventListener("scroll",close,true)})();</script>
-</body></html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#5b3fc4">
+  <meta name="description" content="Guia visual e explicativo do QR Admin. Demonstração estática: não cria pedidos, não altera status e não consulta dados privados.">
+  <title>Guia do sistema · QR Admin</title>
+  <link rel="canonical" href="https://qradminn.up.railway.app/guia-sistema.html">
+  <link rel="icon" href="/logo/favicon.png" type="image/png">
+  <style>
+    @font-face {
+      font-family: "Fraunces";
+      src: url("/garcom-pwa/fonts/fraunces-latin-soft-normal.woff2") format("woff2-variations");
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "Plus Jakarta Sans";
+      src: url("/garcom-pwa/fonts/plus-jakarta-sans-latin-wght-normal.woff2") format("woff2-variations");
+      font-weight: 200 800;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "JetBrains Mono";
+      src: url("/garcom-pwa/fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
+      font-weight: 100 800;
+      font-style: normal;
+      font-display: swap;
+    }
+    :root {
+      --surface: #eef1f8;
+      --surface-raised: #f8faff;
+      --surface-sunken: #e0e5f1;
+      --surface-sidebar: #0b101b;
+      --text: #121829;
+      --text-muted: #48536d;
+      --sidebar-text: #eef1fb;
+      --sidebar-muted: #a9b4cc;
+      --brand: #5b3fc4;
+      --brand-ink: #4a32a6;
+      --brand-contrast: #f8faff;
+      --line: #c7cfe0;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --font-display: "Fraunces", Georgia, serif;
+      --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.55;
+      color: var(--text);
+      background: var(--surface);
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--brand-ink); }
+    a:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+    .skip {
+      position: absolute; left: -9999px; top: 0;
+      background: var(--brand); color: var(--brand-contrast);
+      padding: 0.5rem 0.9rem; z-index: 100;
+    }
+    .skip:focus { left: 0.75rem; top: 0.75rem; }
+    .shell { display: grid; min-height: 100vh; }
+    @media (min-width: 860px) { .shell { grid-template-columns: 240px 1fr; } }
+    .sidebar {
+      background: var(--surface-sidebar);
+      color: var(--sidebar-text);
+      padding: 1.25rem 1rem 2rem;
+    }
+    @media (min-width: 860px) {
+      .sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+    }
+    .sidebar .brand {
+      display: flex; align-items: center; gap: 0.6rem;
+      margin-bottom: 1.25rem; text-decoration: none; color: inherit;
+    }
+    .sidebar .brand img { height: 28px; width: auto; }
+    .sidebar .brand span {
+      font-family: var(--font-display); font-weight: 600; font-size: 1.05rem;
+    }
+    .sidebar .badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--sidebar-muted);
+      border: 1px solid #2a3348;
+      border-radius: 999px;
+      padding: 0.2rem 0.55rem;
+      margin-bottom: 1.25rem;
+    }
+    .sidebar nav { display: flex; flex-direction: column; gap: 0.15rem; }
+    .sidebar nav a {
+      color: var(--sidebar-muted);
+      text-decoration: none;
+      padding: 0.45rem 0.6rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+    }
+    .sidebar nav a:hover,
+    .sidebar nav a[aria-current="true"] {
+      background: #141b29; color: var(--sidebar-text);
+    }
+    .sidebar .note {
+      margin-top: 1.5rem; padding-top: 1rem;
+      border-top: 1px solid #2a3348;
+      font-size: 0.8rem; color: var(--sidebar-muted); line-height: 1.45;
+    }
+    .content { padding: 1.5rem 1.25rem 3rem; }
+    @media (min-width: 860px) { .content { padding: 2rem 2.5rem 4rem; } }
+    .content-inner { max-width: 720px; }
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.65rem; font-weight: 600;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--brand-ink); margin: 0 0 0.4rem;
+    }
+    h1, h2, h3 {
+      font-family: var(--font-display);
+      font-weight: 600; line-height: 1.2; letter-spacing: -0.02em;
+      margin: 0 0 0.65rem;
+    }
+    h1 { font-size: clamp(1.6rem, 4vw, 2.1rem); }
+    h2 { font-size: 1.35rem; margin-top: 2.25rem; }
+    h3 { font-size: 1.05rem; }
+    p { margin: 0 0 0.9rem; color: var(--text); }
+    .muted { color: var(--text-muted); }
+    .alert {
+      background: color-mix(in srgb, var(--brand) 8%, var(--surface-raised));
+      border: 1px solid color-mix(in srgb, var(--brand) 25%, var(--line));
+      border-radius: var(--radius-md);
+      padding: 0.9rem 1.1rem;
+      font-size: 0.9rem;
+      margin: 1rem 0 1.5rem;
+    }
+    .panel {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 1.1rem 1.2rem;
+      margin: 1rem 0;
+    }
+    .panel h3 { margin-top: 0; }
+    .feature-list {
+      display: grid; gap: 0.65rem;
+      margin: 0.75rem 0 0; padding: 0; list-style: none;
+    }
+    .feature-list li {
+      display: grid; grid-template-columns: 1.6rem 1fr; gap: 0.5rem;
+      font-size: 0.925rem; color: var(--text-muted);
+    }
+    .feature-list .i {
+      font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700;
+      color: var(--brand-ink); padding-top: 0.15rem;
+    }
+    .frame {
+      background: var(--surface-sunken);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 1rem 0 0.4rem;
+    }
+    .frame--portrait { max-width: 360px; margin-inline: auto; }
+    .frame--portrait img { aspect-ratio: 390 / 844; object-fit: contain; }
+    .caption { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.25rem; }
+    .flow-mini { display: grid; gap: 0.5rem; margin: 1rem 0; }
+    @media (min-width: 560px) { .flow-mini { grid-template-columns: repeat(4, 1fr); } }
+    .flow-mini div {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 0.7rem 0.8rem; font-size: 0.85rem;
+    }
+    .flow-mini .s {
+      font-family: var(--font-mono); font-size: 0.6rem; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--brand-ink); display: block; margin-bottom: 0.25rem;
+    }
+    details.rule {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 1rem; margin: 0.5rem 0;
+    }
+    details.rule summary {
+      font-weight: 600; cursor: pointer; list-style: none;
+    }
+    details.rule summary::-webkit-details-marker { display: none; }
+    details.rule p {
+      margin: 0.5rem 0 0; font-size: 0.9rem; color: var(--text-muted);
+    }
+    .footer-guide {
+      margin-top: 2.5rem; padding-top: 1.25rem;
+      border-top: 1px solid var(--line);
+      font-size: 0.85rem; color: var(--text-muted);
+    }
+    .footer-guide a { margin-right: 1rem; }
+    .nav-toggle {
+      display: none;
+      background: #141b29; color: var(--sidebar-text);
+      border: 1px solid #2a3348; border-radius: var(--radius-sm);
+      padding: 0.45rem 0.75rem; font-size: 0.85rem;
+      margin-bottom: 0.75rem; cursor: pointer;
+      width: 100%; text-align: left;
+    }
+    @media (max-width: 859px) {
+      .nav-toggle { display: block; }
+      .sidebar nav { display: none; }
+      .sidebar.nav-open nav { display: flex; }
+    }
+
+    /* Rolagem discreta sem trilho visível; a navegação continua funcionando. */
+    html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
+    *::-webkit-scrollbar { display: none; width: 0; height: 0; }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#conteudo">Pular para o conteúdo</a>
+  <div class="shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="/">
+        <img src="/logo/qradmin-mark.png" alt="" width="28" height="28">
+        <span>QR Admin</span>
+      </a>
+      <span class="badge">Guia demonstrativo</span>
+      <button type="button" class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="sideNav">
+        Menu do guia
+      </button>
+      <nav id="sideNav" aria-label="Seções do guia">
+        <a href="#aviso" aria-current="true">Sobre este guia</a>
+        <a href="#fluxo">Fluxo completo</a>
+        <a href="#cliente">Cliente</a>
+        <a href="#cozinha">Cozinha</a>
+        <a href="#bar">Bar</a>
+        <a href="#garcom">Garçom</a>
+        <a href="#caixa">Caixa</a>
+        <a href="#admin">Administração</a>
+        <a href="#regras">Regras importantes</a>
+        <a href="#apresentacao">Apresentação comercial</a>
+      </nav>
+      <p class="note">
+        Esta página é estática. Não cria pedidos, não altera status, não autentica e não chama a API.
+        Serve só para explicar as áreas do sistema.
+      </p>
+    </aside>
+    <div class="content" id="conteudo">
+      <div class="content-inner">
+        <header id="aviso">
+          <p class="eyebrow">Demonstração visual</p>
+          <h1>Guia do QR Admin</h1>
+          <p class="muted">
+            Explicação das áreas e do fluxo operacional. Nenhuma ação aqui mexe em dados reais.
+          </p>
+          <div class="alert" role="status">
+            <strong>Segurança:</strong> o guia não autentica, não envia pedidos, não muda status de item,
+            não registra pagamento e não consulta informações privadas. É só leitura e explicação.
+          </div>
+        </header>
+        <section id="fluxo" aria-labelledby="fluxo-h">
+          <h2 id="fluxo-h">Fluxo completo</h2>
+          <p>
+            O cliente lê o QR da mesa e envia o pedido. Os itens caem na fila do setor correspondente
+            (cozinha ou bar). Cada item avança sozinho. O garçom entrega. O caixa cobra o que foi entregue
+            e fecha a comanda.
+          </p>
+          <div class="flow-mini">
+            <div><span class="s">1</span>Cliente · QR e cardápio</div>
+            <div><span class="s">2</span>Cozinha / Bar · preparo por item</div>
+            <div><span class="s">3</span>Garçom · aceite e entrega</div>
+            <div><span class="s">4</span>Caixa · pagamento e fechamento</div>
+          </div>
+          <p class="muted">
+            A comanda da mesa é acumulativa: novos pedidos entram na mesma sessão até o fechamento.
+          </p>
+        </section>
+        <section id="cliente" aria-labelledby="cliente-h">
+          <h2 id="cliente-h">Cliente</h2>
+          <p>
+            Acesso pelo QR Code fixo da mesa. O cardápio abre no navegador — não é necessário instalar aplicativo.
+          </p>
+          <div class="panel">
+            <h3>O que a tela permite</h3>
+            <ul class="feature-list">
+              <li><span class="i">01</span><span>Navegar categorias, pesquisar produtos, ver fotos, descrições e preços</span></li>
+              <li><span class="i">02</span><span>Personalizar com adicionais, removíveis e observações</span></li>
+              <li><span class="i">03</span><span>Montar o carrinho e enviar o pedido para a comanda da mesa</span></li>
+              <li><span class="i">04</span><span>Acompanhar o andamento e consultar o consumo da sessão</span></li>
+            </ul>
+          </div>
+          <div class="frame">
+            <img src="/assets/apresentacao/cardapio-cliente.webp" width="1440" height="900" alt="Cardápio digital da mesa 18 com categorias, fotos, preços e comanda lateral." loading="lazy" decoding="async">
+          </div>
+          <p class="caption">Cardápio do cliente — ambiente de demonstração com dados fictícios.</p>
+        </section>
+        <section id="cozinha" aria-labelledby="cozinha-h">
+          <h2 id="cozinha-h">Cozinha</h2>
+          <p>
+            Fila própria do setor. Recebe apenas os itens de comida (ou do setor configurado como cozinha).
+            O preparo é controlado por item: iniciar e concluir sem depender do bar.
+          </p>
+          <div class="panel">
+            <h3>Operação na fila</h3>
+            <ul class="feature-list">
+              <li><span class="i">01</span><span>Itens aguardando e em produção, com mesa, cliente, adicionais e observações</span></li>
+              <li><span class="i">02</span><span>Início e conclusão do preparo item a item</span></li>
+              <li><span class="i">03</span><span>Atualização em tempo real e aviso sonoro nas telas compatíveis</span></li>
+              <li><span class="i">04</span><span>Impressão de comanda quando habilitada</span></li>
+            </ul>
+          </div>
+          <div class="frame">
+            <img src="/assets/apresentacao/fila-cozinha.webp" width="1440" height="900" alt="Fila da cozinha com comandas em produção e itens aguardando preparo, identificados por mesa." loading="lazy" decoding="async">
+          </div>
+          <p class="caption">Fila da cozinha. Dados de demonstração.</p>
+        </section>
+        <section id="bar" aria-labelledby="bar-h">
+          <h2 id="bar-h">Bar</h2>
+          <p>
+            Mesma lógica da cozinha, com fila separada para os itens do setor bar.
+            Uma bebida pronta pode seguir para entrega mesmo que a comida ainda esteja na chapa.
+          </p>
+          <div class="panel">
+            <h3>Fila do balcão</h3>
+            <ul class="feature-list">
+              <li><span class="i">01</span><span>Recebe só os itens do setor bar</span></li>
+              <li><span class="i">02</span><span>Início e conclusão por item, independente da cozinha</span></li>
+              <li><span class="i">03</span><span>Tempo real, som e impressão quando configurados</span></li>
+            </ul>
+          </div>
+          <div class="frame">
+            <img src="/assets/apresentacao/fila-bar.webp" width="1440" height="900" alt="Fila do bar com bebida em produção e pedido aguardando preparo." loading="lazy" decoding="async">
+          </div>
+          <p class="caption">Fila do bar. Dados de demonstração.</p>
+        </section>
+        <section id="garcom" aria-labelledby="garcom-h">
+          <h2 id="garcom-h">Garçom</h2>
+          <p>
+            Tela no navegador e PWA instalável. Pensada para uso no celular: mesas, itens prontos,
+            aceite, retirada e entrega com registro de responsável.
+          </p>
+          <div class="panel">
+            <h3>Atendimento</h3>
+            <ul class="feature-list">
+              <li><span class="i">01</span><span>Consulta mesas, comandas e itens prontos</span></li>
+              <li><span class="i">02</span><span>Aceita, retira e entrega individualmente ou em lote</span></li>
+              <li><span class="i">03</span><span>Registra quem fez cada transição e quando</span></li>
+              <li><span class="i">04</span><span>Transferência explícita de mesa e responsabilidade</span></li>
+              <li><span class="i">05</span><span>Pode lançar pedidos conforme a permissão da conta</span></li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>Offline</h3>
+            <p class="muted" style="margin:0">
+              A PWA mantém uma fila local (IndexedDB). O pedido feito sem conexão fica
+              <strong>pendente</strong> até sincronizar com o servidor. Em caso de conflito,
+              a equipe revisa. O offline <strong>não confirma automaticamente</strong>.
+            </p>
+          </div>
+          <div class="frame frame--portrait">
+            <img src="/assets/apresentacao/entregas-garcom.webp" width="390" height="844" alt="PWA móvel do garçom com pedidos prontos, estados dos itens e ações de entrega." loading="lazy" decoding="async">
+          </div>
+          <p class="caption">Área do garçom. Dados fictícios de demonstração.</p>
+        </section>
+        <section id="caixa" aria-labelledby="caixa-h">
+          <h2 id="caixa-h">Caixa</h2>
+          <p>
+            Comandas abertas, consumo cobrável (itens entregues), saldo restante e fechamento.
+            Pagamentos parciais nas formas suportadas.
+          </p>
+          <div class="panel">
+            <h3>Cobrança</h3>
+            <ul class="feature-list">
+              <li><span class="i">01</span><span>Lista de sessões abertas com valor entregue e saldo</span></li>
+              <li><span class="i">02</span><span>Pagamentos parciais: dinheiro, PIX, débito, crédito</span></li>
+              <li><span class="i">03</span><span>Divisão por pessoas na interface</span></li>
+              <li><span class="i">04</span><span>Desconto e taxa de serviço com autorização de gerente quando exigido</span></li>
+              <li><span class="i">05</span><span>Comprovante de consumo (não é nota fiscal)</span></li>
+              <li><span class="i">06</span><span>Fechamento e liberação da mesa</span></li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>PIX nesta versão</h3>
+            <p class="muted" style="margin:0">
+              Chave ou QR estático. O cliente pode informar o pagamento; o caixa confere no
+              aplicativo do banco e registra. Não há gateway bancário nem confirmação automática de transferência.
+            </p>
+          </div>
+          <div class="frame">
+            <img src="/assets/apresentacao/fechamento-caixa.webp" width="1440" height="900" alt="Fechamento de contas com comandas abertas, pagamento parcial e saldo restante." loading="lazy" decoding="async">
+          </div>
+          <p class="caption">Caixa. Dados de demonstração.</p>
+        </section>
+        <section id="admin" aria-labelledby="admin-h">
+          <h2 id="admin-h">Administração</h2>
+          <p>
+            Painel de configuração e acompanhamento do estabelecimento (uma instalação = uma casa).
+          </p>
+          <div class="panel">
+            <h3>Principais áreas</h3>
+            <ul class="feature-list">
+              <li><span class="i">01</span><span><strong>Dashboard</strong> — indicadores e histórico por período; cards reorganizáveis (arraste, redimensione, oculte)</span></li>
+              <li><span class="i">02</span><span><strong>Cardápio</strong> — categorias, produtos, preços, fotos, disponibilidade, estoque, adicionais e setor de produção</span></li>
+              <li><span class="i">03</span><span><strong>Importação CSV</strong> — prévia e validação antes de aplicar</span></li>
+              <li><span class="i">04</span><span><strong>Mesas e praças</strong> — mapa, panorama, geração e download de QR Codes</span></li>
+              <li><span class="i">05</span><span><strong>Garçons</strong> — links individuais e métricas</span></li>
+              <li><span class="i">06</span><span><strong>Contas e permissões</strong> — staff por função (admin, cozinha, bar, caixa, garçom)</span></li>
+            </ul>
+          </div>
+          <div class="frame">
+            <img src="/assets/apresentacao/dashboard-admin.webp" width="1440" height="900" alt="Dashboard administrativo com indicadores de faturamento, pedidos, pagamentos, ocupação e itens em operação." loading="lazy" decoding="async">
+          </div>
+          <p class="caption">Dashboard. Dados fictícios de demonstração.</p>
+        </section>
+        <section id="regras" aria-labelledby="regras-h">
+          <h2 id="regras-h">Regras importantes</h2>
+          <details class="rule">
+            <summary>Itens avançam de forma independente</summary>
+            <p>Cozinha e bar não se bloqueiam. Uma bebida pronta pode ser entregue enquanto o prato ainda está em preparo.</p>
+          </details>
+          <details class="rule">
+            <summary>Comanda acumulativa</summary>
+            <p>Novos pedidos da mesma mesa entram na sessão aberta até o caixa fechar a conta.</p>
+          </details>
+          <details class="rule">
+            <summary>Cobrança só do que foi entregue</summary>
+            <p>O valor cobrável considera os itens com entrega registrada. Itens ainda em preparo não entram no saldo a pagar da mesma forma.</p>
+          </details>
+          <details class="rule">
+            <summary>Pedido offline do garçom</summary>
+            <p>Fica pendente na fila local. Só é confirmado após resposta de sucesso do servidor. Conflito exige revisão humana.</p>
+          </details>
+          <details class="rule">
+            <summary>PIX manual</summary>
+            <p>Sem confirmação bancária automática. A equipe valida o recebimento e registra no sistema.</p>
+          </details>
+          <details class="rule">
+            <summary>Um estabelecimento por instalação</summary>
+            <p>Não há multi-loja nem isolamento entre casas nesta versão.</p>
+          </details>
+        </section>
+        <section id="apresentacao">
+          <h2>Apresentação comercial</h2>
+          <p class="muted">
+            Para uma visão voltada a donos e gerentes, com o mesmo conteúdo ancorado no sistema:
+          </p>
+          <p><a href="/apresentacao.html">Abrir a página de apresentação</a></p>
+        </section>
+        <footer class="footer-guide">
+          <p>QR Admin · Guia de funções · Página estática e independente</p>
+          <p>
+            <a href="/apresentacao.html">Apresentação</a>
+            <a href="https://qradminn.up.railway.app/">Acessar o sistema</a>
+            <a href="https://wa.me/5547996162721">WhatsApp · Deivid Moura</a>
+          </p>
+        </footer>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var toggle = document.getElementById("navToggle");
+      var sidebar = document.getElementById("sidebar");
+      var nav = document.getElementById("sideNav");
+      if (!toggle || !sidebar || !nav) return;
+      toggle.addEventListener("click", function () {
+        var open = sidebar.classList.toggle("nav-open");
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+      nav.querySelectorAll("a").forEach(function (link) {
+        link.addEventListener("click", function () {
+          sidebar.classList.remove("nav-open");
+          toggle.setAttribute("aria-expanded", "false");
+          nav.querySelectorAll("a").forEach(function (a) { a.removeAttribute("aria-current"); });
+          link.setAttribute("aria-current", "true");
+        });
+      });
+      var sections = ["aviso", "fluxo", "cliente", "cozinha", "bar", "garcom", "caixa", "admin", "regras", "apresentacao"];
+      function onScroll() {
+        var y = window.scrollY + 120;
+        var current = sections[0];
+        for (var i = 0; i < sections.length; i++) {
+          var el = document.getElementById(sections[i]);
+          if (el && el.offsetTop <= y) current = sections[i];
+        }
+        nav.querySelectorAll("a").forEach(function (a) {
+          var href = a.getAttribute("href") || "";
+          if (href === "#" + current) a.setAttribute("aria-current", "true");
+          else a.removeAttribute("aria-current");
+        });
+      }
+      window.addEventListener("scroll", onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>
