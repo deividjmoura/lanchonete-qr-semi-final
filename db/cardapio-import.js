@@ -17,10 +17,11 @@
  * foi arquivado some do cardápio do cliente e da lista do admin.
  *
  * Formato (UTF-8, separador `;` ou `,`, decimais com vírgula):
- *   categoria;nome;descricao;preco;imagem_url;disponivel;ordem
+ *   categoria;nome;descricao;preco;imagem_url;disponivel;ordem;estoque
  */
 
 const pool = require('./pool');
+const { bloquearCatalogo, snapshot, guardarReversao } = require('./cardapio-reversao');
 
 const MAX_TEXTO_BYTES = 2 * 1024 * 1024;
 const MAX_PRODUTOS = 2000;
@@ -34,6 +35,7 @@ const COLUNAS_CONHECIDAS = [
   'imagem_url',
   'disponivel',
   'ordem',
+  'estoque',
 ];
 const COLUNAS_OBRIGATORIAS = ['categoria', 'nome', 'preco', 'disponivel'];
 
@@ -46,16 +48,17 @@ const APELIDOS = {
   imagem_url: ['imagem_url', 'imagem', 'foto', 'foto_url', 'url_imagem', 'imagem url'],
   disponivel: ['disponivel', 'disponível', 'ativo', 'available'],
   ordem: ['ordem', 'posicao', 'posição', 'order'],
+  estoque: ['estoque', 'quantidade_estoque', 'stock'],
 };
 
 /** Modelo servido em GET /api/admin/cardapio/modelo.csv (e usado nos testes). */
 const MODELO_CSV = [
-  'categoria;nome;descricao;preco;imagem_url;disponivel;ordem',
-  'Lanches;X-Burger;Pão, hambúrguer artesanal, queijo e molho da casa;25,90;https://exemplo.com/x-burger.jpg;sim;1',
-  'Lanches;X-Bacon;Pão, hambúrguer, queijo e bacon;29,90;;sim;2',
-  'Bebidas;Refrigerante lata;Lata 350 ml;6,00;;sim;1',
-  'Bebidas;Suco natural;Suco de laranja 500 ml;10,00;https://exemplo.com/suco.jpg;sim;2',
-  'Sobremesas;Pudim;Pudim de leite condensado;9,00;;nao;1',
+  'categoria;nome;descricao;preco;imagem_url;disponivel;ordem;estoque',
+  'Lanches;X-Burger;Pão, hambúrguer artesanal, queijo e molho da casa;25,90;https://exemplo.com/x-burger.jpg;sim;1;20',
+  'Lanches;X-Bacon;Pão, hambúrguer, queijo e bacon;29,90;;sim;2;0',
+  'Bebidas;Refrigerante lata;Lata 350 ml;6,00;;sim;1;42',
+  'Bebidas;Suco natural;Suco de laranja 500 ml;10,00;https://exemplo.com/suco.jpg;sim;2;',
+  'Sobremesas;Pudim;Pudim de leite condensado;9,00;;nao;1;',
   '',
 ].join('\n');
 
@@ -362,8 +365,13 @@ function lerCsvCardapio(texto) {
     const disponivelBruto = valorDaColuna(registro, 'disponivel');
     const imagemBruta = valorDaColuna(registro, 'imagem_url');
     const ordemBruta = valorDaColuna(registro, 'ordem');
+    const estoqueBruto = valorDaColuna(registro, 'estoque');
+    const estoque = estoqueBruto === '' ? null : Number(estoqueBruto);
 
     const problemas = [];
+    if (estoqueBruto !== '' && (!/^\d+$/.test(estoqueBruto) || !Number.isInteger(estoque) || estoque > 2147483647)) {
+      problemas.push({ coluna: 'estoque', mensagem: 'Estoque deve ser inteiro de 0 a 2147483647; vazio mantém o estoque atual.' });
+    }
     if (!categoria) problemas.push({ coluna: 'categoria', mensagem: 'Categoria é obrigatória' });
     else if (categoria.length > 60) problemas.push({ coluna: 'categoria', mensagem: 'Categoria com mais de 60 caracteres' });
 
@@ -441,6 +449,7 @@ function lerCsvCardapio(texto) {
       descricao: descricao || null,
       preco,
       imagemUrl: imagem.valor,
+      estoque,
       disponivel,
       ordem: ordem.valor != null ? ordem.valor : posicaoPadrao,
     });
@@ -503,6 +512,8 @@ async function importarCardapio({ texto, modo = 'substituir', ator = null, reque
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await bloquearCatalogo(client);
+    const anterior = await snapshot(client);
 
     // Serializa importações concorrentes: dois uploads ao mesmo tempo não podem
     // se atropelar (o segundo espera o primeiro terminar).
@@ -560,7 +571,9 @@ async function importarCardapio({ texto, modo = 'substituir', ator = null, reque
         await client.query(
           `UPDATE produtos
               SET nome = $2, descricao = $3, preco = $4, foto_url = $5,
-                  disponivel = $6, ordem = $7
+                  disponivel = $6, ordem = $7,
+                  controla_estoque = CASE WHEN $8::int IS NULL THEN controla_estoque ELSE TRUE END,
+                  estoque = CASE WHEN $8::int IS NULL THEN estoque ELSE $8 END
             WHERE id = $1`,
           [
             existente.id,
@@ -570,6 +583,7 @@ async function importarCardapio({ texto, modo = 'substituir', ator = null, reque
             produto.imagemUrl,
             produto.disponivel,
             produto.ordem,
+            produto.estoque,
           ]
         );
         atualizados += 1;
@@ -578,8 +592,8 @@ async function importarCardapio({ texto, modo = 'substituir', ator = null, reque
 
       await client.query(
         `INSERT INTO produtos
-           (categoria_id, nome, descricao, preco, foto_url, disponivel, ordem, setor)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+           (categoria_id, nome, descricao, preco, foto_url, disponivel, ordem, setor, controla_estoque, estoque)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
         [
           categoriaId,
           produto.nome.trim(),
@@ -589,6 +603,8 @@ async function importarCardapio({ texto, modo = 'substituir', ator = null, reque
           produto.disponivel,
           produto.ordem,
           inferirSetor(produto.nome, produto.categoria),
+          produto.estoque !== null,
+          produto.estoque,
         ]
       );
       inseridos += 1;
@@ -634,6 +650,7 @@ async function importarCardapio({ texto, modo = 'substituir', ator = null, reque
       });
     }
 
+    resumo.versao = await guardarReversao(client, anterior);
     await client.query('COMMIT');
     return resumo;
   } catch (e) {

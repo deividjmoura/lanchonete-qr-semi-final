@@ -14,6 +14,7 @@ import type {
   ModoImportCardapio,
   PreviaImportCardapio,
   ResumoImportCardapio,
+  ReversaoCardapio,
 } from "../../lib/api";
 import { confirmarAcao } from "../../lib/confirmacao";
 import { cn } from "../../utils/cn";
@@ -73,6 +74,10 @@ export function ImportarCardapio({
   onClose: () => void;
   onImportado: () => void;
 }) {
+  const [reversao, setReversao] = useState<ReversaoCardapio | null>(null);
+  const [revertendo, setRevertendo] = useState(false);
+  const [erroReversao, setErroReversao] = useState<string | null>(null);
+  const [revertido, setRevertido] = useState(false);
   const [csv, setCsv] = useState("");
   const [arquivo, setArquivo] = useState<{ nome: string; bytes: number } | null>(null);
   const [previa, setPrevia] = useState<PreviaImportCardapio | null>(null);
@@ -83,6 +88,25 @@ export function ImportarCardapio({
   const [resultado, setResultado] = useState<ResumoImportCardapio | null>(null);
   const [arrastando, setArrastando] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const carregarReversao = useCallback(async () => {
+    try { setReversao(await api.statusReversaoCardapio()); setErroReversao(null); }
+    catch { setReversao(null); setErroReversao("Não foi possível consultar a reversão. Reabra esta janela para tentar novamente."); }
+  }, []);
+  useEffect(() => {
+    if (open) { setErroReversao(null); setRevertido(false); void carregarReversao(); }
+  }, [open, carregarReversao]);
+  const reverter = async () => {
+    if (!reversao?.versao || revertendo || importando) return;
+    if (!await confirmarAcao({ titulo: "Reverter última importação?", mensagem: "O cardápio anterior será restaurado e os novos produtos serão arquivados, sem apagar vendas. Se o cardápio ou estoque mudou depois da importação, a reversão será bloqueada para não perder alterações.", confirmar: "Reverter cardápio", perigo: true })) return;
+    setRevertendo(true); setErroReversao(null);
+    try {
+      await api.reverterCardapio(reversao.versao);
+      setResultado(null); setPrevia(null); setCsv(""); setArquivo(null);
+      setRevertido(true); onImportado(); await carregarReversao();
+    } catch (e: any) { setErroReversao(e.message || "Não foi possível reverter. Nenhuma alteração foi aplicada."); }
+    finally { setRevertendo(false); }
+  };
 
   const limpar = useCallback(() => {
     setCsv("");
@@ -133,7 +157,7 @@ export function ImportarCardapio({
     }
   }, []);
 
-  const podeImportar = Boolean(previa?.ok && csv && !lendo && !importando);
+  const podeImportar = Boolean(previa?.ok && csv && !lendo && !importando && !revertendo);
 
   const importar = async () => {
     if (!podeImportar) return;
@@ -154,6 +178,7 @@ export function ImportarCardapio({
       const out = await api.importarCardapio(csv, modo);
       setResultado(out);
       onImportado();
+      await carregarReversao();
     } catch (e: any) {
       setErro(e?.message || "A importação falhou. O cardápio atual foi mantido.");
     } finally {
@@ -166,9 +191,9 @@ export function ImportarCardapio({
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={() => { if (!importando && !revertendo) onClose(); }}
       wide
-      closeOnBackdrop={!importando}
+      closeOnBackdrop={!importando && !revertendo}
       labelledBy="importar-cardapio-titulo"
       describedBy="importar-cardapio-descricao"
     >
@@ -182,11 +207,18 @@ export function ImportarCardapio({
           </h2>
           <p id="importar-cardapio-descricao" className="text-xs leading-relaxed text-text-muted">
             Envie uma planilha <strong className="text-text">CSV UTF-8</strong> com uma linha por produto
-            (categoria, nome, descrição, preço, imagem, disponibilidade e ordem). O sistema mostra a prévia
+            (categoria, nome, descrição, preço, imagem, disponibilidade, ordem e estoque). O sistema mostra a prévia
             e só troca o cardápio depois da sua confirmação.
           </p>
         </header>
 
+        <section aria-label="Reverter importação" className="mb-4 space-y-2 rounded-md border border-line bg-surface-sunken p-3">
+          <p className="text-xs text-text-muted">Estoque no CSV: <strong>0</strong> cria saldo zerado com controle ativo. Vazio mantém o saldo existente; produtos novos ficam sem controle. Informe somente unidades inteiras.</p>
+          <p className="text-xs text-text-muted">Apenas a última importação pode ser revertida. Uma nova importação substitui o ponto de restauração. Alterações posteriores no catálogo ou estoque bloqueiam a reversão.</p>
+          {revertido && <p role="status" className="text-sm font-semibold text-brand-ink">Cardápio anterior restaurado.</p>}
+          {erroReversao && <p role="alert" className="text-xs text-status-danger-ink">{erroReversao}</p>}
+          {reversao?.disponivel && <Btn variant="secondary" onClick={() => void reverter()} disabled={revertendo || importando || lendo}>{revertendo ? "Revertendo…" : "Reverter última importação"}</Btn>}
+        </section>
         {resultado ? (
           <div className="space-y-4" role="status" aria-live="polite">
             <div className="flex items-start gap-3 rounded-md border border-status-success-border bg-status-success-surface p-4">
@@ -205,10 +237,10 @@ export function ImportarCardapio({
               </div>
             </div>
             <div className="flex flex-wrap justify-end gap-2">
-              <Btn variant="secondary" onClick={limpar}>
+              <Btn variant="secondary" onClick={limpar} disabled={revertendo || importando}>
                 Importar outro arquivo
               </Btn>
-              <Btn onClick={onClose}>Fechar</Btn>
+              <Btn onClick={onClose} disabled={revertendo || importando}>Fechar</Btn>
             </div>
           </div>
         ) : (
@@ -295,6 +327,15 @@ export function ImportarCardapio({
             </section>
 
             {/* ---------------- Passo 2: prévia ---------------- */}
+            {previa && (
+              <details className="mb-3 rounded-sm border border-line p-3 text-xs text-text-muted">
+                <summary className="cursor-pointer font-semibold">Prévia de estoque: {previa.produtos.filter((p) => p.estoque != null).length} com quantidade, {previa.produtos.filter((p) => p.estoque === 0).length} zerados</summary>
+                <ul className="mt-2 space-y-1">
+                  {previa.produtos.slice(0, 20).map((p) => <li key={p.linha}>{p.nome}: {p.estoque == null ? "não informado (mantém saldo existente; novo sem controle)" : `${p.estoque} un.${p.estoque === 0 ? " · esgotado" : ""}`}</li>)}
+                </ul>
+                {previa.produtos.length > 20 && <p className="mt-2">Exibindo os 20 primeiros produtos. Todos os produtos do arquivo serão importados.</p>}
+              </details>
+            )}
             {previa && (
               <section className="space-y-3" aria-labelledby="importar-cardapio-previa">
                 <h3 id="importar-cardapio-previa" className="sr-only">

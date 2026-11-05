@@ -179,6 +179,9 @@ jobs:
           node -e "const z=require('zlib'),f=require('fs');f.writeFileSync('/tmp/al2023.tar',z.brotliDecompressSync(f.readFileSync('node_modules/@sparticuz/chromium/bin/al2023.tar.br')))"
           mkdir -p /tmp/al2023 && tar -xf /tmp/al2023.tar -C /tmp/al2023
       # O E2E visual (PR #141) roda sobre o build de produção, não sobre o source.
+      - name: CSV estoque e reversão transacional do cardápio
+        run: node --test tests/postgres-cardapio-import-reversao.test.cjs
+
       - name: Build for E2E
         run: npm run build
       # Roda todos os E2E: offline, lote/cobrança, abas CSRF, redefinição de senha

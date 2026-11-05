@@ -35,6 +35,7 @@ if (!/(^|_)test($|_)/.test(nome)) {
 }
 
 const suites = [
+  'postgres-cardapio-import-reversao.test.cjs',
   'postgres-integration.test.cjs',
   'postgres-financial-integration.test.cjs',
   'postgres-dashboard.test.cjs',
