@@ -693,6 +693,222 @@ async function trocarSenha(staffId, senhaAtual, senhaNova) {
   }
 }
 
+const LOGIN_RE = /^[a-z0-9][a-z0-9._-]{2,31}$/;
+
+/**
+ * Issue #48 — cria uma conta INDIVIDUAL de staff.
+ *
+ * Decisão do responsável: substituir os logins genéricos por papel por uma
+ * conta por pessoa, para que a autoria de pagamento, desconto e cancelamento
+ * seja atribuível. O login é a identidade que aparecerá na trilha.
+ *
+ * Garantias (para a facilidade não virar buraco):
+ *  - só papel válido; login normalizado e único entre contas ATIVAS;
+ *  - política de senha aplicada também aqui (não só na troca);
+ *  - senha exclusiva: não pode ser igual à de outra conta ativa;
+ *  - nasce com deve_trocar_senha = TRUE, para o admin não conhecer a senha
+ *    definitiva do funcionário;
+ *  - criação e recusa são auditadas com o ator, sem gravar senha nem hash.
+ */
+async function criarContaStaff({ nome, login, senha, papel }, ator) {
+  if (!ator || ator.papel !== 'admin') {
+    throw new ErroAuth(403, 'Apenas o administrador pode criar contas.');
+  }
+
+  const nomeLimpo = String(nome || '').trim();
+  if (nomeLimpo.length < 2 || nomeLimpo.length > 80) {
+    throw new ErroAuth(400, 'Informe o nome do funcionário (2 a 80 caracteres).');
+  }
+
+  const loginLimpo = String(login || '').trim().toLowerCase();
+  if (!LOGIN_RE.test(loginLimpo)) {
+    throw new ErroAuth(
+      400,
+      'Usuário inválido. Use de 3 a 32 caracteres: letras minúsculas, números, ponto, hífen ou sublinhado.'
+    );
+  }
+
+  if (!PAPEIS.includes(papel)) {
+    throw new ErroAuth(400, 'Papel inválido. Use admin, cozinha, bar ou caixa.');
+  }
+
+  const politica = validarPoliticaSenha(senha, { login: loginLimpo });
+  if (politica) throw new ErroAuth(400, politica);
+
+  const client = await pool.connect();
+  let rejeicao = null;
+  try {
+    await client.query('BEGIN');
+    // Serializa criação de contas: a checagem de senha exclusiva não pode ser
+    // burlada por duas criações concorrentes com a mesma senha.
+    await client.query('SELECT pg_advisory_xact_lock(741928350113)');
+
+    // Login é único GLOBALMENTE, inclusive de contas desativadas.
+    //
+    // Isso é deliberado: staff_credencial_eventos e auditoria_eventos guardam
+    // o login como identidade. Se "joao" fosse reaproveitado por outra pessoa
+    // depois de uma desativação, a trilha passaria a apontar para duas pessoas
+    // diferentes com o mesmo nome — exatamente o que a #48 existe para evitar.
+    // Quem substitui alguém deve usar um login distinto (ex.: joao-2).
+    const { rows: existentes } = await client.query(
+      'SELECT id, ativo FROM staff WHERE lower(login) = $1 FOR UPDATE',
+      [loginLimpo]
+    );
+    const jaExiste = existentes[0];
+    if (jaExiste) {
+      rejeicao = {
+        evento: 'conta_criacao_rejeitada',
+        erro: new ErroAuth(
+          409,
+          jaExiste.ativo
+            ? 'Esse usuário já existe.'
+            : 'Esse usuário pertence a uma conta desativada e não pode ser reutilizado, porque a trilha de auditoria usa o login como identidade. Escolha outro (ex.: acrescente um número).'
+        ),
+      };
+    }
+
+    if (!rejeicao) {
+      const { rows: outros } = await client.query('SELECT senha_hash FROM staff WHERE ativo');
+      for (const o of outros) {
+        if (await verificarSenha(senha, o.senha_hash)) {
+          rejeicao = {
+            evento: 'conta_criacao_rejeitada',
+            erro: new ErroAuth(400, 'Essa senha já é usada por outra conta. Escolha uma senha exclusiva.'),
+          };
+          break;
+        }
+      }
+    }
+
+    if (rejeicao) {
+      await registrarEventoCredencial(client, {
+        staffId: jaExiste ? jaExiste.id : null,
+        login: loginLimpo,
+        evento: rejeicao.evento,
+        atorStaffId: ator.id,
+        atorLogin: ator.login,
+      });
+      await client.query('COMMIT'); // preserva a trilha da tentativa recusada
+      throw rejeicao.erro;
+    }
+
+    const hash = await hashSenha(senha);
+    const { rows } = await client.query(
+      `INSERT INTO staff (nome, login, senha_hash, papel, ativo, deve_trocar_senha)
+       VALUES ($1, $2, $3, $4, TRUE, TRUE)
+       RETURNING id, nome, login, papel, ativo`,
+      [nomeLimpo, loginLimpo, hash, papel]
+    );
+    const criada = rows[0];
+
+    await registrarEventoCredencial(client, {
+      staffId: criada.id,
+      login: criada.login,
+      evento: 'conta_criada',
+      atorStaffId: ator.id,
+      atorLogin: ator.login,
+    });
+    await client.query('COMMIT');
+
+    return {
+      id: criada.id,
+      nome: criada.nome,
+      login: criada.login,
+      papel: criada.papel,
+      ativo: criada.ativo,
+      deveTrocarSenha: true,
+    };
+  } catch (e) {
+    if (!rejeicao) await client.query('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Issue #48 — desativa uma conta individual (desativação lógica).
+ *
+ * Não apaga a linha: pedidos, pagamentos e auditoria apontam para staff.id, e
+ * apagar quebraria a rastreabilidade. Revoga as sessões, impede novo login
+ * (autenticar() só aceita staff.ativo) e recusa na hora se for a última conta
+ * admin ativa — senão o sistema ficaria sem quem administre.
+ */
+async function desativarContaStaff(idBruto, ator) {
+  if (!ator || ator.papel !== 'admin') {
+    throw new ErroAuth(403, 'Apenas o administrador pode desativar contas.');
+  }
+  const id = Number(idBruto);
+  if (!Number.isInteger(id) || id < 1) throw new ErroAuth(400, 'Conta inválida.');
+  if (id === ator.id) throw new ErroAuth(400, 'Você não pode desativar a própria conta.');
+
+  const client = await pool.connect();
+  let rejeicao = null;
+  try {
+    await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(741928350114)');
+
+    const { rows } = await client.query(
+      'SELECT id, login, papel, ativo FROM staff WHERE id = $1 FOR UPDATE',
+      [id]
+    );
+    const alvo = rows[0];
+    if (!alvo) {
+      rejeicao = { evento: 'conta_desativacao_rejeitada', erro: new ErroAuth(404, 'Conta não encontrada.'), login: '' };
+    } else if (!alvo.ativo) {
+      rejeicao = { evento: 'conta_desativacao_rejeitada', erro: new ErroAuth(409, 'Essa conta já está desativada.'), login: alvo.login };
+    } else if (alvo.papel === 'admin') {
+      const { rows: admins } = await client.query(
+        "SELECT count(*)::int AS n FROM staff WHERE ativo AND papel = 'admin'"
+      );
+      if (admins[0].n <= 1) {
+        rejeicao = {
+          evento: 'conta_desativacao_rejeitada',
+          erro: new ErroAuth(409, 'Esta é a última conta de administrador ativa. Crie outra antes de desativar.'),
+          login: alvo.login,
+        };
+      }
+    }
+
+    if (rejeicao) {
+      await registrarEventoCredencial(client, {
+        staffId: alvo ? alvo.id : null,
+        login: rejeicao.login || '',
+        evento: rejeicao.evento,
+        atorStaffId: ator.id,
+        atorLogin: ator.login,
+      });
+      await client.query('COMMIT');
+      throw rejeicao.erro;
+    }
+
+    await client.query(
+      `UPDATE staff
+          SET ativo = FALSE, desativado_em = now(), desativado_por = $2
+        WHERE id = $1`,
+      [id, ator.id]
+    );
+    const revogadas = await client.query('DELETE FROM staff_sessoes WHERE staff_id = $1', [id]);
+
+    await registrarEventoCredencial(client, {
+      staffId: id,
+      login: alvo.login,
+      evento: 'conta_desativada',
+      sessoesRevogadas: revogadas.rowCount,
+      atorStaffId: ator.id,
+      atorLogin: ator.login,
+    });
+    await client.query('COMMIT');
+
+    return { ok: true, id, login: alvo.login, sessoesRevogadas: revogadas.rowCount };
+  } catch (e) {
+    if (!rejeicao) await client.query('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 function homeDoPapel(papel) {
   return HOME_POR_PAPEL[papel] || '/admin';
 }
@@ -724,6 +940,8 @@ module.exports = {
   trocarSenha,
   redefinirSenhaStaff,
   listarContasStaff,
+  criarContaStaff,
+  desativarContaStaff,
   validarPoliticaSenha,
   trocaObrigatoriaAtiva,
   exigeTrocaDeSenha,

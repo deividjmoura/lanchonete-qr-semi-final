@@ -73,6 +73,8 @@ const {
   trocarSenha,
   redefinirSenhaStaff,
   listarContasStaff,
+  criarContaStaff,
+  desativarContaStaff,
   homeDoPapel,
   garantirStaffSeed,
   csrfTokenParaSessao,
@@ -1162,6 +1164,29 @@ const server = http.createServer(async (req, res) => {
        admin, sem bloquear a própria recuperação por troca obrigatória. */
     if (p === '/api/admin/contas' && req.method === 'GET') {
       return json(res, 200, await listarContasStaff());
+    }
+
+    /* Issue #48 — conta individual por funcionário.
+       Substitui os logins genéricos por papel (admin/cozinha/bar/caixa), que
+       tornavam impossível dizer quem lançou pagamento ou concedeu desconto.
+       A senha nunca é devolvida; a conta nasce exigindo troca. */
+    if (p === '/api/admin/contas' && req.method === 'POST') {
+      const ator = await exigirSessao(req);
+      const b = await body(req);
+      const out = await criarContaStaff(
+        { nome: b.nome, login: b.login, senha: b.senha, papel: b.papel },
+        ator
+      );
+      return json(res, 201, out);
+    }
+
+    /* Desativação lógica: preserva a rastreabilidade de quem operou no passado. */
+    {
+      const mDesativa = p.match(/^\/api\/admin\/contas\/(\d+)\/desativar$/);
+      if (mDesativa && req.method === 'POST') {
+        const ator = await exigirSessao(req);
+        return json(res, 200, await desativarContaStaff(Number(mDesativa[1]), ator));
+      }
     }
 
     // Cadastro prévio do e-mail autorizado para login Google. Conta já vinculada
