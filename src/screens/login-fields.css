@@ -1,0 +1,29 @@
+/* The field (icon + input) owns its focus ring, not the inner input rectangle. */
+.login-credential { min-width: 0; }
+.login-credential:focus-within {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.login-credential > input {
+  width: 0;
+  min-width: 0;
+  flex: 1 1 0%;
+  align-self: stretch;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  appearance: none;
+}
+.login-credential > input:focus,
+.login-credential > input:focus-visible { outline: none; box-shadow: none; }
+/* Keep browser autofill inside the same visual field, including dark mode. */
+.login-credential > input:-webkit-autofill {
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
+  -webkit-box-shadow: 0 0 0 1000px var(--surface-sunken) inset;
+}
+@media (max-width: 639px) {
+  .login-credential > input { font-size: 16px; }
+}
