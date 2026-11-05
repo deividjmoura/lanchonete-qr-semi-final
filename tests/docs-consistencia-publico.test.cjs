@@ -81,13 +81,16 @@ test('cópias legais em dist/ são idênticas às de public/', () => {
   }
 });
 
-test('as páginas legais não prometem o que o código não faz', () => {
-  // Contrato mínimo de honestidade: nada de CNPJ, prazo de retenção ou fornecedor
-  // inventado dentro das páginas públicas.
+test('as páginas legais identificam o fornecedor real sem expor dados pessoais desnecessários', () => {
   const juntas = COPIAS_LEGAIS.map((arquivo) => ler(`public/${arquivo}`)).join('\n');
 
-  assert.doesNotMatch(juntas, /\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b/, 'CNPJ não pode ser inventado');
+  assert.match(juntas, /69\.987\.201 DEIVID DE JESUS DE MOURA/);
+  assert.match(juntas, /69\.987\.201\/0001-20/, 'deve usar o CNPJ confirmado no CCMEI');
+  assert.match(juntas, /deividmoura729249@gmail\.com/);
+  assert.doesNotMatch(juntas, /073\.749\.559-60/, 'CPF do titular não deve ser publicado');
   assert.doesNotMatch(juntas, /mantidos por \d+ (dias|meses|anos)/i, 'prazo de retenção não pode ser inventado');
+  assert.match(ler('public/politica-de-privacidade.html'), /controlador dos dados pessoais.*estabelecimento/i);
+  assert.match(ler('public/politica-de-privacidade.html'), /fornecedor do software não se torna controlador/i);
   // O token do garçom precisa ser descrito como bearer no navegador, não como cookie HttpOnly.
   assert.match(juntas, /token de acesso do tipo bearer armazenado no navegador, não um cookie HttpOnly/);
   // Rascunho offline não é pedido recebido: a distinção precisa existir nos dois arquivos.
