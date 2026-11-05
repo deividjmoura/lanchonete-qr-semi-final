@@ -101,4 +101,4 @@ O procedimento precisa ser definido pelo responsável. Como ponto de partida ope
 
 ## 7. Fontes técnicas consultadas
 
-`db/purge.js`; migrations `0001`, `0009`, `0016`, `0019`, `0023`, `0024`, `0025`, `0028` e `0034`; módulos `db/auth.js`, `db/caixa.js`, `db/pix-cliente.js`, `db/auditoria.js` e `db/foto.js`; arquivos `public/garcom-pwa/app.js`, `offline.js` e `sw.js`.; fluxo de autorização Google em `server.js` e `db/admin.js`. O inventário descreve o repositório, não uma inspeção do banco de produção.
+`db/purge.js`; migrations `0001`, `0009`, `0016`, `0019`, `0023`, `0024`, `0025`, `0028` e `0034`; módulos `db/auth.js`, `db/caixa.js`, `db/pix-cliente.js`, `db/auditoria.js` e `db/foto.js`; arquivos `public/garcom-pwa/app.js`, `offline.js` e `sw.js`; fluxo de autorização Google em `server.js` e `db/admin.js`. O inventário descreve o repositório, não uma inspeção do banco de produção.
