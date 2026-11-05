@@ -124,20 +124,12 @@ test("PWA concentra conexão, sincronização, tema, avisos e ajuda no rodapé, 
   assert.equal(syncMatches.length, 1, "deve existir exatamente um botão de sincronização");
   assert.doesNotMatch(pwaHtml, /class="app-header"/, "a faixa superior fixa foi removida");
   const footer = pwaHtml.slice(pwaHtml.indexOf('<footer class="app-footer"'), pwaHtml.indexOf("</footer>"));
-  assert.match(
-    footer,
-    /id="connection"[\s\S]{0,480}id="syncBtn"[^>]*aria-label="[^"]+"[^>]*title="[^"]+"/,
-    "#syncBtn precisa ficar imediatamente à direita do indicador de conexão no rodapé",
-  );
-  for (const id of ["themeToggleBtn", "helpBtn", "openNotificationSettings"]) {
-    assert.match(footer, new RegExp('id="' + id + '"'), id + " também vive no rodapé");
+  assert.match(footer, /class="bottom-nav"/, "navegação continua no rodapé");
+  assert.doesNotMatch(footer, /class="utility-bar"/, "utilitários não ficam no rodapé fixo");
+  const mesas = pwaHtml.slice(pwaHtml.indexOf('id="page-tables"'), pwaHtml.indexOf('id="page-orders"'));
+  for (const id of ["connection", "syncBtn", "themeToggleBtn", "helpBtn", "openNotificationSettings"]) {
+    assert.match(mesas, new RegExp('id="' + id + '"'), id + " fica na aba Mesas");
   }
-  const main = pwaHtml.slice(pwaHtml.indexOf('<main class="workspace">'), pwaHtml.indexOf("</main>"));
-  assert.doesNotMatch(
-    main,
-    /Sincronizar/i,
-    "nenhum botão visual Sincronizar repetido nas páginas individuais",
-  );
   assert.match(pwaHtml, /icons\.svg#squares-four-regular/);
   assert.match(pwaHtml, /icons\.svg#squares-four-fill/);
 });
