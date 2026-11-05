@@ -1,1 +1,0 @@
-/home/user/lanchonete-qr-semi-final/node_modules/@embedded-postgres/linux-x64/native/bin/postgres "-D" "/home/user/lanchonete-qr-semi-final/.tmp-pgdata" "-p" "55433"

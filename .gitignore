@@ -11,3 +11,6 @@ public/uploads/*
 
 # capturas visuais de auditoria antes/depois (mantidas no workspace)
 docs/screenshots/
+
+# Dados temporários do PostgreSQL embarcado (nunca commitar)
+.tmp-pgdata/
