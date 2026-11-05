@@ -44,7 +44,7 @@ html {
 body {
   margin: 0;
   min-height: 100svh;
-  padding-bottom: calc(82px + env(safe-area-inset-bottom));
+  padding-bottom: calc(128px + env(safe-area-inset-bottom));
   background: var(--surface);
   color: var(--text);
 }
@@ -126,88 +126,68 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   display: none;
 }
 
-/* Global Operational Header + Compact Waiter Strip */
-.app-header {
-  position: sticky;
-  top: 0;
-  z-index: 16;
-  background: var(--surface-raised);
-  border-bottom: 1px solid var(--line-strong);
+/* Rodapé operacional: utilitários + navegação, sem faixa superior fixa. */
+.app-footer {
+  position: fixed;
+  z-index: 20;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--surface-sidebar);
+  border-top: 1px solid var(--sidebar-line);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
-.header-inner {
-  max-width: 1040px;
+.utility-bar {
+  max-width: 520px;
   margin: 0 auto;
-  min-height: 54px;
-  padding: 6px 14px;
+  padding: 6px 8px 2px;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-width: 0;
+.utility-button {
+  position: relative;
+  flex: 0 0 40px;
 }
 
-.brand-mark {
-  width: 30px;
-  height: 30px;
-  object-fit: contain;
-  border-radius: var(--radius-xs);
-  flex-shrink: 0;
-}
-
-.brand h1 {
-  margin: 0;
-  font-family: var(--font-display);
-  font-variation-settings: "SOFT" 80;
-  font-size: clamp(0.92rem, 3.4vw, 1.12rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.connection-pill {
-  display: inline-flex;
-  align-items: center;
-  min-height: 30px;
-  padding: 4px 8px;
+/* Indicador de conexão: somente ícone; o texto fica para leitores de tela. */
+.connection-indicator {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  display: inline-grid;
+  place-items: center;
   border-radius: var(--radius-pill);
   border: 1px solid var(--status-success-border);
   background: var(--status-success-surface);
   color: var(--status-success-ink);
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  white-space: nowrap;
 }
 
-.connection-pill[data-net="offline"],
-.connection-pill[data-net="checking"] {
+.connection-indicator[data-net="offline"],
+.connection-indicator[data-net="checking"] {
   border-color: var(--status-warning-border);
   background: var(--status-warning-surface);
   color: var(--status-warning-ink);
 }
 
-.connection-pill[data-net="auth"],
-.connection-pill[data-net="storage"] {
+.connection-indicator[data-net="auth"],
+.connection-indicator[data-net="storage"] {
   border-color: var(--status-danger-border);
   background: var(--status-danger-surface);
   color: var(--status-danger-ink);
+}
+
+.connection-indicator[data-net="checking"] .pwa-icon {
+  animation: connection-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes connection-pulse {
+  50% {
+    opacity: 0.4;
+  }
 }
 
 .icon-action {
@@ -224,7 +204,7 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 
-/* 48px touch target without bloating header bar */
+/* Alvo de toque de 48px sem inchar a barra do rodapé. */
 .icon-action::after {
   content: "";
   position: absolute;
@@ -263,87 +243,16 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   }
 }
 
-/* Compact Waiter Strip (Section 7.2: minimal vertical footprint across all screens) */
-.waiter-strip {
-  background: var(--surface-sunken);
-  border-top: 1px solid var(--line);
-}
-
-.waiter-strip-inner {
-  max-width: 1040px;
-  margin: 0 auto;
-  min-height: 28px;
-  padding: 3px 14px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  line-height: 1.2;
-}
-
-.waiter-badge-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--text);
-  font-weight: 700;
-  min-width: 0;
-}
-
-.waiter-badge {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.waiter-sep {
-  color: var(--text-subtle);
-}
-
-.waiter-page-name {
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 600;
-}
-
-/* Acesso discreto e disponível em todas as abas, com alvo de toque ampliado. */
-.notification-settings-button {
-  position: relative;
-  display: grid;
-  place-items: center;
-  flex: 0 0 32px;
-  width: 32px;
-  height: 32px;
-  margin-left: auto;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--text-muted);
-}
-
-.notification-settings-button:hover {
-  background: var(--surface-hover);
-  color: var(--text);
-}
-
-.notification-settings-button::after {
-  content: "";
-  position: absolute;
-  inset: -6px;
-}
-
+/* Ponto de configuração pendente no ícone de avisos. */
 .notification-settings-button[data-pending="true"]::before {
   content: "";
   position: absolute;
   z-index: 1;
-  top: 3px;
-  right: 3px;
+  top: 4px;
+  right: 4px;
   width: 8px;
   height: 8px;
-  border: 1px solid var(--surface-sunken);
+  border: 1px solid var(--surface);
   border-radius: 50%;
   background: var(--brand);
 }
@@ -352,7 +261,7 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 .notification-feedback {
   position: fixed;
   z-index: 30;
-  bottom: calc(84px + env(safe-area-inset-bottom));
+  bottom: calc(128px + env(safe-area-inset-bottom));
   left: 50%;
   width: min(calc(100% - 28px), 420px);
   transform: translateX(-50%);
@@ -486,6 +395,70 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   background: var(--status-info-surface);
   color: var(--status-info-ink);
   font-weight: 600;
+}
+
+/* Identidade visual mínima dentro da ajuda (marca também offline). */
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: var(--radius-xs);
+}
+
+.help-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-family: var(--font-display);
+  font-variation-settings: "SOFT" 80;
+}
+
+/* Ajuda rápida dos ícones do rodapé */
+.help-list {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.help-list li {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+}
+
+.help-list strong {
+  display: block;
+  font-size: 0.86rem;
+}
+
+.help-list span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.help-list .pwa-icon-xs {
+  display: inline-block;
+  vertical-align: -2px;
+}
+
+/* Salão completo só aparece depois da busca por número ou cliente. */
+.salao-search .table-grid {
+  padding: 0;
+  margin-top: 10px;
+}
+
+.offline-notice {
+  border-left: 3px solid var(--status-warning-border);
 }
 
 /* Ledger Blocks (soft rounded cards) */
@@ -664,13 +637,52 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   gap: 10px;
 }
 
-.my-table-row {
-  border: 1px solid var(--line);
+/* Uma mesa = uma superfície: título, cliente e ações em ícones. */
+.my-table-card {
+  border: 1px solid var(--brand-border);
   border-radius: var(--radius-sm);
-  padding: 10px;
-  background: var(--surface);
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--brand-surface) 55%, var(--surface));
   display: grid;
   gap: 8px;
+}
+
+.my-table-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.my-table-card-head strong {
+  font-family: var(--font-display);
+  font-variation-settings: "SOFT" 80;
+  font-variant-numeric: tabular-nums;
+  font-size: 1rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.my-table-client {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-table-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.table-icon-btn {
+  flex: 0 0 40px;
+  border-color: var(--line-strong);
+  background: var(--surface);
 }
 
 .table-grid {
@@ -1172,17 +1184,12 @@ textarea {
 
 /* Bottom Navigation (Touch-safe, 4 items, stroke inactive / fill active) */
 .bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 20;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 2px;
   background: var(--surface-sidebar);
   border-top: 1px solid var(--sidebar-line);
-  padding: 4px 6px calc(6px + env(safe-area-inset-bottom));
+  padding: 4px 6px 6px;
 }
 
 .bottom-nav button {
@@ -1317,11 +1324,10 @@ dialog.sheet[open] {
    tokens, para funcionar igual nos temas claro e escuro. Nada aqui muda
    layout, alvos de toque ou contraste do texto.
    ========================================================================== */
-.app-header {
-  background: color-mix(in srgb, var(--surface-raised) 90%, transparent);
+.app-footer {
+  background: color-mix(in srgb, var(--surface-sidebar) 94%, transparent);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
   backdrop-filter: blur(14px) saturate(140%);
-  box-shadow: 0 10px 24px -20px color-mix(in srgb, var(--text) 70%, transparent);
 }
 
 .ledger-block {
@@ -1381,6 +1387,46 @@ dialog.sheet[open] {
   -webkit-backdrop-filter: blur(16px) saturate(140%);
   backdrop-filter: blur(16px) saturate(140%);
   box-shadow: 0 -10px 26px -22px color-mix(in srgb, var(--sidebar-text) 70%, transparent);
+}
+
+/* Bordas discretas: a hierarquia vem de superfície, espaço e sombra.
+   Estados de alerta (aviso, bloqueio, status) mantêm as bordas fortes. */
+.ledger-block {
+  border-color: color-mix(in srgb, var(--line) 82%, transparent);
+}
+
+.ledger-head {
+  border-bottom-color: color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.my-table-card {
+  border-color: color-mix(in srgb, var(--brand-border) 55%, transparent);
+  box-shadow: var(--shadow-card);
+}
+
+.table-tile {
+  border-color: color-mix(in srgb, var(--line) 78%, transparent);
+}
+
+.table-icon-btn {
+  border-color: color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.icon-action {
+  border-color: color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.sheet {
+  border-color: color-mix(in srgb, var(--line-strong) 55%, transparent);
+}
+
+.sheet-top,
+.sheet-footer {
+  border-color: color-mix(in srgb, var(--line) 72%, transparent);
+}
+
+.bottom-nav {
+  border-top-color: color-mix(in srgb, var(--sidebar-line) 80%, transparent);
 }
 
 /* Rolagem discreta em qualquer faixa horizontal/vertical do app. */

@@ -12,17 +12,15 @@
 <style id="critical-pwa-layout">
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
-body{margin:0;background:var(--surface);color:var(--text);padding-bottom:84px}
-.app-header{background:var(--surface-raised);border-bottom:1px solid var(--line-strong)}
-.header-inner{max-width:1040px;margin:auto;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
-.brand{display:flex;align-items:center;gap:10px;min-width:0}
-.header-actions{display:flex;align-items:center;gap:6px}
+body{margin:0;background:var(--surface);color:var(--text);padding-bottom:calc(156px + env(safe-area-inset-bottom))}
 .workspace{max-width:1040px;margin:0 auto;padding:12px 14px 32px}
+.app-footer{position:fixed;bottom:0;left:0;right:0;z-index:20;background:var(--surface-sidebar);border-top:1px solid var(--surface-sidebar-border);padding-bottom:env(safe-area-inset-bottom)}
+.utility-bar{display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 8px 4px;border-bottom:1px solid var(--surface-sidebar-border)}
 .page{display:none!important}
 .page.active{display:block!important}
 .quick-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 button{cursor:pointer;font:inherit}
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:20;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;background:var(--surface-sidebar);border-top:1px solid var(--surface-sidebar-border);padding:4px 6px calc(6px + env(safe-area-inset-bottom))}
+.bottom-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;padding:4px 6px 6px}
 .sheet:not([open]){display:none}
 .sheet{border:1px solid var(--line-strong);padding:0;background:var(--surface);color:var(--text)}
 dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!important;width:min(calc(100vw - 32px),520px)!important;max-width:520px!important;height:fit-content!important;max-height:min(82dvh,690px)!important;border-radius:24px!important;display:flex!important;flex-direction:column;overflow:hidden}
@@ -35,41 +33,7 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
 <title>Atendimento · QR Admin</title>
 </head>
 <body data-regime="operational">
-<header class="app-header">
-  <div class="header-inner">
-    <div class="brand">
-      <img class="brand-mark" src="./brand-mark.webp" alt="" width="30" height="30">
-      <div class="brand-copy">
-        <h1>Atendimento</h1>
-      </div>
-    </div>
-    <div class="header-actions">
-      <span class="connection-pill" id="connection" role="status" aria-live="polite">Verificando rede…</span>
-      <button id="syncBtn" class="icon-action sync-button" type="button" aria-label="Sincronizar pendências com o servidor" title="Sincronizar pendências com o servidor" data-sync-state="idle">
-        <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#arrows-clockwise-regular"></use></svg>
-      </button>
-      <button id="themeToggleBtn" class="icon-action" type="button" aria-label="Alternar tema claro e escuro" title="Alternar tema">
-        <svg class="pwa-icon theme-icon-light" aria-hidden="true"><use href="./icons.svg#moon-regular"></use></svg>
-        <svg class="pwa-icon theme-icon-dark" aria-hidden="true"><use href="./icons.svg#sun-regular"></use></svg>
-      </button>
-      <span id="syncFeedback" class="sr-only" role="status" aria-live="polite"></span>
-    </div>
-  </div>
-  <div class="waiter-strip" aria-label="Identificação do atendimento">
-    <div class="waiter-strip-inner">
-      <span class="waiter-badge-wrap">
-        <svg class="pwa-icon-xs" aria-hidden="true"><use href="./icons.svg#user-circle-regular"></use></svg>
-        <span id="identity" class="waiter-badge">Identificando…</span>
-      </span>
-      <span class="waiter-sep" aria-hidden="true">/</span>
-      <span id="pageTitle" class="waiter-page-name">Mesas</span>
-      <span id="pageSubtitle" class="sr-only"></span>
-      <button id="openNotificationSettings" class="notification-settings-button" type="button" aria-label="Avisos e instalação" aria-haspopup="dialog" aria-controls="notificationConsent" title="Avisos e instalação">
-        <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#bell-regular"></use></svg>
-      </button>
-    </div>
-  </div>
-</header>
+
 
 <div id="notificationFeedback" role="status" aria-live="polite" hidden class="notification-feedback"></div>
 
@@ -87,6 +51,10 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
 </div>
 
 <main class="workspace">
+  <div id="offlineNotice" class="notice offline-notice" role="status" aria-live="polite" hidden>
+    <svg class="pwa-icon-sm shrink-0" aria-hidden="true"><use href="./icons.svg#wifi-slash-regular"></use></svg>
+    <p>Sem conexão confirmada com o servidor. Pedidos criados agora ficam salvos neste aparelho até a confirmação; mesas e pedidos podem estar desatualizados.</p>
+  </div>
   <section class="page active" id="page-tables" data-page="tables" aria-label="Mesas">
     <div class="section-heading">
       <div>
@@ -118,7 +86,14 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
         <h3>Salão completo</h3>
         <button id="refreshTables" class="text-button" type="button">Recarregar</button>
       </div>
-      <div id="tableGrid" class="table-grid"><p class="muted">Carregando mesas…</p></div>
+      <div class="ledger-body-pad salao-search">
+        <label class="field">Buscar mesa ou cliente
+          <input id="tableSearch" type="search" inputmode="numeric" autocomplete="off" placeholder="Ex.: 3, 12, 27 ou o cliente" aria-describedby="tableSearchHint">
+        </label>
+        <p id="tableSearchHint" class="muted small-copy">Digite um ou mais números de mesa separados por vírgula, ou o nome do cliente de uma mesa com atendimento aberto.</p>
+        <p id="tableSearchMessage" class="muted small-copy" aria-live="polite"></p>
+        <div id="tableGrid" class="table-grid" hidden></div>
+      </div>
     </div>
   </section>
 
@@ -131,11 +106,6 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
         <svg class="pwa-icon-sm" aria-hidden="true"><use href="./icons.svg#plus-bold"></use></svg>
         <span>Novo pedido</span>
       </button>
-    </div>
-
-    <div class="notice">
-      <svg class="pwa-icon-sm shrink-0" aria-hidden="true"><use href="./icons.svg#wifi-slash-regular"></use></svg>
-      <p>Pedidos criados sem sinal ficam salvos neste aparelho até confirmação do servidor. Toque em um pedido para abrir os itens.</p>
     </div>
 
     <div class="ledger-block">
@@ -151,7 +121,6 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
         <h3>Pedidos nas minhas mesas</h3>
         <div class="inline-controls">
           <button class="text-button" type="button" id="refreshOrderStatus">Recarregar</button>
-          <button type="button" id="showActiveOrders" class="secondary small">Ver em janela</button>
         </div>
       </div>
       <div id="activeOrderStatuses" class="orders-list"><p class="muted">Nenhum pedido ativo carregado.</p></div>
@@ -234,7 +203,28 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
   </section>
 </main>
 
-<nav class="bottom-nav" aria-label="Navegação do garçom">
+<footer class="app-footer" aria-label="Controles do atendimento">
+  <div class="utility-bar" role="group" aria-label="Utilitários do rodapé">
+    <span id="connection" class="connection-indicator" role="status" aria-live="polite" data-net="checking" title="Verificando conexão com o servidor">
+      <svg class="pwa-icon" aria-hidden="true"><use class="connection-icon" href="./icons.svg#clock-regular"></use></svg>
+      <span class="connection-label sr-only">Verificando conexão com o servidor…</span>
+    </span>
+    <button id="syncBtn" class="icon-action sync-button utility-button" type="button" aria-label="Sincronizar pendências com o servidor" title="Sincronizar pendências com o servidor" data-sync-state="idle">
+      <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#arrows-clockwise-regular"></use></svg>
+    </button>
+    <button id="openNotificationSettings" class="icon-action notification-settings-button utility-button" type="button" aria-label="Avisos e instalação" aria-haspopup="dialog" aria-controls="notificationConsent" title="Avisos e instalação">
+      <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#bell-regular"></use></svg>
+    </button>
+    <button id="themeToggleBtn" class="icon-action utility-button" type="button" aria-label="Alternar tema claro e escuro" title="Alternar tema claro e escuro">
+      <svg class="pwa-icon theme-icon-light" aria-hidden="true"><use href="./icons.svg#moon-regular"></use></svg>
+      <svg class="pwa-icon theme-icon-dark" aria-hidden="true"><use href="./icons.svg#sun-regular"></use></svg>
+    </button>
+    <button id="helpBtn" class="icon-action utility-button" type="button" aria-label="Ajuda: o que faz cada ícone do rodapé" aria-haspopup="dialog" aria-controls="helpModal" title="Ajuda">
+      <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#question-regular"></use></svg>
+    </button>
+    <span id="syncFeedback" class="sr-only" role="status" aria-live="polite"></span>
+  </div>
+  <nav class="bottom-nav" aria-label="Navegação do garçom">
   <button type="button" class="active" data-tab="tables" aria-current="page">
     <svg class="nav-svg icon-regular" aria-hidden="true"><use href="./icons.svg#squares-four-regular"></use></svg>
     <svg class="nav-svg icon-fill" aria-hidden="true"><use href="./icons.svg#squares-four-fill"></use></svg>
@@ -256,6 +246,7 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
     <span>Cobrança</span>
   </button>
 </nav>
+</footer>
 
 <dialog id="notificationConsent" class="sheet small-sheet" aria-labelledby="notificationConsentTitle">
   <div class="sheet-top">
@@ -373,6 +364,69 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
     <button type="button" id="closeHistory" class="close-button" aria-label="Fechar">×</button>
   </div>
   <div class="sheet-body" id="historyContent"></div>
+</dialog>
+
+<dialog id="transferModal" class="sheet small-sheet" aria-labelledby="transferTitle">
+  <div class="sheet-top">
+    <div>
+      <span class="section-eyebrow">RESPONSABILIDADE</span>
+      <h2 id="transferTitle">Transferir mesa</h2>
+    </div>
+    <button type="button" id="closeTransfer" class="close-button" aria-label="Fechar transferência">×</button>
+  </div>
+  <div class="sheet-body">
+    <p id="transferSummary" class="small-copy"></p>
+    <label class="field">Garçom de destino
+      <select id="transferWaiter" aria-label="Garçom de destino"></select>
+    </label>
+    <p class="hint">Nada é enviado ao servidor antes de você confirmar. Pedidos já prontos continuam prontos e passam para a fila do novo responsável.</p>
+    <p id="transferMessage" class="muted small-copy" aria-live="polite"></p>
+    <div class="action-row">
+      <button id="confirmTransfer" class="primary" type="button">Confirmar transferência</button>
+      <button id="cancelTransfer" class="secondary" type="button">Cancelar</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="helpModal" class="sheet small-sheet" aria-labelledby="helpTitle">
+  <div class="sheet-top">
+    <div>
+      <span class="section-eyebrow">AJUDA RÁPIDA</span>
+      <h2 id="helpTitle">Ícones do rodapé</h2>
+    </div>
+    <button type="button" id="closeHelp" class="close-button" aria-label="Fechar ajuda">×</button>
+  </div>
+  <div class="sheet-body">
+    <div class="help-brand">
+      <img class="brand-mark" src="./brand-mark.webp" alt="" width="28" height="28">
+      <strong>QR Admin · Atendimento</strong>
+    </div>
+    <p class="muted small-copy">Todo o controle do atendimento fica no rodapé, ao alcance do polegar. A barra inferior com quatro abas continua trocando as áreas de trabalho.</p>
+    <ul class="help-list">
+      <li>
+        <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#wifi-high-regular"></use></svg>
+        <div><strong>Conexão</strong><span>Só um ícone: <svg class="pwa-icon-xs" aria-hidden="true"><use href="./icons.svg#wifi-high-regular"></use></svg> servidor confirmado, <svg class="pwa-icon-xs" aria-hidden="true"><use href="./icons.svg#wifi-slash-regular"></use></svg> sem conexão, <svg class="pwa-icon-xs" aria-hidden="true"><use href="./icons.svg#clock-regular"></use></svg> verificando e <svg class="pwa-icon-xs" aria-hidden="true"><use href="./icons.svg#warning-circle-regular"></use></svg> link inválido ou erro local. Mantenha pressionado (ou passe o mouse) para ver o texto.</span></div>
+      </li>
+      <li>
+        <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#arrows-clockwise-regular"></use></svg>
+        <div><strong>Sincronizar</strong><span>Reenvia os pedidos salvos neste aparelho e atualiza mesas, pedidos e entregas.</span></div>
+      </li>
+      <li>
+        <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#bell-regular"></use></svg>
+        <div><strong>Avisos</strong><span>Permissão de notificação e instalação do app. O ponto marca uma configuração pendente.</span></div>
+      </li>
+      <li>
+        <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#sun-regular"></use></svg>
+        <div><strong>Tema</strong><span>Alterna entre claro e escuro; a escolha fica salva neste aparelho.</span></div>
+      </li>
+      <li>
+        <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#question-regular"></use></svg>
+        <div><strong>Ajuda</strong><span>Este painel. Fecha com o botão × ou tocando fora.</span></div>
+      </li>
+    </ul>
+    <p class="muted small-copy">Mesas: toque em uma mesa do salão para abrir as ações (novo pedido, pedidos, cobrança, transferência e sair da mesa). No salão completo, busque pelo número da mesa — separando vários números por vírgula — ou pelo nome do cliente de uma mesa aberta.</p>
+    <p id="identity" class="muted small-copy">Identificando o garçom…</p>
+  </div>
 </dialog>
 
 <script src="./qrcode-generator.js" defer></script>
