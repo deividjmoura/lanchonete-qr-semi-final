@@ -323,7 +323,7 @@ async function main() {
        da aba morta continua gravado. Antes da correção ele nunca mais saía
        desse estado: o flush ignorava `sync` e a recuperação só rodava na
        abertura, desistindo se o lease ainda estivesse válido. */
-    const interrompido = await page.evaluate(async () => {
+    const interrompido = await page.evaluate(async (mesaNumero) => {
       const { openOfflineDb, OfflineStore } = await import('./offline.js');
       const db = await openOfflineDb();
       const token = localStorage.getItem('waiter-token');
@@ -338,14 +338,16 @@ async function main() {
       const cardapio = await (await fetch('/api/cardapio')).json();
       const produto = cardapio.flatMap((c) => c.produtos || [])[0];
       novo.items = [{ productId: Number(produto.id), name: produto.nome, qty: 1, unitPrice: Number(produto.preco) }];
-      const mesas = await (await fetch('/api/garcom/' + token + '/mesas')).json();
-      novo.table = Number(mesas.mesas[0].numero);
+      // O cenário de recuperação usa a mesa criada por este próprio teste.
+      // Não escolher mesas.mesas[0]: em banco compartilhado ela pode pertencer
+      // a outro fixture e provocar conflito de responsável não determinístico.
+      novo.table = Number(mesaNumero);
       await store.put(novo);
       // lease de uma aba que morreu, ainda dentro da validade
       await store.acquireLease('sync:' + token, 'aba-que-morreu', 45000, Date.now());
       db.close();
       return { localId: novo.localId, chave: novo.idempotencyKey };
-    });
+    }, ids.numero);
     ok('cenário de envio interrompido criado com lease de aba morta ainda válido');
 
     await page.reload({ waitUntil: 'domcontentloaded' });

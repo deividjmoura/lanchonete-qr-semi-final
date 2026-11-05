@@ -20,7 +20,10 @@ const assert = require('node:assert/strict');
 const { chromium } = require('playwright-core');
 const binary = require('@sparticuz/chromium').default;
 
-const base = process.env.VISUAL_BASE_URL || 'http://localhost:4173';
+const base = process.env.VISUAL_BASE_URL;
+if (!base) {
+  throw new Error('VISUAL_BASE_URL ausente. Execute npm run test:e2e para usar o preview isolado do runner.');
+}
 
 const CABECALHO = 'categoria;nome;descricao;preco;imagem_url;disponivel;ordem';
 

@@ -1,7 +1,6 @@
 "use strict";
 // Validação visual e estrutural do sistema "Palco Azul/Violeta" em Chromium real.
-// npm run build && npm run preview -- --host 0.0.0.0 --port 4173
-// node tests/e2e/visual-system.e2e.cjs
+// Executado pelo runner scripts/run-e2e-tests.js, que fornece uma porta isolada via VISUAL_BASE_URL.
 const { chromium } = require("playwright-core");
 const binary = require("@sparticuz/chromium").default;
 const { criarDashboard, aguardarLayoutDashboard } = require("./fixtures/dashboard.cjs");
@@ -9,7 +8,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const base = process.env.VISUAL_BASE_URL || "http://localhost:4173";
+const base = process.env.VISUAL_BASE_URL;
+if (!base) {
+  throw new Error('VISUAL_BASE_URL ausente. Execute npm run test:e2e para usar o preview isolado do runner.');
+}
 const screenshots = process.env.VISUAL_SCREENSHOTS_DIR;
 
 const menu = [

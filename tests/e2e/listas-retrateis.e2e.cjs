@@ -5,7 +5,10 @@ const fs = require('node:fs');
 const { chromium } = require('playwright-core');
 const binary = require('@sparticuz/chromium').default;
 const { criarDashboard } = require('./fixtures/dashboard.cjs');
-const base = process.env.VISUAL_BASE_URL || 'http://localhost:4173';
+const base = process.env.VISUAL_BASE_URL;
+if (!base) {
+  throw new Error('VISUAL_BASE_URL ausente. Execute npm run test:e2e para usar o preview isolado do runner.');
+}
 
 const contas = Array.from({ length: 31 }, (_, i) => ({
   id: i + 1, mesa: i + 1, cliente: `Cliente ${i + 1}`, valor: 10,
