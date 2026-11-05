@@ -89,25 +89,27 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
       </div>
     </div>
 
-  <div class="utility-bar" role="group" aria-label="Utilitários do rodapé">
-    <span id="connection" class="connection-indicator" role="status" aria-live="polite" data-net="checking" title="Verificando conexão com o servidor">
-      <svg class="pwa-icon" aria-hidden="true"><use class="connection-icon" href="./icons.svg#clock-regular"></use></svg>
-      <span class="connection-label sr-only">Verificando conexão com o servidor…</span>
-    </span>
-    <button id="syncBtn" class="icon-action sync-button utility-button" type="button" aria-label="Sincronizar pendências com o servidor" title="Sincronizar pendências com o servidor" data-sync-state="idle">
-      <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#arrows-clockwise-regular"></use></svg>
-    </button>
-    <button id="openNotificationSettings" class="icon-action notification-settings-button utility-button" type="button" aria-label="Avisos e instalação" aria-haspopup="dialog" aria-controls="notificationConsent" title="Avisos e instalação">
-      <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#bell-regular"></use></svg>
-    </button>
-    <button id="themeToggleBtn" class="icon-action utility-button" type="button" aria-label="Alternar tema claro e escuro" title="Alternar tema claro e escuro">
-      <svg class="pwa-icon theme-icon-light" aria-hidden="true"><use href="./icons.svg#moon-regular"></use></svg>
-      <svg class="pwa-icon theme-icon-dark" aria-hidden="true"><use href="./icons.svg#sun-regular"></use></svg>
-    </button>
-    <button id="helpBtn" class="icon-action utility-button" type="button" aria-label="Ajuda: o que faz cada ícone do rodapé" aria-haspopup="dialog" aria-controls="helpModal" title="Ajuda">
-      <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#question-regular"></use></svg>
-    </button>
-    <span id="syncFeedback" class="sr-only" role="status" aria-live="polite"></span>
+    <div class="tables-utility-footer" aria-label="Atalhos da aba Mesas">
+    <div class="utility-bar" role="group" aria-label="Utilitários do rodapé">
+        <span id="connection" class="connection-indicator" role="status" aria-live="polite" data-net="checking" title="Verificando conexão com o servidor">
+          <svg class="pwa-icon" aria-hidden="true"><use class="connection-icon" href="./icons.svg#clock-regular"></use></svg>
+          <span class="connection-label sr-only">Verificando conexão com o servidor…</span>
+        </span>
+        <button id="syncBtn" class="icon-action sync-button utility-button" type="button" aria-label="Sincronizar pendências com o servidor" title="Sincronizar pendências com o servidor" data-sync-state="idle">
+          <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#arrows-clockwise-regular"></use></svg>
+        </button>
+        <button id="openNotificationSettings" class="icon-action notification-settings-button utility-button" type="button" aria-label="Avisos e instalação" aria-haspopup="dialog" aria-controls="notificationConsent" title="Avisos e instalação">
+          <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#bell-regular"></use></svg>
+        </button>
+        <button id="themeToggleBtn" class="icon-action utility-button" type="button" aria-label="Alternar tema claro e escuro" title="Alternar tema claro e escuro">
+          <svg class="pwa-icon theme-icon-light" aria-hidden="true"><use href="./icons.svg#moon-regular"></use></svg>
+          <svg class="pwa-icon theme-icon-dark" aria-hidden="true"><use href="./icons.svg#sun-regular"></use></svg>
+        </button>
+        <button id="helpBtn" class="icon-action utility-button" type="button" aria-label="Ajuda: o que faz cada ícone do rodapé" aria-haspopup="dialog" aria-controls="helpModal" title="Ajuda">
+          <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#question-regular"></use></svg>
+        </button>
+        <span id="syncFeedback" class="sr-only" role="status" aria-live="polite"></span>
+      </div>
   </div>
   </section>
 
