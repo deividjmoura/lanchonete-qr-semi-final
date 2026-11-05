@@ -34,6 +34,8 @@ A inspeção de `public/garcom-pwa/offline.js` e `app.js` confirma:
 
 A sessão interna de funcionário usa o cookie `lqr_session` com atributos `HttpOnly`, `SameSite=Lax`, `Secure` em produção e validade configurada de 12 horas. O código remove registros expirados de `staff_sessoes` em ciclos de 30 minutos. Isso não deve ser confundido com o token bearer individual do garçom salvo no navegador.
 
+O ciclo de vida do e-mail de autenticação Google de funcionário é separado da fila offline: `staff.email` é o endereço previamente autorizado e `staff.google_sub` identifica a conta Google já vinculada. Desde a PR #241, o administrador pode remover apenas o e-mail pré-autorizado de uma conta ativa com `google_sub IS NULL`; a operação usa `DELETE /api/admin/contas/:id/email` e registra `email_google_removido` na mesma transação. Ela não apaga nem altera `google_sub` e não oferece desvinculação de uma identidade Google já associada. O procedimento de desligamento/retensão de contas de funcionários ainda depende de decisão do responsável.
+
 ## 2. Relações que afetam exclusão
 
 A rotina `db/purge.js` remove, em transação, sessões fechadas anteriores à data de corte e seus pedidos, itens, adicionais/removíveis e pagamentos parciais. A data é exclusiva: `fechada_em::date < before`. Sem `confirm: true`, a execução é dry-run.
@@ -99,4 +101,4 @@ O procedimento precisa ser definido pelo responsável. Como ponto de partida ope
 
 ## 7. Fontes técnicas consultadas
 
-`db/purge.js`; migrations `0001`, `0009`, `0016`, `0019`, `0023`, `0024`, `0025`, `0028` e `0034`; módulos `db/auth.js`, `db/caixa.js`, `db/pix-cliente.js`, `db/auditoria.js` e `db/foto.js`; arquivos `public/garcom-pwa/app.js`, `offline.js` e `sw.js`. O inventário descreve o repositório, não uma inspeção do banco de produção.
+`db/purge.js`; migrations `0001`, `0009`, `0016`, `0019`, `0023`, `0024`, `0025`, `0028` e `0034`; módulos `db/auth.js`, `db/caixa.js`, `db/pix-cliente.js`, `db/auditoria.js` e `db/foto.js`; arquivos `public/garcom-pwa/app.js`, `offline.js` e `sw.js`.; fluxo de autorização Google em `server.js` e `db/admin.js`. O inventário descreve o repositório, não uma inspeção do banco de produção.
