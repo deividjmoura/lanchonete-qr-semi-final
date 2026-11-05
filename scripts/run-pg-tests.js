@@ -59,6 +59,10 @@ const suites = [
   'postgres-sse-ticket-http.test.cjs',
   // Cadastro e remoção do e-mail Google pré-autorizado, com auditoria transacional.
   'postgres-google-oauth.test.cjs',
+  // #48: dois funcionários no mesmo aparelho — a autoria vem da sessão.
+  'postgres-autoria-dispositivo-compartilhado.test.cjs',
+  // #44: a purga anonimiza e preserva valor/forma/data/autoria.
+  'postgres-purge-anonimiza.test.cjs',
 ];
 
 // O drill de backup precisa de pg_dump/psql no PATH. Em ambiente local com

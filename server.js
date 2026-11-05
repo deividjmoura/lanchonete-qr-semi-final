@@ -1432,6 +1432,9 @@ const server = http.createServer(async (req, res) => {
       try {
         const b = await body(req);
         const staff = await getStaffDaRequisicao(req);
+        // #44: a purga ANONIMIZA (remove dados pessoais) e preserva valor,
+        // forma de pagamento, data e autoria. Não existe caminho nesta rota
+        // para apagar registro financeiro.
         return json(res, 200, await purgeHistorico({
           before: b.before,
           confirm: b.confirm === true,
