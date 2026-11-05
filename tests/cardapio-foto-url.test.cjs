@@ -16,7 +16,12 @@ const { getCardapioAdmin } = require('../db/admin');
 test('data-URL vira URL de mesma origem; URLs externas e legadas ficam intactas', () => {
   assert.equal(resolverFotoUrl('data:image/webp;base64,AAAA', 12), '/api/cardapio/fotos/12');
   assert.equal(resolverFotoUrl('https://cdn.externo.com/foto.webp', 12), 'https://cdn.externo.com/foto.webp');
+  assert.equal(resolverFotoUrl('http://cdn.externo.com/foto.webp', 12), 'http://cdn.externo.com/foto.webp');
   assert.equal(resolverFotoUrl('/uploads/antigo.webp', 12), '/uploads/antigo.webp');
+  assert.equal(resolverFotoUrl('javascript:alert(1)', 12), null);
+  assert.equal(resolverFotoUrl('//cdn.externo.com/foto.webp', 12), null);
+  assert.equal(resolverFotoUrl('data:text/html;base64,PGgxPk9wcw==', 12), null);
+  assert.equal(resolverFotoUrl('https://user:pass@cdn.externo.com/foto.webp', 12), null);
   assert.equal(resolverFotoUrl('', 12), null);
   assert.equal(resolverFotoUrl(null, 12), null);
   assert.equal(resolverFotoUrl(undefined, 12), null);
@@ -71,6 +76,9 @@ test('carregarFotoProduto trata data-URL, URL externa, caminho legado e ausênci
     { foto_url: 'data:image/svg+xml;base64,PHN2Zy8+' },
     { foto_url: 'https://cdn.externo.com/f.webp' },
     { foto_url: '/uploads/legado.webp' },
+    { foto_url: 'javascript:alert(1)' },
+    { foto_url: '//cdn.externo.com/f.webp' },
+    { foto_url: 'https://user:pass@cdn.externo.com/f.webp' },
     { foto_url: null },
   ];
   const queryOriginal = pool.query;
@@ -89,7 +97,11 @@ test('carregarFotoProduto trata data-URL, URL externa, caminho legado e ausênci
     const legado = await carregarFotoProduto(4);
     assert.deepEqual(legado, { kind: 'redirect', location: '/uploads/legado.webp' });
 
-    assert.equal(await carregarFotoProduto(5), null);
+    assert.equal(await carregarFotoProduto(5), null, 'javascript: não pode virar URL de imagem');
+    assert.equal(await carregarFotoProduto(6), null, 'URL protocol-relative não pode escapar da origem');
+    assert.equal(await carregarFotoProduto(7), null, 'URL com credenciais embutidas deve ser rejeitada');
+
+    assert.equal(await carregarFotoProduto(8), null);
     assert.equal(await carregarFotoProduto(0), null);
     assert.equal(await carregarFotoProduto('abc'), null);
   } finally {
