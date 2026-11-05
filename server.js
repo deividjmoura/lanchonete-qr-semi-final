@@ -22,6 +22,7 @@ const {
 const { informarPixPago, ErroPixCliente } = require('./db/pix-cliente');
 const {
   ErroAdmin,
+  definirEmailGoogleStaff,
   removerEmailGoogleStaff,
   listMesas,
   listarPracas,
@@ -1201,18 +1202,15 @@ const server = http.createServer(async (req, res) => {
         return json(res, 400, { error: 'Informe um funcionário e um e-mail válido.' });
       }
       try {
-        const result = await pool.query(
-          'UPDATE staff SET email = $2 WHERE id = $1 AND ativo = TRUE AND google_sub IS NULL RETURNING id, nome, login, email',
-          [id, email]
-        );
-        if (!result.rowCount) return json(res, 409, { error: 'Funcionário inexistente, inativo ou já vinculado a uma conta Google.' });
-        return json(res, 200, { ok: true, staff: result.rows[0] });
+        const staff = await definirEmailGoogleStaff(id, email, ator, reqId);
+        return json(res, 200, { ok: true, staff });
       } catch (e) {
+        if (e instanceof ErroAdmin) return json(res, e.status, { error: e.message });
         if (e.code === '23505') return json(res, 409, { error: 'Este e-mail já está vinculado a outro funcionário.' });
         throw e;
       }
     }
-    // Remove apenas o e-mail pré-autorizado de uma conta ainda não vinculada.
+    // Remove o e-mail pré-autorizado e desvincula a identidade Google, se houver.
     // exigirAcesso aplica sessão, papel, origem e CSRF; a transação revalida o admin.
     const emailGoogleStaffMatch = p.match(/^\/api\/admin\/contas\/(\d+)\/email$/);
     if (emailGoogleStaffMatch && req.method === 'DELETE') {
