@@ -1360,28 +1360,16 @@ dialog.sheet[open] {
   border-top-color: color-mix(in srgb, var(--sidebar-line) 80%, transparent);
 }
 
-/* Rolagem discreta em qualquer faixa horizontal/vertical do app. */
+/* Trilhos de rolagem ocultos; gesto, roda e teclado continuam ativos. */
 * {
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--text-muted) 45%, transparent) transparent;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-*::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--text-muted) 38%, transparent);
-}
-
-*::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--text-muted) 58%, transparent);
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
