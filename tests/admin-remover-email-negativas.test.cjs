@@ -3,14 +3,14 @@
 /**
  * Complemento de regressão da remoção de e-mail Google pré-cadastrado (#239).
  *
- * A implementação base (rota, escrita condicionada a `google_sub IS NULL`,
- * botão na tela) já está coberta por tests/auditoria.test.cjs e
+ * A implementação base (rota, escrita transacional, desvinculação e botão na tela)
+ * já está coberta por tests/auditoria.test.cjs e
  * tests/postgres-google-oauth.test.cjs. Este arquivo trava o que faltava:
  *
  *  - a NEGATIVA também vai para a trilha da #48 (`resultado: 'negado'` com
  *    motivo), distinguível de operação concluída e sem PII/segredo;
  *  - a documentação descreve o ciclo de vida do e-mail, as restrições de conta
- *    vinculada e o que segue pendente de decisão do responsável.
+ *    vinculada, inclusive troca de e-mail e revogação das sessões.
  *
  * Roda sem PostgreSQL (a integração HTTP está em
  * tests/postgres-remover-email-google-http.test.cjs, executada no CI).
@@ -61,7 +61,6 @@ test('toda recusa da remoção é auditada como negado, com motivo e sem e-mail'
     'ator_sem_permissao',
     'conta_inexistente',
     'conta_inativa',
-    'conta_vinculada_google',
     'conta_sem_email',
     'concorrencia',
   ]) {
@@ -78,11 +77,11 @@ test('o sucesso continua na mesma transação da escrita (evento antes do COMMIT
   const evento = bloco.indexOf("acao: 'email_google_removido'");
   const commit = bloco.indexOf("await client.query('COMMIT')");
   assert.ok(escrita > 0 && evento > escrita && commit > evento, 'escrita → evento → COMMIT');
-  assert.match(bloco, /WHERE id = \$1 AND ativo = TRUE AND google_sub IS NULL AND email IS NOT NULL/);
+  assert.match(bloco, /WHERE id = \$1 AND ativo = TRUE AND \(email IS NOT NULL OR google_sub IS NOT NULL\)/);\n  assert.match(bloco, /google_sub = NULL/);\n  assert.match(bloco, /DELETE FROM staff_sessoes WHERE staff_id = \$1/);
   assert.match(bloco, /FOR UPDATE/);
 });
 
-test('documentação descreve o ciclo do e-mail, restrição de conta vinculada e pendências', () => {
+test('documentação descreve troca e desvinculação de conta Google', () => {
   assert.match(docs, /## Ciclo de vida do e-mail pré-cadastrado/);
   assert.match(docs, /pré-autorização/);
   assert.match(docs, /google_sub/);
