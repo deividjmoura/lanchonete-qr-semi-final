@@ -112,7 +112,7 @@ async function rodapeNasTelas(browser, viewport, scheme) {
     // As ações da mesa responsável ficam no modal aberto pelo cartão do salão.
     await page.locator('#tableSearch').fill('Ana Prado');
     await page.locator('#tableGrid .table-tile').first().click();
-    detalhe = page.locator('#tableDetailsModal');
+    let detalhe = page.locator('#tableDetailsModal');
     await detalhe.waitFor({ state: 'visible' });
     for (const label of ['Ver pedidos', 'Cobrar', 'Transferir mesa', 'Deixar mesa']) {
       assert.equal(await detalhe.getByRole('button', { name: label, exact: true }).count(), 1, label + ' no modal do responsável');
@@ -123,7 +123,7 @@ async function rodapeNasTelas(browser, viewport, scheme) {
     await page.locator('#tableSearch').fill('2');
     await page.locator('#tableGrid .table-tile').first().waitFor();
     await page.locator('#tableGrid .table-tile').first().click();
-    let detalhe = page.locator('#tableDetailsModal');
+    detalhe = page.locator('#tableDetailsModal');
     await detalhe.waitFor({ state: 'visible' });
     assert.equal(await detalhe.getByRole('button', { name: /Transferir mesa/ }).count(), 0);
     assert.equal(await detalhe.getByRole('button', { name: 'Iniciar atendimento' }).count(), 1);
