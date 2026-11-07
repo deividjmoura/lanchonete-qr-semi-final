@@ -1,0 +1,342 @@
+#!/usr/bin/env node
+/**
+ * Inspeção visual e funcional da landing oficial do QR Admin.
+ *
+ * Verifica, contra um servidor local:
+ *  - a landing ocupa "/" (sem redirecionamento) e não tem overflow horizontal
+ *    em 1440, 768, 390 e 320 px;
+ *  - capturas reais do sistema carregam (nenhum placeholder);
+ *  - links internos rolam a página sem trocar a rota;
+ *  - /guia-sistema.html e /apresentacao.html continuam acessíveis;
+ *  - todos os CTAs de acesso abrem o modal real de autenticação, com foco
+ *    preso, ESC, clique fora e retorno de foco;
+ *  - o formulário do modal usa a MESMA API de login do produto (#/login):
+ *    credencial inválida mostra o erro real e 2FA pendente exibe a etapa 2.
+ *
+ * Uso:
+ *   BASE_URL=http://127.0.0.1:8080 node scripts/verificar-landing.mjs [--screenshots]
+ *
+ * A API é interceptada apenas para simular respostas de autenticação; nenhuma
+ * credencial real é usada e nenhum POST chega ao banco.
+ */
+import fs from "node:fs";
+import path from "node:path";
+import { chromium } from "playwright-core";
+
+const BASE = process.env.BASE_URL || "http://127.0.0.1:8080";
+const host = new URL(BASE).hostname;
+if (!new Set(["localhost", "127.0.0.1", "::1"]).has(host)) {
+  throw new Error("Teste bloqueado: BASE_URL precisa apontar para localhost/127.0.0.1.");
+}
+const screenshots = process.argv.includes("--screenshots");
+const OUT = path.join(process.cwd(), "docs", "screenshots", "landing");
+
+const packed = (await import("@sparticuz/chromium")).default;
+process.env.LD_LIBRARY_PATH ||= "/tmp/al2023/lib";
+const browser = await chromium.launch({
+  executablePath: process.env.CHROMIUM_PATH || (await packed.executablePath()),
+  args: packed.args,
+  headless: true,
+});
+
+const falhas = [];
+const contextosExtras = [];
+const ok = (msg) => console.log("OK  " + msg);
+const falhar = (msg) => {
+  falhas.push(msg);
+  console.error("FALHA  " + msg);
+};
+const assert = (cond, msg) => (cond ? ok(msg) : falhar(msg));
+/* AnimatePresence com mode="wait" troca o painel no quadro seguinte: esperar
+   o texto evita ler o DOM no meio da transição. */
+const esperarTexto = async (alvo, texto, timeout = 6000) => {
+  const limite = Date.now() + timeout;
+  while (Date.now() < limite) {
+    const conteudo = await alvo.innerText().catch(() => "");
+    /* `innerText` reflete o text-transform do CSS (rótulos em caixa alta). */
+    if (conteudo.toLowerCase().includes(texto.toLowerCase())) return conteudo;
+    await new Promise((r) => setTimeout(r, 120));
+  }
+  const final = await alvo.innerText().catch(() => "");
+  throw new Error(`texto "${texto}" não apareceu; conteúdo atual: ${final.slice(0, 200)}`);
+};
+
+try {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  const erros = [];
+  page.on("pageerror", (e) => erros.push(e.message));
+
+  /* --- 1. Rota "/" entrega a landing -------------------------------------- */
+  const resp = await page.goto(BASE + "/", { waitUntil: "networkidle" });
+  assert(resp?.status() === 200, "GET / responde 200");
+  assert(page.url() === BASE + "/", "/ não redireciona");
+  await page.locator("#hero-title").waitFor();
+  assert(
+    (await page.getByRole("heading", { level: 1 }).innerText()).includes("Quando o salão acelera"),
+    "/ mostra o hero da landing aprovada",
+  );
+  await page.evaluate(() => document.fonts.ready);
+
+  const fontes = await page.evaluate(() => {
+    const titulo = document.querySelector("#hero-title");
+    const em = document.querySelector("#hero-title em");
+    return {
+      corpo: getComputedStyle(document.querySelector(".hero__lead")).fontFamily,
+      titulo: getComputedStyle(titulo).fontFamily,
+      serifa: getComputedStyle(em).fontFamily,
+    };
+  });
+  assert(/DM Sans/.test(fontes.corpo), "corpo em DM Sans");
+  assert(/DM Serif Display/.test(fontes.serifa), "ênfase em DM Serif Display");
+
+  /* --- 2. Capturas reais carregadas --------------------------------------- */
+  const capturas = await page.evaluate(() =>
+    [...document.querySelectorAll(".hero-art img, .product-stage img")].map((img) => ({
+      src: img.getAttribute("src"),
+      completa: img.complete,
+      largura: img.naturalWidth,
+      alt: img.getAttribute("alt"),
+    })),
+  );
+  assert(capturas.length >= 2, "hero e demonstração usam capturas reais do sistema");
+  for (const c of capturas) {
+    assert(c.completa && c.largura > 0, "captura carregada: " + c.src);
+  }
+  assert(
+    capturas.every((c) => /^\/assets\/apresentacao\/.+\.webp$/.test(c.src || "")),
+    "capturas vêm de /assets/apresentacao",
+  );
+
+  /* --- 3. Responsividade -------------------------------------------------- */
+  for (const largura of [1440, 768, 390, 320]) {
+    await page.setViewportSize({ width: largura, height: 900 });
+    await page.waitForTimeout(140);
+    const m = await page.evaluate(() => ({
+      scroll: document.documentElement.scrollWidth,
+      inner: window.innerWidth,
+    }));
+    assert(m.scroll <= m.inner + 1, `${largura}px sem overflow horizontal (${m.scroll}/${m.inner})`);
+    if (screenshots) {
+      fs.mkdirSync(OUT, { recursive: true });
+      await page.screenshot({ path: path.join(OUT, `landing-${largura}.png`), fullPage: true });
+    }
+  }
+
+  /* --- 4. Links internos rolam sem trocar de rota ------------------------- */
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const [rotulo, alvo] of [
+    ["Como funciona", "#como-funciona"],
+    ["Módulos", "#funcionalidades"],
+    ["Para quem é", "#para-quem"],
+  ]) {
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.locator(".main-nav a", { hasText: rotulo }).first().click();
+    await page.waitForTimeout(1400);
+    const estado = await page.evaluate((sel) => {
+      const el = document.querySelector(sel);
+      const rect = el?.getBoundingClientRect();
+      return {
+        topo: rect ? rect.top : null,
+        visivel: rect ? rect.top < window.innerHeight && rect.bottom > 0 : false,
+        rolado: window.scrollY,
+        hash: window.location.hash,
+        path: window.location.pathname,
+      };
+    }, alvo);
+    /* A seção precisa entrar na viewport. "Para quem é" fica perto do fim da
+       página: ali a rolagem chega ao limite e o topo fica acima do cabeçalho. */
+    assert(
+      estado.topo !== null && estado.rolado > 0 && estado.topo < 260 && estado.visivel,
+      `${rotulo} rola até ${alvo} (topo=${Math.round(estado.topo)}, scroll=${Math.round(estado.rolado)})`,
+    );
+    assert(estado.hash === "" && estado.path === "/", `${rotulo} não troca a rota do SPA`);
+  }
+
+  /* --- 5. Páginas institucionais continuam acessíveis --------------------- */
+  for (const rota of ["/guia-sistema.html", "/apresentacao.html"]) {
+    const r = await page.request.get(BASE + rota);
+    assert(r.status() === 200, rota + " responde 200");
+  }
+  const linksInstitucionais = await page.evaluate(() =>
+    [...document.querySelectorAll(".site-footer a")].map((a) => a.getAttribute("href")),
+  );
+  assert(linksInstitucionais.includes("/guia-sistema.html"), "footer liga para /guia-sistema.html");
+  assert(linksInstitucionais.includes("/apresentacao.html"), "footer liga para /apresentacao.html");
+
+  /* --- 6. Modal de acesso real ------------------------------------------- */
+  await page.route("**/api/auth/google/status", (route) => route.fulfill({ json: { enabled: false } }));
+  /* /api/me sem sessão: a landing não depende de banco para renderizar. */
+  await page.route("**/api/me", (route) => route.fulfill({ json: {} }));
+
+  /* 6a. credencial inválida → mensagem de erro real.
+     Um único handler mutável evita rotas concorrentes na mesma página. */
+  let modoLogin = "credencial-invalida";
+  await page.route("**/api/login", (route) => {
+    if (modoLogin === "2fa") {
+      return route.fulfill({ json: { ok: false, mfaPendente: true } });
+    }
+    return route.fulfill({ status: 401, json: { error: "Senha incorreta" } });
+  });
+  await page.locator(".site-header .header-access").click();
+  const dialogo = page.getByRole("dialog");
+  await dialogo.waitFor();
+  assert(await dialogo.getAttribute("aria-modal") === "true", "modal usa role=dialog + aria-modal");
+  const nomeDialogo = await dialogo.getAttribute("aria-labelledby");
+  assert(Boolean(nomeDialogo), "modal tem título associado (aria-labelledby)");
+  assert(
+    await page.evaluate(() => {
+      const p = document.querySelector(".acesso-modal__panel");
+      return Boolean(p && p.contains(document.activeElement));
+    }),
+    "foco entra no modal ao abrir",
+  );
+  if (screenshots) {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: path.join(OUT, "modal-390.png") });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.screenshot({ path: path.join(OUT, "modal-1440.png") });
+  }
+
+  await dialogo.getByRole("button", { name: "Cozinha" }).click();
+  await dialogo.locator("#acesso-modal-senha").fill("senha-invalida");
+  await dialogo.getByRole("button", { name: /Entrar em Cozinha/ }).click();
+  await dialogo.getByRole("alert").waitFor();
+  assert(
+    (await dialogo.getByRole("alert").innerText()).includes("Senha incorreta"),
+    "erro de credencial vem da API real (401)",
+  );
+
+  /* 6b. Escape fecha e devolve o foco ao CTA */
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(250);
+  assert((await page.getByRole("dialog").count()) === 0, "ESC fecha o modal");
+  assert(
+    await page.evaluate(() => document.activeElement?.classList.contains("header-access")),
+    "foco volta ao botão que abriu o modal",
+  );
+
+  /* 6c. clique no fundo fecha */
+  await page.locator(".site-header .header-access").click();
+  await page.getByRole("dialog").waitFor();
+  await page.mouse.click(6, 6);
+  await page.waitForTimeout(250);
+  assert((await page.getByRole("dialog").count()) === 0, "clique fora fecha o modal");
+
+  /* 6d. Tab preso no modal */
+  await page.locator(".site-header .header-access").click();
+  await page.getByRole("dialog").waitFor();
+  await page.waitForFunction(
+    () => Boolean(document.querySelector(".acesso-modal__panel")?.contains(document.activeElement)),
+    null,
+    { timeout: 3000 },
+  );
+  const dentro = [];
+  for (let i = 0; i < 14; i++) {
+    await page.keyboard.press("Tab");
+    dentro.push(
+      await page.evaluate(() => Boolean(document.querySelector(".acesso-modal__panel")?.contains(document.activeElement))),
+    );
+  }
+  assert(dentro.every(Boolean), "Tab não escapa do modal");
+
+  /* 6e. TODOS os CTAs abrem o modal (header, nav mobile, CTA final, footer) */
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(200);
+  const seletores = [
+    ".site-header .header-access",
+    ".final-cta__access",
+    ".site-footer__access-link",
+  ];
+  for (const sel of seletores) {
+    await page.locator(sel).scrollIntoViewIfNeeded();
+    await page.locator(sel).click();
+    const abriu = await page.getByRole("dialog").count();
+    assert(abriu === 1, `${sel} abre o modal de acesso`);
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(200);
+  }
+
+  /* 6f. 2FA pendente entra na etapa 2 (mesma API do login) */
+  modoLogin = "2fa";
+  await page.locator(".site-header .header-access").click();
+  const modal = page.getByRole("dialog");
+  await modal.waitFor();
+  await modal.getByRole("button", { name: "Admin" }).click();
+  await modal.locator("#acesso-modal-senha").fill("senha-ficticia");
+  await modal.getByRole("button", { name: /Entrar em Admin/ }).click();
+  await modal.locator("#acesso-modal-2fa").waitFor();
+  const texto2fa = (await esperarTexto(modal, "Código do autenticador")).toLowerCase();
+  assert(texto2fa.includes("código do autenticador"), "2FA pendente abre a etapa do código");
+  assert(texto2fa.includes("usar um código de recuperação"), "etapa 2 oferece recuperação");
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(250);
+
+  /* --- 7. #/login continua funcionando ----------------------------------- */
+  const page2 = page;
+  await page2.goto(BASE + "/#/login", { waitUntil: "networkidle" });
+  await page.locator("#login-titulo").waitFor();
+  assert(
+    (await page.locator("#login-titulo").innerText()).includes("Acesso à equipe"),
+    "/#/login preservado",
+  );
+  assert((await page.locator("#login-senha").count()) === 0, "senha só aparece após escolher o setor");
+  await page.getByRole("button", { name: "Bar" }).click();
+  assert((await page.locator("#login-senha").count()) === 1, "login por setor preservado");
+
+  /* --- 8. Rotas preservadas --------------------------------------------- */
+  /* /#/garcom (com ou sem token) entrega o PWA do garçom, que é outro shell;
+     por isso ele não é validado pelo seletor "#root > *" abaixo. */
+  for (const rota of ["/#/cozinha", "/#/bar", "/#/caixa", "/#/admin", "/#/mesa/visual"]) {
+    const r = await page2.goto(BASE + rota, { waitUntil: "domcontentloaded" });
+    assert((r?.status() ?? 200) === 200, rota + " responde 200");
+    await page2.waitForTimeout(350);
+    const montou = await page2
+      .waitForFunction(() => (document.querySelector("#root")?.childElementCount ?? 0) > 0, null, { timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
+    assert(montou, rota + " monta a aplicação");
+    assert(!(await page2.locator("#hero-title").count()), rota + " não cai na landing");
+  }
+
+  /* --- 3b. Tema escuro do produto não descaracteriza a landing ------------- */
+  {
+    const ctxTema = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const paginaTema = await ctxTema.newPage();
+    await paginaTema.addInitScript(() => localStorage.setItem("qradmin-tema", "escuro"));
+    await paginaTema.route("**/api/me", (route) => route.fulfill({ json: {} }));
+    await paginaTema.goto(BASE + "/", { waitUntil: "networkidle" });
+    await paginaTema.evaluate(() => document.fonts.ready);
+    const tema = await paginaTema.evaluate(() => ({
+      atributo: document.documentElement.dataset.theme,
+      raiz: getComputedStyle(document.querySelector(".landing-root")).backgroundColor,
+      tinta: getComputedStyle(document.querySelector("#hero-title")).color,
+      filete: getComputedStyle(document.querySelector(".hero__lead")).color,
+    }));
+    assert(tema.atributo === "escuro", "tema escuro do produto é aplicado ao documento");
+    assert(tema.raiz === "rgb(245, 242, 235)", "landing mantém o papel claro no tema escuro");
+    assert(tema.tinta === "rgb(32, 44, 39)", "texto da landing mantém a tinta editorial");
+    assert(tema.filete !== "rgb(255, 255, 255)" && tema.filete !== "rgb(0, 0, 0)", "texto secundário legível");
+    /* Não fechamos o contexto aqui: no Chromium single-process do sandbox
+       fechar um contexto derruba o navegador. Ele é encerrado no finally. */
+    contextosExtras.push(ctxTema);
+  }
+
+  /* O link do garçom continua levando ao PWA instalável, como antes. */
+  await page2.goto(BASE + "/#/garcom/8f14e45f-ceea-467f-a8ac-3b1c1b6a1b0d", { waitUntil: "domcontentloaded" });
+  await page2.waitForTimeout(900);
+  assert(page2.url().includes("/garcom-pwa/"), "/#/garcom/<token> mantém o redirecionamento ao PWA");
+  const pwa = await page2.request.get(BASE + "/garcom-pwa/?token=8f14e45f-ceea-467f-a8ac-3b1c1b6a1b0d");
+  assert(pwa.status() === 200, "/garcom-pwa/ responde 200");
+
+  assert(erros.length === 0, "nenhum erro de JavaScript na página" + (erros.length ? ": " + erros[0] : ""));
+} finally {
+  for (const extra of contextosExtras) await extra.close().catch(() => {});
+  await browser.close();
+}
+
+if (falhas.length) {
+  console.error(`\n${falhas.length} verificação(ões) falharam.`);
+  process.exit(1);
+}
+console.log("\nTodas as verificações da landing passaram.");

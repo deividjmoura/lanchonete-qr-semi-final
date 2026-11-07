@@ -48,11 +48,14 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { usePub } from '${raiz}/src/store/usePub.ts';
 import Login from '${raiz}/src/screens/Login.tsx';
+/* O corpo do login (setores, senha, 2FA e Google) foi extraído para
+   AuthFlow.tsx para ser compartilhado com o modal da landing. */
+import { FormularioAcesso, useFluxoAcesso } from '${raiz}/src/components/AuthFlow.tsx';
 import { SegurancaConta } from '${raiz}/src/screens/admin/SegurancaConta.tsx';
 
 export { renderToString };
 export { usePub };
-export { Login, SegurancaConta };
+export { Login, SegurancaConta, FormularioAcesso, useFluxoAcesso };
 `
 );
 
@@ -111,7 +114,9 @@ console.log('SSR smoke — telas de 2FA (#55)');
 semear();
 preparar();
 let html = render(React.createElement(Login));
-conferir('Login renderiza', html.includes('Acesso Equipe'));
+/* O título da tela é "Acesso à equipe" desde a troca de marca do login; o
+   smoke guardava o texto antigo e falhava em main. */
+conferir('Login renderiza', html.includes('Acesso à equipe'));
 conferir('etapa 1 mostra os setores', html.includes('Selecione o setor'));
 conferir('etapa 1 NÃO mostra campo de código 2FA', !html.includes('login-2fa'));
 
@@ -160,7 +165,11 @@ for (const [rotulo, texto] of [
   ['explica o uso único', 'aparecem só'],
   ['pede a senha para desativar', 'Senha atual'],
   ['mostra o estado Ativo', 'Ativo'],
-  ['etapa 2 do login pede o código', 'login-2fa'],
+  /* O id do campo passou a ser parametrizado (`idPrefixo`) para o modal da
+     landing usar `acesso-modal-2fa` sem duplicar o formulário. */
+  ['etapa 2 do login pede o código', 'idPrefixo'],
+  /* Concatenado para não ser interpolado pelo template literal deste script. */
+  ['etapa 2 tem o campo de código', '$' + '{idPrefixo}-2fa'],
   ['etapa 2 permite recomeçar', 'voltarParaCredencial'],
   ['etapa 2 aceita código de recuperação', 'código de recuperação'],
 ]) {

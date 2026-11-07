@@ -19,7 +19,7 @@ async function comOAuthConfigurado(fn) {
   Object.assign(process.env, {
     GOOGLE_CLIENT_ID: 'client-id-ficticio',
     GOOGLE_CLIENT_SECRET: 'client-secret-ficticio',
-    GOOGLE_REDIRECT_URI: 'https://qradminn.up.railway.app/api/auth/google/callback',
+    GOOGLE_REDIRECT_URI: 'https://qradmin.up.railway.app/api/auth/google/callback',
     GOOGLE_OAUTH_STATE_SECRET: 'state-secret-ficticio-com-mais-de-32-bytes',
     NODE_ENV: 'test',
   });

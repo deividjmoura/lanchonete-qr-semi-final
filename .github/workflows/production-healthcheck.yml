@@ -25,7 +25,7 @@ jobs:
       - name: Check production liveness
         id: check
         env:
-          HEALTHCHECK_URL: https://qradminn.up.railway.app/healthz
+          HEALTHCHECK_URL: https://qradmin.up.railway.app/healthz
         run: |
           node <<'NODE'
           const url = process.env.HEALTHCHECK_URL;
@@ -70,6 +70,6 @@ jobs:
           ALERTA_WEBHOOK_URL: ${{ secrets.ALERTA_WEBHOOK_URL }}
           ALERTA_TELEGRAM_TOKEN: ${{ secrets.ALERTA_TELEGRAM_TOKEN }}
           ALERTA_TELEGRAM_CHAT_ID: ${{ secrets.ALERTA_TELEGRAM_CHAT_ID }}
-          HEALTHCHECK_URL: https://qradminn.up.railway.app/healthz
+          HEALTHCHECK_URL: https://qradmin.up.railway.app/healthz
           ALERTA_MOTIVO: "health check de produção falhou (ver log do job)"
         run: node scripts/notificar-alerta.js

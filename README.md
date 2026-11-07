@@ -6,9 +6,9 @@
 
 Do QR Code à cozinha, do atendimento à cobrança: cada etapa conectada para a equipe trabalhar com mais clareza e o cliente acompanhar seu pedido.
 
-[**Acessar o QR Admin**](https://qradminn.up.railway.app/) · [**Conhecer o guia interativo**](https://qradminn.up.railway.app/guia-sistema.html)
+[**Acessar o QR Admin**](https://qradmin.up.railway.app/) · [**Conhecer o guia interativo**](https://qradmin.up.railway.app/guia-sistema.html)
 
-[Política de Privacidade](https://qradminn.up.railway.app/politica-de-privacidade.html) · [Termos de Serviço](https://qradminn.up.railway.app/termos-de-servico.html)
+[Política de Privacidade](https://qradmin.up.railway.app/politica-de-privacidade.html) · [Termos de Serviço](https://qradmin.up.railway.app/termos-de-servico.html)
 
 </div>
 
@@ -206,6 +206,7 @@ O primeiro login exige troca da senha de bootstrap. Não existe senha padrão. N
 | **npm run db:migrate** | Aplica migrations pendentes |
 | **npm run pg:local** | Sobe PostgreSQL local dedicado aos testes (encerre com Ctrl+C; os dados ficam em `.tmp-pgdata` entre execuções) |
 | **npm run db:seed** | Popula dados iniciais de demonstração, sem sobrescrever cardápio existente por padrão |
+| **npm run test:landing** | Inspeção visual e funcional da landing em 1440/768/390/320 px, modal de acesso, links e rotas preservadas; exige **BASE_URL** de servidor local |
 
 **Banco PostgreSQL local para testes:** `npm run pg:local` inicia um PostgreSQL embarcado na porta `55433`, com o banco `qradmin_test`. Em outro terminal, aplique o schema e rode a suíte:
 
@@ -223,15 +224,30 @@ O diretório `.tmp-pgdata` é mantido entre execuções; o banco não é apagado
 - `npm run test:dia`: cenário operacional prolongado.
 - `npm run test:carga`, `npm run test:carga70` e `npm run test:carga60`: cenários de carga; exigem ambiente de teste isolado.
 - `npm run test:seguranca`: verificações de segurança; use ambiente isolado.
+- `npm run test:landing`: abre a landing em Chromium headless e confere layout, links, modal de acesso (foco, ESC, clique fora, 2FA) e rotas preservadas. Use `-- --screenshots` para gravar as capturas de auditoria em `docs/screenshots/landing/`.
 - `npm run smoke:panorama`, `npm run smoke:mesas` e `npm run smoke:fila`: smoke das telas SSR correspondentes.
 - `npm run fotos:dry`: prévia da correção de fotos; `npm run fotos:fix` e `npm run fotos:sync` executam operações de manutenção; `npm run diag:fotos` gera diagnóstico.
 - `npm run db:reset-senha`: ferramenta administrativa de redefinição de senha; não execute sem entender o alvo e o efeito.
+
+## Landing page e acesso
+
+A página inicial (`/`) é a landing comercial do QR Admin, integrada ao build do SPA. Todo CTA de acesso abre o **mesmo** fluxo de autenticação da rota `/#/login` em um modal (sem login paralelo): setor, senha, segundo fator, código de recuperação, Google OAuth quando configurado, CSRF e sessão são os do produto.
+
+| Página | Endereço | Observação |
+|---|---|---|
+| Landing comercial | `/` | Página inicial; capturas reais do sistema com dados fictícios |
+| Acesso da equipe | `/#/login` | Página de login preservada |
+| Apresentação institucional | `/apresentacao.html` | Página estática preservada |
+| Guia demonstrativo | `/guia-sistema.html` | Página estática preservada |
+| Privacidade e Termos | `/politica-de-privacidade.html`, `/termos-de-servico.html` | Preservados, também ligados no rodapé da landing |
+
+A landing usa os assets oficiais (`public/logo/qradmin-mark.png`) e as capturas de `public/assets/apresentacao/`, geradas por `scripts/capturar-apresentacao.mjs` em ambiente isolado. As fontes editoriais (DM Sans e DM Serif Display, licença SIL OFL) são servidas localmente em `public/fonts/landing/`.
 
 ## Documentação do projeto
 
 | Documento | Conteúdo |
 |---|---|
-| [Guia visual interativo](https://qradminn.up.railway.app/guia-sistema.html) | Demonstração navegável das áreas do produto. É uma página estática demonstrativa, não uma sessão conectada ao banco/API. |
+| [Guia visual interativo](https://qradmin.up.railway.app/guia-sistema.html) | Demonstração navegável das áreas do produto. É uma página estática demonstrativa, não uma sessão conectada ao banco/API. |
 | [PWA do garçom](docs/PWA-ATENDIMENTO-GARCOM.md) | Arquitetura, sincronização offline e comportamento da PWA. |
 | [Contrato do atendimento](docs/CONTRATO-ATENDIMENTO-GARCOM.md) | Estados dos itens, regras de autoria e rotas de entrega. |
 | [Importação de cardápio CSV](docs/IMPORTAR-CARDAPIO-CSV.md) | Formato e regras de importação. |
@@ -244,8 +260,8 @@ O diretório `.tmp-pgdata` é mantido entre execuções; o banco não é apagado
 | [Google OAuth](docs/engineering/google-oauth-setup.md) | Pré-cadastro e configuração do login Google. |
 | [Backup e restore](docs/engineering/backup-restore.md) | Procedimento e evidências necessárias para restauração. |
 | [Fornecedor e serviços](docs/FORNECEDOR-E-SERVICOS-QR-ADMIN.md) | Identificação do fornecedor, infraestrutura e limites documentados. |
-| [Política de Privacidade](https://qradminn.up.railway.app/politica-de-privacidade.html) | Política publicada. |
-| [Termos de Serviço](https://qradminn.up.railway.app/termos-de-servico.html) | Condições de uso publicadas. |
+| [Política de Privacidade](https://qradmin.up.railway.app/politica-de-privacidade.html) | Política publicada. |
+| [Termos de Serviço](https://qradmin.up.railway.app/termos-de-servico.html) | Condições de uso publicadas. |
 
 ## Roadmap e limites conhecidos
 
@@ -295,7 +311,7 @@ O QR Admin é fornecido tecnicamente por **69.987.201 DEIVID DE JESUS DE MOURA**
 - **Titular:** Deivid de Jesus de Moura.
 - **Contato profissional:** [dejesusdemouradeivid@gmail.com](mailto:dejesusdemouradeivid@gmail.com).
 - **Produto:** QR Admin — sistema de pedidos por QR Code e gestão operacional para estabelecimento.
-- **Aplicação documentada:** [qradminn.up.railway.app](https://qradminn.up.railway.app/).
+- **Aplicação documentada:** [qradmin.up.railway.app](https://qradmin.up.railway.app/).
 - **Infraestrutura documentada:** Railway e PostgreSQL.
 - **Autenticação externa opcional:** Google OAuth, quando habilitada pelo estabelecimento.
 
@@ -305,10 +321,10 @@ O CNPJ e o nome empresarial são reproduzidos conforme o certificado cadastral. 
 
 ## Acesso
 
-- **Sistema:** [qradminn.up.railway.app](https://qradminn.up.railway.app/)
-- **Guia visual:** [Explorar as áreas e funcionalidades](https://qradminn.up.railway.app/guia-sistema.html)
-- **Privacidade:** [Política de Privacidade](https://qradminn.up.railway.app/politica-de-privacidade.html)
-- **Condições de uso:** [Termos de Serviço](https://qradminn.up.railway.app/termos-de-servico.html)
+- **Sistema:** [qradmin.up.railway.app](https://qradmin.up.railway.app/)
+- **Guia visual:** [Explorar as áreas e funcionalidades](https://qradmin.up.railway.app/guia-sistema.html)
+- **Privacidade:** [Política de Privacidade](https://qradmin.up.railway.app/politica-de-privacidade.html)
+- **Condições de uso:** [Termos de Serviço](https://qradmin.up.railway.app/termos-de-servico.html)
 
 <div align="center">
 

@@ -53,7 +53,7 @@ Limites funcionais que devem continuar explícitos na documentação comercial:
 
 | Componente | Uso documentado | Observação |
 |---|---|---|
-| Railway | Hospedagem/deploy da aplicação em produção **e do banco PostgreSQL** da instalação | Confirmado pelo responsável em 05/11/2026. URL documentada: https://qradminn.up.railway.app/ |
+| Railway | Hospedagem/deploy da aplicação em produção **e do banco PostgreSQL** da instalação | Confirmado pelo responsável em 05/11/2026. URL documentada: https://qradmin.up.railway.app/ |
 | PostgreSQL | Banco de dados da aplicação | Roda na mesma conta Railway da aplicação |
 | Google OAuth | Autenticação opcional de funcionários | Somente quando habilitada e configurada |
 | PIX | Registro manual de pagamentos | Não é provedor de processamento ou confirmação automática |

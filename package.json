@@ -43,6 +43,7 @@
     "diag:fotos": "node scripts/diagnostico-fotos.js",
     "pg:local": "node scripts/pg-local.mjs",
     "test:paginas-publicas": "node scripts/verificar-paginas-publicas.mjs",
+    "test:landing": "node scripts/verificar-landing.mjs",
     "seed:apresentacao": "node scripts/seed-apresentacao.cjs"
   },
   "dependencies": {

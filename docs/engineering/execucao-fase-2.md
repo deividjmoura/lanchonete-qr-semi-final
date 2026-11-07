@@ -191,12 +191,12 @@ O código já está endurecido: `TRUSTED_PROXY_HOPS=0` por padrão, e `X-Forward
 A issue registra o bloqueio: *"a conexão Railway disponível só mostra o projeto `chic-alignment` com serviços do bot SEGA, não o serviço QRAdmin."*
 
 - Confirme no painel qual projeto contém o serviço do QRAdmin
-- O health check aponta para `https://qradminn.up.railway.app` — esse é o host público a usar como referência
+- O health check aponta para `https://qradmin.up.railway.app` — esse é o host público a usar como referência
 
 ### 3.2 Teste empírico de XFF (grátis e conclusivo)
 
 ```bash
-HOST=https://qradminn.up.railway.app
+HOST=https://qradmin.up.railway.app
 
 # 1. Baseline: sem cabeçalho
 curl -sS -o /dev/null -w '%{http_code}\n' $HOST/healthz

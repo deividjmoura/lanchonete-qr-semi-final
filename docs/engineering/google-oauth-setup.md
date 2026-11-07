@@ -4,7 +4,7 @@
 
 Depois que esta implementação estiver integrada e implantada, cadastre no cliente OAuth do tipo **Aplicativo da Web**:
 
-- **URI de redirecionamento autorizado:** `https://qradminn.up.railway.app/api/auth/google/callback`
+- **URI de redirecionamento autorizado:** `https://qradmin.up.railway.app/api/auth/google/callback`
 - **Origens JavaScript autorizadas:** não são necessárias para este fluxo server-side.
 
 Não use o callback antes do deploy do código que o atende.
@@ -17,7 +17,7 @@ Configurar no serviço backend do Railway, por canal seguro:
 |---|---|
 | `GOOGLE_CLIENT_ID` | Client ID do cliente OAuth criado no Google Cloud |
 | `GOOGLE_CLIENT_SECRET` | Client Secret do JSON baixado do Google Cloud |
-| `GOOGLE_REDIRECT_URI` | `https://qradminn.up.railway.app/api/auth/google/callback` |
+| `GOOGLE_REDIRECT_URI` | `https://qradmin.up.railway.app/api/auth/google/callback` |
 | `GOOGLE_OAUTH_STATE_SECRET` | Segredo aleatório próprio, com pelo menos 32 bytes; opcional, pois o Client Secret é usado como fallback |
 
 Nunca commitar o JSON de credenciais, Client Secret ou qualquer segredo em arquivos do repositório.

@@ -30,7 +30,10 @@ test('troca de senha não limpa os campos antes do navegador capturar o envio co
 });
 
 test('login em React usa <form> com usuário (perfil) e senha identificáveis', () => {
-  const src = ler('src/screens/Login.tsx');
+  /* O corpo do login foi extraído para components/AuthFlow.tsx para ser
+     compartilhado entre a página #/login e o modal de acesso da landing. */
+  const src = ler('src/components/AuthFlow.tsx');
+  assert.match(ler('src/screens/Login.tsx'), /<FormularioAcesso/);
   assert.match(src, /<form/);
   assert.match(src, /autoComplete="username"/);
   assert.match(src, /value=\{papel\}/);
