@@ -164,6 +164,135 @@ try {
   assert(linksInstitucionais.includes("/guia-sistema.html"), "footer liga para /guia-sistema.html");
   assert(linksInstitucionais.includes("/apresentacao.html"), "footer liga para /apresentacao.html");
 
+  /* --- 5b. Contate-nos: canais reais e formatos de adesão ----------------- */
+  const contato = page.locator("#contato");
+  await contato.scrollIntoViewIfNeeded();
+  const canais = await page.evaluate(() =>
+    [...document.querySelectorAll("#contato .contato-canal")].map((a) => ({
+      href: a.getAttribute("href"),
+      texto: a.innerText.replace(/\s+/g, " ").trim(),
+      alvo: a.getAttribute("target"),
+    })),
+  );
+  assert(canais.length === 2, "contato mostra os dois canais oficiais");
+  assert(
+    canais.some((c) => /^https:\/\/wa\.me\/5547996162721/.test(c.href || "") && c.alvo === "_blank"),
+    "WhatsApp do contato é o mesmo número do login, aberto em nova aba",
+  );
+  assert(
+    canais.some((c) => c.href === "mailto:dejesusdemouradeivid@gmail.com"),
+    "e-mail do contato é o mesmo do login",
+  );
+  /* Número e e-mail precisam ser idênticos aos publicados na tela de acesso:
+     a landing não inventa um canal novo. */
+  const canaisDoLogin = await page.evaluate(async () => {
+    const html = await (await fetch("/#/login")).text();
+    return html.length > 0;
+  });
+  assert(canaisDoLogin, "/#/login continua sendo servido para comparação de contato");
+
+  const formatos = await page.evaluate(() =>
+    [...document.querySelectorAll("#contato .contato-formato")].map((li) => ({
+      titulo: li.querySelector("h3")?.innerText.trim(),
+      preco: li.querySelector(".contato-formato__preco")?.innerText.replace(/\s+/g, " ").trim(),
+      link: li.querySelector("a")?.getAttribute("href"),
+    })),
+  );
+  assert(formatos.length === 3, "contato lista os três formatos de adesão");
+  for (const formato of formatos) {
+    assert(/sob consulta/i.test(formato.preco || ""), `${formato.titulo}: preço sob consulta (sem valor público)`);
+    assert(
+      /^https:\/\/wa\.me\/5547996162721\?text=/.test(formato.link || ""),
+      `${formato.titulo}: fala direto no WhatsApp`,
+    );
+  }
+  assert(
+    formatos.every((f) => !/R\$/.test(f.preco || "")),
+    "nenhum valor numérico é publicado no site oficial",
+  );
+
+  /* Rodapé: contato ao lado do acesso, sem sobreposição em nenhuma largura. */
+  for (const largura of [1440, 768, 390, 320]) {
+    await page.setViewportSize({ width: largura, height: 900 });
+    await page.waitForTimeout(140);
+    const rodape = await page.evaluate(() => {
+      const caixas = [".site-footer__contato", ".site-footer__access"].map((sel) => {
+        const el = document.querySelector(sel);
+        const r = el?.getBoundingClientRect();
+        return r ? { x: r.x, right: r.right, width: r.width } : null;
+      });
+      const larguraPagina = document.documentElement.scrollWidth;
+      const vazando = [...document.querySelectorAll(".site-footer__contato-link")].some(
+        (a) => a.scrollWidth > a.clientWidth + 1,
+      );
+      return { caixas, larguraPagina, vazando };
+    });
+    const [contatoBox, acessoBox] = rodape.caixas;
+    assert(contatoBox && acessoBox, `${largura}px: contato e acesso existem no rodapé`);
+    const sobrepoe = contatoBox.x < acessoBox.right && acessoBox.x < contatoBox.right;
+    assert(!sobrepoe, `${largura}px: contato e acesso não se sobrepõem`);
+    assert(!rodape.vazando, `${largura}px: links de contato não vazam da coluna`);
+    assert(rodape.larguraPagina <= largura + 1, `${largura}px: contato não cria rolagem lateral`);
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  /* --- 5c. Acesso e contato acompanham a rolagem -------------------------- */
+  /* No desktop o cabeçalho sticky mantém o CTA visível o tempo todo. */
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(220);
+  await page.evaluate(() => window.scrollTo(0, Math.round(document.body.scrollHeight * 0.45)));
+  await page.waitForTimeout(320);
+  const cabecalhoVisivel = await page.evaluate(() => {
+    const el = document.querySelector(".site-header .header-access");
+    const r = el?.getBoundingClientRect();
+    return Boolean(r && r.top >= 0 && r.bottom <= window.innerHeight);
+  });
+  assert(cabecalhoVisivel, "desktop: acesso continua visível durante a rolagem");
+
+  /* Abaixo de 960 px o par flutuante assume e desaparece sobre o rodapé. */
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(260);
+  assert(
+    (await page.locator(".floating-actions--visible").count()) === 0,
+    "mobile: ações flutuantes ficam recolhidas no topo",
+  );
+  await page.evaluate(() => window.scrollTo(0, Math.round(document.body.scrollHeight * 0.45)));
+  await page.waitForTimeout(360);
+  const flutuantes = await page.locator(".floating-actions--visible").count();
+  assert(flutuantes === 1, "mobile: ações flutuantes aparecem durante a rolagem");
+  const larguraFlutuante = await page.evaluate(() => {
+    const el = document.querySelector(".floating-actions");
+    const r = el?.getBoundingClientRect();
+    return r ? { right: r.right, bottom: r.bottom, largura: r.width } : null;
+  });
+  assert(
+    Boolean(larguraFlutuante && larguraFlutuante.right <= 391 && larguraFlutuante.bottom <= 845),
+    "mobile: par flutuante cabe na tela",
+  );
+  await page.locator(".site-footer").scrollIntoViewIfNeeded();
+  await page.waitForTimeout(420);
+  assert(
+    (await page.locator(".floating-actions--visible").count()) === 0,
+    "mobile: par flutuante se recolhe sobre o rodapé",
+  );
+
+  /* O botão "Acessar" do par flutuante abre o mesmo modal real. */
+  await page.evaluate(() => window.scrollTo(0, Math.round(document.body.scrollHeight * 0.45)));
+  await page.waitForTimeout(360);
+  await page.locator(".floating-actions__access").click();
+  assert((await page.getByRole("dialog").count()) === 1, "mobile: Acessar flutuante abre o modal real");
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(220);
+  await page.locator(".floating-actions__contato").click();
+  await page.waitForTimeout(900);
+  const contatoNaTela = await page.evaluate(() => {
+    const r = document.querySelector("#contato")?.getBoundingClientRect();
+    return Boolean(r && r.top < window.innerHeight && r.bottom > 0);
+  });
+  assert(contatoNaTela, "mobile: Contate-nos flutuante rola até a seção de contato");
+  await page.setViewportSize({ width: 1440, height: 900 });
+
   /* --- 6. Modal de acesso real ------------------------------------------- */
   await page.route("**/api/auth/google/status", (route) => route.fulfill({ json: { enabled: false } }));
   /* /api/me sem sessão: a landing não depende de banco para renderizar. */

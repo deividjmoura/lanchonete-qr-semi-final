@@ -8,8 +8,10 @@ import { FeaturesSection } from "./landing/sections/FeaturesSection";
 import { ProductSection } from "./landing/sections/ProductSection";
 import { AudienceSection } from "./landing/sections/AudienceSection";
 import { PrinciplesSection } from "./landing/sections/PrinciplesSection";
+import { ContatoSection } from "./landing/sections/ContatoSection";
 import { FinalCta } from "./landing/sections/FinalCta";
 import { Footer } from "./landing/sections/Footer";
+import { FloatingActions } from "./landing/components/FloatingActions";
 import "./landing/styles/main.css";
 
 /* Landing comercial oficial do QR Admin.
@@ -53,9 +55,11 @@ export default function Landing() {
         <ProductSection />
         <AudienceSection />
         <PrinciplesSection />
+        <ContatoSection />
         <FinalCta aoAbrirAcesso={abrirAcesso} />
       </main>
       <Footer aoAbrirAcesso={abrirAcesso} />
+      <FloatingActions aoAbrirAcesso={abrirAcesso} />
       <AuthModal aberto={acessoAberto} aoFechar={fecharAcesso} />
     </div>
   );

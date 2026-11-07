@@ -82,7 +82,10 @@ html {
    para não afetar login, cozinha, bar, caixa, admin e o cardápio da mesa. */
 .landing-root {
   min-width: 320px;
-  overflow-x: hidden;
+  /* `hidden` na raiz criaria um contêiner de rolagem e desativaria o
+     `position: sticky` do cabeçalho; `clip` corta o excesso horizontal sem
+     esse efeito colateral. */
+  overflow-x: clip;
   background: var(--paper);
   color: var(--ink);
   font-size: 16px;
@@ -2537,8 +2540,8 @@ footer [id] {
 
 .site-footer__top {
   display: grid;
-  grid-template-columns: minmax(250px, 1.1fr) minmax(150px, 0.55fr) minmax(235px, 0.85fr);
-  gap: clamp(40px, 8vw, 115px);
+  grid-template-columns: minmax(220px, 1fr) minmax(130px, 0.5fr) minmax(190px, 0.62fr) minmax(200px, 0.62fr);
+  gap: clamp(28px, 5vw, 72px);
   padding-bottom: 52px;
 }
 
@@ -3803,6 +3806,7 @@ footer [id] {
   }
 
   .site-footer__nav-wrap,
+  .site-footer__contato,
   .site-footer__access {
     grid-column: span 1;
   }
@@ -4115,4 +4119,462 @@ footer [id] {
    landing, então mantém o arquivo original. */
 [data-theme="escuro"] .landing-root .brand-mark img {
   filter: none;
+}
+
+/* --------------------------------------------------------------------------
+   Contate-nos
+   Seção de adesão acrescentada depois da aprovação da landing. Reaproveita
+   apenas os tokens, a escala tipográfica e o ritmo vertical das seções
+   existentes (papel claro, serifa nos títulos, ícones de traço), alternando o
+   fundo em relação a "Diferenciais" para manter a leitura do documento.
+   -------------------------------------------------------------------------- */
+.contato-section {
+  padding: 116px 0 118px;
+  background: var(--paper);
+  border-top: 1px solid var(--line);
+}
+
+.contato-section__heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+  align-items: start;
+  gap: clamp(40px, 6vw, 86px);
+}
+
+.contato-section .section-intro h2 {
+  max-width: 620px;
+}
+
+.contato-canais {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 6px;
+}
+
+.contato-canal {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 15px 17px;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper-light);
+  transition: border-color 160ms var(--ease-out), background-color 160ms var(--ease-out), transform 160ms var(--ease-out);
+}
+
+.contato-canal:hover {
+  border-color: var(--ink);
+  background: var(--white);
+  transform: translateY(-1px);
+}
+
+.contato-canal__icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  place-items: center;
+  color: var(--accent);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.contato-canal--whatsapp .contato-canal__icon {
+  color: var(--white);
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.contato-canal__text {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.contato-canal__label {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.contato-canal__value {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contato-canal > svg {
+  flex: 0 0 auto;
+  color: var(--muted);
+  transition: transform 160ms var(--ease-out), color 160ms var(--ease-out);
+}
+
+.contato-canal:hover > svg {
+  transform: translate(2px, -2px);
+  color: var(--accent);
+}
+
+.contato-formatos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 62px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.contato-formato {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 26px 26px 28px 0;
+}
+
+.contato-formato + .contato-formato {
+  padding-left: 26px;
+  border-left: 1px solid var(--line);
+}
+
+.contato-formato__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.contato-formato__number {
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.contato-formato__icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  color: var(--pine);
+  border: 1px solid var(--line);
+}
+
+.contato-formato h3 {
+  margin: 18px 0 0;
+  color: var(--ink);
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 25px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.contato-formato p {
+  max-width: 300px;
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.contato-formato .contato-formato__preco {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-top: 16px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.contato-formato__preco span {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.contato-formato__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: auto;
+  padding-top: 20px;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.contato-formato__link svg {
+  color: var(--accent);
+  transition: transform 160ms var(--ease-out);
+}
+
+.contato-formato__link:hover {
+  color: var(--accent-deep);
+}
+
+.contato-formato__link:hover svg {
+  transform: translate(2px, -2px);
+}
+
+.contato-formato__link:focus-visible,
+.contato-canal:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.contato-section__note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 22px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.contato-section__note svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--accent);
+}
+
+.contato-section__note > span {
+  min-width: 0;
+}
+
+.contato-section__note-link {
+  color: var(--ink);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.contato-section__note-link:hover {
+  color: var(--accent);
+}
+
+/* Contato fica na terceira coluna do rodapé, ao lado do acesso. */
+.site-footer__contato {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.site-footer__contato-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  color: #edf0e8;
+  font-size: 11px;
+  /* O endereço de e-mail é mais largo que a coluna em telas estreitas:
+     quebra em vez de vazar para a coluna vizinha. */
+  overflow-wrap: anywhere;
+  transition: color 150ms ease;
+}
+
+.site-footer__contato-link svg {
+  flex: 0 0 auto;
+  color: #e5a78c;
+}
+
+.site-footer__contato-link:hover {
+  color: #e5a78c;
+}
+
+.site-footer__contato-link:focus-visible {
+  outline: 2px solid #edf0e8;
+  outline-offset: 3px;
+}
+
+/* --------------------------------------------------------------------------
+   Ações persistentes (abaixo de 960 px)
+   No desktop o cabeçalho sticky mantém o acesso visível; nele este par não é
+   montado visualmente. Em telas estreitas ele acompanha a rolagem e se recolhe
+   sobre o rodapé, onde os mesmos destinos já aparecem.
+   -------------------------------------------------------------------------- */
+.floating-actions {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 40;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(252, 250, 245, 0.94);
+  box-shadow: 0 10px 28px rgba(32, 44, 39, 0.16);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(14px);
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.floating-actions--visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.floating-actions__access,
+.floating-actions__contato {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  color: var(--white);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.floating-actions__access {
+  border: 0;
+  background: var(--ink);
+  cursor: pointer;
+}
+
+.floating-actions__contato {
+  color: var(--ink);
+  border: 1px solid var(--line);
+  background: var(--white);
+}
+
+.floating-actions__contato svg {
+  color: var(--accent);
+}
+
+.floating-actions__access:focus-visible,
+.floating-actions__contato:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 960px) {
+  .floating-actions {
+    display: inline-flex;
+  }
+}
+
+/* Entre 851 e 960 px o rodapé vira três colunas e o acesso ocupa a linha
+   inteira, para as quatro colunas do desktop não apertarem. Abaixo disso a
+   grade de duas colunas já definida adiante assume. */
+@media (min-width: 851px) and (max-width: 960px) {
+  .site-footer__top {
+    grid-template-columns: minmax(200px, 1fr) minmax(130px, 0.6fr) minmax(190px, 0.7fr);
+  }
+
+  .site-footer__access {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 850px) {
+  .contato-section {
+    padding: 82px 0 84px;
+  }
+
+  .contato-section__heading {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 30px;
+  }
+
+  .contato-formatos {
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 42px;
+    border-bottom: 0;
+  }
+
+  .contato-formato {
+    padding: 24px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .contato-formato + .contato-formato {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .contato-formato p {
+    max-width: 460px;
+  }
+
+  .contato-formato__link {
+    padding-top: 16px;
+  }
+
+}
+
+@media (max-width: 680px) {
+  .contato-section {
+    padding: 70px 0 72px;
+  }
+
+  .contato-canal {
+    padding: 13px 14px;
+  }
+
+  .contato-canal__value {
+    font-size: 11px;
+  }
+
+  .contato-formato h3 {
+    font-size: 22px;
+  }
+
+}
+
+@media (max-width: 390px) {
+  .floating-actions {
+    right: 12px;
+    bottom: 12px;
+    gap: 6px;
+    padding: 5px;
+  }
+
+  .floating-actions__access,
+  .floating-actions__contato {
+    min-height: 38px;
+    padding: 0 12px;
+    font-size: 10px;
+  }
+}
+
+/* O tema escuro do produto não muda a landing: as ações persistentes seguem a
+   paleta de papel como o resto da página. */
+[data-theme="escuro"] .landing-root .floating-actions {
+  color: var(--ink);
+  border-color: var(--line);
+  background: rgba(252, 250, 245, 0.94);
+}
+
+[data-theme="escuro"] .landing-root .floating-actions__contato {
+  color: var(--ink);
+  border-color: var(--line);
+  background: var(--white);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floating-actions {
+    transition: opacity 120ms linear;
+    transform: none;
+  }
+
+  .contato-canal:hover {
+    transform: none;
+  }
 }
