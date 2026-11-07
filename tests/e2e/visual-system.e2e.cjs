@@ -271,8 +271,13 @@ async function main() {
             screen === "pwa"
               ? "#tableGrid .table-tile"
               : screen === "login"
-                ? ".brand-logo"
-                : "h1",
+                /* A tela de acesso exibe a marca em .login-brand (o .brand-logo
+                   do OpsShell não é montado nela). */
+                ? ".login-brand"
+                : screen === "home"
+                  /* "/" é a landing comercial: a marca fica em .brand-mark. */
+                  ? ".brand-mark"
+                  : "h1",
           )
           .first()
           .waitFor();
