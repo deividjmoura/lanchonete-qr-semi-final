@@ -29,7 +29,9 @@ export default function App() {
     <ConfirmacaoGlobal>
       <>
       <Toasts />
-      {rota.path === "home" && <Login />}
+      {/* Rota raiz e a landing comercial oficial. O acesso da equipe continua em
+          #/login (mesma tela de antes) e pelo modal de cada CTA. */}
+      {rota.path === "home" && <Landing />}
       {rota.path === "login" && <Login />}
       {rota.path === "mesa" && <Mesa key={rota.params.token} token={rota.params.token || ""} />}
       {rota.path === "cozinha" && <Cozinha />}

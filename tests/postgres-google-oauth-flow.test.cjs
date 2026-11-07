@@ -13,7 +13,7 @@ const previousEnv = Object.fromEntries(ENV.map((key) => [key, process.env[key]])
 Object.assign(process.env, {
   GOOGLE_CLIENT_ID: 'client-id-ficticio',
   GOOGLE_CLIENT_SECRET: 'client-secret-ficticio',
-  GOOGLE_REDIRECT_URI: 'https://qradminn.up.railway.app/api/auth/google/callback',
+  GOOGLE_REDIRECT_URI: 'https://qradmin.up.railway.app/api/auth/google/callback',
   GOOGLE_OAUTH_STATE_SECRET: 'segredo-de-teste-oauth-google-com-mais-de-32-bytes',
   NODE_ENV: 'test',
   STAFF_FORCE_PASSWORD_CHANGE: 'true',

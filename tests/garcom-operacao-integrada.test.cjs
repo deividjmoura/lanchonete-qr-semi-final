@@ -4,6 +4,7 @@ if (!process.env.DATABASE_URL) process.env.DATABASE_URL = 'postgres://regress:re
 const { test, describe } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const path = require('node:path');
 const ts = require('typescript');
 const vm = require('node:vm');
 
@@ -117,7 +118,12 @@ describe('1. Fluxo do Cliente — Sem Pagamento e com Recursos Essenciais', () =
   });
 
   test('Cliente pode iniciar pedidos diretamente pelo QR fixo da mesa', () => {
-    const landingSrc = fs.readFileSync('src/screens/Landing.tsx', 'utf8');
+    /* A landing oficial é montada por seções em src/screens/landing/.
+       Lemos a raiz e as seções para validar a orientação ao cliente. */
+    const secoes = fs.readdirSync('src/screens/landing/sections');
+    const landingSrc = [fs.readFileSync('src/screens/Landing.tsx', 'utf8')]
+      .concat(secoes.map((f) => fs.readFileSync(path.join('src/screens/landing/sections', f), 'utf8')))
+      .join('\n');
     assert.match(
       landingSrc,
       /QR Code fixo da sua mesa/i,

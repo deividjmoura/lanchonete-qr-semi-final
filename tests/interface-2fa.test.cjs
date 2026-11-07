@@ -20,7 +20,9 @@ const path = require('node:path');
 const raiz = path.join(__dirname, '..');
 const ler = (...p) => fs.readFileSync(path.join(raiz, ...p), 'utf8');
 
-const login = ler('src', 'screens', 'Login.tsx');
+/* O corpo do login (setores, senha, 2FA e Google) vive em AuthFlow.tsx e é
+   compartilhado pela página #/login e pelo modal de acesso da landing. */
+const login = ler('src', 'components', 'AuthFlow.tsx');
 const painel = ler('src', 'screens', 'admin', 'SegurancaConta.tsx');
 const admin = ler('src', 'screens', 'Admin.tsx');
 const api = ler('src', 'lib', 'api.ts');
