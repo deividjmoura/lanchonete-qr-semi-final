@@ -3,12 +3,14 @@ import { AccessButton } from "../components/AccessButton";
 import { Brand } from "../components/Brand";
 import { Icon } from "../components/Icon";
 import { useRolagemInterna } from "../useRolagemInterna";
+import { EMAIL_EXIBIDO, EMAIL_URL, whatsappLink } from "../contato";
 
 const footerLinks = [
   { href: "#proposta", label: "Proposta" },
   { href: "#como-funciona", label: "Como funciona" },
   { href: "#funcionalidades", label: "Módulos" },
   { href: "#para-quem", label: "Para quem é" },
+  { href: "#contato", label: "Contate-nos" },
 ];
 
 /* Páginas institucionais já publicadas pelo produto. Elas continuam servidas
@@ -49,6 +51,31 @@ export function Footer({ aoAbrirAcesso }: { aoAbrirAcesso: () => void }) {
                 </a>
               ))}
             </nav>
+          </div>
+          {/* Contate-nos fica ao lado do acesso: quem chega ao fim da página
+              escolhe entre falar com o responsável e entrar no sistema. */}
+          <div className="site-footer__contato">
+            <p className="site-footer__label">CONTATE-NOS</p>
+            <a
+              className="site-footer__contato-link"
+              href={whatsappLink()}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Icon name="whatsapp" size={15} />
+              WhatsApp
+            </a>
+            <a className="site-footer__contato-link" href={EMAIL_URL}>
+              <Icon name="mail" size={15} />
+              {EMAIL_EXIBIDO}
+            </a>
+            <a
+              className="site-footer__contato-link"
+              href="#contato"
+              onClick={(event) => aoClicarInterno(event, "#contato")}
+            >
+              Ver formatos de adesão
+            </a>
           </div>
           <div className="site-footer__access" id="acesso">
             <p className="site-footer__label">ACESSO AO SISTEMA</p>

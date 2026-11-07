@@ -243,6 +243,19 @@ A página inicial (`/`) é a landing comercial do QR Admin, integrada ao build d
 
 A landing usa os assets oficiais (`public/logo/qradmin-mark.png`) e as capturas de `public/assets/apresentacao/`, geradas por `scripts/capturar-apresentacao.mjs` em ambiente isolado. As fontes editoriais (DM Sans e DM Serif Display, licença SIL OFL) são servidas localmente em `public/fonts/landing/`.
 
+### Contato e adesão
+
+A seção **Contate-nos** (`/#contato`) fica antes do CTA final e repete os dois canais que já existem no rodapé da tela de acesso — nenhum canal novo é criado:
+
+| Canal | Endereço | Origem |
+|---|---|---|
+| WhatsApp | `https://wa.me/5547996162721` | Mesmo número de `src/screens/Login.tsx` |
+| E-mail | `dejesusdemouradeivid@gmail.com` | Mesmo endereço de `src/screens/Login.tsx` |
+
+Os dois endereços estão centralizados em `src/screens/landing/contato.ts`. A seção também lista os três formatos de adesão (assinatura mensal, aquisição do sistema e venda exclusiva) **sem valores publicados**: preço, prazo e escopo ficam "sob consulta" e são confirmados na conversa.
+
+O rodapé mantém **Contate-nos** ao lado de **Acesso ao sistema**. Durante a rolagem, o acesso fica disponível no cabeçalho fixo no desktop e, abaixo de 960 px, em um par flutuante discreto (`Acessar` + `Contate-nos`) que se recolhe sobre o rodapé, onde os mesmos destinos já estão à vista.
+
 ## Documentação do projeto
 
 | Documento | Conteúdo |
