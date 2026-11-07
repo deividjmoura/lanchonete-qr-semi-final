@@ -22,8 +22,10 @@ const relatorio = {
   porDia: Array.from({ length: 25 }, (_, i) => ({ dia: `2042-06-${String(i + 1).padStart(2, '0')}`, contas: 1, faturamento: 11 })),
   porGarcom: Array.from({ length: 25 }, (_, i) => ({ garcomId: i + 1, garcomNome: `Garçom ${i + 1}`, contas: 1, totalCobrado: 11 })),
 };
+/* A categoria "longa" fica com 23 itens zerados: é ela que alimenta a única
+   lista paginada do cardápio hoje, "Produtos com estoque baixo" (5 por página). */
 const menu = [{ id: 1, nome: 'Categoria longa', ordem: 0, produtos: Array.from({ length: 23 }, (_, i) => ({
-  id: i + 1, nome: `Estoque ${i + 1}`, preco: 10, controlaEstoque: true, estoque: 5, estoqueMinimo: 1,
+  id: i + 1, nome: `Estoque ${i + 1}`, preco: 10, controlaEstoque: true, estoque: 0, estoqueMinimo: 1,
 })) }, ...Array.from({ length: 11 }, (_, i) => ({
   id: i + 2, nome: `Categoria ${i + 2}`, ordem: i + 1,
   produtos: [{ id: i + 24, nome: `Produto adicional ${i + 1}`, preco: 10, controlaEstoque: true, estoque: 5, estoqueMinimo: 1 }],
@@ -71,22 +73,23 @@ async function main() {
     await maisPedidos.getByRole('button', { name: 'Mostrar menos' }).click();
     assert.equal(await maisPedidos.locator('li').count(), 5);
 
-    await page.goto(base + '/#/admin/funcoes');
-    const estoque = page.getByRole('region', { name: 'Estoque' });
-    await estoque.locator('button[aria-expanded]').nth(9).waitFor();
-    assert.equal(await estoque.locator('button[aria-expanded]').count(), 10);
-    await estoque.getByRole('button', { name: 'Carregar mais' }).click();
-    assert.equal(await estoque.locator('button[aria-expanded]').count(), 12);
-    await estoque.getByRole('button', { name: 'Mostrar menos' }).click();
-    assert.equal(await estoque.locator('button[aria-expanded]').count(), 10);
-    const grupo = page.locator('section').filter({ has: page.getByRole('button', { name: /^Categoria longa/ }) });
-    await grupo.getByRole('button', { name: /^Categoria longa/ }).click();
-    assert.equal(await grupo.getByRole('button', { name: '+ entrada' }).count(), 10);
-    await grupo.getByRole('button', { name: 'Carregar mais' }).click();
-    assert.equal(await grupo.getByRole('button', { name: '+ entrada' }).count(), 20);
-    await grupo.getByRole('button', { name: 'Mostrar menos' }).click();
-    assert.equal(await grupo.getByRole('button', { name: '+ entrada' }).count(), 10);
+    /* As categorias do cardápio não paginam mais: a lista limitada da aba é a
+       de "Produtos com estoque baixo" (5 itens por página). */
+    await page.getByRole('button', { name: 'Cardápio', exact: true }).click();
+    const baixos = page.getByRole('region', { name: 'Produtos com estoque baixo' });
+    await baixos.locator('li').nth(4).waitFor();
+    assert.equal(await baixos.locator('li').count(), 5, 'estoque baixo: limite inicial');
+    await baixos.getByRole('button', { name: 'Carregar mais' }).click();
+    assert.equal(await baixos.locator('li').count(), 10, 'estoque baixo: próxima página');
+    await baixos.getByRole('button', { name: 'Mostrar menos' }).click();
+    assert.equal(await baixos.locator('li').count(), 5, 'estoque baixo: recolhe');
+    const grupo = page.locator('li[data-category-id="1"]');
+    await grupo.locator('button[aria-expanded]').click();
+    assert.equal(await grupo.getByRole('button', { name: /entrada/ }).count(), 23, 'todos os itens da categoria aparecem');
+    assert.equal(await grupo.getByRole('button', { name: 'Carregar mais' }).count(), 0, 'categoria não pagina');
 
+    /* Relatório, histórico, senhas e retenção vivem na aba Funções. */
+    await page.getByRole('button', { name: 'Funções', exact: true }).click();
     await page.getByRole('button', { name: 'Relatório', exact: true }).click();
     const tabela = page.getByRole('region', { name: 'Contas fechadas do relatório' });
     await tabela.locator('tbody tr').nth(9).waitFor();

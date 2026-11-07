@@ -76,17 +76,20 @@ async function desktop(browser) {
   const nav = page.getByRole('navigation', { name: 'Navegação principal' });
   assert.equal(await page.getByRole('navigation', { name: 'Seções administrativas' }).count(), 0, 'pill removido');
   assert.equal(await page.getByRole('button', { name: 'Redefinir senha de um setor' }).count(), 0, 'sem chave de admin no topo');
+  // O título da aba de cardápio é "Cardápio & Estoque" (a lista de estoque
+  // baixo vive nela), enquanto o item de navegação continua "Cardápio".
   const secoes = [
-    ['Dashboard', '/admin'], ['Cardápio', '/admin/cardapio'], ['Mesas', '/admin/mesas'],
-    ['Garçons', '/admin/garcons'], ['Funções', '/admin/funcoes'],
+    ['Dashboard', '/admin', 'Dashboard'], ['Cardápio', '/admin/cardapio', 'Cardápio & Estoque'],
+    ['Mesas', '/admin/mesas', 'Mesas'], ['Garçons', '/admin/garcons', 'Garçons'],
+    ['Funções', '/admin/funcoes', 'Funções'],
   ];
-  for (const [nome, rota] of secoes) {
+  for (const [nome, rota, titulo] of secoes) {
     await nav.getByRole('button', { name: nome, exact: true }).click();
     await page.waitForFunction((r) => location.hash === '#' + r, rota);
-    await page.getByRole('heading', { name: nome, exact: true, level: 1 }).waitFor();
+    await page.getByRole('heading', { name: titulo, exact: true, level: 1 }).waitFor();
     assert.equal(await nav.getByRole('button', { name: nome, exact: true }).getAttribute('aria-current'), 'page');
     await page.reload();
-    await page.getByRole('heading', { name: nome, exact: true, level: 1 }).waitFor();
+    await page.getByRole('heading', { name: titulo, exact: true, level: 1 }).waitFor();
     assert.equal(new URL(page.url()).hash, '#' + rota, `refresh preserva ${nome}`);
   }
 

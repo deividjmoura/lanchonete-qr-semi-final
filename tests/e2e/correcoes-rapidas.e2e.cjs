@@ -132,8 +132,12 @@ async function chartAndStock(browser, scheme) {
   assert.equal(await failPage.locator('.week-bar-value').count(), 0);
   await failPage.close();
 
-  await page.getByRole('button', { name: 'Funções', exact: true }).click();
-  const categoria = (name) => page.getByRole('button', { name: new RegExp('^' + name + '\\b') });
+  /* Categorias e estoque vivem na aba "Cardápio" (a de Funções cuida de
+     relatório, histórico, senhas e retenção). */
+  await page.getByRole('button', { name: 'Cardápio', exact: true }).click();
+  /* O nome acessível do cabeçalho da categoria é composto (alça de arraste,
+     número da ordem, nome e contagem), então não dá para ancorar no início. */
+  const categoria = (name) => page.locator('button[aria-expanded]').filter({ hasText: name });
   for (const nome of ['Bebidas', 'Lanches', 'Porções', 'Sobremesas']) {
     await categoria(nome).waitFor();
     assert.equal(await categoria(nome).getAttribute('aria-expanded'), 'false', `${nome} inicia recolhida`);
@@ -155,7 +159,8 @@ async function chartAndStock(browser, scheme) {
     menu.push({ id: 5, nome: 'Nova categoria', ordem: 4, produtos: [{ id: 5, nome: 'Novo item', preco: 5 }] });
     await route.fulfill({ json: { ok: true } });
   });
-  await page.getByRole('button', { name: '−1', exact: true }).click();
+  /* O texto do botão é "−1", mas o nome acessível vem do aria-label. */
+  await page.getByRole('button', { name: 'Retirar uma unidade de Produto 1' }).click();
   await patchSeen;
   await categoria('Bebidas').click();
   assert.equal(await categoria('Bebidas').getAttribute('aria-expanded'), 'false');
