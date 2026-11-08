@@ -60,6 +60,8 @@ const suites = [
   'postgres-sse-ticket-http.test.cjs',
   // Cadastro e remoção do e-mail Google pré-autorizado, com auditoria transacional.
   'postgres-google-oauth.test.cjs',
+  // Callback OAuth + cookie lqr_session + rotas protegidas no servidor HTTP real.
+  'postgres-google-oauth-flow.test.cjs',
   // #48: dois funcionários no mesmo aparelho — a autoria vem da sessão.
   'postgres-autoria-dispositivo-compartilhado.test.cjs',
   // #44: a purga anonimiza e preserva valor/forma/data/autoria.

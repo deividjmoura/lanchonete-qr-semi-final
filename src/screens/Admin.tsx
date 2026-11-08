@@ -78,24 +78,6 @@ export default function Admin({ secao }: { secao?: string }) {
     void hydrateMesas();
   }, [hydrateCardapio, hydrateMesas]);
 
-  useEffect(() => {
-    if (!auth) {
-      ir("/login");
-      return;
-    }
-    if (auth.role !== "admin") {
-      ir(
-        auth.role === "cozinha"
-          ? "/cozinha"
-          : auth.role === "bar"
-            ? "/bar"
-            : auth.role === "caixa"
-              ? "/caixa"
-              : "/login",
-      );
-    }
-  }, [auth]);
-
   const abaAtual = ABAS.find((a) => a.id === secao) || ABAS[0];
   const aba = abaAtual.id;
   useEffect(() => { if (aba !== "painel") setDashboardEditMode(false); }, [aba]);

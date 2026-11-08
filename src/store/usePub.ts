@@ -12,7 +12,7 @@ import type {
   Role,
   Sessao,
 } from "../lib/types";
-import { api, aoTrocarSessao } from "../lib/api";
+import { api, ApiError, aoTrocarSessao } from "../lib/api";
 import {
   itensToApiBody,
   mapCaixaSessoes,
@@ -45,7 +45,7 @@ interface PubState {
   hydrateBar: () => Promise<void>;
   hydrateGarcom: (token: string) => Promise<void>;
   hydrateCaixa: () => Promise<void>;
-  hydrateMe: () => Promise<void>;
+  hydrateMe: () => Promise<ResultadoHidratacaoSessao>;
 
   /* cliente / mesa */
   criarPedido: (mesaId: number, clienteNome: string, itens: ItemPedido[]) => number | null;
@@ -100,6 +100,8 @@ interface PubState {
   /** Publica falha de operação na faixa de erro da própria tela (sem alert nativo). */
   reportarErro: (mensagem: string | null) => void;
 }
+
+export type ResultadoHidratacaoSessao = "autenticada" | "anonima" | "indisponivel";
 
 export type ResultadoLogin =
   | { ok: true; role: Role }
@@ -484,13 +486,26 @@ if (typeof window !== "undefined") {
     try {
       const out = await api.me();
       const me = out?.staff;
-      if (me && me.papel) {
-        const auth = { role: me.papel as Role, nome: me.nome || me.papel, login: me.login || undefined, deveTrocar: Boolean(me.deveTrocarSenha) };
-        sessionStorage.setItem("pub-auth", JSON.stringify(auth));
-        set({ auth });
+      const papel = me?.papel;
+      if (!me || !papel || !["admin", "cozinha", "bar", "caixa"].includes(papel)) {
+        sessionStorage.removeItem("pub-auth");
+        set({ auth: null, lastError: null });
+        return "anonima";
       }
-    } catch (_) {
-      /* anônimo ok */
+      const auth = { role: papel as Role, nome: me.nome || papel, login: me.login || undefined, deveTrocar: Boolean(me.deveTrocarSenha) };
+      sessionStorage.setItem("pub-auth", JSON.stringify(auth));
+      set({ auth, lastError: null });
+      return "autenticada";
+    } catch (error) {
+      // Só uma recusa de autenticação encerra o estado local. Falha de rede ou
+      // 5xx não prova logout: a fronteira da rota oferece nova tentativa.
+      if (error instanceof ApiError && error.status === 401) {
+        sessionStorage.removeItem("pub-auth");
+        set({ auth: null, lastError: null });
+        return "anonima";
+      }
+      set({ lastError: "Não foi possível confirmar sua sessão. Tente novamente." });
+      return "indisponivel";
     }
   },
 

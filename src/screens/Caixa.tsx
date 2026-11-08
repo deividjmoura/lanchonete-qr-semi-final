@@ -20,7 +20,7 @@ import { useEffect, useMemo, useState } from "react";
 import { OpsShell, useAnuncios } from "../components/OpsShell";
 import { ControlesPaginacao, ListaLimitada, useLimiteLocal } from "../components/Paginacao";
 import { Badge, Btn } from "../components/ui";
-import { ir, useAgora } from "../router";
+import { useAgora } from "../router";
 import type { FormaPagamento, PixConfig, Sessao } from "../lib/types";
 import { FORMAS, consumoSessao, pagoSessao, usePub } from "../store/usePub";
 import { api } from "../lib/api";
@@ -29,19 +29,7 @@ import { BRL, elapsed, montarPixEMV } from "../lib/utils";
 import { cn } from "../utils/cn";
 
 export default function Caixa() {
-  const auth = usePub((s) => s.auth);
   const reduceMotion = useReducedMotion();
-
-  useEffect(() => {
-    if (!auth) {
-      ir("/login");
-      return;
-    }
-    if (auth.role !== "admin" && auth.role !== "caixa") {
-      ir(auth.role === "cozinha" ? "/cozinha" : "/login");
-    }
-  }, [auth]);
-
   useAnuncios("caixa");
   useAgora(1000);
 

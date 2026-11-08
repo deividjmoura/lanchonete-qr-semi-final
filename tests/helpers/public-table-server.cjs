@@ -19,8 +19,10 @@
  *    SHA-256 contra a árvore de trabalho, então a suíte prova que está
  *    exercitando exatamente o código de produção.
  *
- * Assets estáticos (`public/`, `dist/`, `index.html`) não são copiados de
- * propósito: esta suíte só chama rotas `/api/**` e `/healthz`.
+ * Por padrão, assets estáticos não são copiados: os testes de API só chamam
+ * `/api/**` e `/healthz`. O E2E do retorno Google usa `servirSpa: true` para
+ * compartilhar o build real e `preCarregamentoExtra` para simular somente os
+ * dois endpoints externos do Google, sem alterar o servidor ou suas proteções.
  */
 
 const crypto = require('node:crypto');
@@ -83,6 +85,12 @@ function arquivosDe(dir) {
   };
   visitar(dir);
   return saida.sort();
+}
+
+function assertBuildDisponivel() {
+  if (!fs.existsSync(path.join(RAIZ, 'dist', 'index.html'))) {
+    throw new Error('E2E do retorno Google exige o build real. Execute npm run build antes.');
+  }
 }
 
 function copiarAplicacao(destino) {
@@ -242,11 +250,11 @@ async function esperarHealthz(base, aoFalhar) {
 /**
  * Sobe o servidor real em cópia isolada.
  *
- * @param {{ env?: Record<string,string> }} opcoes variáveis extras para o filho
+ * @param {{ env?: Record<string,string>, servirSpa?: boolean, preCarregamentoExtra?: string }} opcoes
  * @returns {Promise<{ base: string, request: Function, avancarRelogio: Function,
  *   logs: Function, pid: number, encerrar: Function }>}
  */
-async function subirServidor({ env = {} } = {}) {
+async function subirServidor({ env = {}, servirSpa = false, preCarregamentoExtra } = {}) {
   exigirAmbienteDeTeste();
 
   const raizTemporaria = fs.mkdtempSync(path.join(os.tmpdir(), 'qradmin-public-table-'));
@@ -257,6 +265,12 @@ async function subirServidor({ env = {} } = {}) {
 
   // Só as dependências são compartilhadas; nenhum arquivo da aplicação.
   fs.symlinkSync(path.join(RAIZ, 'node_modules'), path.join(raizTemporaria, 'node_modules'), 'dir');
+  if (servirSpa) {
+    assertBuildDisponivel();
+    for (const dir of ['dist', 'public']) {
+      fs.symlinkSync(path.join(RAIZ, dir), path.join(copia, dir), 'dir');
+    }
+  }
 
   const preCarregamento = path.join(raizTemporaria, 'pre-carregamento-relogio.cjs');
   const moduloRateLimit = path.join(fs.realpathSync(copia), 'db', 'rateLimit.js');
@@ -266,7 +280,7 @@ async function subirServidor({ env = {} } = {}) {
   const base = `http://127.0.0.1:${porta}`;
   const filho = fork(path.join(copia, 'server.js'), [], {
     cwd: raizTemporaria,
-    execArgv: ['--require', preCarregamento],
+    execArgv: ['--require', preCarregamento, ...(preCarregamentoExtra ? ['--require', preCarregamentoExtra] : [])],
     env: {
       ...process.env,
       NODE_ENV: 'test',

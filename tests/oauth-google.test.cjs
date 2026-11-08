@@ -4,7 +4,10 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 
+// Este teste não consulta banco; o pool compartilhado só exige uma URL válida.
+process.env.DATABASE_URL ||= 'postgres://regress:regress@127.0.0.1:5432/regress';
 const oauth = require('../db/oauth-google');
+const auth = require('../db/auth');
 
 const ENV_NAMES = [
   'GOOGLE_CLIENT_ID',
@@ -133,3 +136,77 @@ test('cookie de estado OAuth é removido com escopo restrito', () => {
   assert.match(cookie, /SameSite=Lax/);
   assert.match(cookie, /Max-Age=0/);
 });
+
+
+test('callback recusa cookie ausente, assinatura adulterada e payload malformado sem contactar Google', () => comOAuthConfigurado(async () => {
+  const anterior = global.fetch;
+  let chamadas = 0;
+  global.fetch = async () => { chamadas += 1; throw new Error('não deveria contactar Google'); };
+  const valido = cookieAssinado({ state: 'state-valido', verifier: 'verifier-valido', iat: Date.now() }, process.env.GOOGLE_OAUTH_STATE_SECRET);
+  const [payload, assinatura] = valido.split('.');
+  const casos = [
+    { headers: {} },
+    requestComCookie('sem-assinatura'),
+    requestComCookie(`${payload}.${assinatura}.extra`),
+    requestComCookie(`${payload}.${assinatura.slice(0, -1)}${assinatura.endsWith('a') ? 'b' : 'a'}`),
+    requestComCookie(cookieAssinado({ state: 'state-valido', iat: Date.now() }, process.env.GOOGLE_OAUTH_STATE_SECRET)),
+    requestComCookie(cookieAssinado({ state: 'state-valido', verifier: 'x', iat: Date.now() + 120000 }, process.env.GOOGLE_OAUTH_STATE_SECRET)),
+  ];
+  try {
+    for (const req of casos) {
+      await assert.rejects(oauth.concluirOAuth(req, 'codigo-ficticio', 'state-valido'), (e) => e.status === 400);
+    }
+    assert.equal(chamadas, 0);
+  } finally { global.fetch = anterior; }
+}));
+
+test('cookie de sessão preserva atributos de segurança e é host-only nos dois ambientes', () => {
+  const anterior = process.env.NODE_ENV;
+  try {
+    process.env.NODE_ENV = 'test';
+    const local = auth.cookieDeSessao('token-sintetico');
+    assert.match(local, /^lqr_session=token-sintetico;/);
+    assert.match(local, /HttpOnly/);
+    assert.match(local, /SameSite=Lax/);
+    assert.match(local, /Path=\//);
+    assert.match(local, /Max-Age=43200/);
+    assert.doesNotMatch(local, /Domain=/i);
+    assert.doesNotMatch(local, /Secure/);
+    process.env.NODE_ENV = 'production';
+    const producao = auth.cookieDeSessao('token-sintetico');
+    assert.match(producao, /Secure/);
+    assert.match(producao, /HttpOnly/);
+    assert.match(producao, /SameSite=Lax/);
+    assert.match(producao, /Path=\//);
+    assert.doesNotMatch(producao, /Domain=/i);
+    assert.match(auth.cookieDeLogout(), /Max-Age=0/);
+    assert.match(auth.cookieDeLogout(), /Secure/);
+    assert.match(oauth.limparCookieEstado(), /Secure/);
+  } finally {
+    if (anterior === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = anterior;
+  }
+});
+
+test('configuração recusa callback com path/query/hash errado e HTTPS obrigatório em produção', () => comOAuthConfigurado(() => {
+  const original = process.env.GOOGLE_REDIRECT_URI;
+  const nodeEnv = process.env.NODE_ENV;
+  try {
+    process.env.NODE_ENV = 'production';
+    for (const uri of [
+      'http://qradmin.up.railway.app/api/auth/google/callback',
+      'https://qradmin.up.railway.app/callback',
+      'https://qradmin.up.railway.app/api/auth/google/callback?x=1',
+      'https://qradmin.up.railway.app/api/auth/google/callback#fragmento',
+      'não é uma URL',
+    ]) {
+      process.env.GOOGLE_REDIRECT_URI = uri;
+      assert.deepEqual(oauth.statusOAuth(), { enabled: false });
+    }
+    process.env.GOOGLE_REDIRECT_URI = original;
+    assert.deepEqual(oauth.statusOAuth(), { enabled: true });
+  } finally {
+    process.env.GOOGLE_REDIRECT_URI = original;
+    process.env.NODE_ENV = nodeEnv;
+  }
+}));

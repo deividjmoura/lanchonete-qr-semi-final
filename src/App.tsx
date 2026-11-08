@@ -11,6 +11,7 @@ import Bar from "./screens/Bar";
 import Garcom from "./screens/Garcom";
 import Caixa from "./screens/Caixa";
 import Admin from "./screens/Admin";
+import { RotaStaff } from "./components/RotaStaff";
 
 export default function App() {
   const rota = useRota();
@@ -34,11 +35,11 @@ export default function App() {
       {rota.path === "home" && <Landing />}
       {rota.path === "login" && <Login />}
       {rota.path === "mesa" && <Mesa key={rota.params.token} token={rota.params.token || ""} />}
-      {rota.path === "cozinha" && <Cozinha />}
-      {rota.path === "bar" && <Bar />}
+      {rota.path === "cozinha" && <RotaStaff recurso="cozinha"><Cozinha /></RotaStaff>}
+      {rota.path === "bar" && <RotaStaff recurso="bar"><Bar /></RotaStaff>}
       {rota.path === "garcom" && <Garcom key={rota.params.token} token={rota.params.token || ""} />}
-      {rota.path === "caixa" && <Caixa />}
-      {rota.path === "admin" && <Admin secao={rota.params.secao} />}
+      {rota.path === "caixa" && <RotaStaff recurso="caixa"><Caixa /></RotaStaff>}
+      {rota.path === "admin" && <RotaStaff recurso="admin"><Admin secao={rota.params.secao} /></RotaStaff>}
       {!["home", "login", "mesa", "cozinha", "bar", "garcom", "caixa", "admin"].includes(rota.path) && <Landing />}
       </>
     </ConfirmacaoGlobal>

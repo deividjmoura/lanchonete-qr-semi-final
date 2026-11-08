@@ -101,7 +101,6 @@ export function OpsShell({
   const toggleSom = usePub((s) => s.toggleSom);
   const logout = usePub((s) => s.logout);
   const auth = usePub((s) => s.auth);
-  const hydrateMe = usePub((s) => s.hydrateMe);
   const role = auth?.role || null;
   const [trocando, setTrocando] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
@@ -109,10 +108,6 @@ export function OpsShell({
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const trocaObrigatoria = Boolean(auth?.deveTrocar);
   const reduceMotion = useReducedMotion();
-
-  useEffect(() => {
-    if (role) void hydrateMe();
-  }, [role, hydrateMe]);
 
   const nav = role
     ? NAV_ALL.filter((n) => (n.roles as readonly string[]).includes(role))
