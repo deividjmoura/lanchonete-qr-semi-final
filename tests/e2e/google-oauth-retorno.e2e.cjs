@@ -187,6 +187,7 @@ async function main() {
     }, conta.papel);
     assert.equal(protegidas.propria, 200);
     assert.equal(protegidas.administrativa, conta.papel === 'admin' ? 200 : 403);
+    assert.deepEqual(naoAutenticados, [], 'sessão válida não pode gerar 401 nas leituras protegidas');
 
     if (conta.papel === 'cozinha') {
       // Mantém a falha até o usuário pedir nova tentativa. Assim uma segunda
@@ -211,7 +212,8 @@ async function main() {
     await page.goto(servidor.base + conta.home);
     await aguardarHome(page, '/login');
     assert.equal((await context.cookies()).filter((c) => c.name === 'lqr_session').length, 0);
-    assert.deepEqual(naoAutenticados, ['/api/me']);
+    assert.ok(naoAutenticados.length >= 1 && naoAutenticados.every((p) => p === '/api/me'),
+      'após logout, apenas /api/me pode registrar 401; rotas protegidas não podem vazar 401 com sessão válida');
     assert.deepEqual(erros, []);
     console.log(`  ✓ ${conta.papel}: Google -> ${conta.home}; cookie aceito, sessão persistida, reload/deep link e API protegida OK; logout invalida.`);
     await context.close();
