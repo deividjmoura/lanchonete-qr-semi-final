@@ -1,1 +1,272 @@
-PLACEHOLDER
+/*
+ * QR Admin — Design Tokens Compartilhados (SPA + PWA do Garçom)
+ *
+ * Direção: Território A — "Comanda de Chapa" (aprovada 2026-11-08)
+ * Conceito: a interface é a comanda térmica digital. Número de mesa = âncora.
+ * Ticket = unidade legível a distância. Estado = posição + forma + cor.
+ *
+ * Assinatura de cor: brasa (--prim-brasa) com orçamento ~10% da área.
+ * Tipografia: Fraunces (display) · Plus Jakarta Sans (UI) · JetBrains Mono (tnum).
+ * Elevação por contraste e linha; glows decorativos reduzidos.
+ *
+ * Arquitetura em três níveis:
+ *   1. Primitivos de marca (--prim-*)
+ *   2. Primitivos do palco (--stage-*) — superfícies escuras e acentos de estado
+ *   3. Tokens semânticos (--surface*, --text*, --brand*, --status-*) — únicos consumidos pelos componentes
+ *
+ * Cardápio do cliente (#/mesa/:token) mantém layout próprio (fotos protagonistas).
+ * NENHUM componente deve escrever hex: consome apenas tokens.
+ */
+
+@font-face {
+  font-family: "Fraunces";
+  src: url("./fonts/fraunces-latin-soft-normal.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("./fonts/plus-jakarta-sans-latin-wght-normal.woff2") format("woff2-variations");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("./fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ==========================================================================
+   1. PRIMITIVOS DE MARCA (Nível 1 — não consumir diretamente em componentes)
+   ========================================================================== */
+:root {
+  /* Âncoras da casa */
+  --prim-stout: #17120e;
+  --prim-papel: #f0e6d2;
+  --prim-brasa: #e8501f; /* assinatura Território A — orçamento ~10% da área */
+  --prim-latao: #c99a2e;
+  --prim-lupulo: #3e7b3a;
+  --prim-cobalto: #2c5fa8;
+  --prim-carmim: #b3261e;
+  --prim-lousa: #141813;
+
+  /* Derivações tonais quentes — zero branco/preto puros */
+  --prim-stout-profundo: #100c09;
+  --prim-stout-suave: #2b221b;
+  --prim-malte-medio: #594b3e;
+  --prim-malte-claro: #746353;
+
+  --prim-papel-claro: #f7f0e2;
+  --prim-papel-rebaixo: #e5d8be;
+  --prim-papel-hover: #eae0ca;
+  --prim-papel-borda: #cfc0a3;
+  --prim-papel-forte: #b09d7b;
+
+  --prim-lousa-rebaixo: #0f120e;
+  --prim-lousa-elevada: #1c211b;
+  --prim-lousa-hover: #242a22;
+  --prim-lousa-borda: #2e362c;
+  --prim-lousa-forte: #434e40;
+
+  --prim-giz: #ede5d5;
+  --prim-giz-medio: #b0a795;
+  --prim-giz-sutil: #8c8372;
+
+  --prim-brasa-escura: #bf3b11;
+  --prim-brasa-hover-claro: #a3300c;
+  --prim-brasa-tinta: #b5360d;
+  --prim-brasa-clara: #ff7d52;
+  --prim-brasa-hover-escuro: #f26435;
+
+  --prim-latao-tinta-claro: #755308;
+  --prim-latao-tinta-escuro: #e5b94e;
+
+  --prim-lupulo-escuro: #255722;
+  --prim-lupulo-claro: #74ba6f;
+
+  --prim-cobalto-escuro: #1f4987;
+  --prim-cobalto-claro: #7aa8eb;
+
+  --prim-carmim-escuro: #941c15;
+  --prim-carmim-claro: #f2847d;
+
+  /* Tipografia expressiva e acolhedora */
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", "SFMono-Regular", monospace;
+
+  /* Geometria — Território A: raios mais contidos (ticket/comanda) */
+  --radius-none: 0px;
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 22px;
+  --radius-pill: 9999px;
+
+  /* Elevação quente e sutil para cartões e diálogos */
+  --shadow-card: 0 6px 22px -6px rgba(23, 18, 14, 0.08), 0 2px 6px -1px rgba(23, 18, 14, 0.04);
+  --shadow-card-hover: 0 12px 28px -6px rgba(23, 18, 14, 0.13), 0 4px 10px -2px rgba(23, 18, 14, 0.05);
+  --shadow-modal: 0 24px 52px -12px rgba(23, 18, 14, 0.28);
+
+  /* Espaçamento e alvos operacionais */
+  --sidebar-collapsed: 72px;
+  --sidebar-expanded: 248px;
+  --sidebar-notch: 20px;
+  --touch-min: 48px;
+
+  /* Identidade global azul/violeta (dashboard). Brasa é a assinatura operacional. */
+  --prim-meia-noite: #0b101b;
+  --prim-meia-noite-elevada: #141b29;
+  --prim-meia-noite-rebaixo: #080d16;
+  --prim-meia-noite-profunda: #080d16;
+  --prim-nevoa: #e4e8f1;
+  --prim-nevoa-elevada: #edf0f6;
+  --prim-nevoa-rebaixo: #d8deea;
+  --prim-nevoa-hover: #dfe5ef;
+  --prim-nevoa-borda: #b8c2d4;
+  --prim-nevoa-forte: #98a6bd;
+  --prim-azul-tinta: #121829;
+  --prim-azul-medio: #48536d;
+  --prim-azul-claro: #616d88;
+  --prim-noite-tinta: #eef1fb;
+  --prim-noite-medio: #a9b4cc;
+  --prim-noite-claro: #7f8ba6;
+  --prim-noite-borda: #2a3348;
+  --prim-noite-forte: #3b4660;
+  --prim-noite-hover: #1b2232;
+  --prim-azul-linha: #1f2637;
+  --prim-violeta: #7c5cff;
+  --prim-violeta-escuro: #5b3fc4;
+  --prim-violeta-escuro-hover: #4b32b0;
+  --prim-violeta-claro: #8b6fff;
+  --prim-violeta-hover: #6b4bf0;
+  --prim-violeta-tinta-claro: #4a32a6;
+  --prim-violeta-tinta-escuro: #b7a5ff;
+  --prim-azul-agua: #4fd1e0;
+  --prim-azul-agua-claro: #8fe6f0;
+  --prim-azul-agua-tinta-claro: #0a5a63;
+  --prim-verde-ink-claro: #1c6b3e;
+  --prim-verde-ink-escuro: #7fe0b0;
+  --prim-ambar-ink-claro: #8a5600;
+  --prim-ambar-ink-escuro: #ffcf8a;
+  --prim-azul-ink-claro: #17558f;
+  --prim-azul-ink-escuro: #8fd0f0;
+  --prim-vermelho-ink-claro: #9e2b3a;
+  --prim-vermelho-ink-escuro: #ffb3b3;
+
+  /* Motion contido */
+  --ease-ticket: cubic-bezier(0.22, 1.18, 0.36, 1);
+  --ease-snap: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 120ms;
+  --dur-page: 160ms;
+}
+
+/* ==========================================================================
+   1b. PRIMITIVOS DO PALCO (Nível 1b — superfícies e acentos de estado)
+   Glows decorativos reduzidos (Território A). Consumidos por dashboard/cozinha/bar/Admin/PWA.
+   ========================================================================== */
+:root {
+  --stage-bg: #0b101b;
+  --stage-bg-2: #101322;
+  --stage-bg-3: #111525;
+  --stage-panel: rgba(27, 34, 50, 0.86);
+  --stage-panel-2: rgba(20, 27, 41, 0.92);
+  --stage-card: rgba(31, 37, 57, 0.95);
+  --stage-card-2: rgba(17, 23, 37, 0.96);
+  --stage-card-3: rgba(28, 35, 53, 0.92);
+  --stage-card-4: rgba(14, 20, 33, 0.94);
+  --stage-inset: #101723;
+  --stage-inset-2: rgba(14, 21, 35, 0.65);
+  --stage-inset-3: #0c1121;
+  --stage-inset-deep: #101827;
+  --stage-scrim: rgba(5, 7, 17, 0.79);
+
+  --stage-ink: #f5f7ff;
+  --stage-ink-2: #e4eafb;
+  --stage-ink-3: #d7caff;
+  --stage-ink-muted: #aebad0;
+  --stage-ink-muted-2: #b8c4d8;
+  --stage-ink-subtle: #93a1bb;
+  --stage-ink-faint: #6c7691;
+
+  --stage-line: #283044;
+  --stage-line-2: #303a50;
+  --stage-line-3: #3b4660;
+  --stage-line-4: #414c64;
+  --stage-line-5: #39445b;
+  --stage-line-base: #263149;
+  --stage-hairline: rgba(255, 255, 255, 0.04);
+  --stage-hairline-2: rgba(255, 255, 255, 0.07);
+  --stage-hairline-3: rgba(255, 255, 255, 0.10);
+  --stage-hairline-4: rgba(255, 255, 255, 0.145);
+  --stage-hairline-5: rgba(255, 255, 255, 0.21);
+
+  --stage-violet: #c8b8ff;
+  --stage-violet-deep: #7151bf;
+  --stage-violet-soft: rgba(142, 105, 229, 0.19);
+  --stage-violet-text: #b7a5ff;
+
+  --stage-cyan: #83edee;
+  --stage-cyan-deep: #278a9c;
+  --stage-cyan-soft: rgba(65, 188, 199, 0.17);
+  --stage-lime: #d8fa9c;
+  --stage-lime-deep: #809b40;
+  --stage-lime-soft: rgba(174, 216, 93, 0.16);
+  --stage-lime-ink: #ccf88f;
+  --stage-rose: #ffc2da;
+  --stage-rose-deep: #af5c87;
+  --stage-rose-soft: rgba(224, 123, 168, 0.16);
+  --stage-amber: #ffd2a2;
+  --stage-amber-deep: #af7042;
+  --stage-amber-soft: rgba(232, 153, 89, 0.16);
+  --stage-mint: #8bf8ce;
+  --stage-mint-2: #7bf2c8;
+  --stage-mint-text: #a4f4d5;
+  --stage-mint-text-2: #a7eecf;
+  --stage-mint-bar: #8ce8d1;
+  --stage-on-accent: #151a28;
+
+  --stage-ok-line: #33584f;
+  --stage-ok-soft: rgba(22, 59, 50, 0.53);
+  --stage-ok-ink: #a9ecc8;
+  --stage-warn-line: #6d5a33;
+  --stage-warn-soft: rgba(47, 38, 22, 0.79);
+  --stage-warn-surface: #4a3526;
+  --stage-warn-ink: #ffe0b9;
+  --stage-warn-ink-2: #ffe4af;
+  --stage-warn-line-2: #c39b58;
+  --stage-danger-line: #a95f5c;
+  --stage-danger-soft: rgba(59, 32, 39, 0.79);
+  --stage-danger-soft-2: #3b2027;
+  --stage-danger-surface: #44242c;
+  --stage-danger-border: #c78480;
+  --stage-danger-ink: #ffe1dd;
+  --stage-danger-ink-2: #ffd9d5;
+  --stage-danger-ink-3: #ff9b95;
+  --stage-danger-ink-4: #ffc4be;
+  --stage-danger-deep: #7d4340;
+  --stage-danger-shadow: rgba(42, 13, 18, 0.35);
+  --stage-info-line: #2f6a73;
+  --stage-info-soft: rgba(18, 48, 56, 0.79);
+  --stage-info-ink: #b9f2f6;
+  --stage-shadow-1: rgba(3, 7, 18, 0.29);
+  --stage-shadow-2: rgba(3, 7, 18, 0.42);
+  --stage-shadow-3: rgba(3, 7, 18, 0.62);
+  --stage-shadow-4: rgba(3, 4, 11, 0.67);
+  --stage-shadow-inset: rgba(5, 9, 20, 0.64);
+  --stage-focus: #b8f3ff;
+  --stage-grid: rgba(131, 147, 180, 0.07);
+  --stage-veil: rgba(255, 255, 255, 0.12);
+  --stage-glow-violet: rgba(104, 77, 200, 0.06); /* Território A: glow reduzido */
+  --stage-glow-cyan: rgba(15, 143, 159, 0.05); /* Território A: glow reduzido */
+  --stage-scroll-thumb: #43506a;
+  --stage-scroll-thumb-hover: #566684;
+  --stage-scroll-track: #1d293c;
+}
