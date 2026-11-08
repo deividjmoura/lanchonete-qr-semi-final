@@ -189,14 +189,17 @@ async function main() {
     assert.equal(protegidas.administrativa, conta.papel === 'admin' ? 200 : 403);
 
     if (conta.papel === 'cozinha') {
-      let falhar = true;
+      // Mantém a falha até o usuário pedir nova tentativa. Assim uma segunda
+      // chamada concorrente de /api/me não mascara o estado indisponível no CI.
+      let liberar = false;
       await context.route('**/api/me', (route) => {
-        if (falhar) { falhar = false; return route.abort('failed'); }
+        if (!liberar) return route.abort('failed');
         return route.fallback();
       });
       await page.reload();
       await page.getByRole('button', { name: 'Tentar novamente', exact: true }).waitFor();
       assert.equal(await page.evaluate(() => location.hash), '#/cozinha');
+      liberar = true;
       await page.getByRole('button', { name: 'Tentar novamente', exact: true }).click();
       await page.locator('.ops-topbar').waitFor();
       assert.equal(await page.evaluate(() => location.hash), '#/cozinha');
