@@ -2,12 +2,12 @@
 
 ## Callback OAuth
 
-Depois que esta implementação estiver integrada e implantada, cadastre no cliente OAuth do tipo **Aplicativo da Web**:
+No cliente OAuth do tipo **Aplicativo da Web**, mantenha cadastrado:
 
 - **URI de redirecionamento autorizado:** `https://qradmin.up.railway.app/api/auth/google/callback`
 - **Origens JavaScript autorizadas:** não são necessárias para este fluxo server-side.
 
-Não use o callback antes do deploy do código que o atende.
+O callback exige o deploy do código que o atende.
 
 ## Variáveis de ambiente
 
@@ -75,5 +75,82 @@ Enquanto o app permanecer em **Testing**, inclua os endereços Google da equipe 
 
 - `GET /api/auth/google/status`: informa se o fluxo está configurado, sem revelar segredos.
 - `GET /api/auth/google`: inicia Authorization Code + PKCE S256.
-- `GET /api/auth/google/callback`: valida state assinado em cookie HttpOnly, troca o código e consulta o UserInfo do Google.
+- `GET /api/auth/google/callback`: valida state assinado em cookie HttpOnly, troca o código com PKCE S256 e consulta o UserInfo do Google.
 - A sessão final usa o mecanismo existente `lqr_session`; permissões e política de troca obrigatória de senha continuam valendo.
+- Depois do callback, `src/components/RotaStaff.tsx` consulta `/api/me` antes de montar Admin, Cozinha, Bar ou Caixa. O cookie HttpOnly é a credencial; `pub-auth` no `sessionStorage` é apenas estado de apresentação e não pode decidir logout sozinho.
+
+## Retorno do Google e persistência da sessão
+
+O redirect do Google é uma navegação externa de documento inteiro. Diferente do
+login por senha, ele não passa pelo formulário que preenchia `pub-auth` em
+memória. Por isso, uma tela protegida que redirecionasse apenas porque
+`pub-auth` estava vazio voltava ao login mesmo com `lqr_session` válido.
+
+A fronteira compartilhada `RotaStaff` evita essa corrida:
+
+1. monta um estado de verificação, sem montar a tela protegida nem seus fetches;
+2. chama `hydrateMe()`/`GET /api/me` com `credentials: include`;
+3. só redireciona para `#/login` quando o servidor responde 401 (ou não devolve
+   um perfil válido); falha de rede/5xx oferece nova tentativa e não apaga a
+   identidade local;
+4. depois da sessão confirmada, aplica o perfil e monta a tela correspondente.
+
+Não há segunda implementação de autenticação: OAuth e senha continuam usando
+`criarSessao()`, `getStaffDaRequisicao()`, `exigirAcesso()` e o mesmo cookie.
+
+| Perfil | Callback (`homeDoPapel`) | Rota SPA |
+|---|---|---|
+| Administrador | `/admin` | `#/admin` |
+| Cozinha | `/cozinha` | `#/cozinha` |
+| Bar | `/bar` | `#/bar` |
+| Caixa | `/caixa` | `#/caixa` |
+
+`lqr_session` permanece `HttpOnly`, `Path=/`, `SameSite=Lax`, `Max-Age=43200`,
+sem `Domain` (host-only) e com `Secure` em `NODE_ENV=production`. O cookie de
+estado OAuth continua restrito a `Path=/api/auth/google`, é limpo no callback e
+não é substituído por token em URL, `localStorage` ou JavaScript.
+
+Uma conta nova com senha inicial/compartilhada continua vendo o modal de troca
+obrigatória depois do primeiro login Google. Isso é uma sessão válida com
+operação bloqueada por política de senha, não uma falha de sessão; a troca usa a
+rota existente e rotaciona o cookie antes de liberar as operações.
+
+### Railway/proxy
+
+O servidor é Node HTTP nativo (não Express). O cookie `Secure` depende de
+`NODE_ENV=production`, não de `request.secure` nem de `trust proxy`; a terminação
+TLS do Railway não exige mudar essa lógica. Não configurar `Domain` para outro
+host e não introduzir o domínio antigo. As variáveis de IP
+(`TRUSTED_PROXY_HOPS`, `CLIENT_IP_HEADER`) afetam rate limit, não a criação da
+sessão, e não devem ser alteradas para “corrigir” este fluxo sem evidência.
+
+Confira no serviço backend, sem alterar credenciais por tentativa:
+
+- `GOOGLE_REDIRECT_URI=https://qradmin.up.railway.app/api/auth/google/callback`;
+- o mesmo URI autorizado no cliente OAuth do Google Cloud;
+- `NODE_ENV=production`;
+- `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` do mesmo cliente OAuth;
+- `GOOGLE_OAUTH_STATE_SECRET` estável entre instâncias, quando definido;
+- `CSRF_ALLOWED_ORIGINS`, se definido, inclui `https://qradmin.up.railway.app`.
+
+A sequência `callback 302 -> /admin 302 -> / 200` isoladamente não prova falha
+de sessão: o segundo 302 pode ser o redirect legado para a SPA. A evidência
+correta é `GET /api/me` 200 com o perfil esperado depois do callback, seguido de
+acesso 200 à rota protegida do perfil. `/api/mesas` é administrativo; para
+cozinha/bar/caixa, 403 é autorização esperada, enquanto 401 indica sessão
+ausente/inválida.
+
+### Regressões automatizadas
+
+- `npm test`: validação de state/cookies/configuração sem banco real.
+- `DATABASE_URL=postgres://postgres:postgres@127.0.0.1:55433/qradmin_test NODE_ENV=test node --test tests/postgres-google-oauth-flow.test.cjs`:
+  primeiro vínculo, conta já vinculada, e-mail não cadastrado/inativo/não
+  verificado, state/PKCE, cookie, sessão, expiração, logout, comparação com senha,
+  troca obrigatória e rotas protegidas no servidor HTTP real.
+- `npm run build` seguido de `npm run test:e2e` com o mesmo banco descartável:
+  `tests/e2e/google-oauth-retorno.e2e.cjs` percorre início OAuth, provedor externo
+  fictício, callback, cookie aceito pelo Chromium, `/api/me`, recarga, deep link,
+  navegação protegida, falha transitória e logout para os quatro perfis.
+
+Os testes usam apenas contas sintéticas em `qradmin_test`; o fixture substitui
+somente os endpoints Token/UserInfo do Google e nunca credenciais de produção.

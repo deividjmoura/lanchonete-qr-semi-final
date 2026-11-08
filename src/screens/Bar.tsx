@@ -5,20 +5,9 @@ import { FilaProducao } from "../components/FilaProducao";
 import { usePub } from "../store/usePub";
 import { connectEvents } from "../lib/api";
 import { imprimirComandaBar } from "../lib/print";
-import { ir, useAgora } from "../router";
+import { useAgora } from "../router";
 
 export default function Bar() {
-  const auth = usePub((s) => s.auth);
-  useEffect(() => {
-    if (!auth) {
-      ir("/login");
-      return;
-    }
-    if (auth.role !== "admin" && auth.role !== "bar") {
-      ir(auth.role === "cozinha" ? "/cozinha" : auth.role === "caixa" ? "/caixa" : "/login");
-    }
-  }, [auth]);
-
   useAnuncios("bar");
   useAgora(1000);
 

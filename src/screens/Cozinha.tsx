@@ -5,20 +5,9 @@ import { FilaProducao } from "../components/FilaProducao";
 import { usePub } from "../store/usePub";
 import { connectEvents } from "../lib/api";
 import { imprimirComandaCozinha } from "../lib/print";
-import { ir, useAgora } from "../router";
+import { useAgora } from "../router";
 
 export default function Cozinha() {
-  const auth = usePub((s) => s.auth);
-  useEffect(() => {
-    if (!auth) {
-      ir("/login");
-      return;
-    }
-    if (auth.role !== "admin" && auth.role !== "cozinha") {
-      ir(auth.role === "bar" ? "/bar" : auth.role === "caixa" ? "/caixa" : "/login");
-    }
-  }, [auth]);
-
   useAnuncios("cozinha");
   useAgora(1000);
 
