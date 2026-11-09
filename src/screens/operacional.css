@@ -125,7 +125,7 @@
   --ops-accent-soft: var(--stage-cyan-soft);
   min-width: 0;
   border: 1px solid color-mix(in srgb, var(--ops-accent) 26%, var(--stage-line-base));
-  border-radius: 18px;
+  border-radius: var(--radius-md);
   background:
     linear-gradient(135deg, var(--stage-hairline), transparent 46%),
     linear-gradient(155deg, var(--stage-card-3), var(--stage-card-4));
@@ -145,7 +145,7 @@
   gap: 12px;
   min-height: 62px;
   padding: 12px 16px;
-  border-radius: 17px;
+  border-radius: var(--radius-md);
   color: var(--stage-ink);
   text-align: left;
   transition: background-color 0.18s ease;
@@ -170,7 +170,7 @@
   height: 40px;
   flex: none;
   border: 1px solid color-mix(in srgb, var(--ops-accent) 38%, transparent);
-  border-radius: 12px;
+  border-radius: var(--radius-xs);
   color: var(--ops-accent);
   background: var(--ops-accent-soft);
   box-shadow: inset 0 1px 0 var(--stage-hairline-3);
@@ -240,7 +240,7 @@
   margin: 12px 4px 0;
   padding: 18px 14px;
   border: 1px dashed var(--stage-line-3);
-  border-radius: 12px;
+  border-radius: var(--radius-xs);
   color: var(--stage-ink-muted);
   font-family: var(--font-mono), monospace;
   font-size: 11px;
@@ -321,6 +321,45 @@
 
 /* ---------------------------------------------------------------- cartões */
 
+/* Faixa de topo do ticket: posição fixa da assinatura — brasa na produção,
+   âmbar na fila — para reconhecer a etapa sem depender só do título. */
+.ops-card::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  content: "";
+  background: var(--ops-accent);
+}
+
+.ops-card[data-atrasado="true"]::before {
+  background: var(--stage-danger-ink-3);
+}
+
+/* Estado dentro do ticket, sempre no mesmo lugar (abaixo da meta):
+   posição + forma (pill tracejada/sólida) + texto, nunca só cor. */
+.ops-card__estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  padding: 2px 9px;
+  border: 1px solid color-mix(in srgb, var(--ops-accent) 45%, var(--stage-line-base));
+  border-radius: var(--radius-pill);
+  background: var(--ops-accent-soft);
+  color: var(--ops-accent);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.ops-card[data-atrasado="true"] .ops-card__estado {
+  border-style: dashed;
+  border-color: var(--stage-danger-line);
+  background: var(--stage-danger-soft);
+  color: var(--stage-danger-ink-2);
+}
+
 .ops-card {
   position: relative;
   display: flex;
@@ -328,7 +367,7 @@
   min-width: 0;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--ops-accent) 30%, var(--stage-line-base));
-  border-radius: 16px;
+  border-radius: var(--radius-md);
   background:
     linear-gradient(135deg, var(--stage-hairline-2), transparent 48%),
     radial-gradient(ellipse at 6% -16%, var(--ops-accent-soft), transparent 66%),
@@ -381,13 +420,13 @@
   align-items: baseline;
   gap: 6px;
   margin: 0;
-  color: var(--ops-accent);
+  color: var(--stage-brasa);
   font-family: var(--font-mono), monospace;
-  font-size: clamp(26px, 3vw, 34px);
+  font-size: clamp(28px, 3vw, 36px);
   font-weight: 800;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  text-shadow: 1px 1px 0 var(--ops-accent-deep);
+  text-shadow: 1px 1px 0 var(--stage-brasa-deep);
 }
 
 .ops-card__mesa small {
@@ -508,7 +547,7 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 42px;
+  min-height: var(--touch-min);
   margin-top: 2px;
   padding: 8px 12px;
   border: 1px solid color-mix(in srgb, var(--ops-accent) 46%, var(--stage-line-base));
@@ -540,7 +579,7 @@
 }
 
 .ops-card__todos {
-  min-height: 40px;
+  min-height: var(--touch-min);
   padding: 8px 12px;
   border: 1px solid var(--stage-scroll-thumb);
   border-radius: var(--radius-xs);
@@ -567,7 +606,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 36px;
+  min-height: 44px;
   color: var(--stage-ink-muted);
   font-size: 11px;
   font-weight: 700;
@@ -605,7 +644,7 @@
   margin: 0;
   padding: 10px 13px;
   border: 1px solid var(--stage-danger-border);
-  border-radius: 12px;
+  border-radius: var(--radius-xs);
   background: var(--stage-danger-surface);
   color: var(--stage-danger-ink);
   font-size: 12px;
@@ -614,7 +653,7 @@
 
 @media (max-width: 420px) {
   .ops-stage {
-    border-radius: 18px;
+    border-radius: var(--radius-md);
     padding: 10px;
   }
   .ops-sessao__toggle {
