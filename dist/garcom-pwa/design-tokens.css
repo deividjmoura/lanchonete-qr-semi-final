@@ -1,6 +1,10 @@
 /*
  * QR Admin — Design Tokens Compartilhados (SPA + PWA do Garçom)
- * Direção estética global: "Palco Azul/Violeta" (referência: dashboard "Os números da sua casa")
+ * Direção estética global: Território A — "Comanda de Chapa" (aprovada em 2026-11-08).
+ *   A interface é a comanda térmica digital: o número da mesa é a âncora, o ticket
+ *   é a unidade legível a distância e o estado se comunica por posição + forma + cor.
+ *   Brasa é a assinatura operacional (orçamento ~10% da área); violeta/ciano ficam
+ *   como acentos de dado do palco.
  *
  * Arquitetura em três níveis:
  *   1. Primitivos de marca (--prim-*): paleta base sem branco ou preto puros.
@@ -77,6 +81,7 @@
   --prim-brasa-tinta: #b5360d;
   --prim-brasa-clara: #ff7d52;
   --prim-brasa-hover-escuro: #f26435;
+  --prim-brasa-tinta-escuro: #ffb59a;
 
   --prim-latao-tinta-claro: #755308;
   --prim-latao-tinta-escuro: #e5b94e;
@@ -95,13 +100,13 @@
   --font-display: "Fraunces", Georgia, "Times New Roman", serif;
   --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", "SFMono-Regular", monospace;
 
-  /* Geometria suave com cantos orgânicos arredondados */
+  /* Geometria — Território A: raios contidos, de ticket/comanda */
   --radius-none: 0px;
-  --radius-xs: 10px;
-  --radius-sm: 14px;
-  --radius-md: 20px;
-  --radius-lg: 24px;
-  --radius-xl: 28px;
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
   --radius-pill: 9999px;
 
   /* Elevação quente e sutil para cartões e diálogos */
@@ -208,6 +213,13 @@
 
   /* Acento violeta (padrão) */
   --stage-hairline-5: rgba(255, 255, 255, 0.21);
+
+  /* Assinatura de brasa no palco: número de mesa, CTA primário e atraso. */
+  --stage-brasa: #ff9a6b;
+  --stage-brasa-deep: #c2531f;
+  --stage-brasa-soft: rgba(232, 80, 31, 0.18);
+  --stage-brasa-ink: #ffc0a2;
+
   --stage-violet: #c8b8ff;
   --stage-violet-deep: #7151bf;
   --stage-violet-soft: rgba(142, 105, 229, 0.19);
@@ -268,8 +280,10 @@
   --stage-focus: #b8f3ff;
   --stage-grid: rgba(131, 147, 180, 0.07);
   --stage-veil: rgba(255, 255, 255, 0.12);
-  --stage-glow-violet: rgba(104, 77, 200, 0.18);
-  --stage-glow-cyan: rgba(15, 143, 159, 0.13);
+  /* Halos decorativos com orçamento reduzido: brasa discreta no lugar do halo
+     violeta de "palco SaaS"; ciano só como eco frio. */
+  --stage-glow-brasa: rgba(232, 80, 31, 0.12);
+  --stage-glow-cyan: rgba(15, 143, 159, 0.06);
   --stage-scroll-thumb: #43506a;
   --stage-scroll-thumb-hover: #566684;
   --stage-scroll-track: #1d293c;
@@ -297,12 +311,12 @@
   --sidebar-muted: var(--prim-noite-medio);
   --sidebar-line: var(--prim-azul-linha);
 
-  --brand: var(--prim-violeta-escuro);
-  --brand-hover: var(--prim-violeta-escuro-hover);
+  --brand: var(--prim-brasa-escura);
+  --brand-hover: var(--prim-brasa-hover-claro);
   --brand-contrast: var(--prim-nevoa-elevada);
-  --brand-ink: var(--prim-violeta-tinta-claro);
-  --brand-surface: color-mix(in srgb, var(--prim-violeta) 12%, var(--prim-nevoa-elevada));
-  --brand-border: color-mix(in srgb, var(--prim-violeta) 38%, var(--prim-nevoa-borda));
+  --brand-ink: var(--prim-brasa-tinta);
+  --brand-surface: color-mix(in srgb, var(--prim-brasa) 12%, var(--prim-nevoa-elevada));
+  --brand-border: color-mix(in srgb, var(--prim-brasa) 38%, var(--prim-nevoa-borda));
 
   --accent: var(--prim-azul-agua-tinta-claro);
   --accent-ink: var(--prim-azul-agua-tinta-claro);
@@ -311,7 +325,7 @@
 
   --line: var(--prim-nevoa-borda);
   --line-strong: var(--prim-nevoa-forte);
-  --focus-ring: var(--prim-violeta-tinta-claro);
+  --focus-ring: var(--prim-azul-tinta);
 
   --status-success: var(--prim-verde-ink-claro);
   --status-success-ink: var(--prim-verde-ink-claro);
@@ -366,12 +380,12 @@
   --sidebar-muted: var(--prim-noite-medio);
   --sidebar-line: var(--prim-azul-linha);
 
-  --brand: var(--prim-violeta-claro);
-  --brand-hover: var(--prim-violeta);
+  --brand: var(--prim-brasa-clara);
+  --brand-hover: var(--prim-brasa-hover-escuro);
   --brand-contrast: var(--prim-meia-noite);
-  --brand-ink: var(--prim-violeta-tinta-escuro);
-  --brand-surface: color-mix(in srgb, var(--prim-violeta) 16%, var(--prim-meia-noite-elevada));
-  --brand-border: color-mix(in srgb, var(--prim-violeta) 44%, var(--prim-noite-borda));
+  --brand-ink: var(--prim-brasa-tinta-escuro);
+  --brand-surface: color-mix(in srgb, var(--prim-brasa) 16%, var(--prim-meia-noite-elevada));
+  --brand-border: color-mix(in srgb, var(--prim-brasa) 44%, var(--prim-noite-borda));
 
   --accent: var(--prim-azul-agua);
   --accent-ink: var(--prim-azul-agua-claro);
@@ -433,12 +447,12 @@
   --sidebar-muted: var(--prim-noite-medio);
   --sidebar-line: var(--prim-azul-linha);
 
-  --brand: var(--prim-violeta-claro);
-  --brand-hover: var(--prim-violeta);
+  --brand: var(--prim-brasa-clara);
+  --brand-hover: var(--prim-brasa-hover-escuro);
   --brand-contrast: var(--prim-meia-noite);
-  --brand-ink: var(--prim-violeta-tinta-escuro);
-  --brand-surface: color-mix(in srgb, var(--prim-violeta) 16%, var(--prim-meia-noite-elevada));
-  --brand-border: color-mix(in srgb, var(--prim-violeta) 44%, var(--prim-noite-borda));
+  --brand-ink: var(--prim-brasa-tinta-escuro);
+  --brand-surface: color-mix(in srgb, var(--prim-brasa) 16%, var(--prim-meia-noite-elevada));
+  --brand-border: color-mix(in srgb, var(--prim-brasa) 44%, var(--prim-noite-borda));
 
   --accent: var(--prim-azul-agua);
   --accent-ink: var(--prim-azul-agua-claro);

@@ -1,7 +1,7 @@
 /**
  * Preferência de tema clara/escura compartilhada entre o SPA e o PWA do garçom.
  * Espelha os tokens semânticos de `public/garcom-pwa/design-tokens.css`
- * (identidade global azul/violeta, compartilhada entre SPA e PWA).
+ * (Território A — "Comanda de Chapa", compartilhada entre SPA e PWA).
  */
 
 export type Tema = "claro" | "escuro";
@@ -17,9 +17,9 @@ export const TOKENS_TEMA: Record<Tema, Record<string, string>> = {
     "--surface-sidebar": "#0b101b",
     "--text": "#121829",
     "--text-muted": "#48536d",
-    "--brand": "#5b3fc4",
+    "--brand": "#bf3b11",
     "--brand-contrast": "#edf0f6",
-    "--brand-ink": "#4a32a6",
+    "--brand-ink": "#b5360d",
     "--accent": "#0a5a63",
     "--line": "#b8c2d4",
     "--line-strong": "#98a6bd",
@@ -31,9 +31,9 @@ export const TOKENS_TEMA: Record<Tema, Record<string, string>> = {
     "--surface-sidebar": "#080d16",
     "--text": "#eef1fb",
     "--text-muted": "#a9b4cc",
-    "--brand": "#8b6fff",
+    "--brand": "#ff7d52",
     "--brand-contrast": "#0b101b",
-    "--brand-ink": "#b7a5ff",
+    "--brand-ink": "#ffb59a",
     "--accent": "#4fd1e0",
     "--line": "#2a3348",
     "--line-strong": "#3b4660",

@@ -20,7 +20,7 @@
   border: 1px solid var(--stage-line);
   border-radius: var(--radius-lg)
   background:
-    radial-gradient(ellipse at 4% 0%, var(--stage-glow-violet), transparent 34%),
+    radial-gradient(ellipse at 4% 0%, var(--stage-glow-brasa), transparent 34%),
     radial-gradient(ellipse at 96% 12%, var(--stage-glow-cyan), transparent 30%),
     linear-gradient(150deg, var(--stage-bg-3) 0%, var(--stage-bg) 58%, var(--stage-bg-2) 100%);
   color: var(--stage-ink);

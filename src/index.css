@@ -474,7 +474,7 @@ article[data-glass-card] {
   border: 1px solid var(--stage-line);
   border-radius: var(--radius-lg);
   background:
-    radial-gradient(ellipse at 7% 2%, var(--stage-glow-violet), transparent 34%),
+    radial-gradient(ellipse at 7% 2%, var(--stage-glow-brasa), transparent 34%),
     radial-gradient(ellipse at 95% 18%, var(--stage-glow-cyan), transparent 30%),
     linear-gradient(145deg, var(--stage-bg-2) 0%, var(--stage-bg) 56%, var(--stage-bg-3) 100%);
   color: var(--stage-ink);
@@ -499,7 +499,7 @@ article[data-glass-card] {
 .stage-card {
   position: relative;
   min-width: 0;
-  border: 1px solid color-mix(in srgb, var(--stage-violet) 24%, var(--stage-line-base));
+  border: 1px solid var(--stage-line-base);
   border-radius: var(--radius-md);
   background:
     var(--glass-sheen),
@@ -514,7 +514,7 @@ article[data-glass-card] {
 
 @media (hover: hover) {
   .stage-card:hover {
-    border-color: color-mix(in srgb, var(--stage-violet) 62%, var(--stage-line-base));
+    border-color: var(--stage-line-4);
     box-shadow:
       inset 0 1px 0 var(--stage-hairline-5),
       var(--elev-4);

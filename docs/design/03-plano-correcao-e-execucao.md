@@ -4,7 +4,7 @@
 **Repositório:** https://github.com/deividjmoura/lanchonete-qr-semi-final  
 **Produção:** https://qradmin.up.railway.app/  
 **Guia:** https://qradmin.up.railway.app/guia-sistema.html  
-**Status:** instruções para continuidade; não representa trabalho executado.
+**Status:** fundação executada em 2026-11-09 (tokens recuperados, Território A aplicado na camada de tokens, três pilotos com capturas). Resultados e pendências em `04-relatorio-implementacao.md`. As ondas de composição por superfície (§5) continuam abertas.
 
 ## 1. REGRA INEGOCIÁVEL: TRABALHAR SOMENTE NA BRANCH EXISTENTE
 
