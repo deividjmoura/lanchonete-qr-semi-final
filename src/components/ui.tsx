@@ -83,7 +83,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       title={tema === "claro" ? "Ativar tema escuro" : "Ativar tema claro"}
       aria-label={tema === "claro" ? "Ativar tema escuro" : "Ativar tema claro"}
       className={cn(
-        "inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface-raised text-text-muted hover:text-text hover:border-line-strong hover:bg-surface-hover transition-colors duration-150",
+        "inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface-raised text-text-muted hover:text-text hover:border-line-strong hover:bg-surface-hover transition-colors duration-150",
         className,
       )}
     >
@@ -105,7 +105,7 @@ export function IconBtn({
       aria-label={label}
       title={label}
       className={cn(
-        "inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors duration-150",
+        "inline-flex h-11 w-11 items-center justify-center rounded-full border transition-colors duration-150",
         active
           ? "bg-brand-surface text-brand-ink border-brand-border"
           : "bg-surface-raised text-text-muted border-line hover:text-text hover:border-line-strong hover:bg-surface-hover",
@@ -144,7 +144,7 @@ export function Btn({
       onClick={onClick}
       className={cn(
         "qr-button inline-flex items-center justify-center gap-2 font-semibold select-none transition-[background-color,color,border-color,transform,opacity] duration-150 active:translate-y-px disabled:bg-surface-sunken disabled:text-text-muted disabled:border-line disabled:pointer-events-none",
-        size === "sm" && "min-h-10 px-3.5 text-xs rounded-sm",
+        size === "sm" && "min-h-11 px-3.5 text-xs rounded-sm",
         size === "md" && "min-h-12 px-4 text-sm rounded-sm",
         size === "lg" && "min-h-12 px-6 text-base rounded-md",
         full && "w-full",
@@ -285,7 +285,7 @@ export function Modal({
               type="button"
               onClick={onClose}
               aria-label="Fechar"
-              className="absolute top-3.5 right-3.5 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface-sunken text-text-muted hover:text-text hover:border-line-strong"
+              className="absolute top-3.5 right-3.5 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface-sunken text-text-muted hover:text-text hover:border-line-strong"
             >
               <X size={18} weight="bold" />
             </button>
@@ -311,7 +311,7 @@ export function Qtd({
     <div
       className={cn(
         "inline-flex items-center rounded-full overflow-hidden bg-surface-sunken border border-line",
-        size === "sm" ? "h-9" : "h-11",
+        size === "sm" ? "h-11" : "h-11",
       )}
     >
       <button
