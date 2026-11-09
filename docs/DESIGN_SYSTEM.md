@@ -8,7 +8,10 @@
 > layout próprio (tema praia, foto protagonista), documentado em §6.4.
 >
 > A assinatura de cor é a **brasa** (`--prim-brasa`), com orçamento de ~10% da área: número de mesa,
-> ação primária, "em produção"/atenção e atraso. Violeta e ciano continuam como **acentos de dado**
+> ação primária, "em produção"/atenção e atraso. Desde a onda 5, o dashboard também usa a família
+> brasa como acento padrão (`--stage-brasa*`); ciano/lima/rosa/âmbar seguem como acentos de dado
+> secundários e `--stage-violet*` permanece definido nos tokens apenas por compatibilidade, sem
+> consumidor visual. Violeta e ciano continuam como **acentos de dado**
 > do palco (`--stage-violet*`, `--stage-cyan`).
 >
 > A direção "Palco Azul/Violeta" (dashboard "Os números da sua casa") foi **substituída** pela
@@ -159,6 +162,12 @@ Servida localmente em `public/garcom-pwa/fonts/` sob CSP `'self'`, totalizando *
 ### 6.2 Regime Operacional (`data-regime="operational"`)
 - **Telas:** Cozinha, Bar, Caixa e PWA do Garçom.
 - **Características:** mesmo palco (fundo, hairlines, acentos) com densidade de operação; leitura instantânea a ~1,5 m nas filas de preparo, alvos de toque mínimos de `48 px` (`min-h-12`), indicadores objetivos de tempo/setor/garçom e ações em lote diretas.
+- **Composição Comanda de Chapa (ondas 1–8, 2026-11-09):** ticket operacional com faixa de topo por
+  etapa, mesa em mono tabular brasa, estado por posição + forma (pill) + texto, recorte tracejado e
+  ações de item/lote a 48 px; caixa com mesa-âncora em mono, Total/Pago/Restante tabulares, Pix em
+  bloco próprio e fechamento em brasa; garçom (SPA+PWA) com alvos de 48/44 px e entrega parcial
+  explícita; cliente mantém o tema praia isolado com preço em mono; componentes compartilhados com
+  alvos ≥ 44 px. Capturas reais em `docs/design/capturas/` (375/1440, claro/escuro).
 - **Camada "vidro de operação" (`src/screens/operacional.css`):** cozinha e bar usam a mesma família visual do dashboard — gradiente escuro translúcido, grade discreta, acentos de etapa (ciano = em produção, âmbar = na fila, brasa = ação primária e atraso), sombras em camadas e brilho interno de `1px`. A paleta **não** é mais local: `operacional.css` e `dashboard.css` consomem `var(--stage-*)` (zero hex). Cartões de caixa e PWA reaproveitam a mesma ideia via `--surface-raised`, `color-mix`, `--glass-*` e `--shadow-card-hover`, sempre dentro dos tokens e do contraste AA.
 
 ### 6.3 Fila de Produção por Item (Cozinha e Bar)

@@ -152,3 +152,48 @@ npm run build && npm test
 
 Pilotos: abrir `docs/design/pilotos/index.html` a partir da raiz do repositório (as fontes e imagens
 são servidas por caminho relativo). Capturas já versionadas na mesma pasta.
+
+---
+
+## 8. Etapa final — ondas 1–8 executadas (2026-11-09)
+
+**Branch de entrega:** `arena/d3208a93-lanchonete-qr-semi-final` (conteúdo da
+`design/identidade-visual` incorporado por fast-forward até `7ef80c9`, que já incluía a correção
+das 8 declarações sem ponto e vírgula de `operacional.css`) → PR para `main`. Sem merge, sem deploy.
+
+### 8.1 O que cada onda entregou
+
+| Onda | Superfície | Commit | Resumo |
+|---|---|---|---|
+| 1 | Cozinha/Bar | `83cf51e` | Ticket: faixa de topo por etapa, mesa mono brasa 28–36px, pill de estado (posição+forma+texto), atraso com faixa+ícone+palavra, ações 48/48/44px, raios só via tokens |
+| 2 | Garçom SPA + PWA | `e78bee4` | Mesa-âncora brasa, ações por item 48px, "entrega parcial" explícita; PWA 48/44px; shell `garcom-pwa-shell-v42` + docs vivos |
+| 3 | Caixa | `a187138` | Mesa mono brasa, Total/Pago/Restante tabulares, Pix em bloco próprio, fechamento em brasa (padrão e gerente), alvos 44px |
+| 4 | Cliente | `bd32d66` | Preço em mono tabular sobre a foto; tema praia isolado intacto (`body[data-mesa-praia]`) |
+| 5 | Admin/Dashboard | `82e4867` | Acentos violeta → `--stage-brasa*` no dashboard; `--stage-violet*` fica só por compatibilidade nos tokens; tabelas continuam tabelas |
+| 6+8 | Login/UI compartilhada | `0f1239c` | Alvos ≥44px (Btn sm, IconBtn, tema, fechar, Qtd, rodapé do login); foco visível global; erro com ícone+texto+`role=alert` |
+| 7 | Landing/guia/legado | `6aaee41` | Guia, apresentação e páginas legais: violeta `#5b3fc4` → brasa dos tokens; sem fonte/CDN novo |
+| — | Build | `545268c` | `dist/` reconstruído e versionado |
+
+### 8.2 Verificação real executada nesta etapa
+
+| Comando | Resultado |
+|---|---|
+| `npm ci` | ok, lockfile preservado, nenhuma dependência nova |
+| `npm run typecheck` | ok |
+| `npm run build` | ok; `dist/` reconstruído e commitado |
+| `npm test` | **595 pass, 0 fail** |
+| `node --test tests/design-system.test.cjs tests/design-tokens-identidade.test.cjs` | verde (16/16 na fundação; reexecutado por onda) |
+| `npm run test:e2e` | **19/19 E2E passaram** — Chromium real via `@sparticuz/chromium` com `LD_LIBRARY_PATH=/tmp/al2023/lib` (libs extraídas do próprio pacote `al2023.tar.br`, sem apt/root) e PostgreSQL embarcado descartável (`scripts/pg-local.mjs`, banco `qradmin_test`) após `npm run db:migrate` (40 migrations) |
+| Capturas | `docs/design/capturas/` — 32 PNGs (admin, bar, caixa, cozinha, home, login, mesa, pwa × claro/escuro × 375/1440) gerados pelo harness visual com a API sintética de `tests/e2e/`; revisão visual feita em cozinha, caixa, dashboard e login |
+| `git diff origin/main -- server.js db package.json package-lock.json` | **vazio** |
+| `git diff --check` · `node --check server.js` | ok |
+
+### 8.3 Confirmações
+
+- **Zero mudança funcional:** nada em regras de negócio, APIs, banco, auth, SSE, pagamentos/Pix,
+  QR, offline/IndexedDB/idempotência, CSP/headers ou navegação. O diff é CSS/valores de token,
+  classes utilitárias de alvo/destaque, um rótulo de estado no ticket e documentação.
+- Tokens carregam no SPA e na PWA (shell offline na v42); CSP inalterada; sem Google Fonts/CDN.
+- **Pendências que restam:** nenhuma onda pendente. Risco residual: leitura da brasa em tela real
+  sob luz forte (contraste medido por teste ≥ AA) — acompanhar em uso, sem ação de código.
+- Nenhum merge e nenhum deploy foram realizados; a liberação depende da revisão deste PR.
