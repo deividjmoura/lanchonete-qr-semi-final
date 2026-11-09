@@ -1034,7 +1034,7 @@ function ItemCard({
           )}
           {esgotado && <Badge tone="neutral">Esgotado</Badge>}
         </div>
-        <span className="card-produto__preco absolute bottom-2.5 left-2.5 rounded-full bg-surface-raised/95 border border-line px-2.5 py-0.5 font-display text-xs font-bold tnum text-text pointer-events-none">
+        <span className="card-produto__preco absolute bottom-2.5 left-2.5 rounded-full bg-surface-raised/95 border border-line px-2.5 py-0.5 font-mono text-xs font-bold tnum text-text pointer-events-none">
           {BRL(p.preco)}
         </span>
       </button>

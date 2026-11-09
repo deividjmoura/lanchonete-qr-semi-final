@@ -729,3 +729,14 @@ body[data-mesa-praia] .mesa-praia-barra > div > button:last-child {
     gap: 0.9rem;
   }
 }
+
+/* --------------------------------------------------------------------------
+   13. Leitura Comanda de Chapa dentro do tema praia (exceção isolada mantida):
+   preço e totais em mono tabular; a foto do produto continua protagonista e
+   nenhum seletor vaza para fora de body[data-mesa-praia].
+   -------------------------------------------------------------------------- */
+body[data-mesa-praia] .card-produto__preco,
+body[data-mesa-praia] .mesa-praia-barra .font-mono {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
