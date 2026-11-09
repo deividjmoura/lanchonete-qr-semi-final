@@ -18,7 +18,7 @@
   padding: clamp(12px, 2vw, 24px);
   overflow: hidden;
   border: 1px solid var(--stage-line);
-  border-radius: var(--radius-lg)
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(ellipse at 4% 0%, var(--stage-glow-brasa), transparent 34%),
     radial-gradient(ellipse at 96% 12%, var(--stage-glow-cyan), transparent 30%),
@@ -84,7 +84,7 @@
   min-height: 32px;
   padding: 5px 12px;
   border: 1px solid var(--stage-line-3);
-  border-radius: var(--radius-pill)
+  border-radius: var(--radius-pill);
   background: var(--stage-inset);
   color: var(--stage-ink-muted-2);
   font-size: 11px;
@@ -212,7 +212,7 @@
   margin-left: auto;
   padding: 0 10px;
   border: 1px solid color-mix(in srgb, var(--ops-accent) 40%, var(--stage-line-base));
-  border-radius: var(--radius-pill)
+  border-radius: var(--radius-pill);
   background: var(--ops-accent-soft);
   color: var(--ops-accent);
   font-family: var(--font-mono), monospace;
@@ -446,7 +446,7 @@
   min-width: 0;
   padding: 9px 10px;
   border: 1px solid var(--stage-line-2);
-  border-radius: var(--radius-xs)
+  border-radius: var(--radius-xs);
   background: var(--stage-inset-2);
 }
 
@@ -471,7 +471,7 @@
   margin-left: 6px;
   padding: 1px 7px;
   border: 1px solid var(--stage-info-line);
-  border-radius: var(--radius-pill)
+  border-radius: var(--radius-pill);
   background: var(--stage-info-soft);
   color: var(--stage-info-ink);
   font-family: var(--font-sans), sans-serif;
@@ -512,7 +512,7 @@
   margin-top: 2px;
   padding: 8px 12px;
   border: 1px solid color-mix(in srgb, var(--ops-accent) 46%, var(--stage-line-base));
-  border-radius: var(--radius-xs)
+  border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--ops-accent) 13%, var(--stage-inset-deep));
   color: var(--ops-accent);
   font-size: 12px;
@@ -543,7 +543,7 @@
   min-height: 40px;
   padding: 8px 12px;
   border: 1px solid var(--stage-scroll-thumb);
-  border-radius: var(--radius-xs)
+  border-radius: var(--radius-xs);
   background: var(--stage-inset-deep);
   color: var(--stage-ink-2);
   font-size: 11px;
@@ -588,7 +588,7 @@
   margin: 0;
   padding: 8px 12px;
   border: 1px solid var(--stage-ok-line);
-  border-radius: var(--radius-xs)
+  border-radius: var(--radius-xs);
   background: var(--stage-ok-soft);
   color: var(--stage-ok-ink);
   font-family: var(--font-mono), monospace;
