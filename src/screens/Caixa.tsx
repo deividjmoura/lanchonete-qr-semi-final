@@ -350,7 +350,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
           <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-ink">
             Comanda #{sessao.id}
           </p>
-          <h2 className="font-display text-4xl font-bold tracking-tight text-text leading-tight mt-1">
+          <h2 className="font-mono text-4xl font-extrabold tracking-tight text-brand-ink leading-tight mt-1">
             {sessao.mesaNome}
           </h2>
           {sessao.clienteNome && (
@@ -507,7 +507,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                   <Btn
                     full
                     size="lg"
-                    variant="sage"
+                    variant="brand"
                     onClick={fechar}
                     disabled={!podeEncerrar}
                   >
@@ -536,6 +536,16 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
               </span>
               <span className="font-mono text-3xl font-extrabold text-text">{BRL(total)}</span>
             </div>
+            <div className="grid grid-cols-2 gap-3 border-t border-dashed border-line pt-2.5">
+              <p className="flex items-baseline justify-between gap-2">
+                <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-text-muted">Pago</span>
+                <span className="font-mono text-sm font-bold text-status-success-ink">{BRL(pago)}</span>
+              </p>
+              <p className="flex items-baseline justify-between gap-2">
+                <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-text-muted">Restante</span>
+                <span className="font-mono text-sm font-extrabold text-brand-ink">{BRL(restante)}</span>
+              </p>
+            </div>
           </div>
         </div>
 
@@ -556,7 +566,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                   type="button"
                   aria-label="Menos uma pessoa"
                   onClick={() => setPessoas((p) => Math.max(1, p - 1))}
-                  className="size-10 grid place-items-center text-text-muted hover:text-text"
+                  className="size-11 grid place-items-center text-text-muted hover:text-text"
                 >
                   <Minus size={14} weight="bold" />
                 </button>
@@ -567,7 +577,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                   type="button"
                   aria-label="Mais uma pessoa"
                   onClick={() => setPessoas((p) => Math.min(20, p + 1))}
-                  className="size-10 grid place-items-center text-text-muted hover:text-text"
+                  className="size-11 grid place-items-center text-text-muted hover:text-text"
                 >
                   <Plus size={14} weight="bold" />
                 </button>
@@ -712,7 +722,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                     type="button"
                     onClick={() => void copiarPix()}
                     disabled={!pixCodigo}
-                    className="mt-2 inline-flex items-center gap-1.5 font-mono text-xs font-bold text-brand-ink hover:underline disabled:opacity-40"
+                    className="mt-2 inline-flex min-h-11 items-center gap-1.5 px-1 font-mono text-xs font-bold text-brand-ink hover:underline disabled:opacity-40"
                   >
                     {copiado ? <Check size={14} weight="bold" /> : <Copy size={14} />}
                     {copiado ? "Copiado!" : "Copiar código PIX"}
@@ -740,7 +750,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
               <Btn
                 full
                 size="lg"
-                variant="sage"
+                variant="brand"
                 onClick={() => setFechando(true)}
                 disabled={!podeEncerrar}
               >
@@ -762,7 +772,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                     : "Conta quitada — a mesa será liberada imediatamente."}
                 </p>
                 <div className="mt-3 flex gap-2">
-                  <Btn full variant="sage" onClick={fechar}>
+                  <Btn full variant="brand" onClick={fechar}>
                     <Check size={16} weight="bold" /> Confirmar fechamento
                   </Btn>
                   <Btn variant="secondary" onClick={() => setFechando(false)}>
