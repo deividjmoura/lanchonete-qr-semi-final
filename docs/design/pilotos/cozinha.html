@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="escuro">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Piloto — Cozinha · Território A</title>
+    <link rel="stylesheet" href="./piloto.css" />
+  </head>
+  <body class="piloto piloto--palco">
+    <p class="piloto__aviso">
+      <strong>Protótipo estático</strong> · dados fictícios de demonstração · não é a aplicação
+    </p>
+
+    <div class="palco">
+      <header class="palco__barra">
+        <p class="marca">
+          <img src="../../../public/logo/qradmin-mark.png" alt="" width="26" height="26" />
+          <span>Chapa<small> · cozinha</small></span>
+        </p>
+
+        <p class="pills">
+          <span class="pill pill--producao"><span class="pill__ponto"></span>Em produção <strong>3</strong></span>
+          <span class="pill pill--fila"><span class="pill__ponto"></span>Na fila <strong>4</strong></span>
+          <span class="pill pill--alerta">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">
+              <path d="M12 3 2 21h20L12 3Z" /><path d="M12 10v5" /><path d="M12 18h.01" />
+            </svg>
+            1 atrasado
+          </span>
+        </p>
+      </header>
+
+      <section class="sessao" data-etapa="producao" aria-labelledby="titulo-producao">
+        <div class="sessao__cabeca">
+          <div>
+            <h2 class="sessao__titulo" id="titulo-producao">Em produção</h2>
+            <p class="sessao__desc">itens na chapa agora</p>
+          </div>
+          <span class="sessao__contagem" aria-label="3 comandas em produção">03</span>
+        </div>
+
+        <div class="sessao__corpo">
+          <ul class="grade-comandas">
+            <li class="comanda" data-atraso="true">
+              <p class="comanda__alerta">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">
+                  <path d="M12 3 2 21h20L12 3Z" /><path d="M12 10v5" /><path d="M12 18h.01" />
+                </svg>
+                14 min na chapa
+              </p>
+              <div class="comanda__topo">
+                <div>
+                  <p class="comanda__mesa">07 <small>mesa</small></p>
+                  <p class="comanda__meta">comanda <span>#118</span> · Ana</p>
+                  <span class="comanda__estado">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <circle cx="12" cy="12" r="7" />
+                    </svg>
+                    atrasado
+                  </span>
+                </div>
+                <span class="comanda__tempo">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+                  </svg>
+                  14:20
+                </span>
+              </div>
+              <ul class="comanda__itens">
+                <li class="item">
+                  <p class="item__nome"><span class="item__qtd">2×</span>Burger da casa</p>
+                  <p class="item__obs">sem cebola · ponto da casa</p>
+                </li>
+                <li class="item">
+                  <p class="item__nome"><span class="item__qtd">1×</span>Batata rústica</p>
+                </li>
+              </ul>
+              <div class="comanda__rodape">
+                <button class="botao botao--brasa" type="button">Liberar 2 itens</button>
+                <button class="botao botao--secundario" type="button">Imprimir comanda</button>
+              </div>
+            </li>
+
+            <li class="comanda">
+              <div class="comanda__topo">
+                <div>
+                  <p class="comanda__mesa">12 <small>mesa</small></p>
+                  <p class="comanda__meta">comanda <span>#119</span> · Carlos</p>
+                  <span class="comanda__estado">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <circle cx="12" cy="12" r="7" />
+                    </svg>
+                    em produção
+                  </span>
+                </div>
+                <span class="comanda__tempo">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+                  </svg>
+                  06:41
+                </span>
+              </div>
+              <ul class="comanda__itens">
+                <li class="item">
+                  <p class="item__nome"><span class="item__qtd">1×</span>X-Bacon</p>
+                  <p class="item__obs">bacon extra</p>
+                </li>
+              </ul>
+              <div class="comanda__rodape">
+                <button class="botao botao--brasa" type="button">Liberar item</button>
+              </div>
+            </li>
+
+            <li class="comanda">
+              <div class="comanda__topo">
+                <div>
+                  <p class="comanda__mesa">03 <small>mesa</small></p>
+                  <p class="comanda__meta">comanda <span>#117</span> · Ana</p>
+                  <span class="comanda__estado">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <circle cx="12" cy="12" r="7" />
+                    </svg>
+                    em produção
+                  </span>
+                </div>
+                <span class="comanda__tempo">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+                  </svg>
+                  03:08
+                </span>
+              </div>
+              <ul class="comanda__itens">
+                <li class="item">
+                  <p class="item__nome"><span class="item__qtd">3×</span>Hot dog clássico</p>
+                  <p class="item__obs">2 sem batata palha</p>
+                </li>
+              </ul>
+              <div class="comanda__rodape">
+                <button class="botao botao--brasa" type="button">Liberar 3 itens</button>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="sessao" data-etapa="fila" aria-labelledby="titulo-fila">
+        <div class="sessao__cabeca">
+          <div>
+            <h2 class="sessao__titulo" id="titulo-fila">Na fila</h2>
+            <p class="sessao__desc">recebidos, ainda sem início</p>
+          </div>
+          <span class="sessao__contagem" aria-label="4 comandas na fila">04</span>
+        </div>
+
+        <div class="sessao__corpo">
+          <ul class="grade-comandas">
+            <li class="comanda">
+              <div class="comanda__topo">
+                <div>
+                  <p class="comanda__mesa">09 <small>mesa</small></p>
+                  <p class="comanda__meta">comanda <span>#120</span> · Júlia</p>
+                  <span class="comanda__estado">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true">
+                      <path d="M12 5v14" /><path d="M5 12h14" />
+                    </svg>
+                    na fila
+                  </span>
+                </div>
+                <span class="comanda__tempo">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+                  </svg>
+                  00:52
+                </span>
+              </div>
+              <ul class="comanda__itens">
+                <li class="item">
+                  <p class="item__nome"><span class="item__qtd">2×</span>Porção de fritas</p>
+                </li>
+                <li class="item">
+                  <p class="item__nome"><span class="item__qtd">1×</span>Burger da casa</p>
+                  <p class="item__obs">ao ponto</p>
+                </li>
+              </ul>
+              <div class="comanda__rodape">
+                <button class="botao botao--brasa" type="button">Iniciar os 2 itens desta comanda</button>
+              </div>
+            </li>
+
+            <li class="comanda">
+              <div class="comanda__topo">
+                <div>
+                  <p class="comanda__mesa">05 <small>mesa</small></p>
+                  <p class="comanda__meta">comanda <span>#121</span> · Rafael</p>
+                  <span class="comanda__estado">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true">
+                      <path d="M12 5v14" /><path d="M5 12h14" />
+                    </svg>
+                    na fila
+                  </span>
+                </div>
+                <span class="comanda__tempo">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+                  </svg>
+                  00:18
+                </span>
+              </div>
+              <ul class="comanda__itens">
+                <li class="item">
+                  <p class="item__nome"><span class="item__qtd">1×</span>X-Bacon</p>
+                </li>
+              </ul>
+              <div class="comanda__rodape">
+                <button class="botao botao--brasa" type="button">Iniciar item</button>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <p class="piloto__nav">
+        <a href="./index.html">← Índice dos pilotos</a> ·
+        <a href="./caixa.html">Caixa</a> ·
+        <a href="./cliente.html">Cardápio do cliente</a>
+      </p>
+    </div>
+  </body>
+</html>

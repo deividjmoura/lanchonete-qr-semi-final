@@ -201,8 +201,8 @@ test("fontes Fraunces + Plus Jakarta Sans + JetBrains Mono (~150 KB máx), canto
     fs.statSync("public/garcom-pwa/fonts/jetbrains-mono-latin-wght-normal.woff2").size;
   assert.ok(fontBytes <= 155 * 1024, `orçamento de fontes respeitado (${fontBytes} bytes)`);
   assert.match(tokens, /font-display:\s*swap/);
-  assert.match(tokens, /--radius-md:\s*20px/);
-  assert.match(tokens, /--radius-lg:\s*24px/);
+  assert.match(tokens, /--radius-md:\s*16px/);
+  assert.match(tokens, /--radius-lg:\s*20px/);
   assert.doesNotMatch(read("index.html"), /fonts\.googleapis\.com/);
   assert.ok(fs.existsSync("docs/DESIGN_SYSTEM.md"), "docs/DESIGN_SYSTEM.md existe");
 });

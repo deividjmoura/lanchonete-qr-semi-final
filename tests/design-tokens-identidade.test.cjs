@@ -1,7 +1,9 @@
 "use strict";
 
 /**
- * Identidade visual global — "Palco Azul/Violeta" (dashboard "Os números da sua casa").
+ * Identidade visual global — Território A, "Comanda de Chapa" (aprovada em 2026-11-08).
+ * A brasa é a assinatura operacional; violeta e ciano continuam como acentos de
+ * dado do palco.
  *
  * Contrato desta suíte:
  *  1. existe uma única fonte de tokens e o palco é definido nela;
@@ -40,7 +42,7 @@ test("tokens do palco existem, são estáveis e cobrem superfície, tinta, acent
     "--stage-bg", "--stage-bg-2", "--stage-panel", "--stage-card", "--stage-inset",
     "--stage-ink", "--stage-ink-muted", "--stage-ink-subtle", "--stage-ink-faint",
     "--stage-line", "--stage-hairline-2",
-    "--stage-violet", "--stage-violet-soft", "--stage-cyan", "--stage-lime", "--stage-rose", "--stage-amber",
+    "--stage-violet", "--stage-violet-soft", "--stage-brasa", "--stage-brasa-soft", "--stage-cyan", "--stage-lime", "--stage-rose", "--stage-amber",
     "--stage-ok-ink", "--stage-warn-ink", "--stage-danger-ink", "--stage-info-ink",
     "--stage-focus", "--stage-grid",
   ];
@@ -52,19 +54,21 @@ test("tokens do palco existem, são estáveis e cobrem superfície, tinta, acent
   assert.match(tokens, /--stage-ink: #e[0-9a-f]{5}|--stage-ink: #f[0-9a-f]{5}/);
 });
 
-test("tokens semânticos globais seguem a identidade azul/violeta nos dois temas", () => {
+test("tokens semânticos globais seguem o Território A (brasa) nos dois temas", () => {
   const claro = tokens.slice(tokens.indexOf('[data-theme="claro"]'), tokens.indexOf("@media (prefers-color-scheme: dark)"));
   const escuro = tokens.slice(tokens.indexOf(':root[data-theme="escuro"]'));
-  // Violeta como ação primária e superfícies azuladas (nada de papel/madeira).
-  assert.match(tokens, /--prim-violeta: #7c5cff;/);
+  // Brasa como ação primária e assinatura operacional; superfícies de tinta/nevoeiro.
+  assert.match(tokens, /--prim-brasa: #e8501f;/);
   assert.match(tokens, /--prim-meia-noite: #0b101b;/);
   assert.match(tokens, /--prim-nevoa: #e4e8f1;/);
-  assert.match(claro, /--brand: var\(--prim-violeta-escuro\)/);
-  assert.match(escuro, /--brand: var\(--prim-violeta-claro\)/);
+  assert.match(claro, /--brand: var\(--prim-brasa-escura\)/);
+  assert.match(escuro, /--brand: var\(--prim-brasa-clara\)/);
   assert.match(escuro, /--surface: var\(--prim-meia-noite\)/);
-  // A paleta anterior não pode voltar a alimentar os tokens semânticos.
+  // A paleta de papel/lousa/madeira não volta a alimentar os tokens semânticos.
+  // A brasa entra como assinatura (--brand*) e não como fundo de página.
   for (const bloco of [claro, escuro]) {
-    assert.doesNotMatch(bloco, /--prim-brasa|--prim-papel|--prim-lousa/, "tokens semânticos sem paleta antiga");
+    assert.doesNotMatch(bloco, /--prim-papel|--prim-lousa|--prim-stout/, "tokens semânticos sem paleta antiga");
+    assert.doesNotMatch(bloco, /--surface: var\(--prim-brasa/, "brasa não é fundo de superfície");
   }
 });
 
@@ -116,5 +120,5 @@ test("exceção declarada: o cardápio do cliente segue isolado e documentado", 
   const docs = read("docs/DESIGN_SYSTEM.md");
   assert.match(docs, /#\/mesa\/:token/);
   assert.match(docs, /exceção/i);
-  assert.match(docs, /Palco Azul\/Violeta/);
+  assert.match(docs, /Comanda de Chapa/);
 });

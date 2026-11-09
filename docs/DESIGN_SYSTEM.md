@@ -1,15 +1,23 @@
-# QR Admin — Design System ("Palco Azul/Violeta")
+# QR Admin — Design System (Território A — "Comanda de Chapa")
 
-> **Decisão de identidade (2026-11-01):** a referência visual global passa a ser o dashboard
-> **"Os números da sua casa"** — superfícies escuras com profundidade, cartões de vidro com camadas,
-> acentos violeta/ciano, hairlines internas e tipografia display. Vale para **todo** o sistema:
-> Admin, dashboard, gestão de mesas, cozinha, bar, caixa, telas operacionais e PWA do garçom.
+> **Decisão de identidade (2026-11-08):** a interface do QRAdmin é a **comanda térmica digital** da
+> casa. O número da mesa é a âncora, o ticket é a unidade legível a distância e o estado se comunica
+> por **posição + forma + cor** — nunca só por cor. Vale para **todo** o sistema: Admin, dashboard,
+> gestão de mesas, cozinha, bar, caixa, telas operacionais e PWA do garçom.
 > **Exceção única:** a interface do cardápio acessada pelo cliente em `#/mesa/:token`, que mantém
-> layout próprio, pensado para o cliente.
+> layout próprio (tema praia, foto protagonista), documentado em §6.4.
 >
-> A direção anterior ("A COMANDA / Taproom Brasa", papel de comanda + madeira + brasa) foi
-> **substituída**. Os primitivos dela continuam declarados apenas como histórico e **não** alimentam
-> mais nenhum token semântico (`tests/design-tokens-identidade.test.cjs` trava isso).
+> A assinatura de cor é a **brasa** (`--prim-brasa`), com orçamento de ~10% da área: número de mesa,
+> ação primária, "em produção"/atenção e atraso. Desde a onda 5, o dashboard também usa a família
+> brasa como acento padrão (`--stage-brasa*`); ciano/lima/rosa/âmbar seguem como acentos de dado
+> secundários e `--stage-violet*` permanece definido nos tokens apenas por compatibilidade, sem
+> consumidor visual. Violeta e ciano continuam como **acentos de dado**
+> do palco (`--stage-violet*`, `--stage-cyan`).
+>
+> A direção "Palco Azul/Violeta" (dashboard "Os números da sua casa") foi **substituída** pela
+> decisão de 2026-11-08. Dela sobreviveram a arquitetura de três níveis de tokens, o palco escuro com
+> profundidade e a tipografia display — agora com halos recontidos, raios menores e assinatura de
+> brasa (`tests/design-tokens-identidade.test.cjs` e `tests/design-system.test.cjs` travam o contrato).
 
 ---
 
@@ -22,7 +30,7 @@ divergem).
 
 | Nível | Prefixo | Papel | Quem consome |
 |---|---|---|---|
-| 1. Primitivos de marca | `--prim-*` | Valores brutos de paleta (azul-meia-noite, névoa, violeta, azul-água, verdes/âmbar/azul/vermelho de tinta) | apenas os níveis 2 e 3 |
+| 1. Primitivos de marca | `--prim-*` | Valores brutos de paleta (brasa, meia-noite, névoa, violeta/azul-água como acentos, verdes/âmbar/azul/vermelho de tinta) | apenas os níveis 2 e 3 |
 | 1b. Primitivos do palco | `--stage-*` | Superfícies de vidro, camadas, hairlines, acentos neon e sombras das telas escuras | `dashboard.css`, `operacional.css`, `.stage-*` do SPA e PWA |
 | 2. Semânticos | `--surface*`, `--text*`, `--brand*`, `--accent*`, `--line*`, `--status-*` | Papel funcional por tema (claro/escuro) | todos os componentes |
 | 3. Transversais | `--space-*`, `--dur-*`, `--ease-*`, `--elev-*`, `--glass-*` | Espaçamento, movimento, elevação e composição de vidro | componentes e camadas CSS |
@@ -41,7 +49,10 @@ token em vez de escrever a cor no componente.
 | `--prim-nevoa` | `#EEF1F8` | Superfície clara base |
 | `--prim-nevoa-elevada` | `#F8FAFF` | Cartão elevado no claro |
 | `--prim-nevoa-rebaixo` | `#E0E5F1` | Campo/trilho no claro |
-| `--prim-violeta` | `#7C5CFF` | Ação primária / acento de marca |
+| `--prim-brasa` | `#E8501F` | **Assinatura operacional** (ação primária, mesa em destaque, atenção) |
+| `--prim-brasa-escura` / `--prim-brasa-tinta` | `#BF3B11` / `#B5360D` | Brasa sobre superfície clara (fundo / tinta) |
+| `--prim-brasa-clara` / `--prim-brasa-tinta-escuro` | `#FF7D52` / `#FFB59A` | Brasa sobre palco escuro (fundo / tinta) |
+| `--prim-violeta` | `#7C5CFF` | Acento de dado do palco (não é mais a cor de marca) |
 | `--prim-azul-agua` | `#4FD1E0` | Acento secundário / informação operacional |
 | `--prim-azul-tinta` / `--prim-azul-medio` / `--prim-azul-claro` | `#121829` / `#48536D` / `#616D88` | Texto e apoio no tema claro |
 | `--prim-noite-tinta` / `--prim-noite-medio` / `--prim-noite-claro` | `#EEF1FB` / `#A9B4CC` / `#7F8BA6` | Texto e apoio no tema escuro |
@@ -55,8 +66,8 @@ Nenhum token usa `#FFFFFF` ou `#000000` puros (teste de design system).
 | `--surface` | `#EEF1F8` | `#0B101B` | — |
 | `--text` sobre `--surface` | `#121829` | `#EEF1FB` | 15,6:1 / 16,9:1 (AAA) |
 | `--text-muted` sobre `--surface-raised` | `#48536D` | `#A9B4CC` | 7,4:1 / 8,3:1 |
-| `--brand` sobre `--brand-contrast` | `#5B3FC4` / `#F8FAFF` | `#8B6FFF` / `#0B101B` | 6,8:1 / 5,3:1 |
-| `--brand-ink` sobre `--surface-raised` | `#4A32A6` | `#B7A5FF` | 8,8:1 / 8,1:1 |
+| `--brand` sobre `--brand-contrast` | `#BF3B11` / `#EDF0F6` | `#FF7D52` / `#0B101B` | 4,8:1 / 7,5:1 |
+| `--brand-ink` sobre `--surface-raised` | `#B5360D` | `#FFB59A` | 5,3:1 / 10,1:1 |
 | `--accent-ink` | `#0A5A63` | `#8FE6F0` | 7,6:1 / 12,1:1 |
 | `--status-*` (success/warning/info/danger) | verdes/âmbar/azul/vermelho escuros | versões claras | ≥ 4,5:1 no escuro, ≥ 5,8:1 no claro |
 
@@ -79,15 +90,17 @@ Todos os pares são validados por `tests/design-system.test.cjs` (WCAG AA/AAA) �
 ## 2. O Palco (`--stage-*`) — como as telas escuras são construídas
 
 Uma tela de palco é sempre a mesma receita: fundo em três paradas (`--stage-bg-2` → `--stage-bg` →
-`--stage-bg-3`), dois halos de acento (`--stage-glow-violet`, `--stage-glow-cyan`), grade discreta
-(`--stage-grid` com máscara) e cartões de vidro sobrepostos.
+`--stage-bg-3`), **um** halo de brasa discreto (`--stage-glow-brasa`, 12% de alfa) com eco frio
+(`--stage-glow-cyan`, 6%), grade discreta (`--stage-grid` com máscara) e cartões de vidro sobrepostos.
+Os halos são decoração funcional de profundidade, não "palco" de dashboard: orçamento reduzido por
+decisão do Território A.
 
 | Grupo | Tokens | Uso |
 |---|---|---|
 | Superfícies | `--stage-bg*`, `--stage-panel*`, `--stage-card*`, `--stage-inset*`, `--stage-scrim` | fundo, painéis, cartões, campos e overlay de diálogo |
 | Tinta | `--stage-ink`, `-2`, `-3`, `--stage-ink-muted`, `-muted-2`, `--stage-ink-subtle`, `--stage-ink-faint` | hierarquia de texto sobre vidro |
 | Linhas | `--stage-line*` (bordas) e `--stage-hairline*` (brilho interno de 1px) | separação e profundidade |
-| Acentos | `--stage-violet`, `--stage-cyan`, `--stage-lime`, `--stage-rose`, `--stage-amber`, `--stage-mint` (+ `-deep`, `-soft`, `-ink`) | séries de dados, ícones e estados por cartão |
+| Acentos | `--stage-brasa`, `--stage-violet`, `--stage-cyan`, `--stage-lime`, `--stage-rose`, `--stage-amber`, `--stage-mint` (+ `-deep`, `-soft`, `-ink`) | mesa/ação (brasa), séries de dados, ícones e estados por cartão |
 | Estados | `--stage-ok-*`, `--stage-warn-*`, `--stage-danger-*`, `--stage-info-*` | fila, atraso, erro, informação |
 | Sombras/foco | `--stage-shadow-1..4`, `--stage-shadow-inset`, `--stage-focus` | camadas e anel de foco |
 
@@ -124,11 +137,13 @@ Servida localmente em `public/garcom-pwa/fonts/` sob CSP `'self'`, totalizando *
 
 ## 5. Geometria, Elevação e Estados
 
-- **Raios:** `--radius-xs` 10px, `--radius-sm` 14px, `--radius-md` 20px (cartões), `--radius-lg` 24px
-  (painéis e palcos), `--radius-xl` 28px (diálogos), `--radius-pill` 9999px. Migração feita só onde o
-  valor já coincidia com a escala — zero mudança visual.
+- **Raios (Território A, contidos):** `--radius-xs` 8px (itens internos), `--radius-sm` 12px
+  (botões, inputs), `--radius-md` 16px (tickets e cartões), `--radius-lg` 20px (painéis e palcos),
+  `--radius-xl` 24px (diálogos), `--radius-pill` 9999px (badges de estado). O ticket nunca é um
+  "cartão SaaS": a leitura de papel vem da margem, da linha tracejada e do contraste.
 - **Profundidade:** sempre `hairline interna (--stage-hairline-4/5) + --elev-3/4`; o hover sobe uma
-  camada (`--elev-4`) e a borda ganha 38–62% do acento.
+  camada (`--elev-4`) e a borda sobe para `--stage-line-4`. A elevação é consequência de contraste e
+  linha — sombra difusa sozinha não é elevação.
 - **Estados centralizados no arquivo de tokens:** `:focus-visible` usa `--focus-ring` com
   `outline-offset: 2px`; `[aria-pressed="true"]`/`[aria-selected="true"]` puxam `--brand-border`;
   `:disabled`/`[aria-disabled="true"]` aplicam `opacity: .55` e `cursor: not-allowed`. Nenhum
@@ -142,12 +157,18 @@ Servida localmente em `public/garcom-pwa/fonts/` sob CSP `'self'`, totalizando *
 
 ### 6.1 Regime Expressivo (`data-regime="expressive"`)
 - **Telas:** Login, Landing, Admin (Dashboard, Cardápio, Mesas, Garçons, Funções), Cardápio da Mesa (`/mesa/:token`) e estados vazios.
-- **Características:** títulos display em Fraunces com números grandes e `tabular-nums` (`-0.02em`), cartões de vidro sobre palco escuro com grade discreta (`--stage-grid`, máscara para baixo) e hierarquia editorial de painel → cartão → micro-rótulo em caixa alta espaçada.
+- **Características:** títulos display em Fraunces com números grandes e `tabular-nums` (`-0.02em`), cartões de vidro sobre palco escuro com grade discreta (`--stage-grid`, máscara para baixo), halo único de brasa e hierarquia editorial de painel → cartão → micro-rótulo em caixa alta espaçada. Número de mesa e valor sempre em `--font-mono`.
 
 ### 6.2 Regime Operacional (`data-regime="operational"`)
 - **Telas:** Cozinha, Bar, Caixa e PWA do Garçom.
 - **Características:** mesmo palco (fundo, hairlines, acentos) com densidade de operação; leitura instantânea a ~1,5 m nas filas de preparo, alvos de toque mínimos de `48 px` (`min-h-12`), indicadores objetivos de tempo/setor/garçom e ações em lote diretas.
-- **Camada "vidro de operação" (`src/screens/operacional.css`):** cozinha e bar usam a mesma família visual do dashboard — gradiente escuro translúcido, grade discreta, acentos neon por etapa (ciano = em produção, âmbar = na fila), sombras em camadas e brilho interno de `1px`. A paleta **não** é mais local: `operacional.css` e `dashboard.css` consomem `var(--stage-*)` (zero hex). Cartões de caixa e PWA reaproveitam a mesma ideia via `--surface-raised`, `color-mix`, `--glass-*` e `--shadow-card-hover`, sempre dentro dos tokens e do contraste AA.
+- **Composição Comanda de Chapa (ondas 1–8, 2026-11-09):** ticket operacional com faixa de topo por
+  etapa, mesa em mono tabular brasa, estado por posição + forma (pill) + texto, recorte tracejado e
+  ações de item/lote a 48 px; caixa com mesa-âncora em mono, Total/Pago/Restante tabulares, Pix em
+  bloco próprio e fechamento em brasa; garçom (SPA+PWA) com alvos de 48/44 px e entrega parcial
+  explícita; cliente mantém o tema praia isolado com preço em mono; componentes compartilhados com
+  alvos ≥ 44 px. Capturas reais em `docs/design/capturas/` (375/1440, claro/escuro).
+- **Camada "vidro de operação" (`src/screens/operacional.css`):** cozinha e bar usam a mesma família visual do dashboard — gradiente escuro translúcido, grade discreta, acentos de etapa (ciano = em produção, âmbar = na fila, brasa = ação primária e atraso), sombras em camadas e brilho interno de `1px`. A paleta **não** é mais local: `operacional.css` e `dashboard.css` consomem `var(--stage-*)` (zero hex). Cartões de caixa e PWA reaproveitam a mesma ideia via `--surface-raised`, `color-mix`, `--glass-*` e `--shadow-card-hover`, sempre dentro dos tokens e do contraste AA.
 
 ### 6.3 Fila de Produção por Item (Cozinha e Bar)
 - **Duas sessões recolhíveis:** "Em produção" e "Na fila". Ambas nascem **recolhidas** para manter a tela limpa; cada uma abre de forma independente (`aria-expanded` + `aria-controls`) e a preferência do operador é lembrada por setor em `localStorage`. O corpo recolhido não renderiza cartões.

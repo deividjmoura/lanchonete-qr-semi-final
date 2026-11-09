@@ -30,7 +30,7 @@ A inspeção de `public/garcom-pwa/offline.js` e `app.js` confirma:
 - `localStorage` mantém `waiter-token` (credencial bearer), preferências de tema e notificações, identificadores de avisos já exibidos e tentativa de pagamento pendente com sessão, mesa, valor, forma de pagamento e chave idempotente.
 - A exportação de pedidos pendentes remove `ownerToken` do JSON exportado. Isso não significa que a credencial deixe de existir no IndexedDB original.
 - Não foi encontrada rotina de expurgo automático da store local de pedidos. O código preserva pendências para replay idempotente; a retenção efetiva depende do uso do app, do usuário e do navegador. Limpar dados do site/desinstalar pode eliminar pendências ainda não sincronizadas.
-- O Service Worker usa `garcom-pwa-shell-v41`, armazena somente arquivos estáticos do shell e ignora `/api/`; respostas de API não são cacheadas.
+- O Service Worker usa `garcom-pwa-shell-v42`, armazena somente arquivos estáticos do shell e ignora `/api/`; respostas de API não são cacheadas.
 
 A sessão interna de funcionário usa o cookie `lqr_session` com atributos `HttpOnly`, `SameSite=Lax`, `Secure` em produção e validade configurada de 12 horas. O código remove registros expirados de `staff_sessoes` em ciclos de 30 minutos. Isso não deve ser confundido com o token bearer individual do garçom salvo no navegador.
 

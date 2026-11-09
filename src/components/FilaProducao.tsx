@@ -320,6 +320,7 @@ function CardComandaItem({
             <span className="ops-card__numero">#{pedido.id}</span>
             {pedido.garcomNome && <span>· {pedido.garcomNome}</span>}
           </p>
+          <span className="ops-card__estado">{atrasado ? "Atrasado" : etapaInfo.titulo}</span>
         </div>
         <span className="ops-card__tempo" title="Tempo desde a abertura da comanda">
           <Clock size={13} aria-hidden="true" /> {elapsed(pedido.criadoEm)}

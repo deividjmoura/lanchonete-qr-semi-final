@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="escuro">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Piloto — Caixa · Território A</title>
+    <link rel="stylesheet" href="./piloto.css" />
+  </head>
+  <body class="piloto piloto--palco">
+    <p class="piloto__aviso">
+      <strong>Protótipo estático</strong> · dados fictícios de demonstração · não é a aplicação
+    </p>
+
+    <div class="palco">
+      <header class="palco__barra">
+        <p class="marca">
+          <img src="../../../public/logo/qradmin-mark.png" alt="" width="26" height="26" />
+          <span>Caixa<small> · fechamento</small></span>
+        </p>
+        <p class="pills">
+          <span class="pill"><span class="pill__ponto"></span>Comandas abertas <strong>12</strong></span>
+          <span class="pill pill--alerta">1 comanda com pendência</span>
+        </p>
+      </header>
+
+      <div class="caixa">
+        <section class="painel" aria-labelledby="titulo-comandas">
+          <h2 class="painel__titulo" id="titulo-comandas">
+            Comandas abertas <small>a mais antiga primeiro</small>
+          </h2>
+          <ul class="comandas">
+            <li>
+              <a class="linha-comanda" href="#pagamento" aria-current="true">
+                <span class="linha-comanda__mesa">07</span>
+                <span class="linha-comanda__info">
+                  <strong>Marina Alves</strong>
+                  <span>aberta 19:42 · 2 pedidos</span>
+                </span>
+                <span class="linha-comanda__valor">R$ 89,80</span>
+              </a>
+            </li>
+            <li>
+              <a class="linha-comanda" href="#pagamento">
+                <span class="linha-comanda__mesa">12</span>
+                <span class="linha-comanda__info">
+                  <strong>Carlos Menezes</strong>
+                  <span>aberta 20:05 · 1 pedido</span>
+                </span>
+                <span class="linha-comanda__valor">R$ 32,00</span>
+              </a>
+            </li>
+            <li>
+              <a class="linha-comanda" href="#pagamento">
+                <span class="linha-comanda__mesa">03</span>
+                <span class="linha-comanda__info">
+                  <strong>Júlia Ramos</strong>
+                  <span>aberta 20:18 · 3 pedidos</span>
+                </span>
+                <span class="linha-comanda__valor">R$ 154,50</span>
+              </a>
+            </li>
+            <li>
+              <a class="linha-comanda" href="#pagamento">
+                <span class="linha-comanda__mesa">09</span>
+                <span class="linha-comanda__info">
+                  <strong>Rafael Souza</strong>
+                  <span>aberta 20:31 · 1 pedido</span>
+                </span>
+                <span class="linha-comanda__valor">R$ 47,00</span>
+              </a>
+            </li>
+          </ul>
+        </section>
+
+        <section class="painel" id="pagamento" aria-labelledby="titulo-pagamento">
+          <div class="pagamento">
+            <div class="pagamento__cabeca">
+              <div>
+                <p class="pagamento__mesa">07</p>
+                <p class="pagamento__cliente">Marina Alves · comanda #118</p>
+              </div>
+              <span class="pill pill--producao"><span class="pill__ponto"></span>tudo entregue</span>
+            </div>
+
+            <div class="valores">
+              <p class="valor">Consumo entregue <strong>R$ 81,64</strong></p>
+              <p class="valor">Taxa de serviço (10%) <strong>R$ 8,16</strong></p>
+              <p class="valor valor--total">Total da comanda <strong>R$ 89,80</strong></p>
+              <p class="valor">Pago <strong>R$ 40,00</strong></p>
+              <p class="valor valor--restante">Restante <strong>R$ 49,80</strong></p>
+            </div>
+
+            <fieldset class="formas">
+              <legend>Forma do pagamento</legend>
+              <label><input type="radio" name="forma" value="dinheiro" /><span>Dinheiro</span></label>
+              <label><input type="radio" name="forma" value="pix" checked /><span>Pix</span></label>
+              <label><input type="radio" name="forma" value="debito" /><span>Débito</span></label>
+              <label><input type="radio" name="forma" value="credito" /><span>Crédito</span></label>
+            </fieldset>
+
+            <div class="pix">
+              <span class="pix__codigo" aria-hidden="true">QR<br />PIX</span>
+              <p>
+                <strong>Chave da casa · fixa</strong>
+                Confirme o recebimento antes de registrar o pagamento.
+              </p>
+            </div>
+
+            <div class="acoes">
+              <button class="botao botao--brasa" type="button">Registrar pagamento de R$ 49,80</button>
+              <button class="botao botao--secundario" type="button">Desconto ou taxa (autorização de gerente)</button>
+              <button class="botao botao--secundario" type="button">Imprimir comprovante</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <p class="piloto__nav">
+        <a href="./index.html">← Índice dos pilotos</a> ·
+        <a href="./cozinha.html">Cozinha</a> ·
+        <a href="./cliente.html">Cardápio do cliente</a>
+      </p>
+    </div>
+  </body>
+</html>

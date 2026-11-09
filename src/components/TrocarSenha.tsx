@@ -150,7 +150,7 @@ export function TrocarSenha({ obrigatorio, onClose }: { obrigatorio: boolean; on
               type="button"
               onClick={onClose}
               aria-label="Fechar"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line text-text-muted hover:text-text hover:bg-surface-hover"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line text-text-muted hover:text-text hover:bg-surface-hover"
             >
               <X size={18} weight="bold" />
             </button>

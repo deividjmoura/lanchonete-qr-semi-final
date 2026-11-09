@@ -189,7 +189,7 @@ function CardPronto({
     >
       <div className="px-4 py-3.5 bg-surface-sunken border-b border-dashed border-line-strong flex items-start justify-between gap-2">
         <div>
-          <p className="font-mono text-4xl font-extrabold leading-none text-text">
+          <p className="font-mono text-4xl font-extrabold leading-none text-brand-ink">
             {pedido.mesaNome.replace("Mesa ", "").padStart(2, "0")}
             <span className="text-xs text-text-muted ml-1.5 font-sans font-bold uppercase tracking-wider">
               mesa
@@ -232,7 +232,7 @@ function CardPronto({
                 {podeRetirar(i) ? (
                   <button
                     type="button"
-                    className="underline"
+                    className="inline-flex min-h-12 items-center px-2 underline underline-offset-4"
                     onClick={() => onEntregar([Number(i.id)], "retirar")}
                   >
                     Retirar item
@@ -240,7 +240,7 @@ function CardPronto({
                 ) : podeEntregar(i) ? (
                   <button
                     type="button"
-                    className="underline"
+                    className="inline-flex min-h-12 items-center px-2 underline underline-offset-4"
                     onClick={() => onEntregar([Number(i.id)], "entregar")}
                   >
                     Entreguei
@@ -256,7 +256,7 @@ function CardPronto({
 
       {aindaProducao.length > 0 && (
         <p className="px-4 pb-2 font-mono text-[11px] text-text-muted">
-          {aindaProducao.length} item(ns) ainda em preparo
+          {aindaProducao.length} {aindaProducao.length === 1 ? "item ainda em preparo" : "itens ainda em preparo"} — entrega parcial
         </p>
       )}
 
