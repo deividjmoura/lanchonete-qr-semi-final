@@ -52,7 +52,7 @@ test("superfícies SPA são sólidas e a marca permanece sem placa", () => {
 
 test("PWA compartilha fontes Estação e atualiza o shell offline", () => {
   const sw = read("public/garcom-pwa/sw.js");
-  assert.match(sw, /garcom-pwa-shell-v44/);
+  assert.match(sw, /garcom-pwa-shell-v45/);
   for (const asset of [
     "../fonts/landing/dm-sans-latin-wght-normal.woff2",
     "../fonts/kalam-latin-400-normal.woff2",
