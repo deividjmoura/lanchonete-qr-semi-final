@@ -94,6 +94,13 @@ try {
   // A captura administrativa usa loading="lazy": aproxime o painel da viewport
   // antes de exigir naturalWidth, para testar a imagem sem desativar lazy-load.
   await page.locator(".product-stage").scrollIntoViewIfNeeded();
+  // O painel tem uma captura lazy separada da mesma imagem usada no Hero.
+  // Aguarde a decodificação do próprio elemento, não apenas o estado "complete"
+  // (que também pode ser true para uma imagem que ainda falhou ou não foi pedida).
+  await page.locator(".product-stage img").evaluate(async (img) => {
+    img.loading = "eager";
+    await img.decode();
+  });
   await page.waitForFunction(
     () => [...document.querySelectorAll(".hero-art img, .product-stage img")]
       .every((img) => img.complete && img.naturalWidth > 0),
