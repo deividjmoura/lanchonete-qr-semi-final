@@ -58,7 +58,7 @@ async function aguardarLayoutDashboard(page, width) {
       const grid = document.querySelector('.dashboard-grid');
       const valor = document.querySelector('.card-neon .metric-value');
       const main = document.querySelector('.ops-main');
-      const colunas = grid && getComputedStyle(grid).gridTemplateColumns.trim().split(/\\s+/).length;
+      const colunas = grid && getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length;
       const fonte = valor && parseFloat(getComputedStyle(valor).fontSize);
       const margem = main && parseFloat(getComputedStyle(main).marginLeft);
       return { inner: innerWidth, colunas, fonte, margem,
