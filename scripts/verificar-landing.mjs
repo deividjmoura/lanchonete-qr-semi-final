@@ -510,10 +510,26 @@ try {
 
   /* O link do garçom continua levando ao PWA instalável, como antes. */
   const tokenGarcom = "8f14e45f-ceea-467f-a8ac-3b1c1b6a1b0d";
+  /* O PWA consome o token da query e o remove da barra de endereço por
+     segurança. Portanto, validar page.url() depois do carregamento gera um
+     falso negativo: a URL já foi higienizada pelo próprio app.js. Observe a
+     navegação inicial e confirme também que o token foi persistido. */
+  const navegacaoPwa = page2.waitForRequest((request) => {
+    if (!request.isNavigationRequest()) return false;
+    try {
+      const url = new URL(request.url());
+      return url.pathname === "/garcom-pwa/" && url.searchParams.get("token") === tokenGarcom;
+    } catch {
+      return false;
+    }
+  }, { timeout: 5000 });
   await page2.goto(BASE + "/#/garcom/" + tokenGarcom, { waitUntil: "domcontentloaded" });
+  const requestPwa = await navegacaoPwa;
   await page2.waitForURL((url) => url.pathname.includes("/garcom-pwa/"), { timeout: 5000 });
   assert(page2.url().includes("/garcom-pwa/"), "/#/garcom/<token> mantém o redirecionamento ao PWA");
-  assert(new URL(page2.url()).searchParams.get("token") === tokenGarcom, "redirecionamento preserva o token individual do garçom");
+  assert(new URL(requestPwa.url()).searchParams.get("token") === tokenGarcom, "redirecionamento envia o token individual ao PWA");
+  await page2.waitForFunction((token) => localStorage.getItem("waiter-token") === token, tokenGarcom, { timeout: 5000 });
+  assert(await page2.evaluate(() => localStorage.getItem("waiter-token")) === tokenGarcom, "PWA consome e persiste o token individual do garçom");
   const pwa = await page2.request.get(BASE + "/garcom-pwa/?token=8f14e45f-ceea-467f-a8ac-3b1c1b6a1b0d");
   assert(pwa.status() === 200, "/garcom-pwa/ responde 200");
 
