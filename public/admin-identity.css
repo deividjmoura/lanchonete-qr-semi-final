@@ -46,14 +46,12 @@
   --check-active-bg: var(--brand-surface);
   --check-active-border: var(--brand);
   --shadow: var(--elev-2);
-  --shadow-md: var(--elev-3);
-  --shadow-lg: var(--elev-4);
+  --shadow-md: var(--elev-2);
+  --shadow-lg: var(--elev-3);
   --radius: var(--radius-sm);
   --font-ui: var(--font-sans);
   --duration: var(--dur-base);
   --ease: var(--ease-out);
-  --shadow-md: var(--elev-2);
-  --shadow-lg: var(--elev-3);
 }
 
 :root[data-theme="escuro"] {
