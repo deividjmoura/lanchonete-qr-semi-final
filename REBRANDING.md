@@ -36,23 +36,16 @@ A busca no código da `main` por `deividmoura729249` e `servicosdegestaoqradmin`
 
 ### Endereço atualmente encontrado
 
-A varredura por `gmail.com` encontrou `dejesusdemouradeivid@gmail.com` em:
+A varredura inicial identificou um endereço anterior nos seguintes arquivos da `main`:
 
-- `src/screens/landing/contato.ts` (constantes compartilhadas de contato);
-- `src/screens/Login.tsx` (rodapé do login);
-- `README.md`;
-- `docs/FORNECEDOR-E-SERVICOS-QR-ADMIN.md`;
-- `docs/engineering/procedimento-titulares.md`;
-- `docs/engineering/data-policy-proposal.md`;
-- `public/termos-de-uso.html`;
-- `public/termos-de-servico.html`;
-- `public/politica-de-privacidade.html`;
-- `scripts/verificar-landing.mjs`;
-- `public/apresentacao.html`.
+- `src/screens/landing/contato.ts` e `src/screens/Login.tsx`;
+- `README.md` e apresentação pública;
+- cadastro do fornecedor e procedimentos internos de privacidade;
+- páginas públicas de Termos de Uso, Termos de Serviço e Política de Privacidade.
 
-Os documentos de fornecedor/privacidade registram esse endereço como canal oficial anteriormente confirmado. O novo endereço solicitado para o serviço é `servicosdegestaoqradmin@gmail.com`.
+Em **10/11/2026**, o responsável confirmou expressamente `servicosdegestaoqradmin@gmail.com` como canal profissional e canal oficial de privacidade/solicitações de titulares, monitorado e autorizado, com resposta em até 15 dias. O endereço anterior foi substituído nos canais da aplicação, nas três páginas legais e na documentação interna. A confirmação e a atualização estão registradas em `docs/FORNECEDOR-E-SERVICOS-QR-ADMIN.md` e `docs/engineering/data-policy-proposal.md`.
 
-**Ponto de aprovação necessário:** substituir o e-mail em UI/contatos do produto é uma mudança de comunicação; substituir o canal publicado de privacidade/solicitações de titulares em documentos institucionais também altera uma informação operacional/legal. A atualização dos documentos legais deve ser confirmada explicitamente pelo responsável antes de ser tratada como canal oficial de privacidade. Não inventar nem presumir essa equivalência.
+**Decisão concluída:** não há mais pendência de autorização para usar o novo endereço como canal institucional de privacidade.
 
 ## 4. Landing e narrativa de scroll
 
@@ -152,10 +145,11 @@ Base atualizada: `main` em `bc9727ef336888fa39634f5eeb579af940c2c387`. A branch 
 - [x] Ícones da landing migrados para o mesmo conjunto Phosphor usado na SPA e no PWA.
 - [x] Testes da identidade ampliados para tokens, tipografia, jornada e contato; script de verificação da landing atualizado para conferir oito cenas e capturas.
 - [x] `docs/DESIGN_SYSTEM.md` atualizado com a tipografia e narrativa da landing.
+- [x] Política de Privacidade e Termos de Serviço/Termos de Uso atualizados com o canal institucional confirmado e identidade Comanda de Chapa.
 
-### Divergência institucional pendente
+### Atualização institucional concluída
 
-A busca literal pelo endereço `deividmoura729249@gmail.com` não encontrou ocorrências na `main`. O endereço diferente `dejesusdemouradeivid@gmail.com` aparece nos documentos de privacidade/fornecedor e nos termos como canal anteriormente confirmado para contato profissional/solicitações de titulares. Foi atualizado nos canais comerciais da aplicação, README e apresentação; **os documentos legais e o procedimento de privacidade foram preservados** até confirmação expressa de que o novo e-mail também será o canal oficial para titulares/privacidade. Não afirmar que a substituição global foi concluída enquanto esses documentos mantiverem o endereço anterior.
+Em 10/11/2026, o responsável confirmou o novo endereço como canal oficial também para privacidade e solicitações de titulares. Política de Privacidade, Termos de Serviço, Termos de Uso e documentação operacional foram atualizados. As três páginas legais também receberam a identidade visual Comanda de Chapa.
 
 ### Verificação técnica — estado desta entrega
 
