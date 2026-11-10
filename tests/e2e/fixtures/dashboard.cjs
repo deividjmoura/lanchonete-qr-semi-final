@@ -58,12 +58,13 @@ async function aguardarLayoutDashboard(page, width) {
       const grid = document.querySelector('.dashboard-grid');
       const valor = document.querySelector('.card-neon .metric-value');
       const main = document.querySelector('.ops-main');
-      const colunas = grid && getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length;
+      const colunas = grid && getComputedStyle(grid).gridTemplateColumns.trim().split(/\\s+/).length;
       const fonte = valor && parseFloat(getComputedStyle(valor).fontSize);
       const margem = main && parseFloat(getComputedStyle(main).marginLeft);
       return { inner: innerWidth, colunas, fonte, margem,
         pronto: innerWidth === largura && colunas === (largura <= 700 ? 4 : largura <= 1050 ? 8 : 12) &&
-          (largura > 420 || (fonte != null && fonte <= 18)) &&
+          // A identidade Comanda de Chapa fixa o valor em 24px no mobile estreito.
+          (largura > 420 || (fonte != null && fonte <= 24)) &&
           (largura >= 1024 ? margem != null && margem >= 70 : margem === 0) };
     }, width);
     if (detalhe.pronto) return;
