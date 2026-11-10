@@ -905,5 +905,5 @@
 @media (max-width: 360px) {
   .dashboard-grid { gap: 8px; }
   .card-neon { padding: 12px; }
-  .card-neon .metric-value { font-size: clamp(19px, 6vw, 24px); }
+  .card-neon .metric-value { font-size: clamp(16px, 5.5vw, 20px); }
 }
