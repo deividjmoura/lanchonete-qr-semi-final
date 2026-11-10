@@ -153,19 +153,19 @@ Em 10/11/2026, o responsável confirmou o novo endereço como canal oficial tamb
 
 ### Verificação técnica — estado desta entrega
 
-- [ ] `npm run typecheck`
-- [ ] `npm run build`
-- [ ] `npm run test:regression`
-- [ ] `npm run test:landing`
-- [ ] `npm run test:e2e` (desktop/mobile, claro/escuro)
+- [x] `npm run typecheck` — CI 1384, commit `d051823`.
+- [x] `npm run build` — CI 1384, commit `d051823`.
+- [x] `npm run test:regression` — CI 1384, commit `d051823`.
+- [ ] `npm run test:landing` — integrado agora ao runner E2E; aguarda o CI desta atualização.
+- [x] `npm run test:e2e` (desktop/mobile, claro/escuro) — Chromium real, commit `d051823`.
 - [ ] PWA em navegador/dispositivo real, incluindo atualização do shell offline
 - [ ] Capturas comparativas desktop/mobile e tema claro/escuro anexadas ao PR
 
-**Limitação do ambiente de execução desta sessão:** não foi possível clonar o repositório nem executar npm/Playwright porque o ambiente de trabalho não resolveu o host GitHub. Portanto, typecheck, build, regressão e E2E permanecem pendentes de CI/execução local. Não declarar esses testes como aprovados sem logs verificáveis.
+**Verificação automatizada:** no commit `d051823`, o CI 1384 passou typecheck, build, render smokes, integridade de `dist/`, regressões e sintaxe; o workflow PostgreSQL 1179 passou todas as integrações e o E2E em Chromium real (offline, faturamento, CSRF, redefinição de senha, CSV e sistema visual). A verificação dedicada da landing foi conectada nesta atualização ao mesmo preview de produção do runner e será confirmada no próximo CI. A validação em dispositivo físico e a geração/anexação de screenshots comparativos continuam pendentes; o E2E automatizado cobre 320/375/768/1440px e temas claro/escuro nas telas do produto.
 
 ## 9. Gate obrigatório de revisão e publicação
 
-- [ ] Responsável confirma se o novo e-mail também substitui o canal institucional de privacidade/solicitações de titulares.
+- [x] Responsável confirmou em 10/11/2026 o novo e-mail como canal institucional de privacidade/solicitações de titulares.
 - [ ] Revisor compara a branch com a `main` mais recente e examina os arquivos listados nas regras explícitas da §7.
 - [ ] Revisor confirma visualmente todas as telas e breakpoints em claro/escuro.
 - [ ] Revisor confirma CI verde e ausência de regressões funcionais.

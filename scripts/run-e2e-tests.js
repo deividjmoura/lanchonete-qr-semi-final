@@ -144,6 +144,20 @@ async function main() {
         console.error(`✗ FALHOU ${teste.arquivo} (status ${r.status ?? r.signal ?? 'desconhecido'})`);
       }
     }
+    // A landing tem smoke dedicado de cenas, capturas, CTAs, foco e breakpoints.
+    // Executa no mesmo preview de produção dos E2E visuais para integrar a cobertura ao CI.
+    if (preview) {
+      console.log("\\n▶ verificar-landing.mjs");
+      const landing = spawnSync(process.execPath, [path.join(RAIZ, "scripts", "verificar-landing.mjs")], {
+        cwd: RAIZ,
+        stdio: "inherit",
+        env: { ...env, BASE_URL: preview.base },
+      });
+      if (landing.status !== 0) {
+        falhas++;
+        console.error(`✗ FALHOU verificar-landing.mjs (status ${landing.status ?? landing.signal ?? "desconhecido"})`);
+      }
+    }
   } finally {
     if (preview) preview.encerrar();
   }
