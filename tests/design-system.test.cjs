@@ -193,7 +193,8 @@ test("fontes DM Sans + Kalam + JetBrains Mono (~150 KB máx), cantos Estação e
     "brand-mark.webp",
     "brand-wordmark.webp",
   ]) {
-    assert.ok(sw.includes("'" + asset + "'"), asset + " está no precache");
+    const cachePath = asset.startsWith("./") || asset.startsWith("../") ? asset : "./" + asset;
+    assert.ok(sw.includes("'" + cachePath + "'"), asset + " está no precache");
     assert.ok(fs.existsSync(require("node:path").resolve("public/garcom-pwa", asset)), asset + " existe");
   }
   const fontBytes =
