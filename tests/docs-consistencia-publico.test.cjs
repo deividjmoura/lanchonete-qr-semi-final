@@ -130,9 +130,9 @@ test('páginas legais seguem a identidade Comanda de Chapa e o contato instituci
     assert.match(pagina, /class="brand"/, 'assinatura QR Admin');
     assert.doesNotMatch(pagina, /#166534|#b7a5ff|#101626/i, 'sem paleta visual antiga');
   }
-  assert.match(paginas[0], /mailto:servicosdegestaoqradmin@gmail\\.com/);
-  assert.match(paginas[1], /mailto:servicosdegestaoqradmin@gmail\\.com/);
-  assert.match(paginas[2], /mailto:servicosdegestaoqradmin@gmail\\.com/);
+  assert.match(paginas[0], /mailto:servicosdegestaoqradmin@gmail\.com/);
+  assert.match(paginas[1], /mailto:servicosdegestaoqradmin@gmail\.com/);
+  assert.match(paginas[2], /mailto:servicosdegestaoqradmin@gmail\.com/);
 });
 
 test('a aba Logins renderiza uma única seção de redefinição de senha', () => {
