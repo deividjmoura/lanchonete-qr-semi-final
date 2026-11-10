@@ -119,6 +119,22 @@ test('o E2E de redefinição de senha clica no rótulo real da aba de logins', (
   assert.doesNotMatch(e2e, /name: 'Senhas', exact: true/, 'rótulo antigo da aba');
 });
 
+test('páginas legais seguem a identidade Comanda de Chapa e o contato institucional atual', () => {
+  const paginas = ['public/politica-de-privacidade.html', 'public/termos-de-servico.html', 'public/termos-de-uso.html']
+    .map((arquivo) => ler(arquivo));
+  for (const pagina of paginas) {
+    assert.match(pagina, /Fraunces/);
+    assert.match(pagina, /Plus Jakarta Sans/);
+    assert.match(pagina, /#17120e/i, 'stout da identidade');
+    assert.match(pagina, /#e8501f/i, 'brasa da identidade');
+    assert.match(pagina, /class="brand"/, 'assinatura QR Admin');
+    assert.doesNotMatch(pagina, /#166534|#b7a5ff|#101626/i, 'sem paleta visual antiga');
+  }
+  assert.match(paginas[0], /mailto:servicosdegestaoqradmin@gmail\\.com/);
+  assert.match(paginas[1], /mailto:servicosdegestaoqradmin@gmail\\.com/);
+  assert.match(paginas[2], /mailto:servicosdegestaoqradmin@gmail\\.com/);
+});
+
 test('a aba Logins renderiza uma única seção de redefinição de senha', () => {
   // A PR #254 uniu a aba Google à aba de senhas e deixou o bloco antigo no
   // lugar: a tela passou a mostrar "Redefinir senha de um setor" duas vezes e
