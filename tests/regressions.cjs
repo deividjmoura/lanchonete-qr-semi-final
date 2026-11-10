@@ -71,20 +71,20 @@ test('tema respeita sistema sem armazenamento e preferência salva', () => {
   const t = theme();
   t.aplicarTema('escuro');
   assert.equal(t.saved(), 'escuro');
-  assert.equal(t.meta.content, '#0b101b');
+  assert.equal(t.meta.content, '#17120e');
   assert.equal(theme({ saved: t.saved() }).temaAtual(), 'escuro');
 });
 test('tema claro mantém o fundo suave separado da superfície dos cartões', () => {
   const t = theme();
   t.aplicarTema('claro');
-  assert.equal(t.root.style.values['--surface'], '#e4e8f1');
-  assert.equal(t.root.style.values['--surface-raised'], '#edf0f6');
+  assert.equal(t.root.style.values['--surface'], '#f1eadc');
+  assert.equal(t.root.style.values['--surface-raised'], '#faf5e9');
   assert.notEqual(
     t.root.style.values['--surface'],
     t.root.style.values['--surface-raised'],
     'fundo da página e cartão não podem se confundir',
   );
-  assert.equal(t.meta.content, '#e4e8f1');
+  assert.equal(t.meta.content, '#f1eadc');
 });
 test('inicialização antes do React respeita sistema com armazenamento bloqueado', () => {
   const script = fs.readFileSync('public/garcom-pwa/theme-init.js', 'utf8');
