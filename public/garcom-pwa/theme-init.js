@@ -12,5 +12,5 @@
   root.classList.toggle("dark", tema === "escuro");
   root.style.colorScheme = tema === "escuro" ? "dark" : "light";
   var meta = document.querySelector && document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", tema === "escuro" ? "#0b101b" : "#e4e8f1");
+  if (meta) meta.setAttribute("content", tema === "escuro" ? "#17120e" : "#f1eadc");
 })();
