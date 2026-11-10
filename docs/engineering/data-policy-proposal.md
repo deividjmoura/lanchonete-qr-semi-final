@@ -1,7 +1,7 @@
 # Proposta de política de dados pessoais e retenção
 
 **Issue:** [#44](https://github.com/deividjmoura/lanchonete-qr-semi-final/issues/44).  
-**Status:** inventário técnico com decisões do responsável registradas em **05/11/2026** (fornecedores, canal de privacidade e prazos por classe — §3.1 e §6). **Não é parecer jurídico**; os prazos ainda dependem de validação contábil/jurídica.
+**Status:** inventário técnico com decisões do responsável registradas em **05/11/2026**, com atualização de canal de privacidade aprovada em **10/11/2026**. **Não é parecer jurídico**; os prazos ainda dependem de validação contábil/jurídica.
 
 Este documento descreve o que o código e as migrations versionadas mostram. Não presume que todas as migrations estejam aplicadas em todos os ambientes, nem que um prazo legal específico se aplique ao estabelecimento. Prazos só devem ser definidos pelo responsável com validação contábil/jurídica.
 
@@ -105,7 +105,7 @@ A rota exige papel admin, opera em dry-run por padrão e exige confirmação exp
 ## 5. Atendimento a solicitações de titulares
 
 Canal e procedimento estão definidos em **05/11/2026**:
-`dejesusdemouradeivid@gmail.com` responde em até 15 dias, e o passo a passo
+`servicosdegestaoqradmin@gmail.com` responde em até 15 dias, e o passo a passo
 (papéis, protocolo sem duplicar dado pessoal, confirmação de identidade,
 consulta somente leitura, análise de vínculos, prazos e o que não prometer)
 está em **`docs/engineering/procedimento-titulares.md`**. O registro é manual
@@ -115,7 +115,7 @@ está em **`docs/engineering/procedimento-titulares.md`**. O registro é manual
 
 - [ ] Confirmar as finalidades e os campos que realmente precisam ser coletados no atendimento.
 - [x] Confirmar a identificação legal do controlador (nome empresarial e CNPJ/endereço quando aplicável) e o estabelecimento a que esta instalação corresponde. — **05/11/2026:** MEI `69.987.201 DEIVID DE JESUS DE MOURA`, CNPJ 69.987.201/0001-20 (`docs/FORNECEDOR-E-SERVICOS-QR-ADMIN.md`).
-- [x] Confirmar se o e-mail atualmente publicado como contato de privacidade é canal oficial, monitorado e autorizado para receber solicitações de titulares. — **05/11/2026:** `dejesusdemouradeivid@gmail.com`, com resposta em até 15 dias.
+- [x] Confirmar se o e-mail atualmente publicado como contato de privacidade é canal oficial, monitorado e autorizado para receber solicitações de titulares. — **05/11/2026:** canal anterior confirmado. **Atualização aprovada em 10/11/2026:** `servicosdegestaoqradmin@gmail.com` é o canal oficial, monitorado e autorizado, com resposta em até 15 dias.
 - [x] Confirmar fornecedores efetivamente contratados, suboperadores, local de armazenamento e transferências internacionais a partir dos contratos/configuração reais. — **05/11/2026:** Railway (aplicação + PostgreSQL, região `us-east`) e Google OAuth quando habilitado. Contrato de tratamento (DPA) **ainda não firmado**; nenhum outro suboperador identificado.
 - [x] Aprovar prazos por classe, após validação contábil/jurídica. — **05/11/2026:** prazos aprovados em §3.1; validação contábil/jurídica segue como etapa do responsável.
 - [x] Definir quem aprova e com que frequência se executa a purga. — **05/11/2026:** administrador da instalação, revisão a cada 90 dias, sempre com prévia.
