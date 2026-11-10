@@ -90,9 +90,6 @@ com a nova data e o motivo.
 ## 6. Pendências conhecidas
 
 - O registro é manual (planilha); não existe fila de solicitações no sistema.
-- O texto público da Política descreve o canal e informa que o prazo operacional depende de confirmação, mas não menciona
-  prazo de acuse de recebimento de 2 dias úteis (decisão: manter o
-  compromisso apenas no procedimento interno até haver histórico de
-  atendimento).
+- O texto público e este procedimento não prometem prazo fixo de acuse ou resposta enquanto o monitoramento do novo canal não for confirmado pelo responsável.
 - O enquadramento do MEI para os serviços prestados e a validação dos prazos
   seguem dependendo de confirmação contábil/jurídica.
