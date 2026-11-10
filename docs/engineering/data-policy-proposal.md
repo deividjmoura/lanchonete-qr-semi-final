@@ -105,7 +105,7 @@ A rota exige papel admin, opera em dry-run por padrão e exige confirmação exp
 ## 5. Atendimento a solicitações de titulares
 
 Canal e procedimento estão definidos em **05/11/2026**:
-`servicosdegestaoqradmin@gmail.com` responde em até 15 dias, e o passo a passo
+`servicosdegestaoqradmin@gmail.com` é o canal indicado para solicitações; o monitoramento e o prazo de resposta devem ser confirmados antes da publicação. O passo a passo
 (papéis, protocolo sem duplicar dado pessoal, confirmação de identidade,
 consulta somente leitura, análise de vínculos, prazos e o que não prometer)
 está em **`docs/engineering/procedimento-titulares.md`**. O registro é manual
