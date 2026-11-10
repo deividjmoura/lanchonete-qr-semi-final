@@ -44,7 +44,7 @@ test("páginas estáticas e PWA carregam o mesmo modal de confirmação offline"
   const sw = ler("public/garcom-pwa/sw.js");
   assert.match(sw, /garcom-pwa-shell-v\d+/);
   assert.match(sw, /'\.\/confirmacao\.js'/);
-  assert.match(sw, /const pwaAsset = url\.pathname\.startsWith\('\/garcom-pwa\/'\)/);
+  assert.match(sw, /const pwaAsset=url\.pathname\.startsWith\('\/garcom-pwa\/'\)/);
   assert.match(sw, /if\(!pwaAsset&&!sharedFont\)return/);
   const helper = ler("public/garcom-pwa/confirmacao.js");
   assert.match(helper, /role','alertdialog'/);
