@@ -128,6 +128,14 @@ try {
     assert(m.scroll <= m.inner + 1, `${largura}px sem overflow horizontal (${m.scroll}/${m.inner})`);
     if (screenshots) {
       fs.mkdirSync(OUT, { recursive: true });
+      // O teste de imagens rola até o painel de produto. Reposicione a página
+      // no topo antes da captura fullPage para evitar emenda/duplicação do
+      // documento pelo Chromium quando há cabeçalho sticky e scroll anterior.
+      await page.evaluate(() => {
+        document.documentElement.style.scrollBehavior = "auto";
+        window.scrollTo(0, 0);
+      });
+      await page.waitForFunction(() => window.scrollY === 0);
       await page.screenshot({ path: path.join(OUT, `landing-${largura}.png`), fullPage: true });
     }
   }
