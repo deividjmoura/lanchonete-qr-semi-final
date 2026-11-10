@@ -285,7 +285,6 @@ async function main() {
           await page.evaluate(() => window.scrollTo(0, 0));
 
           const measured = await page.evaluate(() => {
-            const root = getComputedStyle(document.documentElement);
             const bodyBg = getComputedStyle(document.body).backgroundColor;
             return {
               width: innerWidth,
@@ -460,10 +459,22 @@ async function main() {
           await esperarAria(1, "true");
           await esperarAria(0, "false");
         }
-
-        assert.equal(errors.length, 0, `${screen}/${scheme}: sem pageerror (${errors.join("; ")})`);
-        await context.close();
       }
+
+      assert.deepEqual(errors, [], `${scheme}: Sem erros de execução`);
+      assert.notEqual(styles.mesa.surface, styles.pwa.surface, "menu do cliente mantém sua própria superfície");
+      assert.notEqual(styles.mesa.raised, styles.pwa.raised, "menu do cliente mantém sua própria superfície elevada");
+
+      // Preferência explícita prevalece sobre o SO
+      await page.evaluate(() => localStorage.setItem("qradmin-tema", "claro"));
+      await page.emulateMedia({ colorScheme: "dark" });
+      await page.goto(base + "/garcom-pwa/?token=visual");
+      assert.equal(await page.locator("html").getAttribute("data-theme"), "claro");
+      await page.evaluate(() => localStorage.setItem("qradmin-tema", "escuro"));
+      await page.emulateMedia({ colorScheme: "light" });
+      await page.reload();
+      assert.equal(await page.locator("html").getAttribute("data-theme"), "escuro");
+      await context.close();
     }
 
     // Shell offline real: Service Worker precacheia tokens, DM Sans, Kalam, JetBrains Mono e ícones
