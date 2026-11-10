@@ -360,10 +360,20 @@ try {
   assert(await dialogo.getAttribute("aria-modal") === "true", "modal usa role=dialog + aria-modal");
   const nomeDialogo = await dialogo.getAttribute("aria-labelledby");
   assert(Boolean(nomeDialogo), "modal tem título associado (aria-labelledby)");
+  // A abertura do modal aplica o foco em um próximo frame; aguarde o
+  // comportamento real em vez de observar document.activeElement cedo demais.
+  await page.waitForFunction(
+    () => {
+      const panel = document.querySelector(".acesso-modal__panel");
+      return Boolean(panel && panel.contains(document.activeElement));
+    },
+    null,
+    { timeout: 3000 },
+  );
   assert(
     await page.evaluate(() => {
-      const p = document.querySelector(".acesso-modal__panel");
-      return Boolean(p && p.contains(document.activeElement));
+      const panel = document.querySelector(".acesso-modal__panel");
+      return Boolean(panel && panel.contains(document.activeElement));
     }),
     "foco entra no modal ao abrir",
   );
