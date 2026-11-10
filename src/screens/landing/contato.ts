@@ -5,7 +5,6 @@
  * feitas apenas neste módulo. */
 export const WHATSAPP_URL = "https://wa.me/5547996162721";
 export const EMAIL_URL = "mailto:servicosdegestaoqradmin@gmail.com";
-export const EMAIL_EXIBIDO = "servicosdegestaoqradmin@gmail.com";
 
 /* Mensagem inicial da conversa: contexto de quem chegou pela landing, sem
    prometer preço, prazo ou condição comercial. */
