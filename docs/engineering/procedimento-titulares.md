@@ -4,8 +4,7 @@
 anonimização e eliminação feitos por clientes ou funcionários do
 estabelecimento.
 **Aprovado por:** responsável pelo tratamento, em 05/11/2026.
-**Canal indicado para contato:** `servicosdegestaoqradmin@gmail.com` (confirmar monitoramento e prazo de resposta antes da publicação) (assunto "Privacidade no
-QR Admin"). O monitoramento e o prazo operacional de resposta devem ser confirmados antes da publicação.
+**Canal oficial:** `servicosdegestaoqradmin@gmail.com` (assunto "Privacidade no QR Admin"). O prazo operacional de resposta definido é de até **15 dias** após a confirmação do recebimento. O responsável deve assegurar o monitoramento da caixa e o encaminhamento das solicitações.
 **Base documental:** `docs/engineering/data-policy-proposal.md` (§3.1 e §6) e
 seções 6, 8 e 13 de `public/politica-de-privacidade.html`.
 
@@ -41,7 +40,7 @@ pedido.
 
 ## 3. Passos
 
-1. **Acusar recebimento após a confirmação de que o canal está monitorado**, informando protocolo; não assumir prazo fixo até aprovação do responsável.
+1. **Registrar o recebimento e gerar um protocolo** assim que a solicitação chegar pelo canal oficial. Confirmar que a caixa está sendo monitorada e encaminhar o caso para atendimento.
 2. **Confirmar a identidade** com informação que só o titular tem (por exemplo,
    número da mesa, data e valor aproximado do consumo, ou o e-mail cadastrado
    para a conta de funcionário). Não pedir documentos além do necessário.
@@ -67,9 +66,9 @@ pedido.
 
 | Etapa | Prazo |
 |---|---|
-| Acuse de recebimento | 2 dias úteis |
-| Resposta ao titular | prazo a confirmar pelo controlador após validação jurídica |
-| Reavaliação de pedido recusado | prazo a confirmar pelo controlador após validação jurídica |
+| Acuse de recebimento | No primeiro retorno ao titular, com o número de protocolo |
+| Resposta ao titular | até **15 dias** após a confirmação do recebimento (prazo operacional do fornecedor) |
+| Reavaliação de pedido recusado | conforme a legislação aplicável e a orientação do controlador |
 
 Se o prazo não puder ser cumprido, o titular é informado antes do vencimento,
 com a nova data e o motivo.
@@ -90,6 +89,6 @@ com a nova data e o motivo.
 ## 6. Pendências conhecidas
 
 - O registro é manual (planilha); não existe fila de solicitações no sistema.
-- O texto público e este procedimento não prometem prazo fixo de acuse ou resposta enquanto o monitoramento do novo canal não for confirmado pelo responsável.
+- O responsável deve manter a caixa oficial monitorada e garantir o encaminhamento dos pedidos para que o prazo operacional de até 15 dias seja cumprido.
 - O enquadramento do MEI para os serviços prestados e a validação dos prazos
   seguem dependendo de confirmação contábil/jurídica.
