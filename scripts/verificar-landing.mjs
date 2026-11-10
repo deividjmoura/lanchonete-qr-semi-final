@@ -91,6 +91,15 @@ try {
   assert(/Kalam/.test(fontes.serifa), "ênfase manuscrita em Kalam");
 
   /* --- 2. Capturas reais carregadas --------------------------------------- */
+  // A captura administrativa usa loading="lazy": aproxime o painel da viewport
+  // antes de exigir naturalWidth, para testar a imagem sem desativar lazy-load.
+  await page.locator(".product-stage").scrollIntoViewIfNeeded();
+  await page.waitForFunction(
+    () => [...document.querySelectorAll(".hero-art img, .product-stage img")]
+      .every((img) => img.complete && img.naturalWidth > 0),
+    null,
+    { timeout: 10000 },
+  );
   const capturas = await page.evaluate(() =>
     [...document.querySelectorAll(".hero-art img, .product-stage img")].map((img) => ({
       src: img.getAttribute("src"),
@@ -439,8 +448,8 @@ try {
       filete: getComputedStyle(document.querySelector(".hero__lead")).color,
     }));
     assert(tema.atributo === "escuro", "tema escuro do produto é aplicado ao documento");
-    assert(tema.raiz === "rgb(245, 242, 235)", "landing mantém o papel claro no tema escuro");
-    assert(tema.tinta === "rgb(32, 44, 39)", "texto da landing mantém a tinta editorial");
+    assert(tema.raiz === "rgb(20, 38, 34)", "landing consome a superfície escura Estação");
+    assert(tema.tinta === "rgb(236, 244, 238)", "texto da landing consome a tinta clara Estação");
     assert(tema.filete !== "rgb(255, 255, 255)" && tema.filete !== "rgb(0, 0, 0)", "texto secundário legível");
     /* Não fechamos o contexto aqui: no Chromium single-process do sandbox
        fechar um contexto derruba o navegador. Ele é encerrado no finally. */
