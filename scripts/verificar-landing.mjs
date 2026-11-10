@@ -523,9 +523,20 @@ try {
       return false;
     }
   }, { timeout: 5000 });
+  /* location.replace() aborta o ciclo de carga do documento anterior.
+     Aguarde a troca efetiva do frame principal, sem depender do evento "load"
+     da navegação que foi substituída. */
+  const frameNoPwa = page2.waitForEvent("framenavigated", (frame) => {
+    if (frame !== page2.mainFrame()) return false;
+    try {
+      return new URL(frame.url()).pathname === "/garcom-pwa/";
+    } catch {
+      return false;
+    }
+  }, { timeout: 5000 });
   await page2.goto(BASE + "/#/garcom/" + tokenGarcom, { waitUntil: "domcontentloaded" });
   const requestPwa = await navegacaoPwa;
-  await page2.waitForURL((url) => url.pathname.includes("/garcom-pwa/"), { timeout: 5000 });
+  await frameNoPwa;
   assert(page2.url().includes("/garcom-pwa/"), "/#/garcom/<token> mantém o redirecionamento ao PWA");
   assert(new URL(requestPwa.url()).searchParams.get("token") === tokenGarcom, "redirecionamento envia o token individual ao PWA");
   await page2.waitForFunction((token) => localStorage.getItem("waiter-token") === token, tokenGarcom, { timeout: 5000 });
