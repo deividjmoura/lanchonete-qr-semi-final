@@ -43,4 +43,4 @@
 | `03-plano-correcao-e-execucao.md` | Plano de execução |
 | `04-relatorio-implementacao.md` | Relatório da implementação parcial |
 | `capturas/`, `pilotos/` | Imagens de apoio daquela fase |
-| `rebranding/` | **Não é histórico:** comparações antes e depois (`main` × "Passe") usadas em `REBRANDING.md` |
+| `rebranding/` | **Não é histórico:** comparações antes e depois (`main` × "Passe") e o cardápio da produção × o do PR, usadas em `REBRANDING.md` |

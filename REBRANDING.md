@@ -8,7 +8,8 @@ mesclar.
 |---|---|
 | Base analisada | `main` em `bc9727ef336888fa39634f5eeb579af940c2c387` (merge do PR #295) |
 | Branch | `arena/e3918b29-lanchonete-qr-semi-final` |
-| Estado | Pull request aberto para `main`. **Sem merge e sem deploy.** |
+| Estado | Pull request #298 aberto para `main`, sem merge. **Mesclar na `main` publica em produção** (seção 14, regra 7) |
+| Referência do cardápio | A `main` em `bc9727e`, **não a produção**, que estava um merge atrás (seção 4.5) |
 | Exceção absoluta | Cardápio do cliente (`#/mesa/:token`): nenhuma diferença visual ou funcional |
 | Fora do escopo | API, autenticação, banco, pagamentos, regras de negócio, SSE, voz, sincronização, offline |
 
@@ -278,6 +279,37 @@ Dos 21 módulos compartilhados que também desenham o cardápio, 7 mudaram: `ind
 `public/garcom-pwa/theme-init.js`, `src/App.tsx`, `src/components/ui.tsx`, `src/lib/identidade.ts`,
 `src/lib/tema.ts` e `src/main.tsx`. O efeito deles sobre o cardápio é exatamente o que a tabela mede.
 
+### 4.5 A referência é a `main`, não a produção
+
+Tudo acima compara com a `main` em `bc9727e`. No dia deste PR (10/11/2026), a produção
+(`qradmin.up.railway.app`) não estava nesse commit: servia `a044980` (PR #294). O deploy de `bc9727e`
+(PR #295, "Comanda de Chapa") ficou cerca de cinco minutos no ar em 9/11/2026, e em seguida o deploy
+anterior foi reativado.
+
+O #295 alterou o cardápio, e este PR preserva o cardápio como o #295 o deixou. Comparado com o que a
+produção serve, ele difere nas 36 combinações (de 1% a 19% dos pixels):
+
+- o preço sobre a foto do produto trocou a fonte de título pela monoespaçada;
+- o botão de tema, o de fechar e o seletor de quantidade do carrinho cresceram para 44px (eram 40, 40
+  e 36px), e o que vem abaixo deles no carrinho desceu cerca de 8px;
+- os raios diminuíram (`--radius-lg` de 24 para 20px, `--radius-md` de 20 para 16px);
+- os tokens de marca passaram de violeta para brasa, e o anel de foco, de violeta para tinta escura.
+
+![Cardápio e carrinho no celular: em cada par, a produção à esquerda e este PR à direita](docs/design/rebranding/cardapio-producao-x-pr.png)
+
+*Em cada par, à esquerda a produção (`a044980`) e à direita este PR.*
+
+**Consequência:** publicar este PR muda o cardápio que o cliente vê hoje. A causa é o #295, que já está
+na `main`, e não o rebranding. Para o cardápio ficar igual ao da produção, a referência teria de ser
+`a044980` (seção 13, "Mudar a referência"), e os componentes compartilhados teriam de reproduzir, dentro
+do cardápio, a marcação daquele commit.
+
+Para reproduzir (falha em 36 de 36, como esperado):
+
+```bash
+npm run test:cardapio-intacto -- --base a044980511e5b0420001eac77b5f31d1e66ec53a
+```
+
 ---
 
 ## 5. O que não mudou
@@ -448,6 +480,8 @@ de `git add dist`. O motivo é o CI, que regrava a pasta antes dos testes (ponto
 
 ## 11. Limitações conhecidas
 
+- **Cardápio em relação à produção.** Idêntico ao da `main`, não ao que a produção servia no dia do PR
+  (seção 4.5).
 - **Identificador do link do garçom.** Em telas estreitas aparece abreviado com reticências, como na
   `main` (a marcação é a mesma). O botão "Copiar link" entrega o valor completo.
 - **Botão "Comprovante" nas tabelas de Funções, no computador.** Tem 16px de altura, abaixo dos 24px
@@ -489,6 +523,11 @@ de `git add dist`. O motivo é o CI, que regrava a pasta antes dos testes (ponto
    comentário do `ci.yml` sobre nomes de arquivo diferentes entre a máquina local e o CI (aqui, o
    build de produção sai idêntico byte a byte a cada vez). Para o CI exercitar o que vai ao ar, basta
    `env: NODE_ENV: production` nos dois passos de build. Não foi feito aqui porque muda o alvo dos E2E.
+7. **Mesclar publica, e a produção está um merge atrás da `main`.** O Railway publica cada commit que
+   entra na `main` cerca de um minuto depois (seção 14, regra 7). Como a produção ainda está em
+   `a044980`, o deploy deste PR leva junto o que o #295 mudou, inclusive no cardápio do cliente (seção
+   4.5). Se o cardápio precisa ficar igual ao que o cliente vê hoje, isso tem de ser resolvido antes do
+   merge.
 
 ---
 
@@ -565,7 +604,19 @@ painel, os testes de identidade falham. Não os reative para o teste passar: ree
 
 **6. Decida entre este PR, o #296 e o #297** antes de mesclar qualquer um (seção 12).
 
-**7. Deploy é decisão separada.** Mesclar não publica nada.
+**7. Mesclar é publicar.** O Railway faz o deploy de produção de cada commit que entra na `main`, cerca
+de um minuto depois do merge: é o que mostra o histórico de deployments do GitHub para os PRs #292 a
+#295. Não existe etapa de deploy separada. Mescle só quando quiser a identidade nova no ar, e com a
+caixa de e-mail criada. Antes, confira em que commit a produção está: se ela estiver atrás da `main`, o
+deploy leva junto tudo o que ainda não foi publicado (seção 4.5).
+
+```bash
+# deployments de produção, do mais novo para o mais antigo
+gh api "repos/deividjmoura/lanchonete-qr-semi-final/deployments?per_page=5" \
+  --jq '.[] | "\(.id) \(.sha[0:7]) \(.created_at)"'
+# estado atual de um deles: "success" é o que está no ar, "inactive" é o que saiu
+gh api "repos/deividjmoura/lanchonete-qr-semi-final/deployments/<id>/statuses" --jq '.[0].state'
+```
 
 ---
 
