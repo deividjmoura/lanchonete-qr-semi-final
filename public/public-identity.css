@@ -86,3 +86,15 @@ footer a { color: var(--stage-teal); }
   border-color: var(--stage-line) !important;
   color: var(--stage-ink) !important;
 }
+
+.contact-email-icon {
+  display: inline-flex;
+  width: 1.35em;
+  height: 1.35em;
+  margin-inline: .25em;
+  align-items: center;
+  justify-content: center;
+  color: var(--brand);
+  vertical-align: -0.25em;
+}
+.contact-email-icon svg { display: block; width: 100%; height: 100%; }
