@@ -342,23 +342,8 @@
     transform: translateX(0);
     pointer-events: auto;
   }
-  /* O item ativo se conecta à página como uma aba contínua. */
-  .ops-nav-item[data-active="true"]::before, .ops-nav-item[data-active="true"]::after {
-    content: "";
-    position: absolute;
-    right: 0;
-    width: var(--sidebar-notch);
-    height: var(--sidebar-notch);
-    pointer-events: none;
-  }
-  .ops-nav-item[data-active="true"]::before {
-    top: calc(-1 * var(--sidebar-notch));
-    background: radial-gradient(circle at 0 0, transparent var(--sidebar-notch), var(--surface) calc(var(--sidebar-notch) + 0.5px));
-  }
-  .ops-nav-item[data-active="true"]::after {
-    bottom: calc(-1 * var(--sidebar-notch));
-    background: radial-gradient(circle at 0 100%, transparent var(--sidebar-notch), var(--surface) calc(var(--sidebar-notch) + 0.5px));
-  }
+  .ops-nav-item[data-active="true"]::before,
+  .ops-nav-item[data-active="true"]::after { display: none; }
 }
 
 
