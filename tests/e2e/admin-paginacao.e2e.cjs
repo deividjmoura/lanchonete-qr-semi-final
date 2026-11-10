@@ -99,8 +99,8 @@ async function main() {
     });
     // Dashboard completo, sem mock: React → servidor autenticado → PostgreSQL.
     await page.goto(base + '/#/admin', { waitUntil: 'load' });
-    await page.waitForFunction(() => document.querySelector('.card-neon .metric-value')?.textContent?.includes('R$'));
-    assert.equal(await page.locator('.card-neon').count(), 12);
+    await page.waitForFunction(() => document.querySelector('.indicador .metric-value')?.textContent?.includes('R$'));
+    assert.equal(await page.locator('.indicador').count(), 12);
     const filtroDashboard = page.getByRole('group', { name: 'Período do dashboard' });
     const semanaReal = page.waitForResponse((r) => r.url().includes('/api/admin/dashboard?periodo=semana') && r.status() === 200);
     await filtroDashboard.getByRole('button', { name: 'Semana' }).click();

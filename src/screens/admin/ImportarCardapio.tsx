@@ -268,7 +268,7 @@ export function ImportarCardapio({
                     : "border-line-strong bg-surface-sunken/40",
                 )}
               >
-                <span className="inline-flex size-11 items-center justify-center rounded-full border border-line bg-surface-raised text-brand-ink">
+                <span className="inline-flex size-11 items-center justify-center rounded-sm border border-line bg-surface-raised text-brand-ink">
                   <CloudArrowUp size={22} weight="duotone" />
                 </span>
                 <p className="text-sm font-semibold text-text">Arraste o arquivo aqui</p>
@@ -282,7 +282,7 @@ export function ImportarCardapio({
                     onChange={(e) => void processarArquivo(e.target.files?.[0])}
                   />
                 </label>
-                <p className="font-mono text-[10px] uppercase tracking-wider text-text-subtle">
+                <p className="font-mono text-[11px] uppercase tracking-wider text-text-subtle">
                   CSV UTF-8 · até 2 MB
                 </p>
               </div>
@@ -347,7 +347,7 @@ export function ImportarCardapio({
                     <p className="font-display text-3xl font-bold leading-none text-text tnum">
                       {previa.resumo.produtos}
                     </p>
-                    <p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                    <p className="mt-1 font-mono text-[11px] uppercase tracking-wider text-text-muted">
                       Produtos encontrados
                     </p>
                   </div>
@@ -355,7 +355,7 @@ export function ImportarCardapio({
                     <p className="font-display text-3xl font-bold leading-none text-text tnum">
                       {previa.resumo.categorias}
                     </p>
-                    <p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                    <p className="mt-1 font-mono text-[11px] uppercase tracking-wider text-text-muted">
                       Categorias encontradas
                     </p>
                   </div>
@@ -429,7 +429,7 @@ export function ImportarCardapio({
 
                 {previa.ok && (
                   <fieldset className="space-y-2">
-                    <legend className="mb-1 font-mono text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                    <legend className="mb-1 font-mono text-[11px] font-bold uppercase tracking-wider text-text-muted">
                       Como aplicar
                     </legend>
                     <label

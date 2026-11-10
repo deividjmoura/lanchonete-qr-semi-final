@@ -136,7 +136,9 @@ test('as páginas legais identificam o fornecedor real sem expor dados pessoais 
 
   assert.match(juntas, /69\.987\.201 DEIVID DE JESUS DE MOURA/);
   assert.match(juntas, /69\.987\.201\/0001-20/, 'deve usar o CNPJ confirmado no CCMEI');
-  assert.match(juntas, /dejesusdemouradeivid@gmail\.com/);
+  // Um só endereço de contato em todo o produto; a lista completa de lugares
+  // onde ele aparece é conferida por tests/contato-oficial.test.cjs.
+  assert.match(juntas, /servicosdegestaoqradmin@gmail\.com/);
   // Formato genérico: o CPF real nunca precisa aparecer no repositório, nem
   // dentro da asserção que o proíbe.
   assert.doesNotMatch(juntas, /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/, 'CPF não deve ser publicado');

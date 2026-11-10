@@ -108,7 +108,7 @@ export default function Garcom({ token }: { token: string }) {
         </section>
 
         <aside className="rounded-md border border-line bg-surface-raised overflow-hidden">
-          <div className="px-4 py-3.5 border-b border-dashed border-line-strong flex items-center justify-between">
+          <div className="px-4 py-3.5 border-b border-line-strong flex items-center justify-between">
             <h3 className="font-display text-xl font-bold tracking-tight text-text flex items-center gap-2">
               <Checks size={18} className="text-status-success-ink" /> Últimas entregas
             </h3>
@@ -184,10 +184,10 @@ function CardPronto({
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.22, 1.18, 0.36, 1] }}
+      transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.2, 0, 0, 1] }}
       className="rounded-md border border-line bg-surface-raised overflow-hidden"
     >
-      <div className="px-4 py-3.5 bg-surface-sunken border-b border-dashed border-line-strong flex items-start justify-between gap-2">
+      <div className="px-4 py-3.5 bg-surface-sunken border-b border-line-strong flex items-start justify-between gap-2">
         <div>
           <p className="font-mono text-4xl font-extrabold leading-none text-brand-ink">
             {pedido.mesaNome.replace("Mesa ", "").padStart(2, "0")}
@@ -210,7 +210,7 @@ function CardPronto({
         </div>
       </div>
 
-      <ul className="px-4 py-3 divide-y divide-dashed divide-line">
+      <ul className="px-4 py-3 divide-y divide-line">
         {pedido.itens.map((i) => {
           const st = labelItemStatus(i.status);
           return (

@@ -12,6 +12,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { Btn } from "../../components/ui";
 import { api } from "../../lib/api";
+import { QR_SVG_COLORS } from "../../lib/tema";
 import { usePub } from "../../store/usePub";
 import { cn } from "../../utils/cn";
 
@@ -220,7 +221,7 @@ export function SegurancaConta() {
         {estado && (
           <span
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide",
+              "inline-flex items-center gap-1.5 rounded-xs border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide",
               estado.ativo
                 ? "border-status-success-border bg-status-success-surface text-status-success-ink"
                 : "border-line-strong bg-surface-sunken text-text-muted",
@@ -353,8 +354,15 @@ export function SegurancaConta() {
           </p>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-            <div className="mx-auto rounded-sm border border-line bg-white p-2.5 sm:mx-0">
-              <QRCodeSVG value={passo.uri} size={148} level="M" title="QR do 2FA" />
+            <div className="qr-quiet-zone mx-auto sm:mx-0">
+              <QRCodeSVG
+                value={passo.uri}
+                size={148}
+                level="M"
+                title="QR do 2FA"
+                fgColor={QR_SVG_COLORS.fg}
+                bgColor={QR_SVG_COLORS.bg}
+              />
             </div>
             <div className="min-w-0 flex-1 space-y-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">

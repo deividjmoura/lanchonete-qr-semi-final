@@ -1,11 +1,9 @@
 import type { ButtonHTMLAttributes, MouseEvent, ReactNode } from "react";
 import { Icon } from "./Icon";
 
-/* CTA de acesso do sistema.
-   Antes (apresentação independente) ele apontava para uma URL externa lida de
-   VITE_QRADMIN_APP_URL. Agora ele abre o modal de autenticação real do QR
-   Admin, dentro da própria aplicação: nenhuma rota, sessão ou validação nova
-   é criada aqui. */
+/* CTA de acesso do sistema: abre o modal de autenticação real do QR Admin,
+   dentro da própria aplicação. Nenhuma rota, sessão ou validação nova é
+   criada aqui. */
 export function AccessButton({
   children = "Acessar o sistema",
   className = "",

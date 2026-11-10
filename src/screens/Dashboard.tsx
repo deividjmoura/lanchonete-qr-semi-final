@@ -1,6 +1,6 @@
 import {
-  Armchair, ArrowUpRight, ArrowsOut, ChartBar, CookingPot, CreditCard,
-  CurrencyCircleDollar, Eye, EyeSlash, HandCoins, Receipt, ShoppingBagOpen, Sparkle,
+  Armchair, ArrowsOut, ChartBar, CookingPot, CreditCard,
+  CurrencyCircleDollar, Eye, EyeSlash, HandCoins, Receipt, ShoppingBagOpen, Info,
   Timer, TrendUp, Trophy, Users, Wallet, X,
 } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
@@ -26,7 +26,8 @@ type CardId = "faturamento" | "pedidos" | "ticket" | "contas" | "servico" | "pag
 type Icone = ComponentType<{ size?: number; weight?: "regular" | "bold" | "duotone"; className?: string }>;
 type Card = {
   id: CardId; label: string; valor: string; sub: string; Icon: Icone;
-  cor: "violeta" | "ciano" | "lima" | "rosa" | "laranja";
+  /** "valor" = dinheiro; "volume" = contagem ou tempo. */
+  tom: "valor" | "volume";
   variacao?: string; atual?: boolean;
 };
 
@@ -135,44 +136,6 @@ const statusNome = (status: string) => ({
   entregue: "Entregues", cancelado: "Cancelados",
 }[status] || status.replace(/_/g, " "));
 
-/** O ponteiro é global, passivo e processado no máximo uma vez por frame.
- * Não há atualização do React durante o movimento nem listener com reduced motion. */
-function useParallax(ref: React.RefObject<HTMLDivElement | null>) {
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    let frame = 0;
-    let x = 0;
-    let y = 0;
-    const aplicar = () => {
-      frame = 0;
-      el.style.setProperty("--dash-hx", x.toFixed(3));
-      el.style.setProperty("--dash-hy", y.toFixed(3));
-    };
-    const mover = (e: MouseEvent) => {
-      x = Math.max(-1, Math.min(1, (e.clientX / window.innerWidth - 0.5) * 2));
-      y = Math.max(-1, Math.min(1, (e.clientY / window.innerHeight - 0.5) * 2));
-      if (!frame) frame = requestAnimationFrame(aplicar);
-    };
-    const configurar = () => {
-      window.removeEventListener("mousemove", mover);
-      if (frame) cancelAnimationFrame(frame);
-      frame = 0;
-      el.style.setProperty("--dash-hx", "0");
-      el.style.setProperty("--dash-hy", "0");
-      if (!media.matches) window.addEventListener("mousemove", mover, { passive: true });
-    };
-    configurar();
-    media.addEventListener("change", configurar);
-    return () => {
-      window.removeEventListener("mousemove", mover);
-      media.removeEventListener("change", configurar);
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, [ref]);
-}
-
 type GradeMetrics = { rect: DOMRect; passoX: number; passoY: number; colunas: number };
 
 /** Medidas reais da grade. Arraste e redimensionamento usam esta mesma régua,
@@ -197,7 +160,7 @@ function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggl
   const iniciarResize = (event: React.PointerEvent<HTMLButtonElement>) => {
     event.preventDefault(); event.stopPropagation();
     const grid = event.currentTarget.closest(".dashboard-grid") as HTMLElement | null;
-    const card = event.currentTarget.closest(".card-neon") as HTMLElement | null;
+    const card = event.currentTarget.closest(".indicador") as HTMLElement | null;
     if (!grid || !card) return;
     const grade = medirGrade(grid);
     resizeStart.current = {
@@ -216,11 +179,11 @@ function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggl
     resizeStart.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
-  return <article className={`card-neon card-neon--${card.cor} ${editando ? "card-neon--editing" : ""} ${layout.visible ? "" : "card-neon--hidden"}`}
+  return <article className={`indicador indicador--${card.tom} ${editando ? "indicador--editing" : ""} ${layout.visible ? "" : "indicador--hidden"}`}
     style={{ gridColumn: `${layout.x + 1} / span ${layout.w}`, gridRow: `${layout.y + 1} / span ${layout.h}`, order: layout.y * 12 + layout.x }}
     draggable={editando}
     onDragStart={(event) => {
-      if (!editando || (event.target as HTMLElement).closest(".card-neon__resize-handle, .card-neon__visibility")) { event.preventDefault(); return; }
+      if (!editando || (event.target as HTMLElement).closest(".indicador__resize-handle, .indicador__visibility")) { event.preventDefault(); return; }
       event.dataTransfer.effectAllowed = "move";
       event.dataTransfer.setData("text/plain", card.id);
       onDragStart(card.id, event);
@@ -228,21 +191,24 @@ function Cartao({ card, disponivel, onClick, editando, layout, onResize, onToggl
     onDragEnd={onDragEnd}
     onPointerMove={moverResize} onPointerUp={finalizarResize} onPointerCancel={finalizarResize}
     data-dashboard-card={card.id} data-visible={layout.visible ? "true" : "false"}>
-    <button type="button" className="card-neon__open" onClick={() => { if (!editando) onClick(); }}
+    <button type="button" className="indicador__open" onClick={() => { if (!editando) onClick(); }}
       disabled={!disponivel || (!editando && !layout.visible)}
       aria-haspopup="dialog" aria-label={`Detalhar ${card.label}: ${card.valor}`}>
-      <span className="card-neon__top"><span className="card-neon__icon"><Icon size={22} weight="duotone" /></span><ArrowUpRight className="card-neon__arrow" size={18} /></span>
-      <span className="card-neon__label">{card.label}</span><span className="metric-value num-extruded">{card.valor}</span>
-      <span className="card-neon__bottom"><span className="card-neon__sub">{card.sub}</span>
-        {card.variacao && <span className="card-neon__change">{card.variacao}</span>}
-        {card.atual && <span className="card-neon__live"><span /> Agora</span>}
+      <span className="indicador__top">
+        <Icon className="indicador__icon" size={18} weight="bold" />
+        <span className="indicador__label">{card.label}</span>
+      </span>
+      <span className="metric-value dado">{card.valor}</span>
+      <span className="indicador__bottom"><span className="indicador__sub">{card.sub}</span>
+        {card.variacao && <span className="indicador__change">{card.variacao}</span>}
+        {card.atual && <span className="indicador__live"><span /> Agora</span>}
       </span>
     </button>
     {editando && <>
-      <button type="button" className="card-neon__visibility" onClick={onToggleVisibility}
+      <button type="button" className="indicador__visibility" onClick={onToggleVisibility}
         aria-label={layout.visible ? `Ocultar ${card.label}` : `Exibir ${card.label}`} aria-pressed={layout.visible}
         title={layout.visible ? "Ocultar card" : "Exibir card"}>{layout.visible ? <Eye size={17} weight="bold" /> : <EyeSlash size={17} weight="bold" />}</button>
-      <button type="button" className="card-neon__resize-handle" aria-label={`Arraste para redimensionar ${card.label}`}
+      <button type="button" className="indicador__resize-handle" aria-label={`Arraste para redimensionar ${card.label}`}
         title="Arraste para ajustar largura e altura" onPointerDown={iniciarResize}><ArrowsOut size={15} weight="bold" /></button>
     </>}
   </article>;
@@ -368,8 +334,8 @@ function Grafico({ dias, periodo, loading }: { dias: DiaDashboard[]; periodo: Pe
   const compacto = dias.length > 7;
   return <section aria-label={periodo === "hoje" ? "Semana da casa" : "Faturamento por dia"} className="dash-panel dash-chart">
     <div className="dash-panel__head">
-      <div><p className="dash-kicker">EVOLUÇÃO</p><h3>{periodo === "hoje" ? "Semana da casa" : "Faturamento por dia"}</h3><p>{periodo === "hoje" ? "Últimos 7 dias · histórico independente do filtro" : "Contas fechadas no período selecionado"}</p></div>
-      <span className="dash-panel__icon"><ChartBar size={19} weight="duotone" /></span>
+      <div><p className="dash-kicker rotulo">Evolução</p><h3>{periodo === "hoje" ? "Semana da casa" : "Faturamento por dia"}</h3><p>{periodo === "hoje" ? "Últimos 7 dias · histórico independente do filtro" : "Contas fechadas no período selecionado"}</p></div>
+      <ChartBar className="dash-panel__icon" size={20} weight="bold" aria-hidden="true" />
     </div>
     {dias.length ? <div className="dash-chart__scroll">
       <div className="dash-chart__bars" style={compacto ? { minWidth: `${dias.length * 42}px` } : undefined}>
@@ -453,9 +419,7 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
   const [arrastado, setArrastado] = useState<WidgetId | null>(null);
   const [previa, setPrevia] = useState<DashboardRect | null>(null);
   const arraste = useRef<{ id: WidgetId | null; offsetX: number; offsetY: number }>({ id: null, offsetX: 0, offsetY: 0 });
-  const stage = useRef<HTMLDivElement>(null);
   const dialogo = useRef<HTMLDialogElement>(null);
-  useParallax(stage);
 
   useEffect(() => {
     try {
@@ -517,20 +481,20 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
   const primeiro = dash?.topProdutos[0];
   const qtdFila = agora ? agora.itens.aguardando + agora.itens.preparo + agora.itens.prontos + agora.itens.retirados : undefined;
   const metricas: Card[] = [
-    { id: "faturamento", label: "Faturamento", valor: valor(r?.faturamento, BRL), sub: dash ? "Contas fechadas" : carregando, Icon: CurrencyCircleDollar, cor: "violeta", variacao: compara(r?.faturamento, a?.faturamento) },
-    { id: "pedidos", label: "Pedidos", valor: valor(r?.pedidosTotal, (n) => numero(n, 0)), sub: dash ? "Criados no período" : carregando, Icon: ShoppingBagOpen, cor: "ciano", variacao: compara(r?.pedidosTotal, a?.pedidosTotal) },
-    { id: "ticket", label: "Ticket médio", valor: r && r.contasFechadas ? BRL(r.ticketMedio) : "—", sub: dash ? "Por conta fechada" : carregando, Icon: TrendUp, cor: "lima", variacao: r && a ? variacao(r.contasFechadas ? r.ticketMedio : null, a.contasFechadas ? a.ticketMedio : null) : undefined },
-    { id: "contas", label: "Contas fechadas", valor: valor(r?.contasFechadas, (n) => numero(n, 0)), sub: dash ? "Finalizadas no caixa" : carregando, Icon: Receipt, cor: "rosa", variacao: compara(r?.contasFechadas, a?.contasFechadas) },
-    { id: "servico", label: "Taxa de serviço", valor: valor(r?.servicoTotal, BRL), sub: dash ? "Registrada no fechamento" : carregando, Icon: HandCoins, cor: "laranja", variacao: compara(r?.servicoTotal, a?.servicoTotal) },
-    { id: "pagamentos", label: "Pagamentos", valor: valor(registrado, BRL), sub: dash ? "Valores registrados por forma" : carregando, Icon: CreditCard, cor: "ciano" },
-    { id: "produtos", label: "Mais pedidos", valor: primeiro ? `${primeiro.quantidade} un.` : "—", sub: dash ? (primeiro?.nome || "Nenhum item no período") : carregando, Icon: Trophy, cor: "lima" },
-    { id: "entrega", label: "Tempo de entrega", valor: dash?.entrega.mediaMinutos != null ? `${numero(dash.entrega.mediaMinutos)} min` : "—", sub: dash ? (dash.entrega.unidades ? `${dash.entrega.unidades} unidades com horário` : "Sem horários registrados") : carregando, Icon: Timer, cor: "rosa", variacao: dash ? variacao(dash.entrega.mediaMinutos, dash.entregaAnterior.mediaMinutos) : undefined },
+    { id: "faturamento", label: "Faturamento", valor: valor(r?.faturamento, BRL), sub: dash ? "Contas fechadas" : carregando, Icon: CurrencyCircleDollar, tom: "valor", variacao: compara(r?.faturamento, a?.faturamento) },
+    { id: "pedidos", label: "Pedidos", valor: valor(r?.pedidosTotal, (n) => numero(n, 0)), sub: dash ? "Criados no período" : carregando, Icon: ShoppingBagOpen, tom: "volume", variacao: compara(r?.pedidosTotal, a?.pedidosTotal) },
+    { id: "ticket", label: "Ticket médio", valor: r && r.contasFechadas ? BRL(r.ticketMedio) : "—", sub: dash ? "Por conta fechada" : carregando, Icon: TrendUp, tom: "valor", variacao: r && a ? variacao(r.contasFechadas ? r.ticketMedio : null, a.contasFechadas ? a.ticketMedio : null) : undefined },
+    { id: "contas", label: "Contas fechadas", valor: valor(r?.contasFechadas, (n) => numero(n, 0)), sub: dash ? "Finalizadas no caixa" : carregando, Icon: Receipt, tom: "volume", variacao: compara(r?.contasFechadas, a?.contasFechadas) },
+    { id: "servico", label: "Taxa de serviço", valor: valor(r?.servicoTotal, BRL), sub: dash ? "Registrada no fechamento" : carregando, Icon: HandCoins, tom: "valor", variacao: compara(r?.servicoTotal, a?.servicoTotal) },
+    { id: "pagamentos", label: "Pagamentos", valor: valor(registrado, BRL), sub: dash ? "Valores registrados por forma" : carregando, Icon: CreditCard, tom: "valor" },
+    { id: "produtos", label: "Mais pedidos", valor: primeiro ? `${primeiro.quantidade} un.` : "—", sub: dash ? (primeiro?.nome || "Nenhum item no período") : carregando, Icon: Trophy, tom: "volume" },
+    { id: "entrega", label: "Tempo de entrega", valor: dash?.entrega.mediaMinutos != null ? `${numero(dash.entrega.mediaMinutos)} min` : "—", sub: dash ? (dash.entrega.unidades ? `${dash.entrega.unidades} unidades com horário` : "Sem horários registrados") : carregando, Icon: Timer, tom: "volume", variacao: dash ? variacao(dash.entrega.mediaMinutos, dash.entregaAnterior.mediaMinutos) : undefined },
   ];
   const operacao: Card[] = [
-    { id: "consumo", label: "Consumo em aberto", valor: valor(agora?.consumoEntregue, BRL), sub: dash ? "Itens entregues em comandas abertas" : carregando, Icon: Wallet, cor: "violeta", atual: true },
-    { id: "mesas", label: "Mesas ocupadas", valor: agora ? `${agora.mesas.ocupadas} / ${agora.mesas.total}` : "—", sub: agora ? `${agora.mesas.livres} livres no salão` : carregando, Icon: Armchair, cor: "ciano", atual: true },
-    { id: "garcons", label: "Garçons ativos", valor: valor(agora?.garconsAtivos, (n) => numero(n, 0)), sub: dash ? "Cadastros habilitados" : carregando, Icon: Users, cor: "lima", atual: true },
-    { id: "fila", label: "Itens em operação", valor: valor(qtdFila, (n) => numero(n, 0)), sub: agora ? `${agora.itens.preparo} em preparo · ${agora.itens.prontos} prontos` : carregando, Icon: CookingPot, cor: "laranja", atual: true },
+    { id: "consumo", label: "Consumo em aberto", valor: valor(agora?.consumoEntregue, BRL), sub: dash ? "Itens entregues em comandas abertas" : carregando, Icon: Wallet, tom: "valor", atual: true },
+    { id: "mesas", label: "Mesas ocupadas", valor: agora ? `${agora.mesas.ocupadas} / ${agora.mesas.total}` : "—", sub: agora ? `${agora.mesas.livres} livres no salão` : carregando, Icon: Armchair, tom: "volume", atual: true },
+    { id: "garcons", label: "Garçons ativos", valor: valor(agora?.garconsAtivos, (n) => numero(n, 0)), sub: dash ? "Cadastros habilitados" : carregando, Icon: Users, tom: "volume", atual: true },
+    { id: "fila", label: "Itens em operação", valor: valor(qtdFila, (n) => numero(n, 0)), sub: agora ? `${agora.itens.preparo} em preparo · ${agora.itens.prontos} prontos` : carregando, Icon: CookingPot, tom: "volume", atual: true },
   ];
   const todos = [...metricas, ...operacao];
   const iniciarArraste = (id: WidgetId, event: React.DragEvent<HTMLElement>) => {
@@ -633,15 +597,15 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
   const maxTop = Math.max(1, ...top.map((p) => p.quantidade));
   const diasGrafico = dash ? (periodo === "hoje" ? dash.historico : dash.porDia) : [];
 
-  return <div className="dashboard-stage" ref={stage}>
+  return <div className="dashboard-stage">
     <header className="dashboard-intro">
       <div className="dashboard-intro__copy">
-        <p className="dash-eyebrow"><span /> PAINEL DE CONTROLE <span className="dash-eyebrow__sep">/</span> VISÃO GERAL</p>
-        <h2>Os números da sua casa<span>.</span></h2>
+        <p className="dash-eyebrow rotulo">Painel de controle <span className="dash-eyebrow__sep">/</span> Visão geral</p>
+        <h2 className="font-display">Os números da sua casa</h2>
         <p>Acompanhe o que importa, do salão ao caixa.</p>
       </div>
       <div className="dashboard-period">
-        <span>PERÍODO DE ANÁLISE</span>
+        <span className="rotulo">Período de análise</span>
         <div className="dashboard-period__group" role="group" aria-label="Período do dashboard">
           {PERIODOS.map((opcao) => <button type="button" key={opcao.id} aria-pressed={periodo === opcao.id} onClick={() => alterarPeriodo(opcao.id)}>{opcao.label}</button>)}
         </div>
@@ -680,12 +644,12 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
           onToggleVisibility={() => alternarVisibilidade("ranking")} onResize={(w, h) => redimensionar("ranking", w, h)}
           onDragStart={iniciarArraste} onDragEnd={finalizarArraste}>
           <section aria-label="Mais pedidos" className="dash-panel dash-ranking">
-            <div className="dash-panel__head"><div><p className="dash-kicker">DESTAQUES DO PERÍODO</p><h3>Mais pedidos</h3><p>Itens não cancelados por quantidade</p></div><span className="dash-panel__icon dash-panel__icon--lima"><Trophy size={19} weight="duotone" /></span></div>
+            <div className="dash-panel__head"><div><p className="dash-kicker rotulo">Destaques do período</p><h3>Mais pedidos</h3><p>Itens não cancelados por quantidade</p></div><Trophy className="dash-panel__icon" size={20} weight="bold" aria-hidden="true" /></div>
             {!dash ? <p className="dash-ranking__empty">{carregando}</p> : !top.length ? <p className="dash-ranking__empty">Nenhum item pedido no período.</p> : <ul>
               {topVisiveis.itens.map((item, index) => {
                 const produto = produtos.find((p) => p.id === item.id) || produtos.find((p) => p.nome === item.nome);
                 return <li key={item.id} className="dash-ranking__item">
-                  <span className="dash-ranking__number">{String(index + 1).padStart(2, "0")}</span>
+                  <span className="dash-ranking__number dado">{String(index + 1).padStart(2, "0")}</span>
                   {produto?.foto ? <img className="dash-ranking__image" src={produto.foto} alt="" /> : <span className="dash-ranking__image dash-ranking__placeholder" aria-hidden="true">{item.nome.slice(0, 1).toUpperCase()}</span>}
                   <div className="dash-ranking__content"><div><strong>{item.nome}</strong><span>{item.quantidade} un.</span></div><div className="dash-ranking__track"><span style={{ width: `${item.quantidade / maxTop * 100}%` }} /></div></div>
                 </li>;
@@ -698,11 +662,11 @@ export default function Dashboard({ editMode = false }: { editMode?: boolean }) 
           style={{ gridColumn: `${previa.x + 1} / span ${previa.w}`, gridRow: `${previa.y + 1} / span ${previa.h}` }} />}
       </div>
     </section>
-    <p className="dashboard-footnote"><Sparkle size={15} /> Valores do período usam a data de fechamento. Indicadores marcados “agora” são independentes do filtro.</p>
+    <p className="dashboard-footnote"><Info size={16} weight="bold" aria-hidden="true" /> Valores do período usam a data de fechamento. Indicadores marcados “agora” são independentes do filtro.</p>
 
     <dialog ref={dialogo} className="dash-dialog" aria-labelledby="dashboard-dialog-title" onClose={() => setSelecionado(null)} onClick={(e) => { if (e.target === e.currentTarget) e.currentTarget.close(); }}>
       {selecionado && dash && atualSelecionado && <>
-        <div className="dash-dialog__header"><div><p className="dash-kicker">DETALHES DO INDICADOR</p><h3 id="dashboard-dialog-title">{atualSelecionado.label}</h3><p>{atualSelecionado.atual ? "Retrato atual da operação" : `${intervalo(dash.periodo.from, dash.periodo.to)} · ${dash.periodo.timezone}`}</p></div>
+        <div className="dash-dialog__header"><div><p className="dash-kicker rotulo">Detalhes do indicador</p><h3 id="dashboard-dialog-title">{atualSelecionado.label}</h3><p>{atualSelecionado.atual ? "Retrato atual da operação" : `${intervalo(dash.periodo.from, dash.periodo.to)} · ${dash.periodo.timezone}`}</p></div>
           <button type="button" aria-label="Fechar detalhes" className="dash-dialog__close" onClick={() => dialogo.current?.close()}><X size={20} /></button>
         </div>
         <Detalhes id={selecionado} dash={dash} />

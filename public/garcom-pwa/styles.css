@@ -1,28 +1,17 @@
 @import "./design-tokens.css";
 
-@font-face {
-  font-family: "Fraunces";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("./fonts/fraunces-latin-soft-normal.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "Plus Jakarta Sans";
-  font-style: normal;
-  font-weight: 200 800;
-  font-display: swap;
-  src: url("./fonts/plus-jakarta-sans-latin-wght-normal.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "JetBrains Mono";
-  font-style: normal;
-  font-weight: 100 800;
-  font-display: swap;
-  src: url("./fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
-}
+/* ==========================================================================
+   PWA DO GARÇOM · identidade "Passe"
+   --------------------------------------------------------------------------
+   O celular do garçom é a ponta móvel do passe: papel, tinta e régua.
+   - Uma família só (Archivo, declarada em design-tokens.css): larga nos
+     títulos, normal no texto, estreita e tabular nos números.
+   - Superfícies planas: a "sombra" do cartão é a espessura da folha.
+   - Cantos curtos (3 a 10px) e régua de 1px no lugar de sombra e vidro.
+   - A navegação inferior é a linha de passe deitada: quatro estações sobre
+     uma faixa de tinta; a estação atual acende em sinal.
+   Tudo sai dos tokens: nenhuma cor literal neste arquivo.
+   ========================================================================== */
 
 *,
 *::before,
@@ -36,9 +25,13 @@
 
 html {
   font-family: var(--font-sans);
+  font-stretch: var(--wdth-text);
+  font-synthesis: none;
   background: var(--surface);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -54,6 +47,7 @@ input,
 select,
 textarea {
   font: inherit;
+  font-stretch: inherit;
   color: inherit;
 }
 
@@ -92,7 +86,7 @@ summary:focus-visible {
   flex-shrink: 0;
 }
 
-/* Icons via local Phosphor SVG sprite */
+/* ----------------------------------------------------------------- ícones -- */
 .pwa-icon,
 .pwa-icon-sm,
 .pwa-icon-xs,
@@ -126,41 +120,133 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   display: none;
 }
 
-/* Rodapé operacional: utilitários + navegação, sem faixa superior fixa. */
+/* ---------------------------------------------------- rodapé de navegação -- */
 .app-footer {
   position: fixed;
   z-index: 20;
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--surface-sidebar);
-  border-top: 1px solid var(--sidebar-line);
+  background: var(--ink-band);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-.utility-bar {
-  max-width: 520px;
-  margin: 0 auto;
-  padding: 6px 8px 2px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px;
+/* A linha de passe deitada: a borda superior é o trajeto, cada aba é uma
+   estação quadrada sobre ele. */
+.bottom-nav {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2px;
+  padding: 0 6px 6px;
+  background: var(--ink-band);
+  border-top: 1px solid var(--ink-band-line);
 }
 
-.utility-button {
+.bottom-nav button {
   position: relative;
-  flex: 0 0 40px;
+  min-height: 56px;
+  padding: 11px 4px 5px;
+  border: 0;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  background: transparent;
+  color: var(--ink-band-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 0.6875rem;
+  font-stretch: 92%;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  transition: color var(--dur-fast) var(--ease-snap), background-color var(--dur-fast) var(--ease-snap);
+}
+
+/* sobre a tinta, o anel de foco é o sinal */
+.bottom-nav button:focus-visible {
+  outline-color: var(--ink-band-signal);
+  outline-offset: -3px;
+}
+
+/* estação */
+.bottom-nav button::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  margin-left: -4.5px;
+  border: 1.5px solid var(--ink-band-muted);
+  border-radius: 2px;
+  background: var(--ink-band);
+  transition: background-color var(--dur-fast) var(--ease-snap), border-color var(--dur-fast) var(--ease-snap);
+}
+
+.bottom-nav button .nav-svg {
+  width: 21px;
+  height: 21px;
+}
+
+.bottom-nav button .icon-fill {
+  display: none;
+}
+
+.bottom-nav button.active {
+  color: var(--ink-band-text);
+  background: color-mix(in srgb, var(--ink-band-signal) 13%, transparent);
+}
+
+.bottom-nav button.active::before {
+  border-color: var(--ink-band-signal);
+  background: var(--ink-band-signal);
+}
+
+.bottom-nav button.active .icon-regular {
+  display: none;
+}
+
+.bottom-nav button.active .icon-fill {
+  display: block;
+  color: var(--ink-band-signal);
+}
+
+/* ------------------------------------------ utilitários (fim da aba Mesas) -- */
+.utility-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+}
+
+.tables-utility-footer {
+  position: static;
+  width: min(100%, 520px);
+  margin: 22px auto 18px;
+  padding: 14px 10px 4px;
+  border-top: 1px solid var(--line);
+}
+
+.utility-button,
+.tables-utility-footer .connection-indicator {
+  position: relative;
+  flex: 0 0 44px;
+  min-height: 44px;
 }
 
 /* Indicador de conexão: somente ícone; o texto fica para leitores de tela. */
 .connection-indicator {
-  flex: 0 0 40px;
-  width: 40px;
-  height: 40px;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
   display: inline-grid;
   place-items: center;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   border: 1px solid var(--status-success-border);
   background: var(--status-success-surface);
   color: var(--status-success-ink);
@@ -194,25 +280,25 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   position: relative;
   display: inline-grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   padding: 0;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--line);
-  background: var(--surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-raised);
   color: var(--text);
-  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+  transition: background-color var(--dur-fast) var(--ease-snap), border-color var(--dur-fast) var(--ease-snap), color var(--dur-fast) var(--ease-snap);
 }
 
-/* Alvo de toque de 48px sem inchar a barra do rodapé. */
+/* Alvo de toque de 48px sem inchar a barra. */
 .icon-action::after {
   content: "";
   position: absolute;
-  inset: -4px;
+  inset: -2px;
 }
 
 .icon-action:hover {
-  background: var(--surface-sunken);
+  background: var(--surface-hover);
 }
 
 .sync-button[data-sync-state="syncing"] {
@@ -243,20 +329,21 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   }
 }
 
-/* Ponto de configuração pendente no ícone de avisos. */
+/* Marca de configuração pendente no ícone de avisos: uma estação em sinal. */
 .notification-settings-button[data-pending="true"]::before {
   content: "";
   position: absolute;
   z-index: 1;
-  top: 4px;
-  right: 4px;
-  width: 8px;
-  height: 8px;
-  border: 1px solid var(--surface);
-  border-radius: 50%;
-  background: var(--brand);
+  top: -4px;
+  right: -4px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--surface);
+  border-radius: 3px;
+  background: var(--route-active);
 }
 
+/* ------------------------------------------------------------------ avisos -- */
 /* Confirmação temporária, acessível em qualquer aba e sem ocupar a fila. */
 .notification-feedback {
   position: fixed;
@@ -267,22 +354,23 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   transform: translateX(-50%);
   padding: 10px 14px;
   border: 1px solid var(--status-info-border);
+  border-left-width: 4px;
   border-radius: var(--radius-sm);
   background: var(--status-info-surface);
   box-shadow: var(--shadow-card-hover);
   color: var(--status-info-ink);
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 650;
   pointer-events: none;
 }
 
-/* Ready Toast */
 .ready-toast {
   max-width: 1040px;
   margin: 10px auto 0;
   padding: 10px 14px;
   background: var(--status-warning-surface);
   border: 1px solid var(--status-warning-border);
+  border-left-width: 4px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
@@ -307,8 +395,8 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 }
 
 .icon-close {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   background: transparent;
@@ -316,16 +404,53 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   border-radius: var(--radius-sm);
 }
 
-/* Main Workspace & Sections */
+.notice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: var(--surface-raised);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  color: var(--text-muted);
+}
+
+.notice p {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.offline-notice {
+  border-left: 4px solid var(--status-warning);
+}
+
+.alert-inline:empty {
+  display: none;
+}
+
+.alert-inline:not(:empty) {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--status-info-border);
+  border-left-width: 4px;
+  background: var(--status-info-surface);
+  color: var(--status-info-ink);
+  font-weight: 650;
+}
+
+/* ----------------------------------------------------- páginas e títulos -- */
 .workspace {
   max-width: 1040px;
   margin: 0 auto;
-  padding: 14px 14px 36px;
+  padding: 16px 14px 36px;
 }
 
 .page {
   display: none;
-  animation: page-enter 150ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: page-enter var(--dur-page) var(--ease-out);
 }
 
 .page.active {
@@ -343,30 +468,34 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   }
 }
 
+/* título de página sobre régua */
 .section-heading {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-end;
   gap: 10px;
-  margin: 0 0 12px;
+  margin: 0 0 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line-strong);
 }
 
 .section-heading h2 {
   margin: 0;
   font-family: var(--font-display);
-  font-variation-settings: "SOFT" 80;
-  font-size: clamp(1.45rem, 4.2vw, 1.85rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
+  font-stretch: var(--wdth-display);
+  font-size: clamp(1.4rem, 5.4vw, 1.8rem);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1.08;
 }
 
 .eyebrow,
 .section-eyebrow {
   display: block;
-  font-size: 0.68rem;
+  font-size: 0.6875rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.13em;
+  line-height: 1.2;
   text-transform: uppercase;
   color: var(--brand-ink);
 }
@@ -383,44 +512,38 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   font-size: 0.78rem;
 }
 
-.alert-inline:empty {
-  display: none;
-}
-
-.alert-inline:not(:empty) {
-  margin-top: 8px;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--status-info-border);
-  background: var(--status-info-surface);
-  color: var(--status-info-ink);
-  font-weight: 600;
-}
-
-/* Identidade visual mínima dentro da ajuda (marca também offline). */
+/* --------------------------------------------------------------- a marca -- */
+/* O logo oficial (tinta sobre fundo claro) mora numa placa de papel: assim
+   continua legível no tema escuro. */
 .brand-mark {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
+  padding: 3px;
   object-fit: contain;
-  border-radius: var(--radius-xs);
+  border: 1px solid var(--qr-border);
+  border-radius: var(--radius-sm);
+  background: var(--qr-paper);
 }
 
 .help-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 10px;
+  margin-bottom: 10px;
   font-family: var(--font-display);
-  font-variation-settings: "SOFT" 80;
+  font-stretch: var(--wdth-title);
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
-/* Ajuda rápida dos ícones do rodapé */
+/* ------------------------------------------------------------------ ajuda -- */
 .help-list {
   list-style: none;
   margin: 12px 0;
   padding: 0;
   display: grid;
-  gap: 10px;
+  gap: 0;
+  border-top: 1px solid var(--line);
 }
 
 .help-list li {
@@ -428,10 +551,8 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   grid-template-columns: 24px 1fr;
   gap: 10px;
   align-items: start;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface-sunken);
+  padding: 11px 2px;
+  border-bottom: 1px solid var(--line);
 }
 
 .help-list strong {
@@ -451,21 +572,12 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   vertical-align: -2px;
 }
 
-/* Salão completo só aparece depois da busca por número ou cliente. */
-.salao-search .table-grid {
-  padding: 0;
-  margin-top: 10px;
-}
-
-.offline-notice {
-  border-left: 3px solid var(--status-warning-border);
-}
-
-/* Ledger Blocks (soft rounded cards) */
+/* ------------------------------------------------------------------ fichas -- */
+/* Bloco de conteúdo: folha plana com a espessura do papel na base. */
 .ledger-block {
   background: var(--surface-raised);
   border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-card);
   margin-bottom: 16px;
   overflow: hidden;
@@ -476,8 +588,7 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 }
 
 .ledger-head {
-  padding: 12px 16px;
-  background: var(--surface-sunken);
+  padding: 10px 14px;
   border-bottom: 1px solid var(--line);
   display: flex;
   align-items: center;
@@ -489,13 +600,23 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 .ledger-head h3 {
   margin: 0;
   font-family: var(--font-display);
-  font-variation-settings: "SOFT" 80;
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-stretch: var(--wdth-title);
+  font-size: 1rem;
+  font-weight: 750;
+  letter-spacing: -0.005em;
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+/* estação: marca o começo de cada bloco */
+.ledger-head h3::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--route-active);
 }
 
 .ledger-body-pad {
@@ -509,37 +630,28 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   flex-wrap: wrap;
 }
 
-.notice {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  background: var(--surface-sunken);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-sm);
-  padding: 10px 12px;
-  margin-bottom: 12px;
-  color: var(--text-muted);
+/* Salão completo só aparece depois da busca por número ou cliente. */
+.salao-search .table-grid {
+  padding: 0;
+  margin-top: 10px;
 }
 
-.notice p {
-  margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.45;
-}
-
-/* Buttons (>= 48px operational touch targets) */
+/* ------------------------------------------------------------------ botões -- */
+/* Alvos operacionais de pelo menos 48px. */
 .primary,
 .secondary {
   min-height: 48px;
   padding: 10px 16px;
   border-radius: var(--radius-sm);
+  font-stretch: 104%;
   font-weight: 700;
-  font-size: 0.86rem;
+  font-size: 0.875rem;
+  letter-spacing: 0.004em;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
-  transition: background-color 140ms ease, border-color 140ms ease;
+  transition: background-color var(--dur-fast) var(--ease-snap), border-color var(--dur-fast) var(--ease-snap);
 }
 
 .primary {
@@ -550,23 +662,24 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 
 .primary:hover:not(:disabled) {
   background: var(--brand-hover);
+  border-color: var(--brand-hover);
 }
 
 .secondary {
-  background: var(--surface);
+  background: var(--surface-raised);
   color: var(--text);
   border: 1px solid var(--line-strong);
 }
 
 .secondary:hover:not(:disabled) {
-  background: var(--surface-sunken);
+  background: var(--surface-hover);
 }
 
 .primary.small,
 .secondary.small {
   min-height: 44px;
   padding: 8px 12px;
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
 }
 
 .full {
@@ -579,13 +692,14 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   background: transparent;
   border: 0;
   color: var(--brand-ink);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: 0.6875rem;
+  font-stretch: 96%;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.09em;
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
 }
 
 .action-row {
@@ -596,16 +710,18 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   margin: 8px 0;
 }
 
-/* Status stamps */
+/* ---------------------------------------------------------------- carimbos -- */
 .status {
   display: inline-flex;
   align-items: center;
-  padding: 3px 9px;
-  border-radius: var(--radius-pill);
-  font-size: 0.68rem;
+  padding: 3px 7px;
+  border-radius: var(--radius-xs);
+  font-size: 0.6875rem;
+  font-stretch: 92%;
   font-weight: 700;
-  letter-spacing: 0.03em;
-  border: 1px solid var(--line);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid var(--line-strong);
   background: var(--surface-sunken);
   color: var(--text-muted);
 }
@@ -630,7 +746,7 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   color: var(--status-danger-ink);
 }
 
-/* Tables Grid & My Tables */
+/* ------------------------------------------------------------------- mesas -- */
 .table-grid {
   padding: 12px 14px;
   display: grid;
@@ -638,26 +754,35 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   gap: 8px;
 }
 
+/* A mesa é uma plaquinha: faixa de tinta à esquerda, número em largura larga. */
 .table-tile {
   min-height: 64px;
   padding: 10px 12px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line-strong);
-  background: var(--surface);
+  border-left: 5px solid var(--plaque);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-card);
   color: var(--text);
   text-align: left;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: 4px;
+  transition: background-color var(--dur-fast) var(--ease-snap);
+}
+
+.table-tile:hover {
+  background: var(--surface-hover);
 }
 
 .table-tile strong {
   font-family: var(--font-display);
-  font-variation-settings: "SOFT" 80;
-  font-variant-numeric: tabular-nums;
-  font-size: 1rem;
-  font-weight: 700;
+  font-stretch: var(--wdth-title);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 1.0625rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
 .table-tile small {
@@ -668,6 +793,7 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 
 .table-tile.taken {
   border-color: var(--status-warning-border);
+  border-left-color: var(--status-warning);
   background: var(--status-warning-surface);
 }
 
@@ -690,7 +816,8 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   margin-top: 10px;
 }
 
-/* COMPACT EXPANDABLE ORDER CARDS (Section 7.1) */
+/* ----------------------------------------------------------------- pedidos -- */
+/* Cartões compactos que expandem no lugar. */
 .orders-list {
   display: grid;
   gap: 8px;
@@ -716,15 +843,24 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-card);
   overflow: hidden;
+  transition: border-color var(--dur-fast) var(--ease-snap), box-shadow var(--dur-fast) var(--ease-snap);
+}
+
+@media (hover: hover) {
+  .order:hover {
+    border-color: var(--line-strong);
+    box-shadow: var(--shadow-card-hover);
+  }
 }
 
 .order.expanded {
-  border-color: var(--brand-border);
+  border-color: var(--brand);
+  box-shadow: inset 0 0 0 1px var(--brand), var(--shadow-card);
 }
 
 .order-summary {
   width: 100%;
-  min-height: 54px;
+  min-height: 56px;
   padding: 9px 12px;
   background: transparent;
   border: 0;
@@ -736,12 +872,11 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 }
 
 .order-summary:hover {
-  background: var(--surface-sunken);
+  background: var(--surface-hover);
 }
 
 .order.expanded .order-summary {
-  background: var(--surface-sunken);
-  border-bottom: 1px dashed var(--line-strong);
+  border-bottom: 1px solid var(--line);
 }
 
 .order-summary-main {
@@ -757,16 +892,21 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   flex-wrap: wrap;
 }
 
+/* número do pedido: dado, estreito e tabular */
 .order-id-tag {
   font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-stretch: var(--wdth-data);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 0.8125rem;
   font-weight: 700;
+  letter-spacing: 0.012em;
   color: var(--brand-ink);
 }
 
 .order-dest {
-  font-size: 0.88rem;
-  font-weight: 700;
+  font-stretch: var(--wdth-title);
+  font-size: 0.9375rem;
+  font-weight: 750;
   color: var(--text);
 }
 
@@ -776,7 +916,10 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   gap: 8px;
   flex-wrap: wrap;
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-stretch: var(--wdth-data);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 0.75rem;
+  letter-spacing: 0.012em;
   color: var(--text-muted);
 }
 
@@ -788,10 +931,9 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 }
 
 .order-chevron {
-  font-family: var(--font-mono);
   font-size: 0.8rem;
   color: var(--text-muted);
-  transition: transform 140ms ease;
+  transition: transform var(--dur-fast) var(--ease-snap);
 }
 
 .order.expanded .order-chevron {
@@ -808,34 +950,27 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   gap: 10px;
 }
 
-.order-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
 .order-items {
   display: grid;
-  gap: 8px;
+  gap: 0;
+  border-top: 1px solid var(--line);
 }
 
+/* cada item é uma linha da ficha, separada por régua */
 .order-item-line {
-  padding: 8px 10px;
-  border-radius: var(--radius-xs);
-  background: var(--surface);
-  border: 1px solid var(--line);
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--line);
   display: grid;
   gap: 4px;
-  font-size: 0.84rem;
+  font-size: 0.875rem;
 }
 
 .item-state {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.6875rem;
+  font-stretch: 92%;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   color: var(--text-muted);
 }
 
@@ -862,23 +997,31 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   padding: 8px 10px;
   border-radius: var(--radius-xs);
   border: 1px solid var(--status-danger-border);
+  border-left-width: 4px;
   background: var(--status-danger-surface);
   color: var(--status-danger-ink);
   font-size: 0.78rem;
 }
 
-/* Forms & Billing */
+/* ------------------------------------------------------ campos e cobrança -- */
 .field {
-  font-size: 0.76rem;
+  font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
   color: var(--text-muted);
   display: grid;
-  gap: 5px;
+  gap: 6px;
   margin-bottom: 12px;
 }
 
+p + .field,
+.billing-summary + .field,
+p + .modal-fields {
+  margin-top: 14px;
+}
+
+/* contorno de campo com 3:1 contra o fundo (WCAG 1.4.11) */
 input,
 select,
 textarea {
@@ -888,12 +1031,19 @@ textarea {
   padding: 10px 12px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line-strong);
-  background: var(--surface);
+  background: var(--surface-sunken);
   color: var(--text);
-  font-size: 0.92rem;
+  font-size: 0.9375rem;
+  font-stretch: var(--wdth-text);
   text-transform: none;
   letter-spacing: normal;
   font-weight: 500;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--brand);
 }
 
 textarea {
@@ -909,10 +1059,14 @@ textarea {
 .billing-summary {
   padding: 12px;
   background: var(--surface-sunken);
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--plaque);
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
-  font-size: 0.8rem;
+  font-stretch: var(--wdth-data);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 0.875rem;
+  letter-spacing: 0.012em;
   line-height: 1.5;
   margin: 0 0 12px;
 }
@@ -924,7 +1078,8 @@ textarea {
   color: var(--qr-amber-700);
   background: color-mix(in srgb, var(--qr-amber-500) 14%, var(--surface-raised));
   border: 1px solid color-mix(in srgb, var(--qr-amber-500) 45%, var(--line));
-  font-weight: 600;
+  border-left-width: 4px;
+  font-weight: 650;
   line-height: 1.45;
 }
 
@@ -935,8 +1090,8 @@ textarea {
   margin: 12px 0;
   padding: 10px 12px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--line);
-  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-raised);
   font-size: 0.85rem;
   cursor: pointer;
 }
@@ -952,15 +1107,18 @@ textarea {
 .pix-box {
   margin: 12px 0;
   padding: 12px;
-  border: 1px dashed var(--line-strong);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
-  background: var(--surface);
+  background: var(--surface-raised);
 }
 
 .pix-box-head h4 {
   margin: 0 0 4px;
-  font-family: var(--font-display);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 .qr-row {
@@ -969,7 +1127,7 @@ textarea {
   margin: 12px 0;
 }
 
-/* Technical exception: optical quiet zone for camera/EMV QR readers */
+/* Exceção técnica: zona de silêncio do QR, sempre tinta sobre papel claro. */
 .qr-quiet-zone {
   display: block;
   width: min(100%, 240px);
@@ -982,30 +1140,34 @@ textarea {
   border: 1px solid var(--qr-border);
 }
 
-/* Order Creation Modal Products & Cart */
+/* --------------------------------------------- montar pedido: passos 01-03 -- */
 .step-card {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding-bottom: 6px;
+  gap: 10px;
+  padding-bottom: 8px;
   margin-bottom: 10px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--line-strong);
+  font-stretch: var(--wdth-title);
 }
 
 .step-card.top-gap,
 .field.top-gap {
-  margin-top: 14px;
+  margin-top: 16px;
 }
 
+/* cada passo é uma estação numerada, em plaquinha */
 .step-number {
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 2px 6px;
+  font-stretch: var(--wdth-data);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 4px 6px;
   border-radius: var(--radius-xs);
-  background: var(--brand-surface);
-  color: var(--brand-ink);
-  border: 1px solid var(--brand-border);
+  background: var(--plaque);
+  color: var(--plaque-text);
 }
 
 .search {
@@ -1031,7 +1193,8 @@ textarea {
 
 .product h3 {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
 }
 
 .product p {
@@ -1052,17 +1215,25 @@ textarea {
 .total-amount,
 .line-price {
   font-family: var(--font-mono);
-  font-weight: 700;
+  font-stretch: var(--wdth-data);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-weight: 800;
+  letter-spacing: 0.012em;
+}
+
+.total-amount {
+  font-size: 1.25rem;
 }
 
 .product-foot button {
   min-height: 48px;
-  padding: 6px 12px;
-  border-radius: var(--radius-xs);
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--brand);
   background: var(--brand);
   color: var(--brand-contrast);
-  font-size: 0.78rem;
+  font-size: 0.8125rem;
+  font-stretch: 104%;
   font-weight: 700;
 }
 
@@ -1088,14 +1259,17 @@ textarea {
   align-items: center;
   gap: 6px;
   font-family: var(--font-mono);
+  font-stretch: var(--wdth-data);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-weight: 700;
 }
 
 .qty button {
   width: 44px;
   height: 44px;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-sm);
   border: 1px solid var(--line-strong);
-  background: var(--surface);
+  background: var(--surface-raised);
   font-weight: 700;
 }
 
@@ -1120,59 +1294,11 @@ textarea {
   width: 18px;
   height: 18px;
   min-height: 18px;
+  accent-color: var(--brand);
 }
 
-/* Bottom Navigation (Touch-safe, 4 items, stroke inactive / fill active) */
-.bottom-nav {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 2px;
-  background: var(--surface-sidebar);
-  border-top: 1px solid var(--sidebar-line);
-  padding: 4px 6px 6px;
-}
-
-.bottom-nav button {
-  min-height: 52px;
-  padding: 6px 4px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--sidebar-muted);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.bottom-nav button .nav-svg {
-  width: 21px;
-  height: 21px;
-}
-
-.bottom-nav button .icon-fill {
-  display: none;
-}
-
-.bottom-nav button.active {
-  color: var(--sidebar-text);
-  background: color-mix(in srgb, var(--sidebar-text) 10%, transparent);
-}
-
-.bottom-nav button.active .icon-regular {
-  display: none;
-}
-
-.bottom-nav button.active .icon-fill {
-  display: block;
-  color: var(--brand);
-}
-
-/* Native Centered Dialogs (preserves pwa-popups-centrais.test.cjs contracts) */
+/* ---------------------------------------------------------------- diálogos -- */
+/* Diálogos nativos centralizados (contratos em pwa-popups-centrais.test.cjs). */
 .sheet:not([open]) {
   display: none;
 }
@@ -1211,21 +1337,22 @@ dialog.sheet[open] {
   gap: 10px;
   padding: 14px 18px;
   background: var(--surface-raised);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--line-strong);
 }
 
 .sheet-footer {
   border-bottom: 0;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--line-strong);
 }
 
 .sheet-top h2 {
-  margin: 2px 0 0;
+  margin: 3px 0 0;
   font-family: var(--font-display);
-  font-variation-settings: "SOFT" 80;
-  font-size: 1.3rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-stretch: var(--wdth-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1.12;
 }
 
 .sheet-body {
@@ -1238,10 +1365,11 @@ dialog.sheet[open] {
 }
 
 .close-button {
+  flex: 0 0 auto;
   width: 44px;
   height: 44px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
   background: var(--surface);
   font-size: 1.2rem;
   line-height: 1;
@@ -1249,141 +1377,38 @@ dialog.sheet[open] {
   place-items: center;
 }
 
+.close-button:hover {
+  background: var(--surface-hover);
+}
+
 .history-line {
   font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-stretch: var(--wdth-data);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 0.8125rem;
+  letter-spacing: 0.012em;
   padding: 8px 0;
   margin: 0;
-  border-bottom: 1px dashed var(--line);
+  border-bottom: 1px solid var(--line);
 }
 
-
-/* ==========================================================================
-   CAMADA VISUAL OPERACIONAL (mesma linguagem do dashboard)
-   Vidro discreto, bordas de acento e sombras suaves — sempre a partir dos
-   tokens, para funcionar igual nos temas claro e escuro. Nada aqui muda
-   layout, alvos de toque ou contraste do texto.
-   ========================================================================== */
-.app-footer {
-  background: color-mix(in srgb, var(--surface-sidebar) 94%, transparent);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-  backdrop-filter: blur(14px) saturate(140%);
-}
-
-.ledger-block {
-  background:
-    linear-gradient(
-      152deg,
-      color-mix(in srgb, var(--surface-raised) 92%, var(--brand-surface)) 0%,
-      var(--surface-raised) 58%
-    );
-  border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
-  box-shadow:
-    var(--shadow-card),
-    inset 0 1px 0 color-mix(in srgb, var(--surface-raised) 88%, transparent);
-}
-
-.ledger-head {
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--surface-sunken) 88%, var(--brand-surface)),
-      var(--surface-sunken)
-    );
-}
-
-.order {
-  background:
-    linear-gradient(
-      148deg,
-      color-mix(in srgb, var(--surface-raised) 93%, var(--brand-surface)) 0%,
-      var(--surface-raised) 60%
-    );
-  transition: box-shadow 160ms ease, border-color 160ms ease, transform 160ms ease;
-}
-
-@media (hover: hover) {
-  .order:hover {
-    border-color: color-mix(in srgb, var(--brand-border) 65%, var(--line));
-    box-shadow: var(--shadow-card-hover);
-    transform: translateY(-1px);
-  }
-}
-
-.order.expanded {
-  box-shadow:
-    var(--shadow-card),
-    inset 0 0 0 1px color-mix(in srgb, var(--brand) 18%, transparent);
-}
-
-.table-tile.mine {
-  box-shadow:
-    var(--shadow-card),
-    inset 0 0 0 1px color-mix(in srgb, var(--brand) 32%, transparent);
-}
-
-.bottom-nav {
-  background: color-mix(in srgb, var(--surface-sidebar) 92%, transparent);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  backdrop-filter: blur(16px) saturate(140%);
-  box-shadow: 0 -10px 26px -22px color-mix(in srgb, var(--sidebar-text) 70%, transparent);
-}
-
-/* Bordas discretas: a hierarquia vem de superfície, espaço e sombra.
-   Estados de alerta (aviso, bloqueio, status) mantêm as bordas fortes. */
-.ledger-block {
-  border-color: color-mix(in srgb, var(--line) 82%, transparent);
-}
-
-.ledger-head {
-  border-bottom-color: color-mix(in srgb, var(--line) 70%, transparent);
-}
-
-.table-tile {
-  border-color: color-mix(in srgb, var(--line) 78%, transparent);
-}
-
-.icon-action {
-  border-color: color-mix(in srgb, var(--line) 70%, transparent);
-}
-
-.sheet {
-  border-color: color-mix(in srgb, var(--line-strong) 55%, transparent);
-}
-
-.sheet-top,
-.sheet-footer {
-  border-color: color-mix(in srgb, var(--line) 72%, transparent);
-}
-
-.bottom-nav {
-  border-top-color: color-mix(in srgb, var(--sidebar-line) 80%, transparent);
-}
-
-/* Rolagem discreta em qualquer faixa horizontal/vertical do app. */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--text-muted) 45%, transparent) transparent;
+/* ----------------------------------------------------------------- rolagem -- */
+/* Trilhos ocultos em todas as áreas do PWA; rolagem por gesto, roda e teclado
+   continua funcionando. */
+*,
+*::before,
+*::after {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-*::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--text-muted) 38%, transparent);
-}
-
-*::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--text-muted) 58%, transparent);
-}
-
+/* --------------------------------------------------------------- movimento -- */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1392,52 +1417,4 @@ dialog.sheet[open] {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  .order:hover,
-  .table-tile.mine:hover {
-    transform: none !important;
-  }
-}
-
-
-/* Ajustes de conforto visual e controles no fluxo da aba Mesas. */
-body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
-.app-footer { border: 0; box-shadow: 0 -8px 24px -24px var(--text); }
-.utility-bar { max-width: 100%; justify-content: flex-end; margin: 14px 0 2px; padding: 10px 2px 2px; border: 0; background: transparent; }
-.utility-button { flex-basis: 44px; min-height: 44px; }
-.ledger-block { border-color: color-mix(in srgb, var(--line) 38%, transparent); box-shadow: 0 5px 18px -14px var(--text); }
-.ledger-head { border-bottom-color: color-mix(in srgb, var(--line) 42%, transparent); }
-.table-tile, .order, .billing-summary, .pix-box { border-color: color-mix(in srgb, var(--line) 48%, transparent); }
-.sheet { border-color: color-mix(in srgb, var(--line) 45%, transparent); }
-
-
-/* Rodapé de utilitários exclusivo da aba Mesas; não é fixo. */
-.tables-utility-footer {
-  position: static;
-  width: min(100%, 520px);
-  margin: 22px auto 18px;
-  padding: 12px 10px 4px;
-  border-top: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
-}
-.tables-utility-footer .utility-bar {
-  width: 100%;
-  max-width: none;
-  margin: 0;
-  padding: 4px 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.tables-utility-footer .utility-button,
-.tables-utility-footer .connection-indicator { flex: 0 0 44px; }
-
-/* Trilhos ocultos em todas as áreas do PWA; rolagem por gesto, roda e teclado preservada. */
-*, *::before, *::after {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-}
-*::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
 }

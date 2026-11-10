@@ -4,6 +4,7 @@ import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from "
 import { createPortal } from "react-dom";
 import { cn } from "../utils/cn";
 import { alternarTema, EVENTO_TEMA, temaAtual, type Tema } from "../lib/tema";
+import { useGancho } from "../lib/identidade";
 
 export type BadgeTone =
   | "neutral"
@@ -24,7 +25,40 @@ export type BtnVariant =
   | "danger"
   | "sage";
 
+/* Símbolo reduzido "olho do passe": o olho de um QR Code (a mesa) com o centro
+   aceso em menta (o pedido vivo). Substitui a marca completa abaixo de 40px,
+   onde a ilustração isométrica deixa de ser legível. O anel usa a cor do texto
+   corrente (currentColor), então assenta em qualquer superfície. */
+export function Simbolo({ size = 24, className }: { size?: number; className?: string }) {
+  return (
+    <svg
+      className={cn("simbolo", className)}
+      width={size}
+      height={size}
+      viewBox="6 6 20 20"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect className="simbolo__anel" x="7.5" y="7.5" width="17" height="17" rx="3.5" />
+      <rect className="simbolo__centro" x="13" y="13" width="6" height="6" rx="1.25" />
+    </svg>
+  );
+}
+
+/* Assinatura horizontal: símbolo + nome composto na voz da identidade. */
+export function Assinatura({ size = 22, className }: { size?: number; className?: string }) {
+  return (
+    <span className={cn("assinatura", className)}>
+      <Simbolo size={size} />
+      <span className="assinatura__nome">
+        <b>QR</b>Admin
+      </span>
+    </span>
+  );
+}
+
 export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
+  /* "sm" é o que o cardápio do cliente usa: fica exatamente como estava. */
   if (size === "sm") {
     return (
       <span className="brand-logo brand-mark h-10 w-10">
@@ -38,38 +72,14 @@ export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
     );
   }
   return (
-    <span
-      className={cn(
-        "brand-logo inline-flex items-center gap-3 select-none rounded-md border border-line bg-surface-raised shadow-card px-3.5 py-2.5",
-        size === "lg" && "px-4 py-3",
-      )}
-    >
-      <span className="brand-mark h-10 w-10">
-        <img
-          src="/logo/qradmin-mark.png"
-          alt="QR Admin"
-          className="h-8 w-8 object-contain"
-          draggable={false}
-        />
-      </span>
-      <span className="flex flex-col text-left leading-none">
-        <span
-          className={cn(
-            "font-display font-bold tracking-tight text-text",
-            size === "lg" ? "text-2xl sm:text-3xl" : "text-xl",
-          )}
-        >
-          QR Admin
-        </span>
-        <span className="text-[11px] font-medium tracking-wide text-text-muted mt-1">
-          Comanda &amp; Balcão
-        </span>
-      </span>
+    <span className="brand-logo inline-flex select-none items-center" role="img" aria-label="QR Admin">
+      <Assinatura size={size === "lg" ? 30 : 24} className={size === "lg" ? "text-xl" : undefined} />
     </span>
   );
 }
 
 export function ThemeToggle({ className }: { className?: string }) {
+  const gancho = useGancho();
   const [tema, setTema] = useState<Tema>(() => temaAtual());
   useEffect(() => {
     const fn = (e: Event) => setTema((e as CustomEvent<Tema>).detail || temaAtual());
@@ -83,6 +93,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       title={tema === "claro" ? "Ativar tema escuro" : "Ativar tema claro"}
       aria-label={tema === "claro" ? "Ativar tema escuro" : "Ativar tema claro"}
       className={cn(
+        gancho("qr-icon-button"),
         "inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface-raised text-text-muted hover:text-text hover:border-line-strong hover:bg-surface-hover transition-colors duration-150",
         className,
       )}
@@ -99,12 +110,14 @@ export function IconBtn({
   className,
   ...rest
 }: ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean; label: string }) {
+  const gancho = useGancho();
   return (
     <button
       type="button"
       aria-label={label}
       title={label}
       className={cn(
+        gancho("qr-icon-button"),
         "inline-flex h-11 w-11 items-center justify-center rounded-full border transition-colors duration-150",
         active
           ? "bg-brand-surface text-brand-ink border-brand-border"
@@ -188,9 +201,11 @@ export function Badge({
   className?: string;
   dot?: boolean;
 }) {
+  const gancho = useGancho();
   return (
     <span
       className={cn(
+        gancho("qr-badge"),
         "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-wide",
         BADGE_CLASSES[tone],
         className,
@@ -223,6 +238,7 @@ export function Modal({
   labelledBy?: string;
   describedBy?: string;
 }) {
+  const gancho = useGancho();
   const reduceMotion = useReducedMotion();
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
 
@@ -276,6 +292,7 @@ export function Modal({
             onClick={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
             className={cn(
+              gancho("qr-modal"),
               "relative my-auto w-full max-h-[calc(100dvh-24px)] overflow-y-auto overscroll-contain rounded-xl border border-line bg-surface-raised shadow-modal no-scrollbar",
               wide ? "sm:max-w-2xl" : "sm:max-w-md",
               className,
@@ -285,7 +302,10 @@ export function Modal({
               type="button"
               onClick={onClose}
               aria-label="Fechar"
-              className="absolute top-3.5 right-3.5 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface-sunken text-text-muted hover:text-text hover:border-line-strong"
+              className={cn(
+                gancho("qr-icon-button"),
+                "absolute top-3.5 right-3.5 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface-sunken text-text-muted hover:text-text hover:border-line-strong",
+              )}
             >
               <X size={18} weight="bold" />
             </button>
@@ -307,9 +327,11 @@ export function Qtd({
   onChange: (v: number) => void;
   size?: "sm" | "md";
 }) {
+  const gancho = useGancho();
   return (
     <div
       className={cn(
+        gancho("qr-stepper"),
         "inline-flex items-center rounded-full overflow-hidden bg-surface-sunken border border-line",
         size === "sm" ? "h-11" : "h-11",
       )}
@@ -352,14 +374,10 @@ export function Secao({
   right?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-3">
+    <div className="regua">
       <div>
-        {kicker && (
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-ink">
-            {kicker}
-          </p>
-        )}
-        <h2 className="font-display text-2xl sm:text-3xl font-bold tracking-tight leading-tight text-text mt-0.5">
+        {kicker && <p className="rotulo">{kicker}</p>}
+        <h2 className="font-display mt-1 text-2xl font-extrabold leading-tight text-text sm:text-3xl">
           {titulo}
         </h2>
       </div>
@@ -383,6 +401,7 @@ export function Input({
   className?: string;
   prefix?: string;
 }) {
+  const gancho = useGancho();
   return (
     <div className={cn("relative", className)}>
       {prefix && (
@@ -396,6 +415,7 @@ export function Input({
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         className={cn(
+          gancho("qr-input"),
           "w-full h-12 rounded-sm bg-surface-sunken border border-line text-sm text-text placeholder:text-text-subtle",
           "focus:outline-none focus:border-brand transition-colors",
           prefix ? "pl-11 pr-3.5" : "px-3.5",

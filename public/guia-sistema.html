@@ -3,262 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#bf3b11">
+  <meta name="theme-color" content="#f4efe6">
   <meta name="description" content="Guia visual e explicativo do QR Admin. Demonstração estática: não cria pedidos, não altera status e não consulta dados privados.">
   <title>Guia do sistema · QR Admin</title>
   <link rel="canonical" href="https://qradmin.up.railway.app/guia-sistema.html">
-  <link rel="icon" href="/logo/favicon.png" type="image/png">
-  <style>
-    @font-face {
-      font-family: "Fraunces";
-      src: url("/garcom-pwa/fonts/fraunces-latin-soft-normal.woff2") format("woff2-variations");
-      font-weight: 100 900;
-      font-style: normal;
-      font-display: swap;
-    }
-    @font-face {
-      font-family: "Plus Jakarta Sans";
-      src: url("/garcom-pwa/fonts/plus-jakarta-sans-latin-wght-normal.woff2") format("woff2-variations");
-      font-weight: 200 800;
-      font-style: normal;
-      font-display: swap;
-    }
-    @font-face {
-      font-family: "JetBrains Mono";
-      src: url("/garcom-pwa/fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
-      font-weight: 100 800;
-      font-style: normal;
-      font-display: swap;
-    }
-    :root {
-      --surface: #eef1f8;
-      --surface-raised: #f8faff;
-      --surface-sunken: #e0e5f1;
-      --surface-sidebar: #0b101b;
-      --text: #121829;
-      --text-muted: #48536d;
-      --sidebar-text: #eef1fb;
-      --sidebar-muted: #a9b4cc;
-      --brand: #bf3b11;
-      --brand-ink: #b5360d;
-      --brand-contrast: #f8faff;
-      --line: #c7cfe0;
-      --radius-sm: 6px;
-      --radius-md: 10px;
-      --font-display: "Fraunces", Georgia, serif;
-      --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
-      --font-mono: "JetBrains Mono", ui-monospace, monospace;
-    }
-    *, *::before, *::after { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-    body {
-      margin: 0;
-      font-family: var(--font-sans);
-      font-size: 15px;
-      line-height: 1.55;
-      color: var(--text);
-      background: var(--surface);
-      -webkit-font-smoothing: antialiased;
-    }
-    a { color: var(--brand-ink); }
-    a:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
-    .skip {
-      position: absolute; left: -9999px; top: 0;
-      background: var(--brand); color: var(--brand-contrast);
-      padding: 0.5rem 0.9rem; z-index: 100;
-    }
-    .skip:focus { left: 0.75rem; top: 0.75rem; }
-    .shell { display: grid; min-height: 100vh; }
-    @media (min-width: 860px) { .shell { grid-template-columns: 240px 1fr; } }
-    .sidebar {
-      background: var(--surface-sidebar);
-      color: var(--sidebar-text);
-      padding: 1.25rem 1rem 2rem;
-    }
-    @media (min-width: 860px) {
-      .sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto; }
-    }
-    .sidebar .brand {
-      display: flex; align-items: center; gap: 0.6rem;
-      margin-bottom: 1.25rem; text-decoration: none; color: inherit;
-    }
-    .sidebar .brand img { height: 28px; width: auto; }
-    .sidebar .brand span {
-      font-family: var(--font-display); font-weight: 600; font-size: 1.05rem;
-    }
-    .sidebar .badge {
-      display: inline-block;
-      font-family: var(--font-mono);
-      font-size: 0.65rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--sidebar-muted);
-      border: 1px solid #2a3348;
-      border-radius: 999px;
-      padding: 0.2rem 0.55rem;
-      margin-bottom: 1.25rem;
-    }
-    .sidebar nav { display: flex; flex-direction: column; gap: 0.15rem; }
-    .sidebar nav a {
-      color: var(--sidebar-muted);
-      text-decoration: none;
-      padding: 0.45rem 0.6rem;
-      border-radius: var(--radius-sm);
-      font-size: 0.9rem;
-    }
-    .sidebar nav a:hover,
-    .sidebar nav a[aria-current="true"] {
-      background: #141b29; color: var(--sidebar-text);
-    }
-    .sidebar .note {
-      margin-top: 1.5rem; padding-top: 1rem;
-      border-top: 1px solid #2a3348;
-      font-size: 0.8rem; color: var(--sidebar-muted); line-height: 1.45;
-    }
-    .content { padding: 1.5rem 1.25rem 3rem; }
-    @media (min-width: 860px) { .content { padding: 2rem 2.5rem 4rem; } }
-    .content-inner { max-width: 720px; }
-    .eyebrow {
-      font-family: var(--font-mono);
-      font-size: 0.65rem; font-weight: 600;
-      letter-spacing: 0.12em; text-transform: uppercase;
-      color: var(--brand-ink); margin: 0 0 0.4rem;
-    }
-    h1, h2, h3 {
-      font-family: var(--font-display);
-      font-weight: 600; line-height: 1.2; letter-spacing: -0.02em;
-      margin: 0 0 0.65rem;
-    }
-    h1 { font-size: clamp(1.6rem, 4vw, 2.1rem); }
-    h2 { font-size: 1.35rem; margin-top: 2.25rem; }
-    h3 { font-size: 1.05rem; }
-    p { margin: 0 0 0.9rem; color: var(--text); }
-    .muted { color: var(--text-muted); }
-    .alert {
-      background: color-mix(in srgb, var(--brand) 8%, var(--surface-raised));
-      border: 1px solid color-mix(in srgb, var(--brand) 25%, var(--line));
-      border-radius: var(--radius-md);
-      padding: 0.9rem 1.1rem;
-      font-size: 0.9rem;
-      margin: 1rem 0 1.5rem;
-    }
-    .panel {
-      background: var(--surface-raised);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      padding: 1.1rem 1.2rem;
-      margin: 1rem 0;
-    }
-    .panel h3 { margin-top: 0; }
-    .feature-list {
-      display: grid; gap: 0.65rem;
-      margin: 0.75rem 0 0; padding: 0; list-style: none;
-    }
-    .feature-list li {
-      display: grid; grid-template-columns: 1.6rem 1fr; gap: 0.5rem;
-      font-size: 0.925rem; color: var(--text-muted);
-    }
-    .feature-list .i {
-      font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700;
-      color: var(--brand-ink); padding-top: 0.15rem;
-    }
-    .frame {
-      background: var(--surface-sunken);
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      overflow: hidden;
-      margin: 1rem 0 0.4rem;
-    }
-    .frame--portrait { max-width: 360px; margin-inline: auto; }
-    .frame--portrait img { aspect-ratio: 390 / 844; object-fit: contain; }
-    .caption { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.25rem; }
-    .flow-mini { display: grid; gap: 0.5rem; margin: 1rem 0; }
-    @media (min-width: 560px) { .flow-mini { grid-template-columns: repeat(4, 1fr); } }
-    .flow-mini div {
-      background: var(--surface-raised);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-sm);
-      padding: 0.7rem 0.8rem; font-size: 0.85rem;
-    }
-    .flow-mini .s {
-      font-family: var(--font-mono); font-size: 0.6rem; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-      color: var(--brand-ink); display: block; margin-bottom: 0.25rem;
-    }
-    details.rule {
-      background: var(--surface-raised);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      padding: 0.75rem 1rem; margin: 0.5rem 0;
-    }
-    details.rule summary {
-      font-weight: 600; cursor: pointer; list-style: none;
-    }
-    details.rule summary::-webkit-details-marker { display: none; }
-    details.rule p {
-      margin: 0.5rem 0 0; font-size: 0.9rem; color: var(--text-muted);
-    }
-    .footer-guide {
-      margin-top: 2.5rem; padding-top: 1.25rem;
-      border-top: 1px solid var(--line);
-      font-size: 0.85rem; color: var(--text-muted);
-    }
-    .footer-guide a { margin-right: 1rem; }
-    .nav-toggle {
-      display: none;
-      background: #141b29; color: var(--sidebar-text);
-      border: 1px solid #2a3348; border-radius: var(--radius-sm);
-      padding: 0.45rem 0.75rem; font-size: 0.85rem;
-      margin-bottom: 0.75rem; cursor: pointer;
-      width: 100%; text-align: left;
-    }
-    @media (max-width: 859px) {
-      .nav-toggle { display: block; }
-      .sidebar nav { display: none; }
-      .sidebar.nav-open nav { display: flex; }
-    }
-
-    /* Rolagem discreta sem trilho visível; a navegação continua funcionando. */
-    html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
-    *::-webkit-scrollbar { display: none; width: 0; height: 0; }
-  
-    /* Conteúdo ocupa a largura útil em cada viewport, sem coluna estreita fixa. */
-    html, body { width: 100%; max-width: 100%; overflow-x: clip; }
-    .shell { width: 100%; min-width: 0; grid-template-columns: minmax(0, 1fr); }
-    .content, .content-inner, .sidebar { min-width: 0; width: 100%; max-width: none; }
-    .content-inner { max-width: none; }
-    .content { padding-left: clamp(1rem, 4vw, 2.5rem); padding-right: clamp(1rem, 4vw, 2.5rem); }
-    .frame, figure { min-width: 0; max-width: 100%; }
-    .frame img { display: block; width: 100%; max-width: 100%; height: auto; }
-    .frame--portrait { width: min(100%, 360px); }
-    .panel, .alert, details.rule { min-width: 0; overflow-wrap: anywhere; }
-    @media (min-width: 860px) {
-      .shell { grid-template-columns: minmax(210px, 240px) minmax(0, 1fr); }
-      .sidebar { position: sticky; top: 0; height: 100dvh; overflow-y: auto; }
-      .content { padding-top: clamp(1.5rem, 3vw, 3rem); }
-    }
-    @media (max-width: 859px) {
-      .sidebar { padding: 1rem; }
-      .sidebar .brand { margin-bottom: .75rem; }
-      .sidebar .note { margin-top: .75rem; }
-      .content { padding-top: 1.25rem; padding-bottom: 2rem; }
-    }
-    @media (max-width: 420px) {
-      .flow-mini { grid-template-columns: minmax(0, 1fr); }
-      .content { padding-left: .9rem; padding-right: .9rem; }
-      .panel { padding: .9rem; }
-    }
-
-  </style>
+  <link rel="icon" type="image/png" href="/logo/simbolo-96.png">
+  <link rel="apple-touch-icon" href="/logo/simbolo-180.png">
+  <link rel="preload" href="/garcom-pwa/fonts/archivo-latin-wdth-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/garcom-pwa/design-tokens.css">
+  <link rel="stylesheet" href="/institucional.css">
+  <script src="/garcom-pwa/theme-init.js"></script>
 </head>
-<body>
+<body class="pagina pagina--guia">
   <a class="skip" href="#conteudo">Pular para o conteúdo</a>
   <div class="shell">
     <aside class="sidebar" id="sidebar">
-      <a class="brand" href="/">
-        <img src="/logo/qradmin-mark.png" alt="" width="28" height="28">
-        <span>QR Admin</span>
+      <a class="brand" href="/" aria-label="QR Admin — página inicial">
+        <svg class="simbolo" width="26" height="26" viewBox="6 6 20 20" aria-hidden="true" focusable="false"><rect class="simbolo__anel" x="7.5" y="7.5" width="17" height="17" rx="3.5"/><rect class="simbolo__centro" x="13" y="13" width="6" height="6" rx="1.25"/></svg>
+        <span class="assinatura__nome"><b>QR</b>Admin</span>
       </a>
       <span class="badge">Guia demonstrativo</span>
       <button type="button" class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="sideNav">
@@ -387,7 +149,7 @@
           </div>
           <div class="panel">
             <h3>Offline</h3>
-            <p class="muted" style="margin:0">
+            <p class="muted">
               A PWA mantém uma fila local (IndexedDB). O pedido feito sem conexão fica
               <strong>pendente</strong> até sincronizar com o servidor. Em caso de conflito,
               a equipe revisa. O offline <strong>não confirma automaticamente</strong>.
@@ -417,7 +179,7 @@
           </div>
           <div class="panel">
             <h3>PIX nesta versão</h3>
-            <p class="muted" style="margin:0">
+            <p class="muted">
               Chave ou QR estático. O cliente pode informar o pagamento; o caixa confere no
               aplicativo do banco e registra. Não há gateway bancário nem confirmação automática de transferência.
             </p>
@@ -488,6 +250,7 @@
             <a href="/apresentacao.html">Apresentação</a>
             <a href="https://qradmin.up.railway.app/">Acessar o sistema</a>
             <a href="https://wa.me/5547996162721">WhatsApp · Deivid Moura</a>
+            <a href="mailto:servicosdegestaoqradmin@gmail.com">E-mail</a>
           </p>
         </footer>
       </div>

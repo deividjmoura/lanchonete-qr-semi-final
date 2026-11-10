@@ -297,7 +297,7 @@ function CardComandaItem({
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: reduceMotion ? 0 : 0.16, ease: [0.22, 1.18, 0.36, 1] }}
+      transition={{ duration: reduceMotion ? 0 : 0.16, ease: [0.2, 0, 0, 1] }}
       className="ops-card"
       data-atrasado={atrasado ? "true" : "false"}
       aria-label={`Comanda ${pedido.id} da mesa ${mesa} — ${etapaInfo.titulo}`}

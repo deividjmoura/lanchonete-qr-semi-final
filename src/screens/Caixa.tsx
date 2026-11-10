@@ -121,7 +121,7 @@ export default function Caixa() {
                       aria-pressed={ativo}
                       onClick={() => setSelId(s.id)}
                       className={cn(
-                        "ops-card-surface w-full text-left rounded-md p-4 border transition-colors duration-150",
+                        "ficha w-full text-left rounded-md p-4 border transition-colors duration-150",
                         ativo
                           ? "border-brand"
                           : "border-line hover:border-line-strong hover:bg-surface-hover",
@@ -139,15 +139,15 @@ export default function Caixa() {
                         </div>
                       </div>
 
-                      <div className="mt-3 pt-2.5 border-t border-dashed border-line flex items-end justify-between">
+                      <div className="mt-3 pt-2.5 border-t border-line flex items-end justify-between">
                         <div>
-                          <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                          <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
                             Consumo
                           </p>
                           <p className="font-mono text-base font-bold text-text">{BRL(consumo)}</p>
                         </div>
                         <div className="text-right">
-                          <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                          <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
                             Restante
                           </p>
                           <p
@@ -167,7 +167,7 @@ export default function Caixa() {
                           style={{ transform: `scaleX(${Math.max(0, Math.min(1, pct / 100))})` }}
                         />
                       </div>
-                      <p className="mt-1.5 font-mono text-[10px] text-text-muted">
+                      <p className="mt-1.5 font-mono text-[11px] text-text-muted">
                         Pago {BRL(pago)} · {pct.toFixed(0)}%
                       </p>
                     </button>
@@ -187,7 +187,7 @@ export default function Caixa() {
                 initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.2, 0, 0, 1] }}
               >
                 <DetalheCaixa sessao={selecionada} />
               </motion.div>
@@ -343,9 +343,9 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
   };
 
   return (
-    <div className="ops-card-surface rounded-md border border-line overflow-hidden">
+    <div className="ficha rounded-md border border-line overflow-hidden">
       {/* Cabeçalho da comanda */}
-      <div className="px-5 sm:px-6 py-4 border-b border-dashed border-line-strong bg-surface-sunken flex flex-wrap items-center justify-between gap-3">
+      <div className="px-5 sm:px-6 py-4 border-b border-line-strong bg-surface-sunken flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-ink">
             Comanda #{sessao.id}
@@ -358,7 +358,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
           )}
         </div>
         <div className="text-right">
-          <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+          <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
             Tempo aberta
           </p>
           <p className="font-mono text-sm font-bold text-text">{elapsed(sessao.abertaEm)}</p>
@@ -372,7 +372,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
             <h3 className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted mb-3">
               Consumo lançado
             </h3>
-            <div className="divide-y divide-dashed divide-line max-h-72 overflow-y-auto pr-1 no-scrollbar border-y border-dashed border-line">
+            <div className="divide-y divide-line max-h-72 overflow-y-auto pr-1 no-scrollbar border-y border-line">
               {pedidosVisiveis.itens.map((p) => (
                 <div key={p.id} role="group" aria-label={`Pedido ${p.id}`} className="py-3">
                   <p className="font-mono text-[11px] font-semibold text-text-muted mb-1.5">
@@ -397,7 +397,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                                 <span className="text-text-muted text-[11px]"> · {i.escolha.nome}</span>
                               )}
                               {i.status && (
-                                <span className="ml-1.5 font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                                <span className="ml-1.5 font-mono text-[11px] uppercase tracking-wider text-text-muted">
                                   {i.status === "concluido"
                                     ? "pronto"
                                     : i.status === "em_producao"
@@ -416,7 +416,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                               {i.status && i.status !== "entregue" && i.status !== "cancelado" && (
                                 <button
                                   type="button"
-                                  className="ml-2 font-mono text-[10px] font-bold text-status-danger-ink hover:underline"
+                                  className="ml-2 font-mono text-[11px] font-bold text-status-danger-ink hover:underline"
                                   onClick={() => void cancelarItem(Number(i.id))}
                                 >
                                   Cancelar item
@@ -458,7 +458,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
               />
             </div>
             {servicoAjustado && (
-              <label className="mt-3 block font-mono text-[10px] font-bold uppercase tracking-wider text-text-muted">
+              <label className="mt-3 block font-mono text-[11px] font-bold uppercase tracking-wider text-text-muted">
                 Motivo do ajuste do serviço (obrigatório)
                 <input
                   type="text"
@@ -471,7 +471,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
             )}
             {precisaGerente && (
               <div className="mt-3 rounded-sm border border-line-strong bg-surface px-3 py-3">
-                <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-text">
+                <p className="font-mono text-[11px] font-bold uppercase tracking-wider text-text">
                   Autorização do gerente (obrigatória)
                 </p>
                 <p className="mt-1 text-[11px] leading-relaxed text-text-muted">
@@ -480,7 +480,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                   autorização ficam auditados com quem operou e quem autorizou.
                 </p>
                 <div className="mt-2.5 grid grid-cols-2 gap-2">
-                  <label className="block font-mono text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                  <label className="block font-mono text-[11px] font-bold uppercase tracking-wider text-text-muted">
                     Login do gerente
                     <input
                       type="text"
@@ -491,7 +491,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                       className="mt-1.5 block h-10 w-full rounded-sm bg-surface-sunken border border-line-strong px-3 text-xs normal-case tracking-normal text-text focus:outline-none focus:border-brand"
                     />
                   </label>
-                  <label className="block font-mono text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                  <label className="block font-mono text-[11px] font-bold uppercase tracking-wider text-text-muted">
                     Senha do gerente
                     <input
                       type="password"
@@ -522,7 +522,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
             )}
           </div>
 
-          <div className="mt-5 pt-4 border-t border-dashed border-line-strong space-y-1.5 font-mono text-xs">
+          <div className="mt-5 pt-4 border-t border-line-strong space-y-1.5 font-mono text-xs">
             <Linha label="Consumo" valor={BRL(consumo)} />
             <Linha
               label="Desconto"
@@ -536,7 +536,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
               </span>
               <span className="font-mono text-3xl font-extrabold text-text">{BRL(total)}</span>
             </div>
-            <div className="grid grid-cols-2 gap-3 border-t border-dashed border-line pt-2.5">
+            <div className="grid grid-cols-2 gap-3 border-t border-line pt-2.5">
               <p className="flex items-baseline justify-between gap-2">
                 <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-text-muted">Pago</span>
                 <span className="font-mono text-sm font-bold text-status-success-ink">{BRL(pago)}</span>
@@ -556,7 +556,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
           </h3>
 
           {/* Divisão */}
-          <div className="pb-4 border-b border-dashed border-line-strong space-y-3">
+          <div className="pb-4 border-b border-line-strong space-y-3">
             <div className="flex items-center justify-between gap-3">
               <p className="flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-wider text-text">
                 <Users size={16} className="text-text-muted" /> Dividir conta
@@ -700,7 +700,7 @@ function DetalheCaixa({ sessao }: { sessao: Sessao }) {
                       level="M"
                     />
                   ) : (
-                    <div className="size-[92px] flex items-center justify-center text-[10px] text-text-muted text-center px-1">
+                    <div className="size-[92px] flex items-center justify-center text-[11px] text-text-muted text-center px-1">
                       Configure PIX_CHAVE no servidor
                     </div>
                   )}
@@ -808,7 +808,7 @@ function Ajuste({
   };
   return (
     <div>
-      <p className={cn("font-mono text-[10px] font-bold uppercase tracking-wider mb-1.5", tom)}>
+      <p className={cn("font-mono text-[11px] font-bold uppercase tracking-wider mb-1.5", tom)}>
         {label}
       </p>
       <div className="flex items-center gap-1">

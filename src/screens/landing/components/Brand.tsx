@@ -1,34 +1,11 @@
 import type { MouseEvent } from "react";
+import { Assinatura } from "../../../components/ui";
 import { useRolagemInterna } from "../useRolagemInterna";
 
-/* Marca oficial do QR Admin: o símbolo (mesa com QR e comanda) vem de
-   /logo/qradmin-mark.png, o mesmo asset usado pelo login e pelas telas
-   administrativas. O desenho do símbolo provisório da apresentação foi
-   substituído apenas nesse ponto — o resto da composição é o aprovado. */
-export function BrandMark({
-  size = 38,
-  className = "",
-}: {
-  size?: number;
-  className?: string;
-}) {
-  return (
-    <span className={`brand-mark ${className}`} style={{ ["--mark-size" as string]: `${size}px` }}>
-      {/* Símbolo oficial do produto (mesmo arquivo do login e do PWA). */}
-      <img src="/logo/qradmin-mark.png" alt="" aria-hidden="true" draggable={false} />
-    </span>
-  );
-}
-
-export function Brand({
-  inverted = false,
-  compact = false,
-  className = "",
-}: {
-  inverted?: boolean;
-  compact?: boolean;
-  className?: string;
-}) {
+/* Assinatura do QR Admin no cabeçalho: o símbolo reduzido ("olho do passe") e
+   o nome. O logotipo ilustrado oficial só aparece onde tem tamanho para ser
+   lido (rodapé e tela de acesso), sempre sobre uma placa de papel. */
+export function Brand({ className = "" }: { className?: string }) {
   const rolar = useRolagemInterna();
   const aoClicar = (event: MouseEvent<HTMLAnchorElement>) => {
     /* O logotipo aponta para a raiz do produto. Quando já estamos na raiz,
@@ -39,17 +16,17 @@ export function Brand({
   };
 
   return (
-    <a
-      className={`brand${inverted ? " brand--inverted" : ""}${compact ? " brand--compact" : ""} ${className}`}
-      href="/"
-      aria-label="QRAdmin — página inicial"
-      onClick={aoClicar}
-    >
-      <BrandMark size={compact ? 31 : 36} />
-      <span className="brand-wordmark">
-        <strong>QR</strong>
-        <span>Admin</span>
-      </span>
+    <a className={`brand ${className}`} href="/" aria-label="QR Admin — página inicial" onClick={aoClicar}>
+      <Assinatura size={26} />
     </a>
+  );
+}
+
+/* Logotipo ilustrado oficial sobre a placa de papel (legível nos dois temas). */
+export function LogoOficial({ size = 64 }: { size?: number }) {
+  return (
+    <span className="logo-placa">
+      <img src="/logo/qradmin-mark.png" alt="" aria-hidden="true" width={size} height={size} draggable={false} />
+    </span>
   );
 }

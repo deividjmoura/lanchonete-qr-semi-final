@@ -1,5 +1,7 @@
 "use strict";
-// Validação visual e estrutural do sistema "Palco Azul/Violeta" em Chromium real.
+// Validação visual e estrutural da identidade "Passe" em Chromium real.
+// O cardápio do cliente (#/mesa/:token) ficou fora do rebranding: aqui ele é
+// conferido justamente por NÃO ter mudado de fonte nem de superfície.
 // Executado pelo runner scripts/run-e2e-tests.js, que fornece uma porta isolada via VISUAL_BASE_URL.
 const { chromium } = require("playwright-core");
 const binary = require("@sparticuz/chromium").default;
@@ -275,8 +277,8 @@ async function main() {
                    do OpsShell não é montado nela). */
                 ? ".login-brand"
                 : screen === "home"
-                  /* "/" é a landing comercial: a marca fica em .brand-mark. */
-                  ? ".brand-mark"
+                  /* "/" é a landing comercial: a marca é a assinatura do cabeçalho. */
+                  ? ".site-header .assinatura"
                   : "h1",
           )
           .first()
@@ -308,7 +310,13 @@ async function main() {
           });
 
           assert.ok(measured.scroll <= width, `${screen}/${scheme}/${width}: sem overflow horizontal`);
-          assert.ok(measured.font.includes("Plus Jakarta Sans"), `${screen}: fonte Plus Jakarta Sans ativa`);
+          /* Uma família para o produto inteiro (Archivo); o cardápio mantém a
+             família que sempre teve. */
+          const familia = screen === "mesa" ? "Plus Jakarta Sans" : "Archivo";
+          assert.ok(measured.font.includes(familia), `${screen}: fonte ${familia} ativa (lida: ${measured.font})`);
+          if (screen !== "mesa") {
+            assert.ok(!/Fraunces|Plus Jakarta|JetBrains/.test(measured.font), `${screen}: sem famílias da identidade anterior`);
+          }
           assert.notEqual(measured.bodyBg, "rgb(255, 255, 255)", `${screen}: proibido #FFF puro`);
           assert.notEqual(measured.bodyBg, "rgb(0, 0, 0)", `${screen}: proibido #000 puro`);
 
@@ -334,21 +342,35 @@ async function main() {
               const mainBefore = await page.locator(".ops-main").boundingBox();
               assert.ok(mainBefore.x >= 71, `${screen}/${scheme}: main x=${mainBefore.x}`);
 
-              // O dock permanece compacto no hover; só o rótulo do ícone aparece.
+              // Linha de passe: cada estação mostra ícone E nome, sempre. Não há
+              // rótulo escondido que só aparece no hover, e o hover não mexe em
+              // largura nenhuma.
               const navItem = page.locator(".ops-nav-item").first();
+              const rotulo = navItem.locator(".ops-sidebar-label");
+              const caixaRotulo = await inViewport(page, rotulo);
+              assert.ok(caixaRotulo.width > 0 && caixaRotulo.x + caixaRotulo.width <= 72 + 1, "Nome da estação cabe no trilho de 72px");
+              assert.ok(
+                await rotulo.evaluate((el) => {
+                  const estilo = getComputedStyle(el);
+                  return estilo.visibility === "visible" && Number(estilo.opacity) === 1 && parseFloat(estilo.fontSize) >= 11;
+                }),
+                "Nome da estação é texto visível (≥ 11px) sem depender do ponteiro",
+              );
+              assert.equal(
+                await navItem.evaluate((el) => getComputedStyle(el, "::after").content),
+                "none",
+                "Estação não usa tooltip em pseudo-elemento",
+              );
               await navItem.hover();
               await page.waitForTimeout(80);
               const sidebarHover = await page.locator(".ops-sidebar").boundingBox();
               const mainAfter = await page.locator(".ops-main").boundingBox();
-              assert.equal(Math.round(sidebarHover.width), 72, "Dock permanece em 72px no hover");
+              assert.equal(Math.round(sidebarHover.width), 72, "Trilho permanece em 72px no hover");
               assert.equal(
                 Math.round(mainAfter.x),
                 Math.round(mainBefore.x),
-                "Hover do dock não causa reflow no conteúdo",
+                "Hover no trilho não causa reflow no conteúdo",
               );
-              const tooltip = await navItem.evaluate((el) => getComputedStyle(el, "::after"));
-              assert.equal(tooltip.opacity, "1", "Rótulo aparece como tooltip no hover");
-              assert.equal(tooltip.backgroundColor, "rgba(0, 0, 0, 0)", "Tooltip sem fundo");
               await page.mouse.move(700, 200);
             }
             await inViewport(page, page.getByRole("button", { name: /Ativar tema/ }));
@@ -517,8 +539,12 @@ async function main() {
         }
       }
 
-      assert.equal(styles.mesa.surface, styles.pwa.surface, "Mesa/PWA: mesmo token --surface");
-      assert.equal(styles.mesa.raised, styles.pwa.raised, "Mesa/PWA: mesmo token --surface-raised");
+      /* Duas identidades, dois conjuntos de tokens: o PWA do garçom veste Passe,
+         o cardápio do cliente continua com a superfície que tinha. */
+      const escuro = scheme === "dark";
+      assert.equal(styles.pwa.surface.toLowerCase(), escuro ? "#081726" : "#f4efe6", "PWA: --surface da identidade Passe");
+      assert.equal(styles.mesa.surface.toLowerCase(), escuro ? "#0b101b" : "#e4e8f1", "Cardápio: --surface inalterada");
+      assert.notEqual(styles.mesa.raised, styles.pwa.raised, "Cardápio e PWA não dividem --surface-raised");
       assert.deepEqual(errors, [], "Sem erros de execução");
 
       // Preferência explícita prevalece sobre o SO
@@ -533,7 +559,7 @@ async function main() {
       await context.close();
     }
 
-    // Shell offline real: Service Worker precacheia tokens, Fraunces, Plus Jakarta Sans, JetBrains Mono e ícones
+    // Shell offline real: o Service Worker precacheia tokens, a fonte única (Archivo) e os ícones.
     const offline = await browser.newContext({ colorScheme: "dark" });
     const page = await offline.newPage();
     await page.goto(base + "/garcom-pwa/");
@@ -547,9 +573,11 @@ async function main() {
     await page.reload();
     await page.evaluate(() => document.fonts.ready);
     assert.equal(await page.locator("html").getAttribute("data-theme"), "escuro");
-    assert.ok(await page.evaluate(() => document.fonts.check('700 20px "Fraunces"')));
-    assert.ok(await page.evaluate(() => document.fonts.check('600 15px "Plus Jakarta Sans"')));
-    assert.ok(await page.evaluate(() => document.fonts.check('600 13px "JetBrains Mono"')));
+    /* document.fonts.check() responde true para família que nem existe; por
+       isso a conferência olha as faces de fato carregadas, sem rede. */
+    const faces = await page.evaluate(() => [...document.fonts].map((f) => ({ familia: f.family.replace(/["']/g, ""), estado: f.status })));
+    assert.ok(faces.some((f) => f.familia === "Archivo" && f.estado === "loaded"), `Archivo carregada offline (${JSON.stringify(faces)})`);
+    assert.deepEqual(faces.filter((f) => f.familia !== "Archivo"), [], "o PWA declara uma única família");
     // A marca continua no shell offline: agora ela vive no painel de ajuda do rodapé.
     assert.equal(await page.locator(".app-header").count(), 0, "sem cabeçalho para precachear");
     await page.locator("#helpBtn").click();
@@ -559,7 +587,7 @@ async function main() {
       true,
     );
     await offline.close();
-    console.log(`✓ ${layouts} layouts, temas, dock fixo em 72px com tooltip, cards expansíveis e shell offline validados.`);
+    console.log(`✓ ${layouts} layouts, temas, linha de passe fixa em 72px com nome visível, cards expansíveis e shell offline validados.`);
   } finally {
     await browser.close();
   }

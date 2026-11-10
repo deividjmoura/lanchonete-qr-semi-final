@@ -172,8 +172,8 @@ export function MesasAbertasModal({ open, onClose }: { open: boolean; onClose: (
       <div className="dash-mesas">
         <header className="dash-mesas__head">
           <div className="dash-mesas__head-main">
-            <p className="dash-kicker">
-              <span /> SALÃO AGORA <span className="dash-eyebrow__sep">/</span> MESAS ABERTAS
+            <p className="dash-kicker rotulo">
+              Salão agora <span className="dash-eyebrow__sep">/</span> Mesas abertas
             </p>
             <h3 id="dash-mesas-abertas-titulo">Mesas ocupadas</h3>
             <p>
@@ -214,29 +214,29 @@ export function MesasAbertasModal({ open, onClose }: { open: boolean; onClose: (
               rotulo="Mesas abertas"
               valor={`${comTempo.length}/${todas.length}`}
               detalhe={`${totais.atencao} em atenção · ${totais.criticas} críticas`}
-              icone={<Users size={17} weight="duotone" />}
-              tom="ciano"
+              icone={<Users size={17} weight="bold" />}
+              tom="volume"
             />
             <Indicador
               rotulo="Consumo em aberto"
               valor={BRL(totais.saldo)}
               detalhe="Entregue nas mesas abertas e ainda não pago."
-              icone={<Wallet size={17} weight="duotone" />}
-              tom="laranja"
+              icone={<Wallet size={17} weight="bold" />}
+              tom="valor"
             />
             <Indicador
               rotulo="Pedidos ativos"
               valor={String(totais.pedidos)}
               detalhe={`${totais.itensFila} ${totais.itensFila === 1 ? "item" : "itens"} na fila de produção`}
-              icone={<Receipt size={17} weight="duotone" />}
-              tom="lima"
+              icone={<Receipt size={17} weight="bold" />}
+              tom="volume"
             />
             <Indicador
               rotulo="Mesas livres"
               valor={String(Math.max(0, todas.length - comTempo.length))}
               detalhe="Prontas para check-in pelo QR ou pelo garçom."
-              icone={<CheckCircle size={17} weight="duotone" />}
-              tom="rosa"
+              icone={<CheckCircle size={17} weight="bold" />}
+              tom="volume"
             />
           </div>
 
@@ -322,13 +322,13 @@ function Indicador({
   valor: string;
   detalhe: string;
   icone: ReactNode;
-  tom: "ciano" | "laranja" | "lima" | "rosa";
+  tom: "valor" | "volume";
 }) {
   return (
     <div className={`dash-mesas__stat dash-mesas__stat--${tom}`}>
       <span className="dash-mesas__stat-icon">{icone}</span>
       <p className="dash-mesas__stat-label">{rotulo}</p>
-      <p className="dash-mesas__stat-value">{valor}</p>
+      <p className="dash-mesas__stat-value dado">{valor}</p>
       <p className="dash-mesas__stat-detail">{detalhe}</p>
     </div>
   );
@@ -361,7 +361,7 @@ export function CartaoMesaAberta({ mesa, tempo }: { mesa: MesaPanorama; tempo: T
     <article className={`dash-mesa dash-mesa--${situacao}`} aria-label={`Mesa ${String(mesa.numero).padStart(2, "0")}`}>
       <header className="dash-mesa__top">
         <div className="dash-mesa__ident">
-          <p className="dash-mesa__numero num-extruded">{String(mesa.numero).padStart(2, "0")}</p>
+          <p className="dash-mesa__numero placa__numero">{String(mesa.numero).padStart(2, "0")}</p>
           <span className="dash-mesa__label">mesa</span>
         </div>
         <div className="dash-mesa__badges">
@@ -415,7 +415,7 @@ export function CartaoMesaAberta({ mesa, tempo }: { mesa: MesaPanorama; tempo: T
       <footer className="dash-mesa__footer">
         <div>
           <p className="dash-mesa__footer-label">Consumo em aberto</p>
-          <p className="dash-mesa__footer-value">{BRL(mesa.saldo)}</p>
+          <p className="dash-mesa__footer-value dado">{BRL(mesa.saldo)}</p>
         </div>
         <p className="dash-mesa__footer-note">
           entregue {BRL(mesa.consumo)}

@@ -17,6 +17,7 @@ const { getOuAbrirSessao, getProdutoComRegras } = require('../db/queries');
 const { ErroGarcom, removerGarcom, setGarcomAtivo, entregarComoGarcom } = require('../db/garcons');
 const { ErroPedido, criarPedido, setStatusPedido, setStatusItem } = require('../db/pedidos');
 const { sanitizarAlvoRequisicao, sanitizarDetalheErro } = require('../db/log-sanitizer');
+const { temaResolvido, superficieDoCardapio } = require('./helpers/tokens.cjs');
 
 /* Mock mínimo de <html> que espelha o DOM real:
    dataset ↔ data-theme ficam sincronizados com getAttribute/setAttribute. */
@@ -36,12 +37,23 @@ function criarRoot() {
   };
 }
 
-function theme({ blocked = false, dark = false, saved = null } = {}) {
+/* O que o navegador responderia para getComputedStyle(<html>).getPropertyValue("--surface"):
+   o valor da folha de estilo para o tema ligado e para a identidade do documento
+   ("Passe" por padrão; a do cardápio do cliente quando data-identidade="cardapio"). */
+function superficieComputada(root) {
+  const tema = root.getAttribute('data-theme') === 'escuro' ? 'escuro' : 'claro';
+  if (root.getAttribute('data-identidade') === 'cardapio') return superficieDoCardapio()[tema];
+  return temaResolvido(tema)['--surface'];
+}
+
+function theme({ blocked = false, dark = false, saved = null, identidade = null } = {}) {
   const root = criarRoot();
+  if (identidade) root.setAttribute('data-identidade', identidade);
   const meta = {};
   const context = {
     exports: {},
     document: { documentElement: root, querySelector: () => ({ setAttribute: (k, v) => meta[k] = v }) },
+    getComputedStyle: (el) => ({ getPropertyValue: (nome) => (el === root && nome === '--surface' ? ` ${superficieComputada(root)}` : '') }),
     window: { matchMedia: () => ({ matches: dark }), dispatchEvent: () => {} },
     localStorage: {
       getItem: () => { if (blocked) throw Error('Blocked'); return saved; },
@@ -71,20 +83,35 @@ test('tema respeita sistema sem armazenamento e preferência salva', () => {
   const t = theme();
   t.aplicarTema('escuro');
   assert.equal(t.saved(), 'escuro');
-  assert.equal(t.meta.content, '#0b101b');
+  // A barra do navegador acompanha o --surface que a folha de estilo resolve.
+  assert.equal(t.meta.content, '#081726');
   assert.equal(theme({ saved: t.saved() }).temaAtual(), 'escuro');
 });
 test('tema claro mantém o fundo suave separado da superfície dos cartões', () => {
   const t = theme();
   t.aplicarTema('claro');
-  assert.equal(t.root.style.values['--surface'], '#e4e8f1');
-  assert.equal(t.root.style.values['--surface-raised'], '#edf0f6');
-  assert.notEqual(
-    t.root.style.values['--surface'],
-    t.root.style.values['--surface-raised'],
-    'fundo da página e cartão não podem se confundir',
-  );
+  // Os valores moram em design-tokens.css: aplicarTema só liga o tema. Tokens
+  // escritos inline no <html> venceriam a folha de estilo e travariam tanto a
+  // troca de tema quanto a identidade própria do cardápio do cliente.
+  assert.deepEqual(t.root.style.values, {}, 'aplicarTema não fixa tokens inline');
+  for (const tema of ['claro', 'escuro']) {
+    const valores = temaResolvido(tema);
+    assert.match(valores['--surface'], /^#[0-9a-f]{6}$/);
+    assert.match(valores['--surface-raised'], /^#[0-9a-f]{6}$/);
+    assert.notEqual(valores['--surface'], valores['--surface-raised'], `${tema}: fundo da página e cartão não podem se confundir`);
+  }
+  assert.equal(temaResolvido('claro')['--surface'], '#f4efe6');
+  assert.equal(temaResolvido('claro')['--surface-raised'], '#fffdf8');
+  assert.equal(t.meta.content, '#f4efe6');
+});
+test('no cardápio do cliente a barra do navegador segue a identidade dele, não a nova', () => {
+  const t = theme({ identidade: 'cardapio' });
+  t.aplicarTema('claro');
   assert.equal(t.meta.content, '#e4e8f1');
+  t.aplicarTema('escuro');
+  assert.equal(t.meta.content, '#0b101b');
+  assert.deepEqual(t.root.style.values, {});
+  assert.equal(t.root.getAttribute('data-identidade'), 'cardapio', 'trocar o tema não mexe na identidade do documento');
 });
 test('inicialização antes do React respeita sistema com armazenamento bloqueado', () => {
   const script = fs.readFileSync('public/garcom-pwa/theme-init.js', 'utf8');

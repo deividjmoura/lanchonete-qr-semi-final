@@ -1,23 +1,24 @@
-import { useState } from "react";
-import { BrandMark } from "../components/Brand";
+import { useRef, useState, type KeyboardEvent } from "react";
+import { Captura, type CapturaChave } from "../components/Capturas";
 import { Icon } from "../components/Icon";
 import { SectionIntro } from "../components/SectionIntro";
 
-type Recurso = {
+type Modulo = {
   id: string;
   label: string;
   kicker: string;
   title: string;
   description: string;
   rows: { icon: string; title: string; detail: string }[];
-  connected: string[];
+  captura: CapturaChave;
+  tela: string;
 };
 
-const capabilities: Recurso[] = [
+const modulos: Modulo[] = [
   {
     id: "atendimento",
     label: "Atendimento",
-    kicker: "01 / SALÃO",
+    kicker: "Salão",
     title: "Do QR à mesa.",
     description:
       "Cardápio digital por QR Code, mesas com sessão própria, personalização de itens e acompanhamento da comanda pelo cliente.",
@@ -26,12 +27,13 @@ const capabilities: Recurso[] = [
       { icon: "table", title: "Mesa e sessão", detail: "Mapa do salão e check-in" },
       { icon: "receipt", title: "Pedido", detail: "Itens, adicionais e observações" },
     ],
-    connected: ["Cardápio", "Mesa", "Pedido"],
+    captura: "mapa-mesas",
+    tela: "Panorama das mesas",
   },
   {
     id: "operacao",
     label: "Operação",
-    kicker: "02 / SERVIÇO",
+    kicker: "Serviço",
     title: "Do pedido à entrega.",
     description:
       "Fila de produção separada por cozinha e bar, controle item a item, aviso por voz, impressão térmica e entregas do garçom.",
@@ -40,12 +42,13 @@ const capabilities: Recurso[] = [
       { icon: "utensils", title: "Produção por item", detail: "Avanço parcial de cada prato" },
       { icon: "check", title: "Entregas do garçom", detail: "Pronto, retirado e entregue" },
     ],
-    connected: ["Cozinha", "Bar", "Garçom"],
+    captura: "fila-bar",
+    tela: "Fila do bar",
   },
   {
     id: "financeiro",
     label: "Financeiro",
-    kicker: "03 / FECHAMENTO",
+    kicker: "Fechamento",
     title: "Uma conta que fecha com contexto.",
     description:
       "Caixa com divisão de conta, pagamentos parciais, dinheiro, cartão e PIX com confirmação, comprovantes e histórico de vendas.",
@@ -54,12 +57,13 @@ const capabilities: Recurso[] = [
       { icon: "card", title: "PIX com valor exato", detail: "Aviso do cliente e confirmação no caixa" },
       { icon: "receipt", title: "Histórico de vendas", detail: "Consulta e reimpressão" },
     ],
-    connected: ["Conta", "Pagamento", "Histórico"],
+    captura: "comanda-cliente",
+    tela: "Comanda vista pelo cliente",
   },
   {
     id: "gestao",
     label: "Administração",
-    kicker: "04 / GESTÃO",
+    kicker: "Gestão",
     title: "Cadastros para organizar a casa.",
     description:
       "Cardápio com fotos, categorias e adicionais, controle de estoque, praças do salão, contas de funcionários e indicadores gerenciais.",
@@ -68,131 +72,115 @@ const capabilities: Recurso[] = [
       { icon: "users", title: "Equipe", detail: "Contas por setor e segundo fator" },
       { icon: "chart", title: "Indicadores", detail: "Painel gerencial do período" },
     ],
-    connected: ["Catálogo", "Equipe", "Gestão"],
+    captura: "gestao-cardapio",
+    tela: "Cardápio e estoque",
   },
 ];
 
-function FeatureStage({ capability }: { capability: Recurso }) {
-  return (
-    <div className="feature-stage" aria-live="polite" aria-atomic="true">
-      <div className="feature-stage__topline">
-        <span>
-          <BrandMark size={22} /> QRADMIN / MÓDULOS
-        </span>
-        <span className="feature-stage__concept">
-          <i /> EM PRODUÇÃO
-        </span>
-      </div>
-      <div className="feature-stage__heading">
-        <div>
-          <span className="feature-stage__kicker">{capability.kicker}</span>
-          <h3>{capability.title}</h3>
-        </div>
-        <span className="feature-stage__index">0{capabilities.findIndex((item) => item.id === capability.id) + 1}</span>
-      </div>
-      <div className="feature-stage__body">
-        <div className="feature-stage__rows">
-          {capability.rows.map((row) => (
-            <div className="feature-stage__row" key={row.title}>
-              <span className="feature-stage__row-icon">
-                <Icon name={row.icon} size={17} />
-              </span>
-              <span className="feature-stage__row-copy">
-                <strong>{row.title}</strong>
-                <small>{row.detail}</small>
-              </span>
-              <Icon className="feature-stage__row-arrow" name="arrow-up-right" size={15} />
-            </div>
-          ))}
-        </div>
-        <div className="feature-stage__connections">
-          <span className="feature-stage__connections-label">PONTOS RELACIONADOS</span>
-          {capability.connected.map((item, index) => (
-            <div className="feature-stage__connection" key={item}>
-              <span className="feature-stage__connection-number">0{index + 1}</span>
-              <span>{item}</span>
-              {index < capability.connected.length - 1 && <span className="feature-stage__connection-line" />}
-            </div>
-          ))}
-          <span className="feature-stage__connections-foot">
-            Recurso do produto,
-            <br />
-            não de outra plataforma.
-          </span>
-        </div>
-      </div>
-      <div className="feature-stage__bottom">
-        <span>QRADMIN · MÓDULOS DO SISTEMA</span>
-        <span>VERIFICADO NO CÓDIGO</span>
-      </div>
-    </div>
-  );
-}
-
 export function FeaturesSection() {
-  const [activeId, setActiveId] = useState(capabilities[0].id);
-  const activeCapability = capabilities.find((item) => item.id === activeId) ?? capabilities[0];
+  const [ativoId, setAtivoId] = useState(modulos[0].id);
+  const abas = useRef<(HTMLButtonElement | null)[]>([]);
+  const ativo = modulos.find((item) => item.id === ativoId) ?? modulos[0];
+
+  /* Padrão de abas do WAI-ARIA: setas trocam a aba e levam o foco junto. */
+  const aoTeclar = (event: KeyboardEvent<HTMLButtonElement>, indice: number) => {
+    const ultimo = modulos.length - 1;
+    let proximo = indice;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") proximo = indice === ultimo ? 0 : indice + 1;
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") proximo = indice === 0 ? ultimo : indice - 1;
+    if (event.key === "Home") proximo = 0;
+    if (event.key === "End") proximo = ultimo;
+    if (proximo !== indice) {
+      event.preventDefault();
+      setAtivoId(modulos[proximo].id);
+      abas.current[proximo]?.focus();
+    }
+  };
 
   return (
-    <section className="features-section" id="funcionalidades" aria-labelledby="features-title">
+    <section className="modulos" id="funcionalidades" aria-labelledby="features-title">
       <div className="page-shell">
-        <div className="features-section__heading">
-          <SectionIntro eyebrow="RECURSOS POR CONTEXTO DE TRABALHO" title="Não são módulos soltos. São momentos da mesma operação." id="features-title">
-            <p>
-              Explore os grupos de recursos do QRAdmin, da chegada do cliente à visão
-              administrativa.
-            </p>
+        <div className="modulos__cabecalho">
+          <SectionIntro
+            eyebrow="Módulos por contexto de trabalho"
+            title="Não são módulos soltos. São momentos da mesma operação."
+            id="features-title"
+          >
+            <p>Os grupos de recursos do QR Admin, da chegada do cliente à visão administrativa.</p>
           </SectionIntro>
-          <div className="scope-notice" role="note">
-            <Icon name="info" size={19} />
-            <div>
-              <strong>Funcionalidades implementadas · operação de demonstração</strong>
-              <p>
-                Os recursos abaixo existem no produto e estão disponíveis no ambiente de
-                demonstração. A conta usada nas capturas contém apenas dados fictícios.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="feature-explorer">
-          <div className="feature-explorer__menu" aria-label="Escolha um contexto operacional">
-            <p className="feature-explorer__menu-label">EXPLORE POR CONTEXTO</p>
-            {capabilities.map((capability) => (
-              <button
-                className={`feature-picker${activeId === capability.id ? " feature-picker--active" : ""}`}
-                type="button"
-                key={capability.id}
-                aria-pressed={activeId === capability.id}
-                aria-controls="feature-stage"
-                onClick={() => setActiveId(capability.id)}
-              >
-                <span className="feature-picker__index">{capability.kicker}</span>
-                <span className="feature-picker__main">
-                  <strong>{capability.label}</strong>
-                  <Icon name="arrow-up-right" size={16} />
-                </span>
-                <span className="feature-picker__summary">{capability.title}</span>
-              </button>
-            ))}
-            <p className="feature-explorer__menu-foot">Selecione um momento da rotina para ver os recursos relacionados.</p>
-          </div>
-
-          <div id="feature-stage" className="feature-explorer__stage">
-            <FeatureStage capability={activeCapability} />
-          </div>
-        </div>
-
-        <div className="features-section__list-note">
-          <span className="features-section__list-rule" />
-          <p>
-            Os nomes acima seguem as telas do sistema. Para o detalhamento de cada área, consulte o{" "}
-            <a className="features-section__link" href="/guia-sistema.html">
-              guia do sistema
-            </a>
-            .
+          <p className="aviso" role="note">
+            <Icon name="info" size={18} />
+            <span>
+              <strong>Funcionalidades implementadas.</strong> Os recursos abaixo existem no produto e
+              estão no ambiente de demonstração; a conta usada nas capturas contém apenas dados
+              fictícios.
+            </span>
           </p>
         </div>
+
+        <div className="modulos__abas" role="tablist" aria-label="Módulos do QR Admin">
+          {modulos.map((modulo, indice) => (
+            <button
+              className="modulos__aba"
+              type="button"
+              role="tab"
+              key={modulo.id}
+              id={`modulo-aba-${modulo.id}`}
+              aria-selected={ativoId === modulo.id}
+              aria-controls="modulo-painel"
+              tabIndex={ativoId === modulo.id ? 0 : -1}
+              ref={(elemento) => {
+                abas.current[indice] = elemento;
+              }}
+              onClick={() => setAtivoId(modulo.id)}
+              onKeyDown={(event) => aoTeclar(event, indice)}
+            >
+              <span className="modulos__aba-no" aria-hidden="true" />
+              <span className="modulos__aba-rotulo">
+                <span className="dado">0{indice + 1}</span> {modulo.kicker}
+              </span>
+              <strong>{modulo.label}</strong>
+            </button>
+          ))}
+        </div>
+
+        <div
+          className="modulos__painel"
+          role="tabpanel"
+          id="modulo-painel"
+          aria-labelledby={`modulo-aba-${ativo.id}`}
+          tabIndex={0}
+        >
+          <div className="modulos__texto">
+            <h3>{ativo.title}</h3>
+            <p>{ativo.description}</p>
+            <ul className="modulos__lista">
+              {ativo.rows.map((row) => (
+                <li key={row.title}>
+                  <span className="modulos__lista-icone">
+                    <Icon name={row.icon} size={18} />
+                  </span>
+                  <span>
+                    <strong>{row.title}</strong>
+                    <small>{row.detail}</small>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <figure className="moldura modulos__tela">
+            <div className="moldura__topo">
+              <span className="moldura__no" aria-hidden="true" />
+              <span className="moldura__nome">{ativo.tela}</span>
+            </div>
+            <Captura key={ativo.captura} chave={ativo.captura} className="moldura__imagem" />
+          </figure>
+        </div>
+
+        <p className="modulos__nota">
+          Os nomes acima seguem as telas do sistema. Para o detalhamento de cada área, consulte o{" "}
+          <a href="/guia-sistema.html">guia do sistema</a>.
+        </p>
       </div>
     </section>
   );

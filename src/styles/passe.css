@@ -1,0 +1,378 @@
+/* ==========================================================================
+   IDENTIDADE "PASSE" · REGRAS GLOBAIS DO SPA
+   --------------------------------------------------------------------------
+   Tudo neste arquivo fica dentro de
+       :where(html:not([data-identidade="cardapio"]))
+   Ou seja: vale para o produto inteiro, menos o cardápio do cliente, que
+   conserva a identidade dele (src/screens/cardapio-identidade/). `:where()`
+   não soma especificidade, então as regras pesam só o seletor de dentro.
+
+   Vocabulário da identidade (ver docs/DESIGN_SYSTEM.md):
+     .placa   plaquinha de mesa — bloco sólido com o número
+     .rotulo  etiqueta em caixa alta, espaçada
+     .dado    número em largura estreita com algarismos tabulares
+     .regua   título de seção sobre régua de 1px
+
+   A linha de passe (estações quadradas ligadas por um trajeto) não é uma
+   classe daqui: cada superfície desenha a sua, com a geometria que precisa.
+   Em comum ficam os tokens: --route e --route-active sobre papel;
+   --ink-band-line (ou --sidebar-line) e --ink-band-signal sobre tinta.
+   ========================================================================== */
+
+/* @keyframes não aceitam escopo: os nomes têm prefixo próprio para nunca
+   colidirem com os do cardápio (ticket-enter, stamp-pop). */
+@keyframes passe-entrar {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes passe-carimbo {
+  0% { transform: scale(0.96); }
+  65% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+@keyframes passe-pulso {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+:where(html:not([data-identidade="cardapio"])) {
+  /* ---------------------------------------------------------- tipografia -- */
+  & body {
+    font-stretch: var(--wdth-text);
+    font-synthesis: none;
+  }
+
+  /* voz: títulos em largura larga */
+  .font-display,
+  .display-condensed {
+    font-family: var(--font-display);
+    font-stretch: var(--wdth-display);
+    letter-spacing: -0.012em;
+  }
+
+  /* dado: números e códigos operacionais em largura estreita, tabulares */
+  .font-mono,
+  .dado {
+    font-family: var(--font-mono);
+    font-stretch: var(--wdth-data);
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: 0.012em;
+  }
+
+  .tnum {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  /* código de verdade (chaves, tokens, segredos): mono do sistema */
+  code,
+  kbd,
+  samp,
+  pre,
+  .font-code {
+    font-family: var(--font-code);
+    font-stretch: normal;
+    letter-spacing: 0;
+  }
+
+  .rotulo {
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  /* --------------------------------------------------------- primitivos -- */
+  .qr-button {
+    font-stretch: 104%;
+    letter-spacing: 0.004em;
+  }
+
+  .qr-icon-button {
+    border-radius: var(--radius-sm);
+  }
+
+  .qr-badge {
+    border-radius: var(--radius-xs);
+    font-stretch: 92%;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .qr-stepper {
+    border-radius: var(--radius-sm);
+  }
+
+  /* contorno de campo precisa de 3:1 contra o fundo (WCAG 1.4.11) */
+  .qr-input,
+  input:where([type="text"], [type="search"], [type="email"], [type="tel"], [type="url"], [type="number"], [type="password"], [type="date"], [type="time"], [type="datetime-local"], :not([type])).border-line,
+  select.border-line,
+  textarea.border-line {
+    border-color: var(--line-strong);
+  }
+
+  .qr-input:focus,
+  input.border-line:focus,
+  select.border-line:focus,
+  textarea.border-line:focus {
+    border-color: var(--brand);
+  }
+
+  .qr-modal {
+    border-radius: var(--radius-lg);
+    border-color: var(--line-strong);
+  }
+
+  /* ---------------------------------------- confirmação global e avisos -- */
+  /* A marcação de ConfirmacaoGlobal.tsx e de Toasts.tsx também aparece no
+     cardápio do cliente e, por isso, não muda. Aqui ela só é vestida: selo
+     quadrado, rótulo no tamanho mínimo da identidade e o aviso como uma ficha
+     presa pela régua da etapa. */
+  .qr-modal[aria-labelledby="confirmacao-titulo"] .rounded-full:not(.qr-icon-button) {
+    border-radius: var(--radius-sm);
+  }
+
+  .qr-modal[aria-labelledby="confirmacao-titulo"] p.uppercase {
+    font-size: 11px;
+    letter-spacing: 0.13em;
+  }
+
+  .qr-modal[aria-labelledby="confirmacao-titulo"] h2 {
+    font-stretch: var(--wdth-title);
+    font-weight: 800;
+    letter-spacing: -0.012em;
+  }
+
+  [aria-live="polite"].fixed.top-4 > .pointer-events-auto {
+    border-color: var(--line-strong);
+    border-left: 3px solid var(--route-active);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-modal);
+  }
+
+  /* cartão: papel plano com a espessura da folha na base */
+  .bg-surface-raised.rounded-md,
+  .bg-surface-raised.rounded-lg,
+  .bg-surface-raised.rounded-xl {
+    box-shadow: var(--shadow-card);
+  }
+
+  [role="dialog"].bg-surface-raised,
+  [role="alertdialog"].bg-surface-raised {
+    box-shadow: var(--shadow-modal);
+  }
+
+  [data-regime="operational"] {
+    background-color: var(--surface);
+  }
+
+  /* ficha: cartão selecionável (comanda do caixa, mesa do panorama) */
+  .ficha,
+  [data-ficha] {
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-card);
+    transition: border-color var(--dur-fast) var(--ease-snap), box-shadow var(--dur-fast) var(--ease-snap);
+  }
+
+  button.ficha:hover,
+  [data-ficha]:hover {
+    border-color: var(--line-strong);
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  .ficha[aria-pressed="true"] {
+    border-color: var(--brand);
+    box-shadow: inset 0 0 0 1px var(--brand), var(--shadow-card);
+  }
+
+  /* ------------------------------------------------------------- marca -- */
+  .brand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* O logo oficial (tinta sobre fundo claro) mora sempre numa placa de papel:
+     é assim que ele continua legível no tema escuro e sobre a faixa de tinta. */
+  .logo-placa {
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    padding: 6px;
+    border: 1px solid var(--qr-border);
+    border-radius: var(--radius-md);
+    background: var(--qr-paper);
+    line-height: 0;
+  }
+
+  .logo-placa > img {
+    display: block;
+    object-fit: contain;
+  }
+
+  /* símbolo reduzido "olho do passe": anel na cor do texto, centro em sinal */
+  .simbolo {
+    display: block;
+    flex-shrink: 0;
+  }
+
+  .simbolo__anel {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 3;
+  }
+
+  .simbolo__centro {
+    fill: var(--passe-sinal-400);
+  }
+
+  .assinatura {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  .assinatura__nome {
+    font-stretch: var(--wdth-display);
+    font-weight: 800;
+    font-size: 1.0625rem;
+    letter-spacing: -0.015em;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .assinatura__nome b {
+    font-weight: 800;
+    color: var(--brand-ink);
+  }
+
+  /* ---------------------------------------------------------- plaquinha -- */
+  .placa {
+    display: inline-grid;
+    grid-auto-flow: row;
+    justify-items: center;
+    align-content: center;
+    gap: 3px;
+    min-width: 3.25rem;
+    padding: 6px 9px 7px;
+    border-radius: var(--radius-sm);
+    background: var(--plaque);
+    color: var(--plaque-text);
+    line-height: 1;
+    text-align: center;
+  }
+
+  .placa__rotulo {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--plaque-label);
+  }
+
+  .placa__numero {
+    font-family: var(--font-mono);
+    font-stretch: 75%;
+    font-weight: 800;
+    font-size: 1.625rem;
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .placa[data-tamanho="p"] {
+    min-width: 2.5rem;
+    padding: 4px 7px 5px;
+    gap: 2px;
+  }
+
+  .placa[data-tamanho="p"] .placa__rotulo {
+    letter-spacing: 0.1em;
+  }
+
+  .placa[data-tamanho="p"] .placa__numero {
+    font-size: 1.125rem;
+  }
+
+  .placa[data-tamanho="g"] {
+    min-width: 4.5rem;
+    padding: 9px 14px 11px;
+    gap: 5px;
+  }
+
+  .placa[data-tamanho="g"] .placa__numero {
+    font-size: 2.5rem;
+  }
+
+  /* -------------------------------------------------------------- régua -- */
+  .regua {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px 16px;
+    padding-bottom: 12px;
+    border-bottom: var(--rule) solid var(--line-strong);
+  }
+
+  .qr-quiet-zone {
+    background: var(--qr-paper);
+    color: var(--qr-ink);
+    border: 1px solid var(--qr-border);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+  }
+
+  /* ---------------------------------------------------------- movimento -- */
+  .anim-ticket {
+    animation: passe-entrar var(--dur-base) var(--ease-out) both;
+  }
+
+  .anim-stamp {
+    animation: passe-carimbo 150ms var(--ease-snap);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &,
+    & *,
+    & *::before,
+    & *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* ---------------------------------- impressão térmica 72mm / relatório A4 -- */
+  #qradmin-print-frame {
+    display: none;
+  }
+
+  @media print {
+    & body > *:not(#qradmin-print-frame) {
+      display: none !important;
+    }
+
+    #qradmin-print-frame {
+      display: block !important;
+      background: var(--qr-paper) !important;
+      color: var(--qr-ink) !important;
+    }
+  }
+}

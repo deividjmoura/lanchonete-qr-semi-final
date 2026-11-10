@@ -5,7 +5,10 @@
  * Verifica, contra um servidor local:
  *  - a landing ocupa "/" (sem redirecionamento) e não tem overflow horizontal
  *    em 1440, 768, 390 e 320 px;
+ *  - a página usa a identidade "Passe": Archivo, tokens e tema claro/escuro;
  *  - capturas reais do sistema carregam (nenhum placeholder);
+ *  - a narrativa de rolagem do percurso acompanha a rolagem: a linha de passe
+ *    avança, a estação ativa muda e o palco troca de captura;
  *  - links internos rolam a página sem trocar a rota;
  *  - /guia-sistema.html e /apresentacao.html continuam acessíveis;
  *  - todos os CTAs de acesso abrem o modal real de autenticação, com foco
@@ -74,32 +77,59 @@ try {
   await page.locator("#hero-title").waitFor();
   assert(
     (await page.getByRole("heading", { level: 1 }).innerText()).includes("Quando o salão acelera"),
-    "/ mostra o hero da landing aprovada",
+    "/ mostra o hero da landing",
   );
   await page.evaluate(() => document.fonts.ready);
 
+  /* Identidade "Passe": uma família só (Archivo), em que a largura da letra
+     faz a hierarquia — título largo, texto na largura normal. */
   const fontes = await page.evaluate(() => {
-    const titulo = document.querySelector("#hero-title");
-    const em = document.querySelector("#hero-title em");
+    const titulo = getComputedStyle(document.querySelector("#hero-title"));
+    const corpo = getComputedStyle(document.querySelector(".hero__lead"));
+    const grifo = getComputedStyle(document.querySelector("#hero-title .grifo"));
     return {
-      corpo: getComputedStyle(document.querySelector(".hero__lead")).fontFamily,
-      titulo: getComputedStyle(titulo).fontFamily,
-      serifa: getComputedStyle(em).fontFamily,
+      corpo: corpo.fontFamily,
+      titulo: titulo.fontFamily,
+      larguraTitulo: parseFloat(titulo.fontStretch),
+      larguraCorpo: parseFloat(corpo.fontStretch),
+      grifo: grifo.textDecorationLine,
+      carregada: document.fonts.check('700 16px "Archivo"'),
     };
   });
-  assert(/DM Sans/.test(fontes.corpo), "corpo em DM Sans");
-  assert(/DM Serif Display/.test(fontes.serifa), "ênfase em DM Serif Display");
+  assert(/^"?Archivo/.test(fontes.corpo), "corpo em Archivo");
+  assert(/^"?Archivo/.test(fontes.titulo), "título em Archivo");
+  assert(fontes.carregada, "Archivo variável foi carregada (sem cair na fonte do sistema)");
+  assert(
+    fontes.larguraTitulo > fontes.larguraCorpo,
+    `título usa a largura larga da família (${fontes.larguraTitulo}% > ${fontes.larguraCorpo}%)`,
+  );
+  assert(fontes.grifo.includes("underline"), "ênfase do hero é o grifo de sinal");
+  const familias = await page.evaluate(() => {
+    const usadas = new Set();
+    for (const el of document.querySelectorAll(".landing-root *")) {
+      usadas.add(getComputedStyle(el).fontFamily.split(",")[0].replace(/"/g, "").trim());
+    }
+    return [...usadas];
+  });
+  assert(
+    familias.length === 1 && familias[0] === "Archivo",
+    "a landing inteira usa uma única família tipográfica (" + familias.join(", ") + ")",
+  );
 
   /* --- 2. Capturas reais carregadas --------------------------------------- */
   const capturas = await page.evaluate(() =>
-    [...document.querySelectorAll(".hero-art img, .product-stage img")].map((img) => ({
+    [...document.querySelectorAll(".hero-art img")].map((img) => ({
       src: img.getAttribute("src"),
       completa: img.complete,
       largura: img.naturalWidth,
       alt: img.getAttribute("alt"),
     })),
   );
-  assert(capturas.length >= 2, "hero e demonstração usam capturas reais do sistema");
+  assert(capturas.length === 2, "hero mostra duas capturas reais do sistema (painel e garçom)");
+  assert(
+    capturas.every((c) => (c.alt || "").length > 20),
+    "capturas do hero têm texto alternativo descritivo",
+  );
   for (const c of capturas) {
     assert(c.completa && c.largura > 0, "captura carregada: " + c.src);
   }
@@ -122,6 +152,109 @@ try {
       await page.screenshot({ path: path.join(OUT, `landing-${largura}.png`), fullPage: true });
     }
   }
+
+  /* --- 3a. Narrativa de rolagem do percurso -------------------------------- */
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.waitForTimeout(160);
+  const lerPercurso = () =>
+    page.evaluate(() => {
+      const trilho = document.querySelector(".percurso__trilho");
+      const etapas = [...document.querySelectorAll(".percurso__etapa")];
+      const cenas = [...document.querySelectorAll(".percurso__cena")];
+      const visiveis = cenas.filter((c) => !c.hasAttribute("aria-hidden"));
+      return {
+        progresso: parseFloat(trilho.style.getPropertyValue("--percurso") || "0"),
+        estados: etapas.map((e) => e.dataset.estado),
+        ativa: etapas.findIndex((e) => e.dataset.estado === "ativa"),
+        cenasVisiveis: visiveis.length,
+        cena: visiveis[0]?.getAttribute("src") || null,
+        cenaCarregada: Boolean(visiveis[0]?.complete && visiveis[0]?.naturalWidth > 0),
+        opacidade: visiveis[0] ? getComputedStyle(visiveis[0]).opacity : null,
+        placa: document.querySelector(".percurso__palco .placa__numero")?.textContent,
+        palco: getComputedStyle(document.querySelector(".percurso__palco")).display,
+        palcoPreso: getComputedStyle(document.querySelector(".percurso__palco")).position,
+      };
+    });
+  const esperado = [
+    "cardapio-cliente",
+    "personalizacao-produto",
+    "fila-cozinha",
+    "entregas-garcom",
+    "fechamento-caixa",
+    "dashboard-admin",
+  ];
+  const totalEtapas = await page.locator(".percurso__etapa").count();
+  assert(totalEtapas === 6, "percurso tem as seis estações do pedido");
+  let progressoAnterior = -1;
+  let progressoCresce = true;
+  for (let i = 0; i < totalEtapas; i++) {
+    /* Leva o topo da estação um pouco acima do meio da tela: é o gatilho. */
+    await page.evaluate((indice) => {
+      const etapa = document.querySelectorAll(".percurso__etapa")[indice];
+      const topo = etapa.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo(0, Math.round(topo - window.innerHeight * 0.5 + 24));
+    }, i);
+    await page.waitForFunction(
+      (indice) => document.querySelectorAll(".percurso__etapa")[indice]?.dataset.estado === "ativa",
+      i,
+      { timeout: 4000 },
+    ).catch(() => {});
+    await page.waitForFunction(
+      () => {
+        const cena = document.querySelector(".percurso__cena:not([aria-hidden])");
+        return Boolean(cena && cena.complete && cena.naturalWidth > 0);
+      },
+      null,
+      { timeout: 6000 },
+    ).catch(() => {});
+    await page.waitForTimeout(420);
+    const estado = await lerPercurso();
+    assert(estado.ativa === i, `estação ${i + 1} fica ativa quando cruza o meio da tela`);
+    assert(
+      estado.estados.slice(0, i).every((e) => e === "feita") &&
+        estado.estados.slice(i + 1).every((e) => e === "adiante"),
+      `estação ${i + 1}: anteriores feitas, seguintes adiante`,
+    );
+    assert(
+      estado.cenasVisiveis === 1 && (estado.cena || "").includes(`/assets/apresentacao/${esperado[i]}.webp`),
+      `estação ${i + 1}: palco mostra a captura ${esperado[i]}`,
+    );
+    assert(estado.cenaCarregada, `estação ${i + 1}: captura do palco carregada`);
+    assert(estado.opacidade === "1", `estação ${i + 1}: cena do palco fica opaca`);
+    assert(estado.placa === `0${i + 1}`, `estação ${i + 1}: plaquinha do palco mostra a etapa`);
+    if (estado.progresso <= progressoAnterior) progressoCresce = false;
+    progressoAnterior = estado.progresso;
+    if (i === 0) {
+      assert(estado.palco !== "none" && estado.palcoPreso === "sticky", "desktop: palco preso durante a rolagem");
+      assert(estado.progresso < 0.2, `linha de passe começa apagada (${estado.progresso})`);
+    }
+  }
+  assert(progressoCresce, "linha de passe avança a cada estação");
+  assert(progressoAnterior > 0.75, `linha de passe chega perto do fim na última estação (${progressoAnterior})`);
+  if (screenshots) {
+    fs.mkdirSync(OUT, { recursive: true });
+    await page.screenshot({ path: path.join(OUT, "percurso-1440.png") });
+  }
+
+  /* Sem palco em telas estreitas: cada estação mostra a própria captura. */
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(200);
+  const percursoEstreito = await page.evaluate(() => ({
+    palco: getComputedStyle(document.querySelector(".percurso__palco")).display,
+    figuras: [...document.querySelectorAll(".percurso__figura")].map((f) => getComputedStyle(f).display),
+  }));
+  assert(percursoEstreito.palco === "none", "mobile: o palco fixo sai de cena");
+  assert(
+    percursoEstreito.figuras.length === 6 && percursoEstreito.figuras.every((d) => d !== "none"),
+    "mobile: cada estação mostra a própria captura",
+  );
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.waitForTimeout(160);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const figurasDesktop = await page.evaluate(() =>
+    [...document.querySelectorAll(".percurso__figura")].every((f) => getComputedStyle(f).display === "none"),
+  );
+  assert(figurasDesktop, "desktop: capturas por estação ficam só no palco");
 
   /* --- 4. Links internos rolam sem trocar de rota ------------------------- */
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -180,9 +313,17 @@ try {
     "WhatsApp do contato é o mesmo número do login, aberto em nova aba",
   );
   assert(
-    canais.some((c) => c.href === "mailto:dejesusdemouradeivid@gmail.com"),
-    "e-mail do contato é o mesmo do login",
+    canais.some((c) => c.href === "mailto:servicosdegestaoqradmin@gmail.com"),
+    "e-mail do contato é o endereço oficial do QR Admin",
   );
+  assert(
+    canais.some((c) => c.texto.toLowerCase().includes("servicosdegestaoqradmin@gmail.com")),
+    "o endereço de e-mail aparece por extenso no contato",
+  );
+  const canaisComIcone = await page.evaluate(() =>
+    [...document.querySelectorAll("#contato .contato-canal")].every((a) => a.querySelector(".contato-canal__icone svg")),
+  );
+  assert(canaisComIcone, "cada canal do contato tem o próprio ícone");
   /* Número e e-mail precisam ser idênticos aos publicados na tela de acesso:
      a landing não inventa um canal novo. */
   const canaisDoLogin = await page.evaluate(async () => {
@@ -219,7 +360,7 @@ try {
       const caixas = [".site-footer__contato", ".site-footer__access"].map((sel) => {
         const el = document.querySelector(sel);
         const r = el?.getBoundingClientRect();
-        return r ? { x: r.x, right: r.right, width: r.width } : null;
+        return r ? { x: r.x, right: r.right, y: r.y, bottom: r.bottom, width: r.width } : null;
       });
       const larguraPagina = document.documentElement.scrollWidth;
       const vazando = [...document.querySelectorAll(".site-footer__contato-link")].some(
@@ -229,7 +370,13 @@ try {
     });
     const [contatoBox, acessoBox] = rodape.caixas;
     assert(contatoBox && acessoBox, `${largura}px: contato e acesso existem no rodapé`);
-    const sobrepoe = contatoBox.x < acessoBox.right && acessoBox.x < contatoBox.right;
+    /* Lado a lado nas telas largas, empilhados nas estreitas: em nenhum caso
+       um retângulo invade o outro. */
+    const sobrepoe =
+      contatoBox.x < acessoBox.right - 0.5 &&
+      acessoBox.x < contatoBox.right - 0.5 &&
+      contatoBox.y < acessoBox.bottom - 0.5 &&
+      acessoBox.y < contatoBox.bottom - 0.5;
     assert(!sobrepoe, `${largura}px: contato e acesso não se sobrepõem`);
     assert(!rodape.vazando, `${largura}px: links de contato não vazam da coluna`);
     assert(rodape.larguraPagina <= largura + 1, `${largura}px: contato não cria rolagem lateral`);
@@ -284,14 +431,49 @@ try {
   assert((await page.getByRole("dialog").count()) === 1, "mobile: Acessar flutuante abre o modal real");
   await page.keyboard.press("Escape");
   await page.waitForTimeout(220);
-  await page.locator(".floating-actions__contato").click();
-  await page.waitForTimeout(900);
-  const contatoNaTela = await page.evaluate(() => {
-    const r = document.querySelector("#contato")?.getBoundingClientRect();
-    return Boolean(r && r.top < window.innerHeight && r.bottom > 0);
-  });
-  assert(contatoNaTela, "mobile: Contate-nos flutuante rola até a seção de contato");
+  /* Ao lado do acesso, os dois canais em ícone: WhatsApp e e-mail. */
+  const canaisFlutuantes = await page.evaluate(() =>
+    [...document.querySelectorAll(".floating-actions__canal")].map((a) => {
+      const r = a.getBoundingClientRect();
+      return {
+        href: a.getAttribute("href"),
+        alvo: a.getAttribute("target"),
+        nome: a.getAttribute("aria-label"),
+        icone: Boolean(a.querySelector("svg")),
+        lado: Math.min(r.width, r.height),
+        naTela: r.top >= 0 && r.bottom <= window.innerHeight && r.left >= 0 && r.right <= window.innerWidth,
+      };
+    }),
+  );
+  assert(canaisFlutuantes.length === 2, "mobile: barra de ações traz os dois canais de contato");
+  assert(
+    canaisFlutuantes.some((c) => /^https:\/\/wa\.me\/5547996162721/.test(c.href || "") && c.alvo === "_blank"),
+    "mobile: WhatsApp persistente abre a conversa em nova aba",
+  );
+  assert(
+    canaisFlutuantes.some((c) => c.href === "mailto:servicosdegestaoqradmin@gmail.com"),
+    "mobile: e-mail persistente usa o endereço oficial",
+  );
+  assert(
+    canaisFlutuantes.every((c) => c.icone && c.nome && c.lado >= 44 && c.naTela),
+    "mobile: canais em ícone, com nome acessível e área de toque de 44 px ou mais",
+  );
+
+  /* No desktop ficam só os dois canais (o acesso já está no cabeçalho). */
   await page.setViewportSize({ width: 1440, height: 900 });
+  await page.evaluate(() => window.scrollTo(0, Math.round(document.body.scrollHeight * 0.45)));
+  await page.waitForTimeout(420);
+  const flutuanteDesktop = await page.evaluate(() => ({
+    visivel: document.querySelectorAll(".floating-actions--visible").length,
+    acesso: getComputedStyle(document.querySelector(".floating-actions__access")).display,
+    canais: [...document.querySelectorAll(".floating-actions__canal")].filter(
+      (a) => getComputedStyle(a).display !== "none",
+    ).length,
+  }));
+  assert(
+    flutuanteDesktop.visivel === 1 && flutuanteDesktop.canais === 2 && flutuanteDesktop.acesso === "none",
+    "desktop: canais de contato acompanham a rolagem; o acesso fica no cabeçalho",
+  );
 
   /* --- 6. Modal de acesso real ------------------------------------------- */
   await page.route("**/api/auth/google/status", (route) => route.fulfill({ json: { enabled: false } }));
@@ -313,11 +495,17 @@ try {
   assert(await dialogo.getAttribute("aria-modal") === "true", "modal usa role=dialog + aria-modal");
   const nomeDialogo = await dialogo.getAttribute("aria-labelledby");
   assert(Boolean(nomeDialogo), "modal tem título associado (aria-labelledby)");
+  /* O modal move o foco 40 ms depois de montar (AuthModal.tsx, igual ao que
+     era antes do rebranding). Ler o foco no instante em que o diálogo aparece
+     é corrida: só passava porque a página antiga levava mais que isso para
+     responder ao clique. Espera-se o foco entrar, com limite curto. */
   assert(
-    await page.evaluate(() => {
-      const p = document.querySelector(".acesso-modal__panel");
-      return Boolean(p && p.contains(document.activeElement));
-    }),
+    await page
+      .waitForFunction(() => {
+        const p = document.querySelector(".acesso-modal__panel");
+        return Boolean(p && p.contains(document.activeElement));
+      }, null, { timeout: 1000 })
+      .then(() => true, () => false),
     "foco entra no modal ao abrir",
   );
   if (screenshots) {
@@ -428,24 +616,83 @@ try {
     assert(!(await page2.locator("#hero-title").count()), rota + " não cai na landing");
   }
 
-  /* --- 3b. Tema escuro do produto não descaracteriza a landing ------------- */
+  /* --- 3b. A landing acompanha o tema claro/escuro do produto -------------- */
   {
     const ctxTema = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const paginaTema = await ctxTema.newPage();
-    await paginaTema.addInitScript(() => localStorage.setItem("qradmin-tema", "escuro"));
+    await paginaTema.addInitScript(() => {
+      if (!sessionStorage.getItem("tema-semeado")) {
+        localStorage.setItem("qradmin-tema", "claro");
+        sessionStorage.setItem("tema-semeado", "1");
+      }
+    });
     await paginaTema.route("**/api/me", (route) => route.fulfill({ json: {} }));
     await paginaTema.goto(BASE + "/", { waitUntil: "networkidle" });
     await paginaTema.evaluate(() => document.fonts.ready);
-    const tema = await paginaTema.evaluate(() => ({
-      atributo: document.documentElement.dataset.theme,
-      raiz: getComputedStyle(document.querySelector(".landing-root")).backgroundColor,
-      tinta: getComputedStyle(document.querySelector("#hero-title")).color,
-      filete: getComputedStyle(document.querySelector(".hero__lead")).color,
-    }));
-    assert(tema.atributo === "escuro", "tema escuro do produto é aplicado ao documento");
-    assert(tema.raiz === "rgb(245, 242, 235)", "landing mantém o papel claro no tema escuro");
-    assert(tema.tinta === "rgb(32, 44, 39)", "texto da landing mantém a tinta editorial");
-    assert(tema.filete !== "rgb(255, 255, 255)" && tema.filete !== "rgb(0, 0, 0)", "texto secundário legível");
+    const lerTema = () =>
+      paginaTema.evaluate(() => {
+        const rgb = (cor) => (cor.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+        const luz = ([r, g, b]) => {
+          const canal = (v) => {
+            const s = v / 255;
+            return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+          };
+          return 0.2126 * canal(r) + 0.7152 * canal(g) + 0.0722 * canal(b);
+        };
+        const contraste = (a, b) => {
+          const [x, y] = [luz(rgb(a)), luz(rgb(b))].sort((m, n) => n - m);
+          return (x + 0.05) / (y + 0.05);
+        };
+        const estilo = (sel) => getComputedStyle(document.querySelector(sel));
+        const fundo = estilo(".landing-root").backgroundColor;
+        const faixa = estilo(".percurso").backgroundColor;
+        const botao = estilo(".hero .botao--primario");
+        return {
+          atributo: document.documentElement.dataset.theme,
+          fundo,
+          titulo: estilo("#hero-title").color,
+          contrasteTitulo: contraste(estilo("#hero-title").color, fundo),
+          contrasteTexto: contraste(estilo(".hero__lead").color, fundo),
+          contrasteBotao: contraste(botao.color, botao.backgroundColor),
+          contrasteFaixa: contraste(estilo("#flow-title").color, faixa),
+          contrasteFaixaTexto: contraste(estilo(".percurso__texto").color, faixa),
+          contrasteRodape: contraste(estilo(".site-footer__nav a").color, estilo(".site-footer").backgroundColor),
+        };
+      });
+    const claro = await lerTema();
+    assert(claro.atributo === "claro", "tema claro aplicado ao documento");
+    assert(claro.fundo === "rgb(244, 239, 230)", "tema claro: a landing usa o papel da identidade");
+    assert(claro.titulo === "rgb(11, 32, 54)", "tema claro: título na tinta da identidade");
+
+    /* O botão de tema do cabeçalho é o mesmo do produto. */
+    await paginaTema.getByRole("button", { name: "Ativar tema escuro" }).first().click();
+    await paginaTema.waitForTimeout(260);
+    const escuro = await lerTema();
+    assert(escuro.atributo === "escuro", "botão do cabeçalho alterna para o tema escuro");
+    assert(escuro.fundo === "rgb(8, 23, 38)", "tema escuro: a landing usa a tinta da identidade");
+    assert(escuro.titulo === "rgb(238, 242, 236)", "tema escuro: título em giz");
+    assert(
+      (await paginaTema.evaluate(() => localStorage.getItem("qradmin-tema"))) === "escuro",
+      "a escolha de tema fica gravada para as outras telas",
+    );
+    for (const [nome, t] of [
+      ["claro", claro],
+      ["escuro", escuro],
+    ]) {
+      assert(t.contrasteTitulo >= 7, `tema ${nome}: título com contraste ${t.contrasteTitulo.toFixed(1)}:1`);
+      assert(t.contrasteTexto >= 4.5, `tema ${nome}: texto de apoio com contraste ${t.contrasteTexto.toFixed(1)}:1`);
+      assert(t.contrasteBotao >= 4.5, `tema ${nome}: botão principal com contraste ${t.contrasteBotao.toFixed(1)}:1`);
+      assert(t.contrasteFaixa >= 7, `tema ${nome}: título sobre a faixa de tinta ${t.contrasteFaixa.toFixed(1)}:1`);
+      assert(
+        t.contrasteFaixaTexto >= 4.5,
+        `tema ${nome}: texto sobre a faixa de tinta ${t.contrasteFaixaTexto.toFixed(1)}:1`,
+      );
+      assert(t.contrasteRodape >= 4.5, `tema ${nome}: links do rodapé ${t.contrasteRodape.toFixed(1)}:1`);
+    }
+    if (screenshots) {
+      fs.mkdirSync(OUT, { recursive: true });
+      await paginaTema.screenshot({ path: path.join(OUT, "landing-1440-escuro.png"), fullPage: true });
+    }
     /* Não fechamos o contexto aqui: no Chromium single-process do sandbox
        fechar um contexto derruba o navegador. Ele é encerrado no finally. */
     contextosExtras.push(ctxTema);

@@ -1,32 +1,27 @@
-import { useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useState } from "react";
 import { AccessButton } from "./AccessButton";
 import { Icon } from "./Icon";
-import { useRolagemInterna } from "../useRolagemInterna";
+import { EMAIL_URL, whatsappLink } from "../contato";
 
 /* Ações persistentes da landing.
  *
- * No desktop o cabeçalho já é sticky e mantém "Acessar o sistema" visível o
- * tempo todo. Abaixo de 960 px o CTA do cabeçalho dá lugar ao menu (para o
- * logotipo não disputar a linha em 320–390 px), então o acesso e o contato
- * passam a acompanhar a rolagem em um par discreto no canto inferior.
+ * No desktop o cabeçalho é sticky e mantém "Acessar o sistema" à vista o tempo
+ * todo. Abaixo de 960 px o CTA do cabeçalho dá lugar ao menu, então o acesso e
+ * os dois canais de contato passam a acompanhar a rolagem em uma barra curta
+ * no canto inferior: o botão de acesso e, ao lado, WhatsApp e e-mail em ícone.
  *
- * Comportamento: aparece depois que o hero sai da tela e se recolhe quando o
- * rodapé entra na viewport — lá os dois mesmos destinos já estão à vista, e a
- * barra não deve cobrir o conteúdo do rodapé. */
+ * Aparece depois que o hero sai da tela e se recolhe quando o rodapé entra na
+ * viewport — lá os mesmos destinos já estão à vista. */
 export function FloatingActions({ aoAbrirAcesso }: { aoAbrirAcesso: () => void }) {
   const [visivel, setVisivel] = useState(false);
-  const rolar = useRolagemInterna();
 
   useEffect(() => {
     let quadro = 0;
     const avaliar = () => {
       quadro = 0;
-      const rolado = window.scrollY;
       const rodape = document.querySelector(".site-footer");
-      const rodapeNaTela = rodape
-        ? rodape.getBoundingClientRect().top < window.innerHeight - 140
-        : false;
-      setVisivel(rolado > 420 && !rodapeNaTela);
+      const rodapeNaTela = rodape ? rodape.getBoundingClientRect().top < window.innerHeight - 140 : false;
+      setVisivel(window.scrollY > 420 && !rodapeNaTela);
     };
     const agendar = () => {
       if (!quadro) quadro = window.requestAnimationFrame(avaliar);
@@ -41,19 +36,37 @@ export function FloatingActions({ aoAbrirAcesso }: { aoAbrirAcesso: () => void }
     };
   }, []);
 
-  const irParaContato = (event: MouseEvent<HTMLAnchorElement>) => rolar(event, "#contato");
+  /* Recolhida, a barra sai do alcance do teclado e do leitor de tela. */
+  const fora = visivel ? undefined : -1;
 
   return (
     <div
       className={`floating-actions${visivel ? " floating-actions--visible" : ""}`}
       data-visivel={visivel ? "true" : "false"}
+      aria-hidden={visivel ? undefined : true}
     >
-      <AccessButton className="floating-actions__access" onClick={aoAbrirAcesso} showIcon={false}>
+      <AccessButton className="floating-actions__access" onClick={aoAbrirAcesso} showIcon={false} tabIndex={fora}>
         Acessar
       </AccessButton>
-      <a className="floating-actions__contato" href="#contato" onClick={irParaContato}>
-        <Icon name="whatsapp" size={17} />
-        <span>Contate-nos</span>
+      <a
+        className="floating-actions__canal floating-actions__canal--whatsapp"
+        href={whatsappLink()}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Falar pelo WhatsApp"
+        title="WhatsApp"
+        tabIndex={fora}
+      >
+        <Icon name="whatsapp" size={21} />
+      </a>
+      <a
+        className="floating-actions__canal floating-actions__canal--email"
+        href={EMAIL_URL}
+        aria-label="Enviar e-mail"
+        title="E-mail"
+        tabIndex={fora}
+      >
+        <Icon name="mail" size={21} />
       </a>
     </div>
   );

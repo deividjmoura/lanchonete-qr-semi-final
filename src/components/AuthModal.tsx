@@ -86,16 +86,16 @@ function PainelAcesso({ aoFechar }: { aoFechar: () => void }) {
       aria-modal="true"
       aria-labelledby={tituloId}
       className="acesso-modal__panel"
-      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.985 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.99 }}
-      transition={{ duration: reduceMotion ? 0 : 0.18, ease: [0.22, 1, 0.36, 1] }}
+      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
+      transition={{ duration: reduceMotion ? 0 : 0.18, ease: [0.2, 0, 0, 1] }}
       tabIndex={-1}
     >
       <div className="acesso-modal__top">
-        <p className="acesso-modal__eyebrow">
-          <span className="acesso-modal__rule" />
-          QRADMIN · ACESSO DA EQUIPE
+        <p className="acesso-modal__eyebrow rotulo">
+          <span className="acesso-modal__rule" aria-hidden="true" />
+          QR Admin · acesso da equipe
         </p>
         <button type="button" className="acesso-modal__close" onClick={aoFechar} aria-label="Fechar acesso">
           <X size={18} weight="bold" />
@@ -104,11 +104,15 @@ function PainelAcesso({ aoFechar }: { aoFechar: () => void }) {
 
       <div className="acesso-modal__body">
         <div className="acesso-modal__brand">
-          <img src="/logo/qradmin-mark.png" alt="" width="54" height="54" aria-hidden="true" draggable={false} />
-          <h2 id={tituloId} className="acesso-modal__title">
-            Acesso à equipe
-          </h2>
-          <p className="acesso-modal__lead">Selecione seu setor para continuar.</p>
+          <span className="logo-placa acesso-modal__plate">
+            <img src="/logo/qradmin-mark.png" alt="" width="52" height="52" aria-hidden="true" draggable={false} />
+          </span>
+          <div>
+            <h2 id={tituloId} className="acesso-modal__title font-display">
+              Acesso à equipe
+            </h2>
+            <p className="acesso-modal__lead">Selecione seu setor para continuar.</p>
+          </div>
         </div>
 
         <FormularioAcesso fluxo={fluxo} idPrefixo="acesso-modal" />

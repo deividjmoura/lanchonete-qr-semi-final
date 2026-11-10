@@ -58,7 +58,7 @@ export function PanoramaMesas({ dados, filtro, onFiltro, periodo, onPeriodo }: P
               <strong className="font-semibold text-text">Mapa e QR Codes</strong>.
             </p>
           </div>
-          <p className="font-mono text-[10px] uppercase tracking-wider text-text-subtle">
+          <p className="font-mono text-[11px] uppercase tracking-wider text-text-subtle">
             Atualizado {formatarHora(dados.atualizadoEm)}
           </p>
         </div>
@@ -99,7 +99,7 @@ export function PanoramaMesas({ dados, filtro, onFiltro, periodo, onPeriodo }: P
           detalhe="Entregue nas mesas abertas e ainda não pago. Não é receita recebida."
           tom="text-status-warning-ink"
           extra={
-            <p className="mt-2 font-mono text-[10px] leading-relaxed text-text-subtle">
+            <p className="mt-2 font-mono text-[11px] leading-relaxed text-text-subtle">
               consumo entregue {BRL(resumo.consumo)} · já pago {BRL(resumo.pago)}
             </p>
           }
@@ -118,7 +118,7 @@ export function PanoramaMesas({ dados, filtro, onFiltro, periodo, onPeriodo }: P
                   aria-pressed={periodo === p.id}
                   onClick={() => onPeriodo(p.id)}
                   className={cn(
-                    "min-h-7 rounded-full border px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider transition-colors",
+                    "min-h-7 rounded-xs border px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider transition-colors",
                     periodo === p.id
                       ? "border-brand-border bg-brand-surface text-brand-ink"
                       : "border-line bg-surface-sunken text-text-muted hover:text-text",
@@ -135,11 +135,11 @@ export function PanoramaMesas({ dados, filtro, onFiltro, periodo, onPeriodo }: P
           valor={`${resumo.ocupadas}/${resumo.total}`}
           detalhe={`${resumo.livres} livres · ${resumo.atencao} em atenção · ${resumo.criticas} críticas.`}
           extra={
-            <p className="mt-2 flex flex-wrap gap-1 text-[10px]">
-              <span className="rounded-full border border-line bg-surface-sunken px-2 py-0.5 font-mono text-text-muted">
+            <p className="mt-2 flex flex-wrap gap-1 text-[11px]">
+              <span className="rounded-xs border border-line bg-surface-sunken px-2 py-0.5 font-mono text-text-muted">
                 {resumo.recentes} recentes
               </span>
-              <span className="rounded-full border border-line bg-surface-sunken px-2 py-0.5 font-mono text-text-muted">
+              <span className="rounded-xs border border-line bg-surface-sunken px-2 py-0.5 font-mono text-text-muted">
                 {resumo.criticas} críticas
               </span>
             </p>
@@ -150,8 +150,8 @@ export function PanoramaMesas({ dados, filtro, onFiltro, periodo, onPeriodo }: P
           valor={`${resumo.pedidosAtivos}`}
           detalhe={`${resumo.pedidosAtivos === 1 ? "pedido ativo" : "pedidos ativos"} nestas mesas · ${resumo.itensNaFila} itens na fila.`}
           extra={
-            <p className="mt-2 flex flex-wrap gap-1 text-[10px]">
-              <span className="rounded-full border border-line bg-surface-sunken px-2 py-0.5 font-mono text-text-muted">
+            <p className="mt-2 flex flex-wrap gap-1 text-[11px]">
+              <span className="rounded-xs border border-line bg-surface-sunken px-2 py-0.5 font-mono text-text-muted">
                 {resumo.itensProntosRetirada} prontos p/ retirada
               </span>
             </p>
@@ -179,7 +179,7 @@ function Indicador({
 }) {
   return (
     <div className="rounded-md border border-line bg-surface-raised p-3.5">
-      <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-text-muted">{rotulo}</p>
+      <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-text-muted">{rotulo}</p>
       <p className={cn("mt-1.5 font-display text-2xl font-bold tracking-tight text-text", tom)}>{valor}</p>
       <p className="mt-1 text-[11px] leading-relaxed text-text-subtle">{detalhe}</p>
       {extra}
@@ -212,7 +212,7 @@ function FiltroPraça({
       title={`${nome} · ${total} mesas · ${ocupadas} ocupadas${criticas ? ` · ${criticas} críticas` : ""}`}
       onClick={onClick}
       className={cn(
-        "inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
+        "inline-flex min-h-9 items-center gap-2 rounded-sm border px-3 py-1 text-xs font-semibold transition-colors",
         ativo
           ? "border-brand-border bg-brand-surface text-brand-ink"
           : "border-line bg-surface-sunken text-text-muted hover:text-text hover:border-line-strong",
@@ -228,9 +228,11 @@ function FiltroPraça({
           />
         )}
         {nome}
-        {criticas > 0 && <span className="font-mono text-[10px] font-bold text-status-danger-ink">{criticas}</span>}
+        {criticas > 0 && <span className="font-mono text-[11px] font-bold text-status-danger-ink">{criticas}</span>}
       </span>
-      <span className="font-mono text-[10px] font-bold text-text-subtle">
+      {/* Sobre a superfície da praça escolhida o tom mais fraco não alcança
+          4,5:1 no tema escuro; ali a contagem sobe um degrau. */}
+      <span className={cn("font-mono text-[11px] font-bold", ativo ? "text-text-muted" : "text-text-subtle")}>
         {ocupadas}/{total}
       </span>
     </button>
@@ -264,7 +266,7 @@ export function CartaoMesa({
 
   return (
     <article
-      data-glass-card
+      data-ficha
       data-mesa-numero={mesa.numero}
       aria-label={`Mesa ${String(mesa.numero).padStart(2, "0")}: ${ocupada ? "ocupada" : "livre"}${
         faixa ? `, ${faixa.rotulo.toLowerCase()}, ${formatarDuracao(tempo?.minutos)}` : ""
@@ -291,7 +293,7 @@ export function CartaoMesa({
         <div className="min-w-0">
           <p className="font-mono text-xl font-extrabold leading-none tracking-tight text-text">
             {String(mesa.numero).padStart(2, "0")}
-            <span className="ml-1.5 font-sans text-[10px] font-bold uppercase tracking-wider text-text-muted">mesa</span>
+            <span className="ml-1.5 font-sans text-[11px] font-bold uppercase tracking-wider text-text-muted">mesa</span>
           </p>
           <p className="mt-1 truncate text-[11px] text-text-muted">{mesa.pracaNome || "Sem praça"}</p>
         </div>
@@ -312,7 +314,7 @@ export function CartaoMesa({
               <Clock size={13} weight="bold" />
               {formatarDuracao(tempo?.minutos)}
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-wider">{faixa?.rotulo || "Sem horário"}</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider">{faixa?.rotulo || "Sem horário"}</span>
           </div>
 
           <dl className="mt-2.5 space-y-1.5 text-[11px]">
@@ -348,11 +350,11 @@ export function CartaoMesa({
             </div>
           )}
 
-          <div className="mt-2.5 flex items-end justify-between gap-2 border-t border-dashed border-line pt-2.5">
+          <div className="mt-2.5 flex items-end justify-between gap-2 border-t border-line pt-2.5">
             <div className="min-w-0">
-              <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">Consumo em aberto</p>
+              <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">Consumo em aberto</p>
               <p className="font-mono text-sm font-bold text-status-warning-ink">{BRL(mesa.saldo)}</p>
-              <p className="text-[10px] leading-relaxed text-text-subtle">
+              <p className="text-[11px] leading-relaxed text-text-subtle">
                 entregue {BRL(mesa.consumo)}
                 {mesa.pago > 0 ? ` · já pago ${BRL(mesa.pago)}` : ""}
               </p>
@@ -364,8 +366,8 @@ export function CartaoMesa({
           <p className="mt-3 flex-1 text-[11px] leading-relaxed text-text-subtle">
             Nenhuma sessão aberta. Mesa disponível para check-in pelo QR ou início de atendimento pelo garçom.
           </p>
-          <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-dashed border-line pt-2.5">
-            <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-text-muted">
+          <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-line pt-2.5">
+            <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-text-muted">
               <CheckCircle size={13} weight="bold" /> sem consumo
             </span>
           </div>
@@ -391,7 +393,7 @@ function Etiqueta({ children, tom }: { children: ReactNode; tom?: "success" }) {
   return (
     <span
       className={cn(
-        "rounded-full border px-2 py-0.5 font-mono text-[10px] font-semibold",
+        "rounded-xs border px-2 py-0.5 font-mono text-[11px] font-semibold",
         tom === "success"
           ? "border-status-success-border bg-status-success-surface text-status-success-ink"
           : "border-line bg-surface-sunken text-text-muted",
@@ -416,7 +418,7 @@ export function TemposDoFluxo({ fluxo }: { fluxo: FluxoProducao }) {
           </p>
         </div>
         {fluxo.janela.desde && fluxo.janela.ate && (
-          <p className="font-mono text-[10px] uppercase tracking-wider text-text-subtle">
+          <p className="font-mono text-[11px] uppercase tracking-wider text-text-subtle">
             {formatarHora(fluxo.janela.desde)} — {formatarHora(fluxo.janela.ate)}
           </p>
         )}
@@ -433,7 +435,7 @@ export function TemposDoFluxo({ fluxo }: { fluxo: FluxoProducao }) {
                 const medida = setor.etapas[etapa.id];
                 return (
                   <li key={setorId} className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                    <span className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
                       {setor.rotulo}
                     </span>
                     {!medida.aplicavel ? (
@@ -443,12 +445,12 @@ export function TemposDoFluxo({ fluxo }: { fluxo: FluxoProducao }) {
                         <strong className="font-mono text-xs font-bold text-text">
                           {formatarDuracao(medida.minutos)}
                         </strong>
-                        <span className="text-[10px] text-text-subtle" title="Itens usados na média">
+                        <span className="text-[11px] text-text-subtle" title="Itens usados na média">
                           n={medida.amostras}
                         </span>
                         {medida.aproximado && (
                           <span
-                            className="rounded-full border border-status-warning-border bg-status-warning-surface px-1.5 py-0 font-mono text-[9px] font-bold text-status-warning-ink"
+                            className="rounded-xs border border-status-warning-border bg-status-warning-surface px-1.5 py-0 font-mono text-[11px] font-bold text-status-warning-ink"
                             title={`Amostra menor que ${fluxo.amostraMinima} itens: valor aproximado`}
                           >
                             aprox.

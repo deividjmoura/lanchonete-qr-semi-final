@@ -31,7 +31,7 @@ export default function Bar() {
       kicker="Operação · Bar"
       titulo="Fila do balcão"
       extra={
-        <span className="hidden sm:inline-flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-text-muted">
+        <span className="hidden sm:inline-flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-text-muted">
           <BeerStein size={13} aria-hidden="true" /> por item
         </span>
       }

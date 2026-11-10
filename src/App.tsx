@@ -12,6 +12,7 @@ import Garcom from "./screens/Garcom";
 import Caixa from "./screens/Caixa";
 import Admin from "./screens/Admin";
 import { RotaStaff } from "./components/RotaStaff";
+import { IdentidadeContexto } from "./lib/identidade";
 
 export default function App() {
   const rota = useRota();
@@ -26,7 +27,11 @@ export default function App() {
     return () => window.removeEventListener("pointerdown", fn);
   }, []);
 
+  /* O cardápio do cliente ficou fora do rebranding. O contexto avisa os
+     componentes compartilhados (botões, modal, avisos, confirmação) para
+     renderizarem ali exatamente a marcação de antes — ver lib/identidade.ts. */
   return (
+    <IdentidadeContexto.Provider value={rota.path === "mesa" ? "cardapio" : "passe"}>
     <ConfirmacaoGlobal>
       <>
       <Toasts />
@@ -43,5 +48,6 @@ export default function App() {
       {!["home", "login", "mesa", "cozinha", "bar", "garcom", "caixa", "admin"].includes(rota.path) && <Landing />}
       </>
     </ConfirmacaoGlobal>
+    </IdentidadeContexto.Provider>
   );
 }

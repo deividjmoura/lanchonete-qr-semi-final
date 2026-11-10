@@ -1,9 +1,9 @@
 import type { MouseEvent } from "react";
 import { AccessButton } from "../components/AccessButton";
-import { Brand } from "../components/Brand";
+import { LogoOficial } from "../components/Brand";
 import { Icon } from "../components/Icon";
 import { useRolagemInterna } from "../useRolagemInterna";
-import { EMAIL_EXIBIDO, EMAIL_URL, whatsappLink } from "../contato";
+import { EMAIL_DOMINIO, EMAIL_EXIBIDO, EMAIL_URL, EMAIL_USUARIO, whatsappLink } from "../contato";
 
 const footerLinks = [
   { href: "#proposta", label: "Proposta" },
@@ -31,11 +31,15 @@ export function Footer({ aoAbrirAcesso }: { aoAbrirAcesso: () => void }) {
       <div className="page-shell">
         <div className="site-footer__top">
           <div className="site-footer__brand">
-            <Brand inverted />
-            <p>Cardápio, atendimento, operação e administração no mesmo fluxo para negócios de alimentação.</p>
+            <LogoOficial size={72} />
+            <p className="site-footer__nome">
+              <b>QR</b>Admin
+            </p>
+            <p>Cardápio, atendimento, operação e administração no mesmo percurso para negócios de alimentação.</p>
           </div>
-          <div className="site-footer__nav-wrap">
-            <p className="site-footer__label">NAVEGAÇÃO</p>
+
+          <div className="site-footer__coluna">
+            <p className="site-footer__label">Navegação</p>
             <nav className="site-footer__nav" aria-label="Navegação do rodapé">
               {footerLinks.map((link) => (
                 <a href={link.href} key={link.href} onClick={(event) => aoClicarInterno(event, link.href)}>
@@ -43,7 +47,10 @@ export function Footer({ aoAbrirAcesso }: { aoAbrirAcesso: () => void }) {
                 </a>
               ))}
             </nav>
-            <p className="site-footer__label site-footer__label--secondary">INSTITUCIONAL</p>
+          </div>
+
+          <div className="site-footer__coluna">
+            <p className="site-footer__label">Institucional</p>
             <nav className="site-footer__nav" aria-label="Páginas institucionais">
               {institutionalLinks.map((link) => (
                 <a href={link.href} key={link.href}>
@@ -52,41 +59,52 @@ export function Footer({ aoAbrirAcesso }: { aoAbrirAcesso: () => void }) {
               ))}
             </nav>
           </div>
-          {/* Contate-nos fica ao lado do acesso: quem chega ao fim da página
-              escolhe entre falar com o responsável e entrar no sistema. */}
+
+          {/* Contato ao lado do acesso: quem chega ao fim da página escolhe
+              entre falar com o responsável e entrar no sistema. O e-mail fica
+              em ícone, ao lado do WhatsApp. */}
           <div className="site-footer__contato">
-            <p className="site-footer__label">CONTATE-NOS</p>
-            <a
-              className="site-footer__contato-link"
-              href={whatsappLink()}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Icon name="whatsapp" size={15} />
-              WhatsApp
+            <p className="site-footer__label">Contate-nos</p>
+            <div className="site-footer__canais">
+              <a
+                className="site-footer__contato-link"
+                href={whatsappLink()}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Falar pelo WhatsApp"
+                title="WhatsApp"
+              >
+                <Icon name="whatsapp" size={22} />
+              </a>
+              <a
+                className="site-footer__contato-link"
+                href={EMAIL_URL}
+                aria-label={`Enviar e-mail para ${EMAIL_EXIBIDO}`}
+                title="E-mail"
+              >
+                <Icon name="mail" size={22} />
+              </a>
+            </div>
+            <a className="site-footer__email" href={EMAIL_URL}>
+              {EMAIL_USUARIO}@<wbr />
+              {EMAIL_DOMINIO}
             </a>
-            <a className="site-footer__contato-link" href={EMAIL_URL}>
-              <Icon name="mail" size={15} />
-              {EMAIL_EXIBIDO}
-            </a>
-            <a
-              className="site-footer__contato-link"
-              href="#contato"
-              onClick={(event) => aoClicarInterno(event, "#contato")}
-            >
+            <a className="site-footer__formatos" href="#contato" onClick={(event) => aoClicarInterno(event, "#contato")}>
               Ver formatos de adesão
             </a>
           </div>
+
           <div className="site-footer__access" id="acesso">
-            <p className="site-footer__label">ACESSO AO SISTEMA</p>
-            <AccessButton className="site-footer__access-link" onClick={aoAbrirAcesso}>
-              Acessar QRAdmin
+            <p className="site-footer__label">Acesso ao sistema</p>
+            <AccessButton className="botao botao--sinal site-footer__access-link" onClick={aoAbrirAcesso}>
+              Acessar QR Admin
             </AccessButton>
             <span className="site-footer__access-hint">Equipe, cozinha, bar e caixa entram pelo mesmo acesso.</span>
           </div>
         </div>
+
         <div className="site-footer__bottom">
-          <span>© {new Date().getFullYear()} QRAdmin. Todos os direitos reservados.</span>
+          <span>© {new Date().getFullYear()} QR Admin. Todos os direitos reservados.</span>
           <span className="site-footer__bottom-note">
             <Icon name="info" size={14} />
             Capturas do sistema em ambiente de demonstração, com dados fictícios.
@@ -99,7 +117,7 @@ export function Footer({ aoAbrirAcesso }: { aoAbrirAcesso: () => void }) {
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
           >
-            Voltar ao início <Icon name="arrow-up-right" size={15} />
+            Voltar ao início <Icon name="arrow-up" size={15} />
           </a>
         </div>
       </div>
