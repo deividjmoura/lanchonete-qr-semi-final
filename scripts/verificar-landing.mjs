@@ -509,9 +509,11 @@ try {
   }
 
   /* O link do garçom continua levando ao PWA instalável, como antes. */
-  await page2.goto(BASE + "/#/garcom/8f14e45f-ceea-467f-a8ac-3b1c1b6a1b0d", { waitUntil: "domcontentloaded" });
-  await page2.waitForTimeout(900);
+  const tokenGarcom = "8f14e45f-ceea-467f-a8ac-3b1c1b6a1b0d";
+  await page2.goto(BASE + "/#/garcom/" + tokenGarcom, { waitUntil: "domcontentloaded" });
+  await page2.waitForURL((url) => url.pathname.includes("/garcom-pwa/"), { timeout: 5000 });
   assert(page2.url().includes("/garcom-pwa/"), "/#/garcom/<token> mantém o redirecionamento ao PWA");
+  assert(new URL(page2.url()).searchParams.get("token") === tokenGarcom, "redirecionamento preserva o token individual do garçom");
   const pwa = await page2.request.get(BASE + "/garcom-pwa/?token=8f14e45f-ceea-467f-a8ac-3b1c1b6a1b0d");
   assert(pwa.status() === 200, "/garcom-pwa/ responde 200");
 
