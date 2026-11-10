@@ -401,7 +401,8 @@ $('#themeToggleBtn')?.addEventListener('click',()=>{
  root.style.colorScheme=next==='escuro'?'dark':'light';
  try{localStorage.setItem('qradmin-tema',next);}catch{}
  const meta=document.querySelector('meta[name="theme-color"]');
- if(meta)meta.setAttribute('content',next==='escuro'?'#0b101b':'#e4e8f1');
+ // Mesmos valores de theme-init.js: --surface da identidade "Passe" em cada tema.
+ if(meta)meta.setAttribute('content',next==='escuro'?'#081726':'#f4efe6');
 });
 
 for (const btn of document.querySelectorAll('[data-tab]')) {

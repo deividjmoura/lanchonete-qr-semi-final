@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#e4e8f1">
+<meta name="theme-color" content="#f4efe6">
 <script src="./theme-init.js"></script>
 <meta name="description" content="QR Admin · atendimento de salão online e offline">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -14,20 +14,20 @@
 [hidden]{display:none!important}
 body{margin:0;background:var(--surface);color:var(--text);padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 .workspace{max-width:1040px;margin:0 auto;padding:12px 14px 32px}
-.app-footer{position:fixed;bottom:0;left:0;right:0;z-index:20;background:var(--surface-sidebar);padding-bottom:env(safe-area-inset-bottom)}
-.utility-bar{display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:14px 2px 4px;margin-top:12px;border:0;background:transparent}
+.app-footer{position:fixed;bottom:0;left:0;right:0;z-index:20;background:var(--ink-band);padding-bottom:env(safe-area-inset-bottom)}
+.utility-bar{display:flex;align-items:center;justify-content:center;gap:8px;padding:4px 0;border:0;background:transparent}
 .page{display:none!important}
 .page.active{display:block!important}
 .quick-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 button{cursor:pointer;font:inherit}
-.bottom-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;padding:4px 6px 6px}
+.bottom-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;padding:0 6px 6px}
 .sheet:not([open]){display:none}
 .sheet{border:1px solid var(--line-strong);padding:0;background:var(--surface);color:var(--text)}
-dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!important;width:min(calc(100vw - 32px),520px)!important;max-width:520px!important;height:fit-content!important;max-height:min(82dvh,690px)!important;border-radius:24px!important;display:flex!important;flex-direction:column;overflow:hidden}
-.sheet::backdrop{background:var(--overlay-scrim)}
-.sheet-top,.sheet-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:var(--surface-raised);border-bottom:1px solid var(--line)}
+dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!important;width:min(calc(100vw - 32px),520px)!important;max-width:520px!important;height:fit-content!important;max-height:min(82dvh,690px)!important;border-radius:var(--radius-lg)!important;display:flex!important;flex-direction:column;overflow:hidden}
+.sheet::backdrop{background:var(--surface-overlay)}
+.sheet-top,.sheet-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:var(--surface-raised);border-bottom:1px solid var(--line-strong)}
 .sheet-body{padding:17px;min-height:0;max-height:none!important;overflow-y:auto;overscroll-behavior:contain;flex:1 1 auto}
-@media(max-width:480px){dialog.sheet[open]{width:calc(100vw - 24px)!important;max-height:min(82dvh,640px)!important;border-radius:22px!important}.sheet-body{max-height:none!important}}
+@media(max-width:480px){dialog.sheet[open]{width:calc(100vw - 24px)!important;max-height:min(82dvh,640px)!important}.sheet-body{max-height:none!important}}
 </style>
 <link rel="stylesheet" href="./styles.css">
 <title>Atendimento · QR Admin</title>
@@ -394,7 +394,7 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
   </div>
   <div class="sheet-body">
     <div class="help-brand">
-      <img class="brand-mark" src="./brand-mark.webp" alt="" width="28" height="28">
+      <img class="brand-mark" src="./brand-mark.webp" alt="" width="34" height="34">
       <strong>QR Admin · Atendimento</strong>
     </div>
     <p class="muted small-copy">Os controles rápidos aparecem no final da aba Mesas. A navegação inferior continua disponível em todas as áreas.</p>
