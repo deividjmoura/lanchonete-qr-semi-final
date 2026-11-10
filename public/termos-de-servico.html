@@ -4,30 +4,51 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="index,follow">
-  <meta name="theme-color" content="#111827">
+  <meta name="theme-color" content="#17120e">
   <title>Termos de Serviço | QRAdmin</title>
   <style>
-    :root{color-scheme:light;--ink:#182230;--muted:#586579;--line:#e5eaf0;--accent:#166534;--paper:#fff;--bg:#f4f7f5}
-    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-    header{background:#10251b;color:#fff;padding:38px 22px}header>div,main,footer{max-width:880px;margin:auto}
-    .eyebrow{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:#b7d8c1;font-weight:700}
-    h1{font-size:clamp(2rem,5vw,3rem);line-height:1.12;margin:.5rem 0}header p{color:#d7e7dc;margin:.5rem 0 0}
-    main{background:var(--paper);margin:28px auto;padding:clamp(22px,5vw,48px);border:1px solid var(--line);border-radius:18px;box-shadow:0 12px 35px #14251b0b}
-    h2{font-size:1.25rem;margin:2rem 0 .5rem;line-height:1.3}h2:first-child{margin-top:0}
-    p,li{color:#344255}a{color:var(--accent);overflow-wrap:anywhere}li{margin:.35rem 0}
-    .updated{font-size:.9rem;color:var(--muted)}.notice{padding:14px 16px;background:#f0f7f1;border-left:4px solid var(--accent);border-radius:8px}
-    footer{padding:0 22px 32px;color:var(--muted);font-size:.9rem}footer a{margin-right:16px}
+    @font-face{font-family:"Fraunces";src:url("/garcom-pwa/fonts/fraunces-latin-soft-normal.woff2") format("woff2-variations");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Plus Jakarta Sans";src:url("/garcom-pwa/fonts/plus-jakarta-sans-latin-wght-normal.woff2") format("woff2-variations");font-weight:200 800;font-style:normal;font-display:swap}
+:root{color-scheme:light;--stout:#17120e;--stout-deep:#100c09;--paper:#f0e6d2;--paper-light:#f7f0e2;--paper-line:#cfc0a3;--brasa:#e8501f;--brasa-dark:#b5360d;--ink:#2b2118;--muted:#746353;--font-sans:"Plus Jakarta Sans",ui-sans-serif,system-ui,sans-serif;--font-display:"Fraunces",Georgia,serif;--radius:16px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+body{margin:0;background:radial-gradient(ellipse at 8% 0%,rgba(232,80,31,.08),transparent 32%),var(--paper);color:var(--ink);font:16px/1.75 var(--font-sans)}
+header{position:relative;isolation:isolate;overflow:hidden;background:linear-gradient(135deg,var(--stout-deep),var(--stout) 62%,#2b2119);color:var(--paper-light);padding:34px 22px 38px;border-bottom:4px solid var(--brasa)}
+header:after{content:"";position:absolute;z-index:-1;inset:0;background:radial-gradient(ellipse at 90% 0%,rgba(232,80,31,.18),transparent 38%);pointer-events:none}
+header>div,main,footer{max-width:880px;margin-left:auto;margin-right:auto}
+.brand{display:inline-flex;align-items:center;gap:9px;margin-bottom:26px;color:var(--paper-light);font-size:.78rem;font-weight:800;letter-spacing:.16em;text-decoration:none}
+.brand:before{content:"";width:10px;height:10px;border-radius:3px;background:var(--brasa);box-shadow:0 0 0 4px rgba(232,80,31,.14);transform:rotate(45deg)}
+.eyebrow{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:#ff9a6b;font-weight:800}
+h1{max-width:760px;font:700 clamp(2.2rem,6vw,3.7rem)/1.06 var(--font-display);letter-spacing:-.035em;margin:.45rem 0}
+header p{max-width:660px;color:#c8b79f;margin:.75rem 0 0;font-size:.98rem}
+main{position:relative;background:var(--paper-light);margin:28px auto;padding:clamp(22px,5vw,52px);border:1px solid var(--paper-line);border-radius:var(--radius);box-shadow:0 12px 32px rgba(23,18,14,.09),inset 0 1px 0 rgba(255,255,255,.65)}
+h2{font:700 1.42rem/1.25 var(--font-display);letter-spacing:-.015em;color:var(--stout);margin:2.15rem 0 .6rem;padding-top:.2rem}
+h2:first-child{margin-top:0}
+p,li{color:#594b3e}
+p{margin:.8rem 0}
+li{margin:.45rem 0}
+a{color:var(--brasa-dark);font-weight:700;text-decoration-thickness:1px;text-underline-offset:3px;overflow-wrap:anywhere}
+a:hover{color:#8f2a0a}
+a:focus-visible{outline:3px solid var(--brasa);outline-offset:3px;border-radius:4px}
+.updated{font-size:.82rem;color:var(--muted);font-weight:700;letter-spacing:.025em;border-bottom:1px solid var(--paper-line);padding-bottom:16px;margin-bottom:22px}
+.notice,.note{padding:16px 18px;background:#f3e5cf;border:1px solid #dfc49a;border-left:4px solid var(--brasa);border-radius:0 var(--radius) var(--radius) 0;color:#594b3e}
+.notice strong,.note strong{color:var(--stout)}
+footer{display:flex;flex-wrap:wrap;gap:10px;padding:0 22px 34px;color:var(--muted);font-size:.85rem}
+footer a{display:inline-flex;align-items:center;min-height:40px;padding:8px 13px;border:1px solid var(--paper-line);border-radius:999px;background:rgba(247,240,226,.72);text-decoration:none}
+footer a:hover{background:var(--paper-light);border-color:var(--brasa)}
+@media(max-width:600px){header{padding:26px 20px 30px}.brand{margin-bottom:20px}main{margin:16px 12px;padding:24px 20px}h2{font-size:1.28rem}footer{padding:0 16px 26px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
   </style>
 </head>
 <body>
-<header><div><div class="eyebrow">QRAdmin · Condições de uso</div><h1>Termos de Serviço</h1><p>Regras para utilização do sistema de pedidos e gestão operacional.</p></div></header>
+<header><div><a class="brand" href="/" aria-label="QR Admin — página inicial">QR ADMIN</a><div class="eyebrow">QRAdmin · Condições de uso</div><h1>Termos de Serviço</h1><p>Regras para utilização do sistema de pedidos e gestão operacional.</p></div></header>
 <main>
-  <p class="updated">Última atualização: 5 de novembro de 2026</p>
+  <p class="updated">Última atualização: 10 de novembro de 2026.</p>
   <p>Estes Termos regulam o acesso e o uso do QRAdmin, sistema de pedidos por QR Code e operação de estabelecimento. Ao utilizar o sistema, você declara que leu e compreendeu estas condições. Se não concordar, não utilize o serviço e procure a equipe responsável pelo estabelecimento.</p>
 
   <h2>1. Sobre o QRAdmin e seu fornecedor</h2>
   <p>O QRAdmin é uma ferramenta de apoio à operação de um único estabelecimento, reunindo cardápio, pedidos, produção por setor, atendimento, caixa e administração. A instalação é configurada para o estabelecimento responsável e não constitui, por si só, um serviço de marketplace, instituição financeira, banco, emissor fiscal ou intermediador de pagamentos.</p>
-  <p>O fornecedor técnico do software é <strong>69.987.201 DEIVID DE JESUS DE MOURA</strong>, Microempreendedor Individual (MEI), CNPJ <strong>69.987.201/0001-20</strong>, titular Deivid de Jesus de Moura. O contato profissional para dúvidas sobre o sistema é <a href="mailto:dejesusdemouradeivid@gmail.com">dejesusdemouradeivid@gmail.com</a>.</p>
+  <p>O fornecedor técnico do software é <strong>69.987.201 DEIVID DE JESUS DE MOURA</strong>, Microempreendedor Individual (MEI), CNPJ <strong>69.987.201/0001-20</strong>, titular Deivid de Jesus de Moura. O contato profissional para dúvidas sobre o sistema é <a href="mailto:servicosdegestaoqradmin@gmail.com">servicosdegestaoqradmin@gmail.com</a>.</p>
   <p>As condições comerciais de cada instalação — incluindo preço, forma e vencimento de pagamento, escopo de implantação, suporte, manutenção, disponibilidade, suspensão e encerramento — devem ser definidas em proposta ou contrato próprio celebrado com o estabelecimento. Estes Termos gerais de uso não substituem esse instrumento comercial.</p>
   <p>A aplicação em produção documentada utiliza a plataforma de hospedagem Railway. Recursos externos, como autenticação Google, somente participam do fluxo quando habilitados na instalação. O fornecedor poderá atualizar componentes e infraestrutura, observadas as condições contratadas e os deveres legais aplicáveis.</p>
 
@@ -80,7 +101,7 @@
   <p>Estes Termos podem ser atualizados para refletir mudanças no serviço ou na legislação. A versão vigente será publicada nesta página com a data da última atualização. O uso continuado após a publicação de alterações representa ciência da versão atualizada, sem prejuízo dos direitos previstos em lei.</p>
 
   <h2>13. Legislação e contato</h2>
-  <p>Aplicam-se as leis da República Federativa do Brasil, respeitadas as normas de proteção ao consumidor e de proteção de dados. Para dúvidas sobre estes Termos ou sobre o funcionamento do QR Admin, entre em contato com o fornecedor pelo e-mail <a href="mailto:dejesusdemouradeivid@gmail.com">dejesusdemouradeivid@gmail.com</a>. Questões sobre pedidos, preços, pagamentos, atendimento ao consumidor ou dados pessoais da operação devem ser dirigidas ao estabelecimento responsável.</p>
+  <p>Aplicam-se as leis da República Federativa do Brasil, respeitadas as normas de proteção ao consumidor e de proteção de dados. Para dúvidas sobre estes Termos ou sobre o funcionamento do QR Admin, entre em contato com o fornecedor pelo e-mail <a href="mailto:servicosdegestaoqradmin@gmail.com">servicosdegestaoqradmin@gmail.com</a>. Questões sobre pedidos, preços, pagamentos, atendimento ao consumidor ou dados pessoais da operação devem ser dirigidas ao estabelecimento responsável.</p>
   <p class="notice"><strong>Nota:</strong> estes Termos descrevem o uso conhecido do QRAdmin. O estabelecimento responsável deve complementar seus próprios dados de identificação, canais de atendimento, regras comerciais e procedimentos. As condições comerciais da prestação do serviço pelo fornecedor devem ser formalizadas separadamente em proposta ou contrato.</p>
 </main>
 <footer><a href="/">Página inicial do QRAdmin</a><a href="/politica-de-privacidade.html">Política de Privacidade</a></footer>
