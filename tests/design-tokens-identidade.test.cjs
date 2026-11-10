@@ -85,11 +85,11 @@ test("menu do cliente continua fora do rebranding", () => {
   const landing = read("src/screens/Landing.tsx");
   assert.match(landing, /ManagementSection/);
   for (const page of ["admin.html", "caixa.html", "cozinha.html", "bar.html", "garcom.html", "login.html"]) {
-    assert.match(read("public/" + page), /admin-identity\\.css/);
-    assert.doesNotMatch(read("public/" + page), /theme-glass\\.css/);
+    assert.match(read("public/" + page), /admin-identity\.css/);
+    assert.doesNotMatch(read("public/" + page), /theme-glass\.css/);
   }
   for (const page of ["apresentacao.html", "guia-sistema.html", "termos-de-uso.html", "termos-de-servico.html", "politica-de-privacidade.html"]) {
-    assert.match(read("public/" + page), /public-identity\\.css/);
+    assert.match(read("public/" + page), /public-identity\.css/);
   }
 });
 
