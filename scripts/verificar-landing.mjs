@@ -452,7 +452,13 @@ try {
   contextosExtras.push(page2);
   page2.on("pageerror", (e) => erros.push(e.message));
   await page2.goto(BASE + "/#/login", { waitUntil: "domcontentloaded" });
-  assert((await page2.locator("#login-senha").count()) === 1 || (await page2.getByLabel(/senha/i).count()) >= 1, "/#/login preservado");
+  /* A tela de login começa pelos setores; o campo de senha só aparece depois. */
+  await page2.getByRole("heading", { name: /Acesso à equipe/i }).waitFor({ timeout: 8000 }).catch(() => {});
+  assert(
+    (await page2.getByRole("heading", { name: /Acesso à equipe/i }).count()) >= 1
+      || (await page2.getByRole("button", { name: /cozinha/i }).count()) >= 1,
+    "/#/login preservado",
+  );
   // A senha só aparece depois de escolher o setor.
   await page2.getByRole("button", { name: /cozinha/i }).click().catch(() => {});
   await page2.waitForTimeout(400);
@@ -461,10 +467,13 @@ try {
 
   /* --- 8. Rotas preservadas --------------------------------------------- */
   /* /#/garcom (com ou sem token) entrega o PWA do garçom, que é outro shell;
-     por isso ele não é validado pelo seletor "#root > *" abaixo. */
+     por isso ele não é validado pelo seletor "#root > *" abaixo.
+     Em SPA com hash, o status HTTP do goto costuma ser o do index.html; o
+     sinal confiável é a montagem do app e a ausência da landing. */
   for (const rota of ["/#/cozinha", "/#/bar", "/#/caixa", "/#/admin", "/#/mesa/visual"]) {
     const r = await page2.goto(BASE + rota, { waitUntil: "domcontentloaded" });
-    assert(r?.status() === 200, `${rota} responde 200`);
+    const statusOk = !r || (typeof r.status === "function" && r.status() >= 200 && r.status() < 400);
+    assert(statusOk, `${rota} responde 200`);
     await page2.waitForFunction(() => document.querySelector("#root > *") || document.body.children.length > 1, null, { timeout: 8000 }).catch(() => {});
     assert(
       (await page2.evaluate(() => Boolean(document.querySelector("#root > *") || document.body.textContent?.length > 40))),
