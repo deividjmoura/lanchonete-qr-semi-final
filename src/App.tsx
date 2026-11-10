@@ -16,6 +16,16 @@ import { RotaStaff } from "./components/RotaStaff";
 export default function App() {
   const rota = useRota();
 
+  // Links individuais antigos de garçom devem abrir o PWA instalável.
+  // A rota hash é mantida como entrada compatível, mas não deve renderizar
+  // a tela React legada quando existe um token válido no link.
+  useEffect(() => {
+    if (rota.path !== "garcom" || !rota.params.token) return;
+    const destino = new URL("/garcom-pwa/", window.location.origin);
+    destino.searchParams.set("token", rota.params.token);
+    window.location.replace(destino.toString());
+  }, [rota.path, rota.params.token]);
+
   /* a voz "desbloqueia" no primeiro toque — igual ao voz-ops.js original */
   useEffect(() => {
     const fn = () => {
