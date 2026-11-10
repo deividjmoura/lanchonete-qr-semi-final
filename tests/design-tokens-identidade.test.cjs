@@ -81,6 +81,7 @@ test("menu do cliente continua fora do rebranding", () => {
   const mesaHtml = read("public/mesa.html");
   assert.doesNotMatch(mesaHtml, /admin-identity\.css|public-identity\.css/);
   assert.match(read("src/screens/mesa-praia.css"), /body\[data-mesa-praia\]/);
+  assert.match(read("src/main.tsx"), /window\.location\.hash\.startsWith\("\#\/mesa\/"\)/);
   assert.match(read("src/router.tsx"), /segs\[0\] === "mesa"/);
   const landing = read("src/screens/Landing.tsx");
   assert.match(landing, /ManagementSection/);
