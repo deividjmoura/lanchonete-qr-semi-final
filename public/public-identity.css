@@ -3,6 +3,7 @@
 /* Páginas institucionais e apresentação estática: mesma família tipográfica,
    contraste e geometria da aplicação, sem interferir nas rotas de cardápio. */
 :root {
+  color-scheme: light dark;
   --paper: var(--surface-raised);
   --paper-light: var(--surface-raised);
   --paper-deep: var(--surface-sunken);
@@ -17,6 +18,8 @@
   --sidebar-muted: var(--stage-ink-muted);
   --focus: var(--focus-ring);
   --radius-frame: var(--radius-md);
+  --shadow: var(--elev-2);
+  --max: 1180px;
   --shadow-soft: var(--elev-1);
   --shadow-frame: var(--elev-2);
 }
