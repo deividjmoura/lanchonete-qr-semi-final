@@ -21,6 +21,7 @@ test("a identidade Estação tem uma única fonte de tokens para SPA e PWA", () 
   assert.match(tokens, /--accent:\s*#c4d66a/);
   assert.match(tokens, /--radius-md:\s*14px/);
   assert.match(tokens, /--radius-lg:\s*18px/);
+  assert.match(tokens, /--radius-xl:\s*24px/);
   assert.match(tokens, /@media \(prefers-color-scheme: dark\)/);
   assert.doesNotMatch(tokens, /#ffffff\b|#fff\b|#000000\b|#000\b/i);
   assert.doesNotMatch(tokens, /Comanda de Chapa|--prim-brasa|--prim-violeta|--stage-violet/i);
