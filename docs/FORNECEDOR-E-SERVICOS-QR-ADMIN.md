@@ -15,7 +15,7 @@
 | Situação cadastral indicada no certificado | ATIVA |
 | Data de abertura | 05/11/2026 |
 | Forma de atuação declarada | Internet |
-| Contato profissional já utilizado na documentação do produto | dejesusdemouradeivid@gmail.com |
+| Contato profissional já utilizado na documentação do produto | servicosdegestaoqradmin@gmail.com |
 
 Este documento não reproduz CPF, endereço comercial completo, capital social ou outros dados pessoais que não sejam necessários à identificação do fornecedor no contexto do software.
 
@@ -72,7 +72,7 @@ Não afirmar que o fornecedor do software é o controlador dos dados dos consumi
 
 ## 6. Canais e condições ainda a formalizar
 
-O canal oficial de privacidade e contato profissional é **dejesusdemouradeivid@gmail.com**, confirmado pelo responsável em 05/11/2026 como monitorado, com compromisso de resposta em até 15 dias. Não foram confirmados neste cadastro:
+O canal oficial de privacidade e contato profissional é **servicosdegestaoqradmin@gmail.com**, confirmado pelo responsável em 10/11/2026 como canal oficial atualizado e monitorado, com compromisso de resposta em até 15 dias. Não foram confirmados neste cadastro:
 - telefone comercial ou WhatsApp de suporte;
 - domínio institucional ou endereço de site do fornecedor;
 - horários e prazo de resposta do suporte;
