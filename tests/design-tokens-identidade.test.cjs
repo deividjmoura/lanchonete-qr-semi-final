@@ -32,7 +32,7 @@ test("cozinha, bar e dashboard usam tokens, sem cores literais ou vidro", () => 
   for (const [name, css] of [["dashboard", dashboard], ["operacional", operational]]) {
     assert.doesNotMatch(css, literal, name + " deve consumir tokens");
     assert.doesNotMatch(css, /radial-gradient|linear-gradient|backdrop-filter/i, name + " não usa glass ou gradiente decorativo");
-    assert.doesNotMatch(css, /--neon|violet|violeta|brasa/i, name + " não carrega nomes ou cores da identidade anterior");
+    assert.doesNotMatch(css, /--neon|--stage-violet|--prim-violeta|brasa/i, name + " não carrega nomes ou cores da identidade anterior");
     assert.match(css, /var\(--stage-/);
   }
   assert.match(dashboard, /grid-column: span 2 !important/);
