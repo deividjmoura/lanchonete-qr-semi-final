@@ -59,6 +59,12 @@
   --space-7: 32px;
   --space-8: 40px;
   --space-9: 48px;
+  --text-xs: .75rem;
+  --text-caption: .6875rem;
+  --z-sticky: 40;
+  --z-dock: 50;
+  --z-modal: 60;
+  --z-toast: 99;
 
   --dur-instant: 80ms;
   --dur-fast: 140ms;
