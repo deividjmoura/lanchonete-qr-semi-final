@@ -29,7 +29,7 @@ A auditoria foi feita sobre os arquivos da `main` antes das alterações desta b
 | `public/admin.html`, `caixa.html`, `cozinha.html`, `bar.html`, `garcom.html`, `login.html` | Páginas estáticas legadas tinham pilha de estilos separada | Carregam a ponte `admin-identity.css`, que importa os tokens centrais |
 | `public/apresentacao.html`, `public/guia-sistema.html` | Variáveis e cores inline independentes | Carregam `public-identity.css` após o estilo local |
 | `public/termos-de-uso.html`, `termos-de-servico.html`, `politica-de-privacidade.html` | Superfícies e tipografia próprias | Carregam a camada institucional comum |
-| `src/lib/print.ts` | Preto/branco e fontes mono nas folhas de impressão | Mantido intencionalmente: impressão térmica/A4 requer tinta e contraste próprios |
+| `src/lib/print.ts` e `public/js/admin-relatorio.js` | Preto/branco e fontes de sistema/mono nas folhas de impressão e relatórios | Mantidos intencionalmente: impressão térmica/A4 requer tinta e contraste próprios, não a paleta de tela |
 
 ### Ícones e componentes
 - A landing tinha SVGs inline próprios em `src/screens/landing/components/Icon.tsx`; agora usa `@phosphor-icons/react`, alinhado ao set do produto.
