@@ -16,7 +16,7 @@
 
 O Service Worker **nunca** intercepta `/api/`. Nenhuma resposta de API é
 cacheada: o servidor é a única fonte de verdade. O cache do shell é versionado
-(`garcom-pwa-shell-v42` no código consultado em 05/11/2026); qualquer mudança no shell exige subir essa versão, ou
+(`garcom-pwa-shell-v44` no código consultado em 10/11/2026); qualquer mudança no shell exige subir essa versão, ou
 o aparelho continua executando JavaScript antigo.
 
 ## Fila compartilhada de prontos e retirada sem aceite separado
