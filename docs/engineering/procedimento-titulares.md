@@ -41,7 +41,7 @@ pedido.
 
 ## 3. Passos
 
-1. **Acusar recebimento em até 2 dias úteis**, informando protocolo.
+1. **Acusar recebimento após a confirmação de que o canal está monitorado**, informando protocolo; não assumir prazo fixo até aprovação do responsável.
 2. **Confirmar a identidade** com informação que só o titular tem (por exemplo,
    número da mesa, data e valor aproximado do consumo, ou o e-mail cadastrado
    para a conta de funcionário). Não pedir documentos além do necessário.
