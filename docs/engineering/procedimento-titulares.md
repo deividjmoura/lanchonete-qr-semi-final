@@ -5,7 +5,7 @@ anonimização e eliminação feitos por clientes ou funcionários do
 estabelecimento.
 **Aprovado por:** responsável pelo tratamento, em 05/11/2026.
 **Canal indicado para contato:** `servicosdegestaoqradmin@gmail.com` (confirmar monitoramento e prazo de resposta antes da publicação) (assunto "Privacidade no
-QR Admin"), com resposta em até **15 dias**.
+QR Admin"). O monitoramento e o prazo operacional de resposta devem ser confirmados antes da publicação.
 **Base documental:** `docs/engineering/data-policy-proposal.md` (§3.1 e §6) e
 seções 6, 8 e 13 de `public/politica-de-privacidade.html`.
 
@@ -68,8 +68,8 @@ pedido.
 | Etapa | Prazo |
 |---|---|
 | Acuse de recebimento | 2 dias úteis |
-| Resposta ao titular | até 15 dias do recebimento |
-| Reavaliação de pedido recusado | 15 dias, se o titular contestar |
+| Resposta ao titular | prazo a confirmar pelo controlador após validação jurídica |
+| Reavaliação de pedido recusado | prazo a confirmar pelo controlador após validação jurídica |
 
 Se o prazo não puder ser cumprido, o titular é informado antes do vencimento,
 com a nova data e o motivo.
@@ -90,7 +90,7 @@ com a nova data e o motivo.
 ## 6. Pendências conhecidas
 
 - O registro é manual (planilha); não existe fila de solicitações no sistema.
-- O texto público da Política descreve o canal e o prazo, mas não menciona
+- O texto público da Política descreve o canal e informa que o prazo operacional depende de confirmação, mas não menciona
   prazo de acuse de recebimento de 2 dias úteis (decisão: manter o
   compromisso apenas no procedimento interno até haver histórico de
   atendimento).
