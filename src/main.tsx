@@ -5,6 +5,9 @@ import App from "./App";
 import { aplicarTema, temaAtual } from "./lib/tema";
 
 /* aplica o tema salvo antes do primeiro paint */
+if (window.location.hash.startsWith("#/mesa/")) {
+  document.body.dataset.mesaPraia = "praia";
+}
 aplicarTema(temaAtual());
 
 createRoot(document.getElementById("root")!).render(
