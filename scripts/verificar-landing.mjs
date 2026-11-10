@@ -117,6 +117,33 @@ try {
     "capturas vêm de /assets/apresentacao",
   );
 
+  // Verifica também cada arquivo usado nas duas narrativas sticky. A checagem
+  // anterior cobria apenas hero e painel de demonstração, deixando uma captura
+  // quebrada nas cenas intermediárias passar despercebida.
+  const imagensNarrativaEsperadas = [
+    "/assets/apresentacao/cardapio-cliente.webp",
+    "/assets/apresentacao/personalizacao-produto.webp",
+    "/assets/apresentacao/comanda-cliente.webp",
+    "/assets/apresentacao/fila-cozinha.webp",
+    "/assets/apresentacao/fila-bar.webp",
+    "/assets/apresentacao/entregas-garcom.webp",
+    "/assets/apresentacao/fechamento-caixa.webp",
+    "/assets/apresentacao/dashboard-admin.webp",
+    "/assets/apresentacao/gestao-cardapio.webp",
+    "/assets/apresentacao/mapa-mesas.webp",
+  ];
+  const imagensNarrativa = await page.evaluate(async (sources) => Promise.all(
+    sources.map((src) => new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ src, ok: img.naturalWidth > 0, width: img.naturalWidth });
+      img.onerror = () => resolve({ src, ok: false, width: 0 });
+      img.src = src;
+    })),
+  ), imagensNarrativaEsperadas);
+  for (const imagem of imagensNarrativa) {
+    assert(imagem.ok, `imagem da narrativa carrega: ${imagem.src}`);
+  }
+
   /* --- 3. Responsividade -------------------------------------------------- */
   for (const largura of [1440, 768, 390, 320]) {
     await page.setViewportSize({ width: largura, height: 900 });
