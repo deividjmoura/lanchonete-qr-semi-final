@@ -308,6 +308,10 @@ async function main() {
           });
 
           assert.ok(measured.scroll <= width, `${screen}/${scheme}/${width}: sem overflow horizontal`);
+          if (screen === "admin" && width <= 360) {
+            const metricFont = await page.locator(".card-neon .metric-value").first().evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+            assert.ok(metricFont <= 18, `dashboard em ${width}px: KPI cabe no card (${metricFont}px)`);
+          }
           if (screen !== "mesa") assert.ok(measured.font.includes("DM Sans"), `${screen}: fonte DM Sans ativa`);
           if (screen !== "mesa") {
             assert.notEqual(measured.bodyBg, "rgb(255, 255, 255)", `${screen}: proibido #FFF puro`);
