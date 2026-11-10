@@ -162,9 +162,12 @@ test('as páginas legais identificam o fornecedor real sem expor dados pessoais 
     /ainda não firmou com esse provedor um contrato específico de tratamento/i,
     'não declarar contrato de tratamento inexistente',
   );
-  // O atendimento a titulares precisa dizer como o pedido é respondido.
-  assert.match(ler('public/politica-de-privacidade.html'), /monitoramento e o prazo operacional de resposta devem ser confirmados/);
-  assert.doesNotMatch(ler('public/politica-de-privacidade.html'), /em até 15 dias/);
+  // O canal oficial e o prazo operacional de até 15 dias foram definidos pelo responsável.
+  assert.match(ler('public/politica-de-privacidade.html'), /em até 15 dias após a confirmação do recebimento/);
+  assert.match(ler('public/politica-de-privacidade.html'), /assegurar que a caixa seja monitorada/);
+  const procedimento = ler('docs/engineering/procedimento-titulares.md');
+  assert.match(procedimento, /até \*\*15 dias\*\*/);
+  assert.doesNotMatch(procedimento, /Acuse de recebimento \| 2 dias úteis/);
   // A revisão periódica da anonimização é decisão registrada, não promessa solta.
   assert.match(ler('public/politica-de-privacidade.html'), /revisa essa limpeza a cada <strong>90 dias<\/strong>/);
   // Nenhuma página pública pode depender de CDN de fonte de terceiro.
