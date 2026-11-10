@@ -83,4 +83,4 @@ O e-mail oficial do serviço é `servicosdegestaoqradmin@gmail.com`. A landing, 
 
 ## Impressão
 
-Os estilos de impressão em `src/lib/print.ts` continuam usando preto/branco e fontes monoespaçadas quando apropriado: isso é um requisito de legibilidade e economia de tinta do papel, não uma tela do produto.
+Os estilos de impressão em `src/lib/print.ts` e a prévia de relatório em `public/js/admin-relatorio.js` continuam usando preto/branco e fontes de impressão/monoespaçadas quando apropriado: isso é um requisito de legibilidade e economia de tinta do papel, não uma tela do produto.
