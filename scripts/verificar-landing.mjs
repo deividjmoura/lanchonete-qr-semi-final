@@ -91,6 +91,17 @@ try {
   assert(/Fraunces/.test(fontes.serifa), "ênfase em Fraunces");
 
   /* --- 2. Capturas reais carregadas --------------------------------------- */
+  // Imagens com lazy-loading podem estar no DOM antes de terminar o download.
+  // Aguarda cada recurso de verdade; não transforma uma corrida de rede em falha.
+  const imagensCaptura = page.locator(".hero-art img, .product-stage img");
+  for (const imagem of await imagensCaptura.all()) {
+    const handle = await imagem.elementHandle();
+    await page.waitForFunction(
+      (img) => img.complete && img.naturalWidth > 0,
+      handle,
+      { timeout: 15000 },
+    );
+  }
   const capturas = await page.evaluate(() =>
     [...document.querySelectorAll(".hero-art img, .product-stage img")].map((img) => ({
       src: img.getAttribute("src"),
@@ -330,6 +341,15 @@ try {
   assert(await dialogo.getAttribute("aria-modal") === "true", "modal usa role=dialog + aria-modal");
   const nomeDialogo = await dialogo.getAttribute("aria-labelledby");
   assert(Boolean(nomeDialogo), "modal tem título associado (aria-labelledby)");
+  // O modal move o foco após a montagem; sincroniza com esse comportamento.
+  await page.waitForFunction(
+    () => {
+      const p = document.querySelector(".acesso-modal__panel");
+      return Boolean(p && p.contains(document.activeElement));
+    },
+    null,
+    { timeout: 3000 },
+  );
   assert(
     await page.evaluate(() => {
       const p = document.querySelector(".acesso-modal__panel");
