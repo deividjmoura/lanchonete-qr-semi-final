@@ -308,7 +308,7 @@ async function main() {
           });
 
           assert.ok(measured.scroll <= width, `${screen}/${scheme}/${width}: sem overflow horizontal`);
-          if (screen === "admin" && width <= 360) {
+          if (screen === "admin" && width <= 420) {
             const metricFont = await page.locator(".card-neon .metric-value").first().evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
             assert.ok(metricFont <= 18, `dashboard em ${width}px: KPI cabe no card (${metricFont}px)`);
           }
