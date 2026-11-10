@@ -32,7 +32,7 @@ As telas novas usam fontes locais; as fontes do PWA estão no precache offline. 
 
 ## Geometria e ritmo
 
-- Espaçamento em múltiplos de 4 px (`--space-1` a `--space-9`).
+- Espaçamento em múltiplos de 4 px (`--space-1` a `--space-9`), escala tipográfica compacta (`--text-xs`, `--text-caption`) e camadas de interface (`--z-sticky`, `--z-dock`, `--z-modal`, `--z-toast`).
 - Raios: 6, 10, 14, 18 e 24 px; controles de toque com mínimo de 44 px.
 - Elevação em quatro níveis, aplicada a overlays e superfícies que realmente precisam de separação. Cards comuns usam borda e superfície, sem sombra pesada.
 - Conteúdo desktop com largura máxima de 1240 px e gutters fluidos.
