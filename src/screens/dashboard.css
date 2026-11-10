@@ -921,3 +921,18 @@
   background: var(--stage-panel);
   box-shadow: none;
 }
+
+
+/* Comanda de Chapa — tablet mantém a grade lógica de 12 colunas em 8 trilhas
+   visuais (dois cards de 4 unidades por linha). A especificidade evita que
+   regras antigas do editor v2 sobrescrevam o breakpoint no CSS compilado. */
+@media (min-width: 701px) and (max-width: 1050px) {
+  .dashboard-stage .dashboard-grid {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+  .dashboard-stage .dashboard-grid > .card-neon,
+  .dashboard-stage .dashboard-grid > .dashboard-widget {
+    grid-column: auto / span 4 !important;
+    grid-row: auto !important;
+  }
+}
