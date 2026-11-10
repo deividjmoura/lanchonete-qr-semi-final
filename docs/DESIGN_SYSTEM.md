@@ -28,7 +28,7 @@ Estados semânticos permanecem separados da marca: sucesso, atenção, informaç
 - **Kalam** — ênfase editorial pontual na landing; não é usada para texto funcional ou números.
 - **JetBrains Mono** — horários, identificadores, metadados, valores tabulares e labels técnicas.
 
-Não há dependência de Google Fonts em runtime. As fontes necessárias ao PWA estão no precache offline.
+As telas novas usam fontes locais; as fontes do PWA estão no precache offline. O CSS legado `public/style.css` permanece intacto porque também estiliza o menu do cliente, e ainda declara sua fonte externa antiga. Nas páginas administrativas estáticas, `admin-identity.css` substitui a pilha tipográfica antes da renderização; a exceção do menu mantém a tipografia original.
 
 ## Geometria e ritmo
 
