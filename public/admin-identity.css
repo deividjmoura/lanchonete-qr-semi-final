@@ -1,0 +1,190 @@
+@import url("/garcom-pwa/design-tokens.css");
+
+/* Ponte visual para as telas HTML legadas de operação. Não é carregada pelo
+   menu do cliente: os arquivos /mesa* e a rota #/mesa/:token ficam isolados. */
+:root {
+  --bg: var(--surface);
+  --bg-elevated: var(--surface-raised);
+  --surface-2: var(--surface-sunken);
+  --surface-3: var(--surface-hover);
+  --surface-elevated: var(--surface-raised);
+  --border: var(--line);
+  --border-subtle: var(--line);
+  --text-secondary: var(--text-muted);
+  --muted: var(--text-muted);
+  --primary: var(--brand);
+  --primary-hover: var(--brand-hover);
+  --primary-active: var(--brand-hover);
+  --primary-soft: var(--brand-surface);
+  --primary-ring: color-mix(in srgb, var(--brand) 24%, transparent);
+  --accent: var(--stage-lime);
+  --brand-secondary: var(--stage-lime);
+  --success: var(--status-success);
+  --success-soft: var(--status-success-surface);
+  --warning: var(--status-warning);
+  --warning-soft: var(--status-warning-surface);
+  --danger: var(--status-danger);
+  --danger-soft: var(--status-danger-surface);
+  --info: var(--status-info);
+  --info-soft: var(--status-info-surface);
+  --dark: var(--text);
+  --dark-soft: var(--text-muted);
+  --header-bg: var(--surface-raised);
+  --modal-bg: var(--surface-raised);
+  --modal-backdrop: var(--stage-scrim);
+  --cart-bg: var(--surface-raised);
+  --sessao-bg: var(--stage-bg);
+  --sessao-text: var(--stage-ink);
+  --toast-bg: var(--stage-bg);
+  --toast-text: var(--stage-ink);
+  --input-bg: var(--surface-raised);
+  --edit-panel-bg: var(--surface-sunken);
+  --chip-bg: var(--surface-sunken);
+  --badge-neutral-bg: var(--surface-sunken);
+  --badge-neutral-text: var(--text-muted);
+  --qty-btn-bg: var(--surface-sunken);
+  --check-active-bg: var(--brand-surface);
+  --check-active-border: var(--brand);
+  --shadow: var(--elev-2);
+  --shadow-md: var(--elev-3);
+  --shadow-lg: var(--elev-4);
+  --radius: var(--radius-sm);
+  --font-ui: var(--font-sans);
+  --duration: var(--dur-base);
+  --ease: var(--ease-out);
+  --shadow-md: var(--elev-2);
+  --shadow-lg: var(--elev-3);
+}
+
+:root[data-theme="escuro"] {
+  --bg: var(--surface);
+  --bg-elevated: var(--surface-raised);
+  --surface-2: var(--surface-sunken);
+  --surface-3: var(--surface-hover);
+  --surface-elevated: var(--surface-raised);
+  --border: var(--line);
+  --border-subtle: var(--line);
+  --text-secondary: var(--text-muted);
+  --muted: var(--text-muted);
+  --primary: var(--brand);
+  --primary-hover: var(--brand-hover);
+  --primary-active: var(--brand-hover);
+  --primary-soft: var(--brand-surface);
+  --accent: var(--stage-lime);
+  --header-bg: var(--surface-raised);
+  --modal-bg: var(--surface-raised);
+  --cart-bg: var(--surface-raised);
+  --input-bg: var(--surface-raised);
+  --edit-panel-bg: var(--surface-sunken);
+  --chip-bg: var(--surface-sunken);
+  --badge-neutral-bg: var(--surface-sunken);
+  --badge-neutral-text: var(--text-muted);
+  --qty-btn-bg: var(--surface-sunken);
+  --check-active-bg: var(--brand-surface);
+  --check-active-border: var(--brand);
+}
+
+html, body {
+  min-height: 100%;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  font-family: var(--font-sans) !important;
+}
+body {
+  background-image: none !important;
+  -webkit-font-smoothing: antialiased;
+}
+:where(h1,h2,h3,h4,.page-title,.section-title) {
+  color: var(--text);
+  font-family: var(--font-display);
+  letter-spacing: -.035em;
+}
+:where(.card,.panel,.modal,.ops-card,.order,.ledger-block,.table-tile,.dash-panel,.card-neon,.box,.admin-panel) {
+  border-color: var(--line) !important;
+  border-radius: var(--radius-md) !important;
+  background: var(--surface-raised) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+:where(input,select,textarea) {
+  min-height: 42px;
+  border-color: var(--line-strong) !important;
+  border-radius: var(--radius-sm) !important;
+  background: var(--surface-raised) !important;
+  color: var(--text) !important;
+  font: 500 16px/1.4 var(--font-sans) !important;
+}
+:where(button,.btn) { border-radius: var(--radius-sm); font-family: var(--font-sans); }
+:where(.btn-primary,.button-primary,.primary-button,[data-primary="true"]) {
+  border-color: var(--brand) !important;
+  background: var(--brand) !important;
+  color: var(--brand-contrast) !important;
+}
+:where(a) { color: var(--brand-ink); }
+:where(table th) { color: var(--text-muted); }
+:where(table td) { border-color: var(--line); }
+:where(.dock,.utility-bar,.app-footer) {
+  background: var(--surface-raised) !important;
+  border-color: var(--line) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+:where(.modal-backdrop) { background: var(--stage-scrim) !important; }
+:where(.badge,.status,.pill) { border-radius: var(--radius-pill); }
+:where(.ops-card,.order) { color: var(--text); }
+
+
+/* Compatibilidade visual dos componentes definidos em style-ops.css. */
+.dock {
+  background: var(--surface-raised) !important;
+  border-color: var(--line) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+.kpi-card,
+.order,
+.kcard,
+.sessao-card,
+.status-card,
+.pk-col,
+.pk-card,
+.hist-card,
+details.order-card,
+details.sessao-fold {
+  background: var(--surface-raised) !important;
+  border-color: var(--line) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: none !important;
+}
+.kpi-card.accent { background: var(--brand-surface) !important; border-color: var(--brand-border) !important; }
+.kpi-card .kpi-icon { background: var(--brand-surface) !important; color: var(--brand-ink) !important; }
+.admin-tabs button.active {
+  background: var(--brand) !important;
+  border-color: var(--brand) !important;
+  color: var(--brand-contrast) !important;
+  box-shadow: none !important;
+}
+.order.new,
+.kcard.warn,
+.kcard.hot,
+details.order-card.new,
+details.order-card.warn,
+details.order-card.hot {
+  border-left: 1px solid var(--line) !important;
+}
+.pedidos-kanban .pk-col { background: var(--surface-sunken) !important; }
+.pay-row label:has(input:checked) {
+  border-color: var(--brand) !important;
+  background: var(--brand-surface) !important;
+  color: var(--brand-ink) !important;
+}
+.pix-box img { background: var(--surface-raised) !important; }
+.grid-caixa { grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+@media (max-width: 640px) {
+  .kgrid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .grid-caixa { grid-template-columns: minmax(0, 1fr); }
+  .dock { padding-inline: 12px; }
+  .modal { border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important; }
+}

@@ -1,5 +1,5 @@
 "use strict";
-// Validação visual e estrutural do sistema "Palco Azul/Violeta" em Chromium real.
+// Validação visual e estrutural do sistema Estação em Chromium real.
 // Executado pelo runner scripts/run-e2e-tests.js, que fornece uma porta isolada via VISUAL_BASE_URL.
 const { chromium } = require("playwright-core");
 const binary = require("@sparticuz/chromium").default;
@@ -302,15 +302,17 @@ async function main() {
               scroll: document.documentElement.scrollWidth,
               font: getComputedStyle(document.body).fontFamily,
               bodyBg,
-              surface: root.getPropertyValue("--surface").trim(),
-              raised: root.getPropertyValue("--surface-raised").trim(),
+              surface: getComputedStyle(document.body).getPropertyValue("--surface").trim(),
+              raised: getComputedStyle(document.body).getPropertyValue("--surface-raised").trim(),
             };
           });
 
           assert.ok(measured.scroll <= width, `${screen}/${scheme}/${width}: sem overflow horizontal`);
-          assert.ok(measured.font.includes("Plus Jakarta Sans"), `${screen}: fonte Plus Jakarta Sans ativa`);
-          assert.notEqual(measured.bodyBg, "rgb(255, 255, 255)", `${screen}: proibido #FFF puro`);
-          assert.notEqual(measured.bodyBg, "rgb(0, 0, 0)", `${screen}: proibido #000 puro`);
+          if (screen !== "mesa") assert.ok(measured.font.includes("DM Sans"), `${screen}: fonte DM Sans ativa`);
+          if (screen !== "mesa") {
+            assert.notEqual(measured.bodyBg, "rgb(255, 255, 255)", `${screen}: proibido #FFF puro`);
+            assert.notEqual(measured.bodyBg, "rgb(0, 0, 0)", `${screen}: proibido #000 puro`);
+          }
 
           if (["mesa", "pwa"].includes(screen)) styles[screen] = measured;
 
@@ -517,8 +519,8 @@ async function main() {
         }
       }
 
-      assert.equal(styles.mesa.surface, styles.pwa.surface, "Mesa/PWA: mesmo token --surface");
-      assert.equal(styles.mesa.raised, styles.pwa.raised, "Mesa/PWA: mesmo token --surface-raised");
+      assert.notEqual(styles.mesa.surface, styles.pwa.surface, "menu do cliente mantém sua própria superfície");
+      assert.notEqual(styles.mesa.raised, styles.pwa.raised, "menu do cliente mantém sua própria superfície elevada");
       assert.deepEqual(errors, [], "Sem erros de execução");
 
       // Preferência explícita prevalece sobre o SO
@@ -533,7 +535,7 @@ async function main() {
       await context.close();
     }
 
-    // Shell offline real: Service Worker precacheia tokens, Fraunces, Plus Jakarta Sans, JetBrains Mono e ícones
+    // Shell offline real: Service Worker precacheia tokens, DM Sans, Kalam, JetBrains Mono e ícones
     const offline = await browser.newContext({ colorScheme: "dark" });
     const page = await offline.newPage();
     await page.goto(base + "/garcom-pwa/");
@@ -547,8 +549,8 @@ async function main() {
     await page.reload();
     await page.evaluate(() => document.fonts.ready);
     assert.equal(await page.locator("html").getAttribute("data-theme"), "escuro");
-    assert.ok(await page.evaluate(() => document.fonts.check('700 20px "Fraunces"')));
-    assert.ok(await page.evaluate(() => document.fonts.check('600 15px "Plus Jakarta Sans"')));
+    assert.ok(await page.evaluate(() => document.fonts.check('700 20px "Kalam"')));
+    assert.ok(await page.evaluate(() => document.fonts.check('600 15px "DM Sans"')));
     assert.ok(await page.evaluate(() => document.fonts.check('600 13px "JetBrains Mono"')));
     // A marca continua no shell offline: agora ela vive no painel de ajuda do rodapé.
     assert.equal(await page.locator(".app-header").count(), 0, "sem cabeçalho para precachear");

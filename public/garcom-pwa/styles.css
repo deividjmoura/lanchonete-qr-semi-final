@@ -1,29 +1,5 @@
 @import "./design-tokens.css";
 
-@font-face {
-  font-family: "Fraunces";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("./fonts/fraunces-latin-soft-normal.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "Plus Jakarta Sans";
-  font-style: normal;
-  font-weight: 200 800;
-  font-display: swap;
-  src: url("./fonts/plus-jakarta-sans-latin-wght-normal.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "JetBrains Mono";
-  font-style: normal;
-  font-weight: 100 800;
-  font-display: swap;
-  src: url("./fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
-}
-
 *,
 *::before,
 *::after {
@@ -1258,78 +1234,17 @@ dialog.sheet[open] {
 }
 
 
-/* ==========================================================================
-   CAMADA VISUAL OPERACIONAL (mesma linguagem do dashboard)
-   Vidro discreto, bordas de acento e sombras suaves — sempre a partir dos
-   tokens, para funcionar igual nos temas claro e escuro. Nada aqui muda
-   layout, alvos de toque ou contraste do texto.
-   ========================================================================== */
-.app-footer {
-  background: color-mix(in srgb, var(--surface-sidebar) 94%, transparent);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-  backdrop-filter: blur(14px) saturate(140%);
-}
+/* Estação: superfícies sólidas, sem blur ou gradiente de decoração. */
+.app-footer { background: var(--surface-sidebar); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.ledger-block { background: var(--surface-raised); border-color: var(--line); box-shadow: none; }
+.ledger-head { background: var(--surface-sunken); }
+.order { background: var(--surface-raised); box-shadow: none; transition: border-color 160ms ease; }
+.order:hover { border-color: var(--brand-border); box-shadow: none; transform: none; }
+.order.expanded { box-shadow: none; border-color: var(--brand); }
+.table-tile.mine { box-shadow: none; border-color: var(--brand); }
+.bottom-nav { background: var(--surface-sidebar); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none; }
 
-.ledger-block {
-  background:
-    linear-gradient(
-      152deg,
-      color-mix(in srgb, var(--surface-raised) 92%, var(--brand-surface)) 0%,
-      var(--surface-raised) 58%
-    );
-  border-color: color-mix(in srgb, var(--line-strong) 72%, var(--line));
-  box-shadow:
-    var(--shadow-card),
-    inset 0 1px 0 color-mix(in srgb, var(--surface-raised) 88%, transparent);
-}
-
-.ledger-head {
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--surface-sunken) 88%, var(--brand-surface)),
-      var(--surface-sunken)
-    );
-}
-
-.order {
-  background:
-    linear-gradient(
-      148deg,
-      color-mix(in srgb, var(--surface-raised) 93%, var(--brand-surface)) 0%,
-      var(--surface-raised) 60%
-    );
-  transition: box-shadow 160ms ease, border-color 160ms ease, transform 160ms ease;
-}
-
-@media (hover: hover) {
-  .order:hover {
-    border-color: color-mix(in srgb, var(--brand-border) 65%, var(--line));
-    box-shadow: var(--shadow-card-hover);
-    transform: translateY(-1px);
-  }
-}
-
-.order.expanded {
-  box-shadow:
-    var(--shadow-card),
-    inset 0 0 0 1px color-mix(in srgb, var(--brand) 18%, transparent);
-}
-
-.table-tile.mine {
-  box-shadow:
-    var(--shadow-card),
-    inset 0 0 0 1px color-mix(in srgb, var(--brand) 32%, transparent);
-}
-
-.bottom-nav {
-  background: color-mix(in srgb, var(--surface-sidebar) 92%, transparent);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  backdrop-filter: blur(16px) saturate(140%);
-  box-shadow: 0 -10px 26px -22px color-mix(in srgb, var(--sidebar-text) 70%, transparent);
-}
-
-/* Bordas discretas: a hierarquia vem de superfície, espaço e sombra.
+/*/* Bordas discretas: a hierarquia vem de superfície, espaço e sombra.
    Estados de alerta (aviso, bloqueio, status) mantêm as bordas fortes. */
 .ledger-block {
   border-color: color-mix(in srgb, var(--line) 82%, transparent);

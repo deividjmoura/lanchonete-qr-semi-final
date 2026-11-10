@@ -241,7 +241,7 @@ A página inicial (`/`) é a landing comercial do QR Admin, integrada ao build d
 | Guia demonstrativo | `/guia-sistema.html` | Página estática preservada |
 | Privacidade e Termos | `/politica-de-privacidade.html`, `/termos-de-servico.html` | Preservados, também ligados no rodapé da landing |
 
-A landing usa os assets oficiais (`public/logo/qradmin-mark.png`) e as capturas de `public/assets/apresentacao/`, geradas por `scripts/capturar-apresentacao.mjs` em ambiente isolado. As fontes editoriais (DM Sans e DM Serif Display, licença SIL OFL) são servidas localmente em `public/fonts/landing/`.
+A landing usa os assets oficiais (`public/logo/qradmin-mark.png`) e as capturas de `public/assets/apresentacao/`, geradas por `scripts/capturar-apresentacao.mjs` em ambiente isolado. A identidade visual vigente usa DM Sans, Kalam e JetBrains Mono, servidas localmente e compartilhadas entre SPA e PWA. O design system está documentado em `docs/DESIGN_SYSTEM.md`.
 
 ### Contato e adesão
 
@@ -250,7 +250,7 @@ A seção **Contate-nos** (`/#contato`) fica antes do CTA final e repete os dois
 | Canal | Endereço | Origem |
 |---|---|---|
 | WhatsApp | `https://wa.me/5547996162721` | Mesmo número de `src/screens/Login.tsx` |
-| E-mail | `dejesusdemouradeivid@gmail.com` | Mesmo endereço de `src/screens/Login.tsx` |
+| E-mail | `servicosdegestaoqradmin@gmail.com` | Mesmo endereço de `src/screens/Login.tsx` |
 
 Os dois endereços estão centralizados em `src/screens/landing/contato.ts`. A seção também lista os três formatos de adesão (assinatura mensal, aquisição do sistema e venda exclusiva) **sem valores publicados**: preço, prazo e escopo ficam "sob consulta" e são confirmados na conversa.
 
@@ -322,7 +322,7 @@ O status abaixo separa código integrado de validações que dependem de disposi
 O QR Admin é fornecido tecnicamente por **69.987.201 DEIVID DE JESUS DE MOURA**, Microempreendedor Individual (MEI), inscrito no **CNPJ 69.987.201/0001-20**, com situação cadastral ativa conforme Certificado da Condição de MEI emitido em 05/11/2026.
 
 - **Titular:** Deivid de Jesus de Moura.
-- **Contato profissional:** [dejesusdemouradeivid@gmail.com](mailto:dejesusdemouradeivid@gmail.com).
+- **Contato profissional:** [servicosdegestaoqradmin@gmail.com](mailto:servicosdegestaoqradmin@gmail.com).
 - **Produto:** QR Admin — sistema de pedidos por QR Code e gestão operacional para estabelecimento.
 - **Aplicação documentada:** [qradmin.up.railway.app](https://qradmin.up.railway.app/).
 - **Infraestrutura documentada:** Railway e PostgreSQL.

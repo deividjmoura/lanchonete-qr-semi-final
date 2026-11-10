@@ -4,6 +4,7 @@ import { Header } from "./landing/sections/Header";
 import { Hero } from "./landing/sections/Hero";
 import { ValueSection } from "./landing/sections/ValueSection";
 import { FlowSection } from "./landing/sections/FlowSection";
+import { ManagementSection } from "./landing/sections/ManagementSection";
 import { FeaturesSection } from "./landing/sections/FeaturesSection";
 import { ProductSection } from "./landing/sections/ProductSection";
 import { AudienceSection } from "./landing/sections/AudienceSection";
@@ -16,10 +17,9 @@ import "./landing/styles/main.css";
 
 /* Landing comercial oficial do QR Admin.
  *
- * Layout, tipografia, paleta, composição e responsividade vêm da apresentação
- * aprovada (deividjmoura/Exercices · apresentacao, PR #2). As adaptações são
- * apenas de integração: logo oficial, capturas reais do sistema, links
- * institucionais preservados e CTAs abrindo o modal de autenticação real. */
+ * A identidade visual é definida pelo design system Estação, compartilhado com
+ * a área autenticada e o PWA. As cenas usam capturas reais e os CTAs abrem o
+ * modal de autenticação do produto. */
 export default function Landing() {
   const [acessoAberto, setAcessoAberto] = useState(false);
   const abrirAcesso = useCallback(() => setAcessoAberto(true), []);
@@ -51,6 +51,7 @@ export default function Landing() {
         <Hero />
         <ValueSection />
         <FlowSection />
+        <ManagementSection />
         <FeaturesSection />
         <ProductSection />
         <AudienceSection />

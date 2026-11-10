@@ -4,7 +4,7 @@
 anonimização e eliminação feitos por clientes ou funcionários do
 estabelecimento.
 **Aprovado por:** responsável pelo tratamento, em 05/11/2026.
-**Canal oficial:** `dejesusdemouradeivid@gmail.com` (assunto "Privacidade no
+**Canal indicado para contato:** `servicosdegestaoqradmin@gmail.com` (confirmar monitoramento e prazo de resposta antes da publicação) (assunto "Privacidade no
 QR Admin"), com resposta em até **15 dias**.
 **Base documental:** `docs/engineering/data-policy-proposal.md` (§3.1 e §6) e
 seções 6, 8 e 13 de `public/politica-de-privacidade.html`.

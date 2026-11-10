@@ -1,264 +1,86 @@
-# QR Admin — Design System (Território A — "Comanda de Chapa")
+# Design System — QR Admin / Estação
 
-> **Decisão de identidade (2026-11-08):** a interface do QRAdmin é a **comanda térmica digital** da
-> casa. O número da mesa é a âncora, o ticket é a unidade legível a distância e o estado se comunica
-> por **posição + forma + cor** — nunca só por cor. Vale para **todo** o sistema: Admin, dashboard,
-> gestão de mesas, cozinha, bar, caixa, telas operacionais e PWA do garçom.
-> **Exceção única:** a interface do cardápio acessada pelo cliente em `#/mesa/:token`, que mantém
-> layout próprio (tema praia, foto protagonista), documentado em §6.4.
->
-> A assinatura de cor é a **brasa** (`--prim-brasa`), com orçamento de ~10% da área: número de mesa,
-> ação primária, "em produção"/atenção e atraso. Desde a onda 5, o dashboard também usa a família
-> brasa como acento padrão (`--stage-brasa*`); ciano/lima/rosa/âmbar seguem como acentos de dado
-> secundários e `--stage-violet*` permanece definido nos tokens apenas por compatibilidade, sem
-> consumidor visual. Violeta e ciano continuam como **acentos de dado**
-> do palco (`--stage-violet*`, `--stage-cyan`).
->
-> A direção "Palco Azul/Violeta" (dashboard "Os números da sua casa") foi **substituída** pela
-> decisão de 2026-11-08. Dela sobreviveram a arquitetura de três níveis de tokens, o palco escuro com
-> profundidade e a tipografia display — agora com halos recontidos, raios menores e assinatura de
-> brasa (`tests/design-tokens-identidade.test.cjs` e `tests/design-system.test.cjs` travam o contrato).
+## Direção visual
 
----
+**Estação** representa o trabalho coordenado entre mesa, salão, cozinha, bar e caixa. A interface usa verde mineral como cor de ação, superfícies de névoa como base e um acento cítrico para orientar atenção e estados pontuais. A direção é diferente da identidade anterior: não usa laranja/brasa, roxo/índigo, gradientes de palco, vidro ou glow.
 
-## 1. Arquitetura de Tokens em Três Níveis
+A marca aparece por hierarquia, tipografia, ritmo e consistência — não por pintar todos os componentes com a cor primária.
 
-A fonte única de verdade é `public/garcom-pwa/design-tokens.css`, importada **tanto** pelo SPA
-(`src/index.css`) **quanto** pelo PWA (`public/garcom-pwa/styles.css` e `index.html`), com bootstrap
-sem flash em `public/garcom-pwa/theme-init.js` e `src/lib/tema.ts` (teste garante que os três não
-divergem).
+## Tokens centrais
 
-| Nível | Prefixo | Papel | Quem consome |
-|---|---|---|---|
-| 1. Primitivos de marca | `--prim-*` | Valores brutos de paleta (brasa, meia-noite, névoa, violeta/azul-água como acentos, verdes/âmbar/azul/vermelho de tinta) | apenas os níveis 2 e 3 |
-| 1b. Primitivos do palco | `--stage-*` | Superfícies de vidro, camadas, hairlines, acentos neon e sombras das telas escuras | `dashboard.css`, `operacional.css`, `.stage-*` do SPA e PWA |
-| 2. Semânticos | `--surface*`, `--text*`, `--brand*`, `--accent*`, `--line*`, `--status-*` | Papel funcional por tema (claro/escuro) | todos os componentes |
-| 3. Transversais | `--space-*`, `--dur-*`, `--ease-*`, `--elev-*`, `--glass-*` | Espaçamento, movimento, elevação e composição de vidro | componentes e camadas CSS |
+Fonte única: `public/garcom-pwa/design-tokens.css`. A folha é importada pela SPA (`src/index.css`) e pelo PWA (`public/garcom-pwa/styles.css` e shell HTML). O fallback TypeScript em `src/lib/tema.ts` espelha apenas os tokens essenciais usados antes da hidratação.
 
-**Regra dura:** arquivos de camada visual (`src/screens/dashboard.css`, `src/screens/operacional.css`)
-**não escrevem hex nem rgba** — 0 literais, verificado por teste. Se faltar um valor, crie/peça um
-token em vez de escrever a cor no componente.
-
-### 1.1 Nível 1 — Primitivos de marca
-
-| Token | Hex | Papel |
+| Papel | Claro | Escuro |
 |---|---|---|
-| `--prim-meia-noite` | `#0B101B` | Superfície escura base (fundo do palco) |
-| `--prim-meia-noite-elevada` | `#141B29` | Cartão/painel sobre a meia-noite |
-| `--prim-meia-noite-rebaixo` | `#080D16` | Campos e áreas rebaixadas no escuro |
-| `--prim-nevoa` | `#EEF1F8` | Superfície clara base |
-| `--prim-nevoa-elevada` | `#F8FAFF` | Cartão elevado no claro |
-| `--prim-nevoa-rebaixo` | `#E0E5F1` | Campo/trilho no claro |
-| `--prim-brasa` | `#E8501F` | **Assinatura operacional** (ação primária, mesa em destaque, atenção) |
-| `--prim-brasa-escura` / `--prim-brasa-tinta` | `#BF3B11` / `#B5360D` | Brasa sobre superfície clara (fundo / tinta) |
-| `--prim-brasa-clara` / `--prim-brasa-tinta-escuro` | `#FF7D52` / `#FFB59A` | Brasa sobre palco escuro (fundo / tinta) |
-| `--prim-violeta` | `#7C5CFF` | Acento de dado do palco (não é mais a cor de marca) |
-| `--prim-azul-agua` | `#4FD1E0` | Acento secundário / informação operacional |
-| `--prim-azul-tinta` / `--prim-azul-medio` / `--prim-azul-claro` | `#121829` / `#48536D` / `#616D88` | Texto e apoio no tema claro |
-| `--prim-noite-tinta` / `--prim-noite-medio` / `--prim-noite-claro` | `#EEF1FB` / `#A9B4CC` / `#7F8BA6` | Texto e apoio no tema escuro |
+| Fundo | `#f0f4f0` | `#142622` |
+| Superfície elevada | `#fafcf9` | `#1d3430` |
+| Superfície rebaixada | `#e4ece7` | `#0f1e1b` |
+| Texto principal | `#1d302f` | `#ecf4ee` |
+| Texto secundário | `#506763` | `#b4c8be` |
+| Marca / ação | `#176d63` | `#78c8b6` |
+| Acento cítrico | `#c4d66a` | `#d7e98a` |
 
-Nenhum token usa `#FFFFFF` ou `#000000` puros (teste de design system).
+Estados semânticos permanecem separados da marca: sucesso, atenção, informação e erro. Eles não são usados como decoração de cards. Os tokens foram escolhidos para manter contraste mínimo AA em texto normal nos pares principais e nos botões.
 
-### 1.2 Nível 2 — Semânticos (contraste medido)
+## Tipografia
 
-| Token | Claro | Escuro | Contraste medido |
-|---|---|---|---|
-| `--surface` | `#EEF1F8` | `#0B101B` | — |
-| `--text` sobre `--surface` | `#121829` | `#EEF1FB` | 15,6:1 / 16,9:1 (AAA) |
-| `--text-muted` sobre `--surface-raised` | `#48536D` | `#A9B4CC` | 7,4:1 / 8,3:1 |
-| `--brand` sobre `--brand-contrast` | `#BF3B11` / `#EDF0F6` | `#FF7D52` / `#0B101B` | 4,8:1 / 7,5:1 |
-| `--brand-ink` sobre `--surface-raised` | `#B5360D` | `#FFB59A` | 5,3:1 / 10,1:1 |
-| `--accent-ink` | `#0A5A63` | `#8FE6F0` | 7,6:1 / 12,1:1 |
-| `--status-*` (success/warning/info/danger) | verdes/âmbar/azul/vermelho escuros | versões claras | ≥ 4,5:1 no escuro, ≥ 5,8:1 no claro |
+- **DM Sans** — display, interface, formulários e corpo. Arquivo variável local em `public/fonts/landing/dm-sans-latin-wght-normal.woff2`.
+- **Kalam** — ênfase editorial pontual na landing; não é usada para texto funcional ou números.
+- **JetBrains Mono** — horários, identificadores, metadados, valores tabulares e labels técnicas.
 
-Todos os pares são validados por `tests/design-system.test.cjs` (WCAG AA/AAA) — nenhuma cor entra
-"só no olho".
+Não há dependência de Google Fonts em runtime. As fontes necessárias ao PWA estão no precache offline.
 
-### 1.3 Nível 3 — Transversais
+## Geometria e ritmo
 
-- **Espaçamento:** `--space-1` (4px) … `--space-9` (48px), múltiplos de 4.
-- **Movimento:** `--dur-instant` 90ms, `--dur-quick` 140ms, `--dur-base` 200ms, `--dur-slow` 320ms;
-  curvas `--ease-out` e `--ease-in-out`. Em `prefers-reduced-motion`, todas as durações viram 0ms.
-- **Elevação:** `--elev-1` … `--elev-4` (camadas de sombra), usadas sempre em conjunto com hairline
-  interna, nunca isoladas.
-- **Vidro:** `--glass-sheen` (gradiente de brilho), `--glass-border` (hairline), `--glass-blur`,
-  `--glass-shadow`. As classes `.stage-surface` e `.stage-card` (em `src/index.css`) já compõem esses
-  tokens — **reutilize-as em vez de recriar sombra/gradiente no componente.**
+- Espaçamento em múltiplos de 4 px (`--space-1` a `--space-9`).
+- Raios: 6, 10, 14, 18 e 24 px; controles de toque com mínimo de 44 px.
+- Elevação em quatro níveis, aplicada a overlays e superfícies que realmente precisam de separação. Cards comuns usam borda e superfície, sem sombra pesada.
+- Conteúdo desktop com largura máxima de 1240 px e gutters fluidos.
+- Tabelas e painéis devem preservar legibilidade; em viewport estreita, dados densos podem rolar horizontalmente dentro do próprio contêiner, nunca a página inteira.
 
----
+## Componentes e ícones
 
-## 2. O Palco (`--stage-*`) — como as telas escuras são construídas
+- Um único conjunto de ícones: **Phosphor**. A landing usa `@phosphor-icons/react`; SPA e PWA usam os símbolos equivalentes do sprite Phosphor.
+- Botões primários usam verde mineral; o acento cítrico fica restrito a destaque de estado, seleção ou progresso.
+- Formulários usam superfície elevada, borda de contraste suficiente e foco visível.
+- Dashboard, cozinha e bar usam superfícies sólidas. Não há glassmorphism, glow, grade decorativa ou gradiente de fundo.
+- Cards de KPI podem dividir linha no mobile; painéis de gráficos e tabelas ocupam a largura disponível.
 
-Uma tela de palco é sempre a mesma receita: fundo em três paradas (`--stage-bg-2` → `--stage-bg` →
-`--stage-bg-3`), **um** halo de brasa discreto (`--stage-glow-brasa`, 12% de alfa) com eco frio
-(`--stage-glow-cyan`, 6%), grade discreta (`--stage-grid` com máscara) e cartões de vidro sobrepostos.
-Os halos são decoração funcional de profundidade, não "palco" de dashboard: orçamento reduzido por
-decisão do Território A.
+## Motion e acessibilidade
 
-| Grupo | Tokens | Uso |
-|---|---|---|
-| Superfícies | `--stage-bg*`, `--stage-panel*`, `--stage-card*`, `--stage-inset*`, `--stage-scrim` | fundo, painéis, cartões, campos e overlay de diálogo |
-| Tinta | `--stage-ink`, `-2`, `-3`, `--stage-ink-muted`, `-muted-2`, `--stage-ink-subtle`, `--stage-ink-faint` | hierarquia de texto sobre vidro |
-| Linhas | `--stage-line*` (bordas) e `--stage-hairline*` (brilho interno de 1px) | separação e profundidade |
-| Acentos | `--stage-brasa`, `--stage-violet`, `--stage-cyan`, `--stage-lime`, `--stage-rose`, `--stage-amber`, `--stage-mint` (+ `-deep`, `-soft`, `-ink`) | mesa/ação (brasa), séries de dados, ícones e estados por cartão |
-| Estados | `--stage-ok-*`, `--stage-warn-*`, `--stage-danger-*`, `--stage-info-*` | fila, atraso, erro, informação |
-| Sombras/foco | `--stage-shadow-1..4`, `--stage-shadow-inset`, `--stage-focus` | camadas e anel de foco |
+- A linha SVG da landing progride conforme a etapa ativa entra na região de leitura. O painel de demonstração atualiza para a captura real daquela etapa.
+- Não há fade-up genérico aplicado a todas as seções.
+- `prefers-reduced-motion` reduz transições e animações.
+- Foco visível, labels acessíveis e áreas de toque são mantidos.
 
-Quem consome hoje: `src/screens/dashboard.css` (palco do dashboard) e `src/screens/operacional.css`
-(cozinha/bar). Os dois passaram de **212 literais de cor** para **zero**, sem mudança de pixel: cada
-literal foi mapeado para o token exato do valor original.
+## Temas
 
----
+O atributo `data-theme="claro|escuro"` controla SPA e PWA. `prefers-color-scheme` é fallback antes da preferência explícita. `src/lib/tema.ts`, `theme-init.js` e `app.js` mantêm o mesmo conjunto de cores, inclusive a cor da barra do navegador.
 
-## 3. Tipografia Self-Hosted (`<= 150 KB`)
+## Landing: narrativa do serviço
 
-Servida localmente em `public/garcom-pwa/fonts/` sob CSP `'self'`, totalizando **128 KB**:
+A landing tem duas histórias sincronizadas com scroll:
+1. **Pedido:** QR na mesa → personalização → comanda → cozinha → bar → garçom → caixa.
+2. **Gestão:** indicadores → cardápio/estoque → mapa de mesas.
 
-1. **Fraunces Soft Variable (61 KB)** — títulos e números grandes (`--font-display`), `SOFT 80`,
-   `letter-spacing: -0.02em`.
-2. **Plus Jakarta Sans Variable (27 KB)** — corpo, navegação, botões e controles (`--font-sans`).
-3. **JetBrains Mono Variable (40 KB)** — identificadores, tempos e valores (`--font-mono`,
-   `tabular-nums`).
+O componente `ScrollStory` usa IntersectionObserver para ativar a etapa, desenha uma linha SVG progressiva e atualiza um painel sticky com capturas reais versionadas em `public/assets/apresentacao/`. Não cria números, depoimentos ou resultados de venda.
 
-> Correção de documentação: versões anteriores deste arquivo citavam `Archivo`/`Martian Mono` na
-> justificativa e `Fraunces`/`Plus Jakarta`/`JetBrains Mono` na seção de tipografia. As fontes
-> realmente carregadas são as três acima (`@font-face` no arquivo de tokens, coberto por teste).
+## Responsividade
 
----
+- Dashboard: desktop em 12 colunas, tablet em 8, mobile em 4 colunas; KPIs ocupam 2 colunas no mobile (dois por linha) e painéis analíticos ocupam 4.
+- Estatísticas de mesas passam a 2 colunas no mobile.
+- Operação de cozinha/bar reduz padding e preserva alvos de toque.
+- Landing reorganiza a narrativa em uma coluna; o painel de captura fica sticky acima das etapas.
+- PWA respeita safe areas e usa os mesmos tokens em telas estreitas.
 
-## 4. Sistema Único de Ícones (Phosphor)
+## Exceção deliberada — menu do cliente
 
-- **SPA React:** `@phosphor-icons/react` como conjunto único; **PWA:** sprite SVG local
-  `public/garcom-pwa/icons.svg` gerado dos mesmos glifos.
-- Convenção: item inativo em traço (`regular`), item ativo preenchido (`fill`).
-- **Zero emojis** como ícone, estado vazio ou decoração.
+O menu servido em `#/mesa/:token` (e seu shell estático correspondente) **não participa deste design system**. O estabelecimento pode definir sua identidade e cores próprias. Não importar `admin-identity.css` ou `public-identity.css` nas páginas de menu, não editar `src/screens/mesa-praia.css` e não alterar os estilos específicos do cardápio.
 
----
+## Contatos
 
-## 5. Geometria, Elevação e Estados
+O e-mail oficial do serviço é `servicosdegestaoqradmin@gmail.com`. A landing, login, rodapé, ações flutuantes e páginas institucionais usam o mesmo destino. O canal de privacidade foi atualizado nos documentos; o monitoramento e o prazo operacional de resposta precisam ser confirmados antes da publicação da revisão legal.
 
-- **Raios (Território A, contidos):** `--radius-xs` 8px (itens internos), `--radius-sm` 12px
-  (botões, inputs), `--radius-md` 16px (tickets e cartões), `--radius-lg` 20px (painéis e palcos),
-  `--radius-xl` 24px (diálogos), `--radius-pill` 9999px (badges de estado). O ticket nunca é um
-  "cartão SaaS": a leitura de papel vem da margem, da linha tracejada e do contraste.
-- **Profundidade:** sempre `hairline interna (--stage-hairline-4/5) + --elev-3/4`; o hover sobe uma
-  camada (`--elev-4`) e a borda sobe para `--stage-line-4`. A elevação é consequência de contraste e
-  linha — sombra difusa sozinha não é elevação.
-- **Estados centralizados no arquivo de tokens:** `:focus-visible` usa `--focus-ring` com
-  `outline-offset: 2px`; `[aria-pressed="true"]`/`[aria-selected="true"]` puxam `--brand-border`;
-  `:disabled`/`[aria-disabled="true"]` aplicam `opacity: .55` e `cursor: not-allowed`. Nenhum
-  componente precisa redefinir essas regras.
-- **Loading/sucesso/erro:** `--status-*` (surface + border + ink) para faixas e mensagens; o esqueleto
-  de carregamento usa `--surface-sunken` com a animação contida.
+## Impressão
 
----
-
-## 6. Regimes Visuais
-
-### 6.1 Regime Expressivo (`data-regime="expressive"`)
-- **Telas:** Login, Landing, Admin (Dashboard, Cardápio, Mesas, Garçons, Funções), Cardápio da Mesa (`/mesa/:token`) e estados vazios.
-- **Características:** títulos display em Fraunces com números grandes e `tabular-nums` (`-0.02em`), cartões de vidro sobre palco escuro com grade discreta (`--stage-grid`, máscara para baixo), halo único de brasa e hierarquia editorial de painel → cartão → micro-rótulo em caixa alta espaçada. Número de mesa e valor sempre em `--font-mono`.
-
-### 6.2 Regime Operacional (`data-regime="operational"`)
-- **Telas:** Cozinha, Bar, Caixa e PWA do Garçom.
-- **Características:** mesmo palco (fundo, hairlines, acentos) com densidade de operação; leitura instantânea a ~1,5 m nas filas de preparo, alvos de toque mínimos de `48 px` (`min-h-12`), indicadores objetivos de tempo/setor/garçom e ações em lote diretas.
-- **Composição Comanda de Chapa (ondas 1–8, 2026-11-09):** ticket operacional com faixa de topo por
-  etapa, mesa em mono tabular brasa, estado por posição + forma (pill) + texto, recorte tracejado e
-  ações de item/lote a 48 px; caixa com mesa-âncora em mono, Total/Pago/Restante tabulares, Pix em
-  bloco próprio e fechamento em brasa; garçom (SPA+PWA) com alvos de 48/44 px e entrega parcial
-  explícita; cliente mantém o tema praia isolado com preço em mono; componentes compartilhados com
-  alvos ≥ 44 px. Capturas reais em `docs/design/capturas/` (375/1440, claro/escuro).
-- **Camada "vidro de operação" (`src/screens/operacional.css`):** cozinha e bar usam a mesma família visual do dashboard — gradiente escuro translúcido, grade discreta, acentos de etapa (ciano = em produção, âmbar = na fila, brasa = ação primária e atraso), sombras em camadas e brilho interno de `1px`. A paleta **não** é mais local: `operacional.css` e `dashboard.css` consomem `var(--stage-*)` (zero hex). Cartões de caixa e PWA reaproveitam a mesma ideia via `--surface-raised`, `color-mix`, `--glass-*` e `--shadow-card-hover`, sempre dentro dos tokens e do contraste AA.
-
-### 6.3 Fila de Produção por Item (Cozinha e Bar)
-- **Duas sessões recolhíveis:** "Em produção" e "Na fila". Ambas nascem **recolhidas** para manter a tela limpa; cada uma abre de forma independente (`aria-expanded` + `aria-controls`) e a preferência do operador é lembrada por setor em `localStorage`. O corpo recolhido não renderiza cartões.
-- **Leitura em linha (esquerda → direita):** `.fila-grade__cartoes` é uma grade `repeat(auto-fill, minmax(...))` que preenche a linha da esquerda para a direita e só desce quando a linha acaba — nunca coluna por coluna (`grid-auto-flow: column`) e nunca escondendo comandas num carrossel lateral. A largura mínima cresce com a tela (`272px` no celular, `288px` de `768px`, `312px` de `1280px`) e a página rola na vertical, sem rolagem horizontal própria.
-- **Cada setor vê só o que produz:** a comanda é recortada por item (`pedidosDoSetor`/`cardsDaEtapa` com o setor da tela). Um pedido com burger e caipirinha aparece com o burger na cozinha e com a caipirinha no bar — nunca inteiro nos dois. A API já filtra (`/api/(cozinha|bar)/pedidos`), e a tela refaz o recorte porque o store é compartilhado com caixa e garçom: comanda que vem do caixa chega com os itens `entregue` e não volta para a fila de produção.
-- **Unidade é o item:** cada cartão mostra apenas os itens daquela etapa. Iniciar/liberar um item grava `PATCH /api/(cozinha|bar)/itens/:id/status` e afeta só ele; a ação de comanda é secundária, nomeada ("Iniciar/Liberar os N itens desta comanda") e atinge apenas os itens da seção aberta.
-- **Sem coluna de prontos:** o item concluído sai da fila do setor e aparece imediatamente na fila do garçom (`concluido`), mantendo retirada direta, aceite, entregas parciais e notificações.
-- **Feedback imediato:** um `role="status"` anuncia "iniciado/liberado — já aparece para o garçom" porque o cartão troca de seção (que pode estar recolhida).
-
-### 6.3.1 Caixa — coluna “Comandas abertas”
-- **Rolagem interna:** a partir de `1024px` a coluna das comandas (`.caixa-comandas`) não estica a página: `height: 0` tira a lista do cálculo da linha do grid, `min-height: max(100%, 24rem)` devolve a altura da linha (definida pelo cartão de pagamento ao lado) com um piso de `24rem`. A lista rola por dentro (`.caixa-comandas__rolagem`), então o operador nunca perde o cartão de pagamento de vista.
-- **Abaixo de `1024px` nada muda:** a coluna empilha e a página rola inteira — sem scroll aninhado no celular.
-
-### 6.4 Cardápio do Cliente — Tema Praia (`#/mesa/:token`)
-
-A exceção declarada no topo deste documento ganhou uma identidade própria, **escopada na rota**:
-`src/screens/mesa-praia.css` reescreve os tokens semânticos somente sob `body[data-mesa-praia]`
-(atributo ligado/desligado no ciclo de vida de `src/screens/Mesa.tsx`). Fora dessa rota nada muda —
-o palco azul/violeta e os testes de identidade seguem valendo para o resto do sistema.
-
-- **Paleta:** areia (`#f4ecda`), espuma (`#fffdf6`), maré (`#2fb3ba`), mar fundo (`#0b6b74`),
-  sol (`#ffc861`) e coral (`#f2724a`) como primitivos `--praia-*`; eles alimentam os mesmos nomes
-  semânticos (`--surface`, `--text`, `--brand`, `--line`…), sem hex nos componentes.
-- **Tema escuro = noite na praia:** `html[data-theme="escuro"]` (e `prefers-color-scheme`) trocam a
-  areia por maré profunda (`#08222a`) e o sol por um pôr do sol (`#ffb072`). Nada de preto/branco puros.
-- **Ponte do `@theme` (armadilha documentada):** `src/index.css` declara `--color-*: var(--surface)` no
-  `:root`; como custom properties são substituídas **onde são declaradas**, esse snapshot ignora o
-  override feito no `body`. Por isso `mesa-praia.css` repete a ponte `--color-*` dentro de
-  `body[data-mesa-praia]` — sem ela as utilities do Tailwind (`bg-surface`, `text-text`, `border-line`)
-  ficariam presas na paleta global.
-- **Categoria longa = trilho de duas linhas:** `.mesa-trilho` usa `grid-auto-flow: column` com
-  `grid-template-rows: repeat(2, …)` e `overflow-x: auto` (mais `scroll-snap` e
-  `overscroll-behavior-x: contain`). A grade fixa (`grid-cardapio`) continua valendo para categorias
-  curtas: o corte é 2 linhas × colunas visíveis (4 itens no celular, 6 a partir de `640px`).
-  A página nunca ganha rolagem horizontal própria, o trilho é focável (`role="group"` + `tabIndex`)
-  e o desvanecido das bordas + a dica "deslize para ver mais" só aparecem quando há excedente.
-- **Foto que se dissolve no card:** `.card-produto__fusao` substitui a faixa sólida por um degradê
-  multi-parada da cor do card sobre a base da imagem (vale para o card e para o herói do modal).
-- **Detalhes de praia em CSS/SVG (sem novas imagens):** sol com halo, três camadas de onda animadas
-  (`@keyframes mesa-ondular`, período fixo para laço sem emenda), vela ao longe e gaivotas — todas
-  neutralizadas em `prefers-reduced-motion`.
-- **Conteúdo intocado:** nomes, descrições, preços, fotos e regras de pedido continuam vindo
-  exclusivamente dos dados; a mudança é só de camada visual.
-
----
-
-## 7. Navegação e Shell
-
-- **Desktop (`>= 1024px`):** sidebar fixa colapsada em `72 px` (`--sidebar-collapsed`) sobre fundo `--surface-sidebar` (mais escuro que `--surface`). Ao receber `:hover` ou `:focus-within`, expande em sobreposição para `248 px` (`--sidebar-expanded`) sem alterar `margin-left: 72px` do conteúdo principal (zero reflow) e sem botão manual de expandir.
-- **Conexão de aba ativa:** o item ativo usa `background: var(--surface)` até a borda direita da barra, com recortes côncavos superior e inferior de `20 px` (`--sidebar-notch`) e indicador deslizante em mola firme (`layoutId="ops-active-rail"`).
-- **Dispositivos touch (`< 1024px`):** barra inferior fixa respeitando `env(safe-area-inset-bottom)` e controles de conta/tema/som acessíveis no cabeçalho compacto em todas as larguras.
-- **Rota pública `/mesa/:token`:** não renderiza sidebar nem navegação administrativa.
-
----
-
-## 8. Motion e Acessibilidade
-
-- **Propriedades animadas:** `transform` e `opacity` nas entradas e trocas de estado (`<= 180 ms`; padrão `--dur-page: 160ms`).
-- **Entrada de comanda:** `--dur-base` (200ms) com `--ease-out` para entrada discreta de comandas e carimbo (`.anim-stamp`); nenhum bounce elástico — o movimento é para orientar, não para chamar atenção.
-- **Indicador de navegação:** `framer-motion` `layoutId` com spring firme (`stiffness: 520, damping: 38, mass: 0.7`).
-- **Movimento reduzido:** `@media (prefers-reduced-motion: reduce)` e `useReducedMotion()` neutralizam deslocamentos e animações contínuas.
-
----
-
-## 9. Higiene de Produção e Correções Estruturais
-
-- **MIME estático completo (`server.js`):** fontes locais (`.woff2` -> `font/woff2`, `.woff` -> `font/woff`), `.ico` (`image/x-icon`) e `.txt` (`text/plain; charset=utf-8`) são entregues com cabeçalhos MIME oficiais.
-- **Impressão térmica (`src/lib/print.ts`):** normalização NFD em `formaLabel()` resolve `débito`, `debito`, `crédito` e `credito` sem chaves com grafia incorreta.
-- **Cadastro e estoque no Admin (`src/screens/Admin.tsx`, `src/lib/mappers.ts`, `src/store/usePub.ts`):** produtos sem foto usam fallback local `fotoDemo()` (zero URLs externas Pexels), e `estoqueMinimo` é persistido e carregado ponta a ponta sem sobrescrever com valor fixo `5`.
-- **Atualização ativa do Service Worker (`public/garcom-pwa/app.js`):** registro com `{ updateViaCache: 'none' }` e checagem ativa (`swReg?.update()`) ao reconectar (`online`) ou retornar ao primeiro plano (`visibilitychange`).
-- **Quiet zone óptica em QR Codes (`.qr-quiet-zone`):** fundo `--qr-paper` (névoa elevada) e tinta `--qr-ink` (meia-noite) são **invariantes** em claro/escuro — o código impresso na tela não muda de tom quando o operador alterna o tema.
-
-
-### Admin no celular
-
-Abaixo de 640 px, o admin usa uma organização própria, isolada em
-`src/screens/admin/admin-responsive.css`:
-
-- Cabeçalho em duas linhas, gaveta de navegação existente e ações de toque de 44 px.
-- Produtos em cards: foto/nome/preço, controles de estoque e rodapé de ações.
-  Nomes de produtos e categorias quebram linha, sem depender de tooltip.
-- Criação de categoria em uma linha própria; importar CSV e adicionar produto
-  em duas colunas. Campos dos modais administrativos passam a uma coluna.
-- Tabelas de desempenho e relatórios viram registros verticais com rótulos.
-  Dados, totais, comprovantes e paginação são os mesmos do desktop; não há
-  duplicação de controles nem ocultação de colunas para fazer caber.
-- As tabelas largas continuam com rolagem local no desktop/tablet. A página
-  não usa `overflow-x: hidden` para mascarar conteúdo excedente.
-
-Acima desse breakpoint, o layout desktop permanece. O escopo `data-admin`
-impede que as regras do cabeçalho afetem caixa, cozinha, bar ou PWA.
-O E2E `admin-mobile.e2e.cjs` usa o build de produção e API sintética para
-verificar as cinco abas em 320, 390, 768 e 1440 px, estoque, modal e gaveta.
+Os estilos de impressão em `src/lib/print.ts` continuam usando preto/branco e fontes monoespaçadas quando apropriado: isso é um requisito de legibilidade e economia de tinta do papel, não uma tela do produto.

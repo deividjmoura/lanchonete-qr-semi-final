@@ -45,7 +45,7 @@
     margin: 0;
     padding: 0;
     border: 0;
-    border-radius: 16px;
+    border-radius: var(--radius-md);
     background: transparent !important;
     color: var(--sidebar-muted);
     transform-origin: center center !important;
@@ -57,7 +57,7 @@
   .ops-nav-item[data-active="true"] {
     margin: 0;
     border: 0;
-    border-radius: 16px;
+    border-radius: var(--radius-md);
     background: transparent !important;
     color: var(--brand);
   }

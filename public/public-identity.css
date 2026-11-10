@@ -1,0 +1,88 @@
+@import url("/garcom-pwa/design-tokens.css");
+
+/* Páginas institucionais e apresentação estática: mesma família tipográfica,
+   contraste e geometria da aplicação, sem interferir nas rotas de cardápio. */
+:root {
+  --paper: var(--surface-raised);
+  --paper-light: var(--surface-raised);
+  --paper-deep: var(--surface-sunken);
+  --bg: var(--surface);
+  --ink: var(--text);
+  --ink-soft: var(--text-muted);
+  --muted: var(--text-muted);
+  --accent: var(--brand);
+  --accent-deep: var(--brand-hover);
+  --line-dark: rgba(236,244,238,.18);
+  --sidebar-text: var(--stage-ink);
+  --sidebar-muted: var(--stage-ink-muted);
+  --focus: var(--focus-ring);
+  --radius-frame: var(--radius-md);
+  --shadow-soft: var(--elev-1);
+  --shadow-frame: var(--elev-2);
+}
+html, body {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  font-family: var(--font-sans) !important;
+  -webkit-font-smoothing: antialiased;
+}
+body { line-height: 1.65; }
+h1,h2,h3,h4 {
+  color: var(--text);
+  font-family: var(--font-display);
+  letter-spacing: -.035em;
+}
+a { color: var(--brand-ink); }
+header {
+  background: var(--stage-bg) !important;
+  color: var(--stage-ink) !important;
+}
+header h1, header h2, header h3 { color: var(--stage-ink) !important; }
+main { color: var(--text); }
+section, article, .card, .step, .feature, .contact-link, .screen-card {
+  border-color: var(--line) !important;
+}
+:where(.card,.step,.feature,.screen-card,.contact-link) {
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: none;
+}
+:where(button,.button,.btn) {
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+}
+:where(img) { border-radius: var(--radius-sm); }
+:where(input,select,textarea) {
+  border-color: var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text);
+  font: 500 16px var(--font-sans);
+}
+footer {
+  background: var(--stage-bg);
+  color: var(--stage-ink);
+}
+footer a { color: var(--stage-teal); }
+
+
+/* Componentes específicos da apresentação e do guia. */
+.hero { background: var(--surface) !important; }
+.cta-final { background: var(--surface-raised) !important; box-shadow: none !important; }
+.sidebar {
+  background: var(--stage-bg) !important;
+  color: var(--stage-ink) !important;
+  border-color: var(--stage-line) !important;
+}
+.sidebar a { color: var(--stage-ink-muted) !important; }
+.sidebar nav a:hover,
+.sidebar nav a[aria-current="true"] {
+  background: var(--stage-card) !important;
+  color: var(--stage-ink) !important;
+}
+.sidebar .note { border-color: var(--stage-line) !important; color: var(--stage-ink-muted) !important; }
+.nav-toggle {
+  background: var(--stage-card) !important;
+  border-color: var(--stage-line) !important;
+  color: var(--stage-ink) !important;
+}

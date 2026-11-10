@@ -188,7 +188,7 @@ test('aba Mesas usa o panorama novo e preserva as operações existentes', () =>
 
   const panorama = read('src/screens/admin/PanoramaMesas.tsx');
   // Cartões entram no movimento global do PR 2 pelo atributo combinado.
-  assert.match(panorama, /data-glass-card/);
+  assert.match(panorama, /data-surface-card/);
   assert.match(panorama, /FAIXAS_TEMPO/);
   assert.match(panorama, /Consumo em aberto/);
   assert.match(panorama, /Vendas \$\{ROTULO_PERIODO\[periodo\]\}/);

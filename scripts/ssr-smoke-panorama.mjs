@@ -225,7 +225,7 @@ checar('Panorama', html.panorama, [
 ]);
 // O panorama é só painel de números: nenhum cartão de mesa (70 viravam um
 // scroll enorme). Os cartões aparecem na pesquisa de mapa/QR.
-const indesejados = ['data-glass-card', 'Mesa 70', 'Abrir mesa'];
+const indesejados = ['data-surface-card', 'Mesa 70', 'Abrir mesa'];
 const sobrando = indesejados.filter((texto) => html.panorama.includes(texto));
 if (sobrando.length) {
   falhas += 1;

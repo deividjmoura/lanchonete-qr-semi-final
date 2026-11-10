@@ -264,7 +264,7 @@ export function CartaoMesa({
 
   return (
     <article
-      data-glass-card
+      data-surface-card
       data-mesa-numero={mesa.numero}
       aria-label={`Mesa ${String(mesa.numero).padStart(2, "0")}: ${ocupada ? "ocupada" : "livre"}${
         faixa ? `, ${faixa.rotulo.toLowerCase()}, ${formatarDuracao(tempo?.minutos)}` : ""

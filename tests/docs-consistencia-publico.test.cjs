@@ -136,7 +136,7 @@ test('as páginas legais identificam o fornecedor real sem expor dados pessoais 
 
   assert.match(juntas, /69\.987\.201 DEIVID DE JESUS DE MOURA/);
   assert.match(juntas, /69\.987\.201\/0001-20/, 'deve usar o CNPJ confirmado no CCMEI');
-  assert.match(juntas, /dejesusdemouradeivid@gmail\.com/);
+  assert.match(juntas, /servicosdegestaoqradmin@gmail\.com/);
   // Formato genérico: o CPF real nunca precisa aparecer no repositório, nem
   // dentro da asserção que o proíbe.
   assert.doesNotMatch(juntas, /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/, 'CPF não deve ser publicado');
@@ -163,7 +163,7 @@ test('as páginas legais identificam o fornecedor real sem expor dados pessoais 
     'não declarar contrato de tratamento inexistente',
   );
   // O atendimento a titulares precisa dizer como o pedido é respondido.
-  assert.match(ler('public/politica-de-privacidade.html'), /responde por escrito em até 15 dias/);
+  assert.match(ler('public/politica-de-privacidade.html'), /monitoramento e o prazo operacional de resposta devem ser confirmados/);
   // A revisão periódica da anonimização é decisão registrada, não promessa solta.
   assert.match(ler('public/politica-de-privacidade.html'), /revisa essa limpeza a cada <strong>90 dias<\/strong>/);
   // Nenhuma página pública pode depender de CDN de fonte de terceiro.

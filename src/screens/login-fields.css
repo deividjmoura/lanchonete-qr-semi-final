@@ -10,7 +10,7 @@
   flex: 1 1 0%;
   align-self: stretch;
   border: 0;
-  border-radius: 0;
+  border-radius: var(--radius-sm);
   padding: 0;
   background: transparent;
   box-shadow: none;
@@ -31,12 +31,12 @@
 /* Login: composição aberta, com foco na marca e sem caixas concorrentes. */
 .login-panel {
   border: 0;
-  border-radius: 0;
+  border-radius: var(--radius-sm);
   background: transparent;
   box-shadow: none;
 }
 .login-brand img {
-  filter: drop-shadow(0 12px 22px rgb(8 13 28 / 14%));
+  filter: none;
 }
 .login-sector-button {
   border: 1px solid transparent;
@@ -85,7 +85,7 @@
   border: 0;
 }
 .login-credential {
-  border-radius: 0;
+  border-radius: var(--radius-sm);
 }
 .login-credential:focus-within {
   outline: 0;

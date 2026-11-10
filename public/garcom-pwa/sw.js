@@ -1,12 +1,14 @@
-const CACHE='garcom-pwa-shell-v42';
-const SHELL=['./','./index.html','./styles.css','./design-tokens.css','./theme-init.js','./icons.svg','./fonts/fraunces-latin-soft-normal.woff2','./fonts/plus-jakarta-sans-latin-wght-normal.woff2','./fonts/jetbrains-mono-latin-wght-normal.woff2','./brand-mark.webp','./brand-wordmark.webp','./app.js','./manifest.webmanifest','./icon-192.png','./icon-512.png','./qrcode-generator.js','./offline.js','./icon.svg','../js/pix.js','../js/realtime.js','./confirmacao.js'];
+const CACHE='garcom-pwa-shell-v44';
+const SHELL=['./','./index.html','./styles.css','./design-tokens.css','./theme-init.js','./icons.svg','../fonts/landing/dm-sans-latin-wght-normal.woff2','../fonts/kalam-latin-400-normal.woff2','../fonts/kalam-latin-700-normal.woff2','./fonts/jetbrains-mono-latin-wght-normal.woff2','./brand-mark.webp','./brand-wordmark.webp','./app.js','./manifest.webmanifest','./icon-192.png','./icon-512.png','./qrcode-generator.js','./offline.js','./icon.svg','../js/pix.js','../js/realtime.js','./confirmacao.js'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('garcom-pwa-shell-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{
  const req=e.request;if(req.method!=='GET')return;
  const url=new URL(req.url);
  if(url.origin!==location.origin||url.pathname.startsWith('/api/'))return;
- if(!url.pathname.startsWith('/garcom-pwa/'))return;
+ const pwaAsset=url.pathname.startsWith('/garcom-pwa/');
+ const sharedFont=url.pathname.startsWith('/fonts/landing/')||url.pathname.startsWith('/fonts/kalam-');
+ if(!pwaAsset&&!sharedFont)return;
  // Links antigos podem abrir o shell com um token bearer na query string.
  // Nunca persistir essa URL como chave do Cache Storage.
  if(url.searchParams.has('token')){

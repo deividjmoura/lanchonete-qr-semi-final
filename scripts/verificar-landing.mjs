@@ -88,7 +88,7 @@ try {
     };
   });
   assert(/DM Sans/.test(fontes.corpo), "corpo em DM Sans");
-  assert(/DM Serif Display/.test(fontes.serifa), "ênfase em DM Serif Display");
+  assert(/Kalam/.test(fontes.serifa), "ênfase manuscrita em Kalam");
 
   /* --- 2. Capturas reais carregadas --------------------------------------- */
   const capturas = await page.evaluate(() =>
@@ -180,7 +180,7 @@ try {
     "WhatsApp do contato é o mesmo número do login, aberto em nova aba",
   );
   assert(
-    canais.some((c) => c.href === "mailto:dejesusdemouradeivid@gmail.com"),
+    canais.some((c) => c.href === "mailto:servicosdegestaoqradmin@gmail.com"),
     "e-mail do contato é o mesmo do login",
   );
   /* Número e e-mail precisam ser idênticos aos publicados na tela de acesso:
@@ -284,13 +284,9 @@ try {
   assert((await page.getByRole("dialog").count()) === 1, "mobile: Acessar flutuante abre o modal real");
   await page.keyboard.press("Escape");
   await page.waitForTimeout(220);
-  await page.locator(".floating-actions__contato").click();
-  await page.waitForTimeout(900);
-  const contatoNaTela = await page.evaluate(() => {
-    const r = document.querySelector("#contato")?.getBoundingClientRect();
-    return Boolean(r && r.top < window.innerHeight && r.bottom > 0);
-  });
-  assert(contatoNaTela, "mobile: Contate-nos flutuante rola até a seção de contato");
+  const canaisFlutuantes = await page.locator(".floating-actions__channel").evaluateAll((links) => links.map((link) => link.getAttribute("href")));
+  assert(canaisFlutuantes.some((href) => href?.startsWith("https://wa.me/")), "mobile: WhatsApp permanece nas ações flutuantes");
+  assert(canaisFlutuantes.includes("mailto:servicosdegestaoqradmin@gmail.com"), "mobile: e-mail permanece nas ações flutuantes");
   await page.setViewportSize({ width: 1440, height: 900 });
 
   /* --- 6. Modal de acesso real ------------------------------------------- */

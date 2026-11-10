@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>QR Admin — Do pedido ao fechamento da conta na mesma comanda</title>
   <meta name="description" content="Sistema de operação para lanchonete, bar e restaurante: pedido por QR Code, filas de cozinha e bar por item, atendimento do garçom, caixa e administração em um único fluxo.">
-  <meta name="theme-color" content="#bf3b11">
+  <meta name="theme-color" content="#176d63">
   <link rel="canonical" href="https://qradmin.up.railway.app/apresentacao.html">
 
   <!-- Open Graph -->
@@ -27,49 +27,27 @@
 
   <style>
     /* Fontes self-hosted do produto */
-    @font-face {
-      font-family: "Fraunces";
-      src: url("/garcom-pwa/fonts/fraunces-latin-soft-normal.woff2") format("woff2-variations");
-      font-weight: 100 900;
-      font-style: normal;
-      font-display: swap;
-    }
-    @font-face {
-      font-family: "Plus Jakarta Sans";
-      src: url("/garcom-pwa/fonts/plus-jakarta-sans-latin-wght-normal.woff2") format("woff2-variations");
-      font-weight: 200 800;
-      font-style: normal;
-      font-display: swap;
-    }
-    @font-face {
-      font-family: "JetBrains Mono";
-      src: url("/garcom-pwa/fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
-      font-weight: 100 800;
-      font-style: normal;
-      font-display: swap;
-    }
-
     :root {
-      --surface: #eef1f8;
-      --surface-raised: #f8faff;
-      --surface-sunken: #e0e5f1;
-      --text: #121829;
-      --text-muted: #48536d;
-      --brand: #bf3b11;
-      --brand-ink: #b5360d;
-      --brand-contrast: #f8faff;
-      --accent: #0a5a63;
-      --line: #c7cfe0;
-      --line-strong: #a5b0c8;
-      --focus: #bf3b11;
+      --surface: #f0f4f0;
+      --surface-raised: #fafcf9;
+      --surface-sunken: #e4ece7;
+      --text: #1d302f;
+      --text-muted: #506763;
+      --brand: #176d63;
+      --brand-ink: #14584f;
+      --brand-contrast: #fafcf9;
+      --accent: #c4d66a;
+      --line: #cbd8d0;
+      --line-strong: #aebfb5;
+      --focus: #176d63;
       --radius-sm: 6px;
       --radius-md: 10px;
       --radius-lg: 14px;
       --radius-frame: 12px;
       --shadow-soft: 0 4px 16px -4px rgba(18, 24, 41, 0.12);
       --shadow-frame: 0 8px 28px -8px rgba(18, 24, 41, 0.18);
-      --font-display: "Fraunces", "Georgia", serif;
-      --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+      --font-display: "DM Sans", sans-serif;
+      --font-sans: "DM Sans", system-ui, sans-serif;
       --font-mono: "JetBrains Mono", ui-monospace, monospace;
       --max: 1180px;
     }
@@ -230,9 +208,7 @@
     /* Hero */
     .hero {
       padding: 3rem 0 4rem;
-      background:
-        radial-gradient(ellipse 80% 60% at 70% 0%, color-mix(in srgb, var(--brand) 8%, transparent), transparent 70%),
-        var(--surface);
+      background: var(--surface);
     }
     .hero-grid {
       display: grid;
@@ -451,8 +427,7 @@
 
     /* CTA final */
     .cta-final {
-      background:
-        linear-gradient(160deg, color-mix(in srgb, var(--brand) 9%, var(--surface-raised)), var(--surface-raised));
+      background: var(--surface-raised);
       border: 1px solid var(--line);
       border-radius: var(--radius-lg);
       padding: 2rem 1.5rem;
@@ -566,6 +541,7 @@
     }
 
   </style>
+  <link rel="stylesheet" href="/public-identity.css">
 </head>
 <body>
   <a class="skip" href="#conteudo">Pular para o conteúdo</a>
@@ -985,7 +961,7 @@
               <a class="contact-link" href="https://wa.me/5547996162721" target="_blank" rel="noopener noreferrer" aria-label="Conversar pelo WhatsApp" title="WhatsApp">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.1 3.9A11.8 11.8 0 0 0 1.5 18.1L0 24l6-1.6A11.9 11.9 0 0 0 24 12a11.8 11.8 0 0 0-3.9-8.1ZM12 21.8a9.8 9.8 0 0 1-5-1.4l-.4-.2-3.6 1 1-3.5-.2-.4A9.8 9.8 0 1 1 12 21.8Zm5.4-7.3c-.3-.2-1.7-.9-2-.9s-.5-.2-.7.2-.8.9-1 1.1-.4.2-.7.1a8 8 0 0 1-2.4-1.5 9 9 0 0 1-1.7-2.1c-.2-.3 0-.5.1-.7l.5-.6c.2-.2.2-.4.3-.6.1-.2 0-.5 0-.6s-.7-1.6-1-2.2c-.2-.5-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4s-1.2 1.2-1.2 2.8 1.2 3.2 1.4 3.4a12 12 0 0 0 4.6 4c.6.3 1.1.5 1.5.6.6.2 1.2.2 1.7.1.5-.1 1.7-.7 1.9-1.4.2-.7.2-1.3.1-1.4-.1-.1-.3-.2-.6-.4Z"/></svg>
               </a>
-              <a class="contact-link" href="mailto:dejesusdemouradeivid@gmail.com" aria-label="Enviar e-mail" title="E-mail">
+              <a class="contact-link" href="mailto:servicosdegestaoqradmin@gmail.com" aria-label="Enviar e-mail" title="E-mail">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 4-8 5L4 8V6l8 5 8-5Z"/></svg>
               </a>
             </div>

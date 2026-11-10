@@ -1,10 +1,7 @@
 /* Camada visual das telas operacionais (cozinha e bar).
 
-   Reaproveita a linguagem do dashboard — vidro escuro, acentos neon, sombras
-   suaves e grade discreta — mas com densidade de operação: cartões maiores,
-   texto de leitura a 1,5 m e nenhum efeito que atrapalhe em tela cheia.
-   Fica isolado do resto do sistema (mesmo critério de dashboard.css): só estas
-   classes usam a paleta escura. */
+   Superfícies sólidas e contrastes de estado para leitura a distância. A
+   composição é compartilhada com o dashboard e evita efeitos decorativos. */
 
 .ops-stage {
   --ops-hx: 0;
@@ -19,10 +16,7 @@
   overflow: hidden;
   border: 1px solid var(--stage-line);
   border-radius: var(--radius-lg);
-  background:
-    radial-gradient(ellipse at 4% 0%, var(--stage-glow-brasa), transparent 34%),
-    radial-gradient(ellipse at 96% 12%, var(--stage-glow-cyan), transparent 30%),
-    linear-gradient(150deg, var(--stage-bg-3) 0%, var(--stage-bg) 58%, var(--stage-bg-2) 100%);
+  background: var(--stage-bg);
   color: var(--stage-ink);
 }
 
@@ -33,11 +27,7 @@
   content: "";
   opacity: 0.14;
   pointer-events: none;
-  background-image:
-    linear-gradient(var(--stage-grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--stage-grid) 1px, transparent 1px);
-  background-size: 42px 42px;
-  mask-image: linear-gradient(to bottom, var(--stage-bg), transparent 72%);
+  display: none;
 }
 
 .ops-stage__bar {
@@ -66,8 +56,8 @@
   height: 7px;
   flex: none;
   border-radius: 50%;
-  background: var(--stage-mint);
-  box-shadow: 0 0 11px var(--stage-mint-2);
+  background: var(--stage-teal);
+  box-shadow: 0 0 11px var(--stage-teal-2);
 }
 
 .ops-stage__resumo {
@@ -120,22 +110,20 @@
 /* ---------------------------------------------------------------- sessões */
 
 .ops-sessao {
-  --ops-accent: var(--stage-cyan);
-  --ops-accent-deep: var(--stage-cyan-deep);
-  --ops-accent-soft: var(--stage-cyan-soft);
+  --ops-accent: var(--stage-lime);
+  --ops-accent-deep: var(--stage-lime-deep);
+  --ops-accent-soft: var(--stage-lime-soft);
   min-width: 0;
   border: 1px solid color-mix(in srgb, var(--ops-accent) 26%, var(--stage-line-base));
   border-radius: var(--radius-md);
-  background:
-    linear-gradient(135deg, var(--stage-hairline), transparent 46%),
-    linear-gradient(155deg, var(--stage-card-3), var(--stage-card-4));
+  background: var(--stage-card);
   box-shadow: inset 0 1px 0 var(--stage-hairline-4), 0 14px 30px var(--stage-shadow-1);
 }
 
 .ops-sessao[data-etapa="na_fila"] {
-  --ops-accent: var(--stage-amber);
-  --ops-accent-deep: var(--stage-amber-deep);
-  --ops-accent-soft: var(--stage-amber-soft);
+  --ops-accent: var(--stage-warning);
+  --ops-accent-deep: var(--stage-warning-deep);
+  --ops-accent-soft: var(--stage-warning-soft);
 }
 
 .ops-sessao__toggle {
@@ -173,7 +161,7 @@
   border-radius: var(--radius-xs);
   color: var(--ops-accent);
   background: var(--ops-accent-soft);
-  box-shadow: inset 0 1px 0 var(--stage-hairline-3);
+  box-shadow: none;
 }
 
 .ops-sessao__texto {
@@ -321,7 +309,7 @@
 
 /* ---------------------------------------------------------------- cartões */
 
-/* Faixa de topo do ticket: posição fixa da assinatura — brasa na produção,
+/* Faixa de topo do ticket: posição fixa da assinatura — verde mineral na produção,
    âmbar na fila — para reconhecer a etapa sem depender só do título. */
 .ops-card::before {
   position: absolute;
@@ -368,10 +356,7 @@
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--ops-accent) 30%, var(--stage-line-base));
   border-radius: var(--radius-md);
-  background:
-    linear-gradient(135deg, var(--stage-hairline-2), transparent 48%),
-    radial-gradient(ellipse at 6% -16%, var(--ops-accent-soft), transparent 66%),
-    linear-gradient(150deg, var(--stage-card), var(--stage-card-2));
+  background: var(--stage-card);
   box-shadow: inset 0 1px 0 var(--stage-hairline-4), 0 12px 26px var(--stage-shadow-1);
   color: var(--stage-ink);
   transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
@@ -420,13 +405,13 @@
   align-items: baseline;
   gap: 6px;
   margin: 0;
-  color: var(--stage-brasa);
+  color: var(--stage-teal);
   font-family: var(--font-mono), monospace;
   font-size: clamp(28px, 3vw, 36px);
   font-weight: 800;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  text-shadow: 1px 1px 0 var(--stage-brasa-deep);
+  text-shadow: 1px 1px 0 var(--stage-teal-deep);
 }
 
 .ops-card__mesa small {
@@ -688,4 +673,27 @@
     transition: none !important;
     transform: none !important;
   }
+}
+
+
+/* Estação — operação legível à distância, sem glass, halos ou fundos decorativos. */
+.ops-stage {
+  border-color: var(--stage-line);
+  border-radius: var(--radius-md);
+  background: var(--stage-bg);
+  box-shadow: none;
+}
+.ops-stage::before { display: none; }
+.ops-card {
+  border-color: var(--stage-line-2);
+  border-radius: var(--radius-md);
+  background: var(--stage-card);
+  box-shadow: none;
+}
+.ops-card::before { display: none; }
+.ops-card__mesa { color: var(--stage-teal); text-shadow: none; }
+.ops-card__estado { border-radius: var(--radius-sm); }
+@media (max-width: 420px) {
+  .ops-stage { padding: 10px; }
+  .ops-card { padding: 12px; }
 }

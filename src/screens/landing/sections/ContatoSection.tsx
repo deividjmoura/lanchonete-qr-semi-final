@@ -1,6 +1,6 @@
 import { Icon } from "../components/Icon";
 import { SectionIntro } from "../components/SectionIntro";
-import { EMAIL_EXIBIDO, EMAIL_URL, whatsappLink } from "../contato";
+import { EMAIL_URL, whatsappLink } from "../contato";
 import { useRolagemInterna } from "../useRolagemInterna";
 
 /* Formatos de adesão.
@@ -77,7 +77,7 @@ export function ContatoSection() {
               </span>
               <span className="contato-canal__text">
                 <span className="contato-canal__label">E-MAIL</span>
-                <span className="contato-canal__value">{EMAIL_EXIBIDO}</span>
+                <span className="contato-canal__value">Enviar mensagem</span>
               </span>
               <Icon name="arrow-up-right" size={16} />
             </a>

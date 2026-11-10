@@ -1,3 +1,5 @@
+> **Arquivo histórico — não é referência visual vigente.** A identidade atualmente aprovada para revisão está em [`docs/DESIGN_SYSTEM.md`](../DESIGN_SYSTEM.md). Não reutilizar paleta, tipografia, componentes ou direção visual descritos neste documento como base para novas telas.
+
 # 03 — Plano de correção e execução do redesign
 
 **Branch obrigatória:** `design/identidade-visual`  

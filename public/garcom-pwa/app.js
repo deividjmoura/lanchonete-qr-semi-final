@@ -401,7 +401,7 @@ $('#themeToggleBtn')?.addEventListener('click',()=>{
  root.style.colorScheme=next==='escuro'?'dark':'light';
  try{localStorage.setItem('qradmin-tema',next);}catch{}
  const meta=document.querySelector('meta[name="theme-color"]');
- if(meta)meta.setAttribute('content',next==='escuro'?'#0b101b':'#e4e8f1');
+ if(meta)meta.setAttribute('content',next==='escuro'?'#142622':'#f0f4f0');
 });
 
 for (const btn of document.querySelectorAll('[data-tab]')) {

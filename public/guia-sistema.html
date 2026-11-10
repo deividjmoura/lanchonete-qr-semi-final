@@ -3,50 +3,29 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#bf3b11">
+  <meta name="theme-color" content="#176d63">
   <meta name="description" content="Guia visual e explicativo do QR Admin. Demonstração estática: não cria pedidos, não altera status e não consulta dados privados.">
   <title>Guia do sistema · QR Admin</title>
   <link rel="canonical" href="https://qradmin.up.railway.app/guia-sistema.html">
   <link rel="icon" href="/logo/favicon.png" type="image/png">
   <style>
-    @font-face {
-      font-family: "Fraunces";
-      src: url("/garcom-pwa/fonts/fraunces-latin-soft-normal.woff2") format("woff2-variations");
-      font-weight: 100 900;
-      font-style: normal;
-      font-display: swap;
-    }
-    @font-face {
-      font-family: "Plus Jakarta Sans";
-      src: url("/garcom-pwa/fonts/plus-jakarta-sans-latin-wght-normal.woff2") format("woff2-variations");
-      font-weight: 200 800;
-      font-style: normal;
-      font-display: swap;
-    }
-    @font-face {
-      font-family: "JetBrains Mono";
-      src: url("/garcom-pwa/fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
-      font-weight: 100 800;
-      font-style: normal;
-      font-display: swap;
-    }
     :root {
-      --surface: #eef1f8;
-      --surface-raised: #f8faff;
-      --surface-sunken: #e0e5f1;
-      --surface-sidebar: #0b101b;
-      --text: #121829;
-      --text-muted: #48536d;
-      --sidebar-text: #eef1fb;
-      --sidebar-muted: #a9b4cc;
-      --brand: #bf3b11;
-      --brand-ink: #b5360d;
-      --brand-contrast: #f8faff;
-      --line: #c7cfe0;
+      --surface: #f0f4f0;
+      --surface-raised: #fafcf9;
+      --surface-sunken: #e4ece7;
+      --surface-sidebar: #17312f;
+      --text: #1d302f;
+      --text-muted: #506763;
+      --sidebar-text: #edf5ef;
+      --sidebar-muted: #b4c8be;
+      --brand: #176d63;
+      --brand-ink: #14584f;
+      --brand-contrast: #fafcf9;
+      --line: #cbd8d0;
       --radius-sm: 6px;
       --radius-md: 10px;
-      --font-display: "Fraunces", Georgia, serif;
-      --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+      --font-display: "DM Sans", sans-serif;
+      --font-sans: "DM Sans", system-ui, sans-serif;
       --font-mono: "JetBrains Mono", ui-monospace, monospace;
     }
     *, *::before, *::after { box-sizing: border-box; }
@@ -94,7 +73,7 @@
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--sidebar-muted);
-      border: 1px solid #2a3348;
+      border: 1px solid var(--stage-line);
       border-radius: 999px;
       padding: 0.2rem 0.55rem;
       margin-bottom: 1.25rem;
@@ -109,11 +88,11 @@
     }
     .sidebar nav a:hover,
     .sidebar nav a[aria-current="true"] {
-      background: #141b29; color: var(--sidebar-text);
+      background: var(--stage-card); color: var(--stage-ink);
     }
     .sidebar .note {
       margin-top: 1.5rem; padding-top: 1rem;
-      border-top: 1px solid #2a3348;
+      border-top: 1px solid var(--stage-line);
       font-size: 0.8rem; color: var(--sidebar-muted); line-height: 1.45;
     }
     .content { padding: 1.5rem 1.25rem 3rem; }
@@ -207,8 +186,8 @@
     .footer-guide a { margin-right: 1rem; }
     .nav-toggle {
       display: none;
-      background: #141b29; color: var(--sidebar-text);
-      border: 1px solid #2a3348; border-radius: var(--radius-sm);
+      background: var(--stage-card); color: var(--stage-ink);
+      border: 1px solid var(--stage-line); border-radius: var(--radius-sm);
       padding: 0.45rem 0.75rem; font-size: 0.85rem;
       margin-bottom: 0.75rem; cursor: pointer;
       width: 100%; text-align: left;
@@ -251,6 +230,7 @@
     }
 
   </style>
+  <link rel="stylesheet" href="/public-identity.css">
 </head>
 <body>
   <a class="skip" href="#conteudo">Pular para o conteúdo</a>

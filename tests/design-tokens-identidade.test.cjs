@@ -1,124 +1,105 @@
 "use strict";
 
-/**
- * Identidade visual global — Território A, "Comanda de Chapa" (aprovada em 2026-11-08).
- * A brasa é a assinatura operacional; violeta e ciano continuam como acentos de
- * dado do palco.
- *
- * Contrato desta suíte:
- *  1. existe uma única fonte de tokens e o palco é definido nela;
- *  2. nenhum dos arquivos de camada visual escreve cor literal (hex/rgba);
- *  3. os componentes têm classes de palco para reuso (sem reinventar superfície);
- *  4. o PWA importa a mesma fonte e não mantém paleta paralela;
- *  5. a exceção (cardápio do cliente) é explícita e continua isolada.
- */
-
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
 const read = (p) => fs.readFileSync(path.join(__dirname, "..", p), "utf8");
-
 const tokens = read("public/garcom-pwa/design-tokens.css");
 const dashboard = read("src/screens/dashboard.css");
-const operacional = read("src/screens/operacional.css");
-const spaCss = read("src/index.css");
+const operational = read("src/screens/operacional.css");
 
-const LITERAL = /#[0-9a-fA-F]{3,8}\b|rgba?\(/;
-
-test("camada de identidade não contém cor literal: tudo vem de token", () => {
-  for (const [arquivo, conteudo] of [
-    ["src/screens/dashboard.css", dashboard],
-    ["src/screens/operacional.css", operacional],
-  ]) {
-    assert.doesNotMatch(conteudo, LITERAL, `${arquivo} deve consumir apenas var(--stage-*)`);
-    assert.match(conteudo, /var\(--stage-/, `${arquivo} precisa usar os tokens do palco`);
-  }
-});
-
-test("tokens do palco existem, são estáveis e cobrem superfície, tinta, acento e estado", () => {
-  const exigidos = [
-    "--stage-bg", "--stage-bg-2", "--stage-panel", "--stage-card", "--stage-inset",
-    "--stage-ink", "--stage-ink-muted", "--stage-ink-subtle", "--stage-ink-faint",
-    "--stage-line", "--stage-hairline-2",
-    "--stage-violet", "--stage-violet-soft", "--stage-brasa", "--stage-brasa-soft", "--stage-cyan", "--stage-lime", "--stage-rose", "--stage-amber",
-    "--stage-ok-ink", "--stage-warn-ink", "--stage-danger-ink", "--stage-info-ink",
-    "--stage-focus", "--stage-grid",
-  ];
-  for (const nome of exigidos) {
-    assert.match(tokens, new RegExp(`${nome}:`), `token ${nome} precisa existir`);
-  }
-  // O palco é escuro por definição: fundo escuro e tinta clara.
-  assert.match(tokens, /--stage-bg: #[0-1][0-9a-f]{5};/);
-  assert.match(tokens, /--stage-ink: #e[0-9a-f]{5}|--stage-ink: #f[0-9a-f]{5}/);
-});
-
-test("tokens semânticos globais seguem o Território A (brasa) nos dois temas", () => {
-  const claro = tokens.slice(tokens.indexOf('[data-theme="claro"]'), tokens.indexOf("@media (prefers-color-scheme: dark)"));
-  const escuro = tokens.slice(tokens.indexOf(':root[data-theme="escuro"]'));
-  // Brasa como ação primária e assinatura operacional; superfícies de tinta/nevoeiro.
-  assert.match(tokens, /--prim-brasa: #e8501f;/);
-  assert.match(tokens, /--prim-meia-noite: #0b101b;/);
-  assert.match(tokens, /--prim-nevoa: #e4e8f1;/);
-  assert.match(claro, /--brand: var\(--prim-brasa-escura\)/);
-  assert.match(escuro, /--brand: var\(--prim-brasa-clara\)/);
-  assert.match(escuro, /--surface: var\(--prim-meia-noite\)/);
-  // A paleta de papel/lousa/madeira não volta a alimentar os tokens semânticos.
-  // A brasa entra como assinatura (--brand*) e não como fundo de página.
-  for (const bloco of [claro, escuro]) {
-    assert.doesNotMatch(bloco, /--prim-papel|--prim-lousa|--prim-stout/, "tokens semânticos sem paleta antiga");
-    assert.doesNotMatch(bloco, /--surface: var\(--prim-brasa/, "brasa não é fundo de superfície");
-  }
-});
-
-test("camada de identidade expõe espaçamento, movimento, elevação e vidro", () => {
-  for (const grupo of [
-    ["--space-1", "--space-9"],
-    ["--dur-quick", "--dur-base", "--dur-slow"],
-    ["--ease-out", "--ease-in-out"],
-    ["--elev-1", "--elev-4"],
-    ["--glass-sheen", "--glass-border", "--glass-blur"],
-  ]) {
-    for (const nome of grupo) assert.match(tokens, new RegExp(`${nome}:`), `token ${nome}`);
-  }
-  assert.match(tokens, /@media \(prefers-reduced-motion: reduce\)[\s\S]{0,200}--dur-base: 0ms/);
-});
-
-test("SPA oferece superfície e cartão de palco reutilizáveis, sem recriar sombra local", () => {
-  assert.match(spaCss, /\.stage-surface \{[\s\S]*var\(--stage-bg-2\)/);
-  assert.match(spaCss, /\.stage-surface::before \{[\s\S]*var\(--stage-grid\)/);
-  assert.match(spaCss, /\.stage-card \{[\s\S]*var\(--glass-sheen\)/);
-  assert.match(spaCss, /\.stage-card:hover[\s\S]{0,200}var\(--elev-4\)/);
-  // A superfície de vidro do sistema usa os hairlines do palco.
-  assert.match(spaCss, /\[data-glass-card\] \{[\s\S]{0,220}var\(--glass-sheen\)/);
-  assert.match(spaCss, /inset 0 1px 0 var\(--glass-border\)/);
-});
-
-test("a marca entra sem fundo (igual ao PWA) e clareia sobre superfície escura", () => {
-  // O PNG já tem canal alpha: placa branca/borda aqui era o que destoava do
-  // Atendimento. A marca assenta direto na superfície.
-  const bloco = spaCss.match(/\.brand-mark \{([\s\S]*?)\}/);
-  assert.ok(bloco, "regra .brand-mark precisa existir");
-  assert.doesNotMatch(bloco[1], /background/, ".brand-mark não pode ter placa de fundo");
-  assert.doesNotMatch(bloco[1], /border/, ".brand-mark não pode ter borda");
-  // A tinta do arquivo é escura: sem placa ela sumiria na barra lateral (fundo
-  // escuro nos dois temas) e no tema escuro — o filtro só troca a tinta.
-  assert.match(spaCss, /\.ops-sidebar \.brand-mark img[\s\S]{0,120}\[data-theme="escuro"\] \.brand-mark img \{\s*filter: brightness\(0\) invert\(1\);/);
-  // Segue sendo a mesma arte, servida como PNG transparente.
-  assert.match(read("src/components/ui.tsx"), /src="\/logo\/qradmin-mark\.png"/);
-});
-
-test("PWA consome a mesma fonte de tokens e mantém a imagem no shell offline", () => {
+test("a identidade Estação tem uma única fonte de tokens para SPA e PWA", () => {
+  assert.match(read("src/index.css"), /@import "\.\.\/public\/garcom-pwa\/design-tokens\.css"/);
   assert.match(read("public/garcom-pwa/styles.css"), /@import "\.\/design-tokens\.css"/);
   assert.match(read("public/garcom-pwa/index.html"), /design-tokens\.css/);
-  const sw = read("public/garcom-pwa/sw.js");
-  assert.match(sw, /design-tokens\.css/, "o shell precisa versionar os tokens para o aparelho atualizar");
+  assert.match(tokens, /--font-sans:\s*"DM Sans"/);
+  assert.match(tokens, /--font-note:\s*"Kalam"/);
+  assert.match(tokens, /--font-mono:\s*"JetBrains Mono"/);
+  assert.match(tokens, /--brand:\s*#176d63/);
+  assert.match(tokens, /--accent:\s*#c4d66a/);
+  assert.match(tokens, /--radius-md:\s*14px/);
+  assert.match(tokens, /--radius-lg:\s*18px/);
+  assert.match(tokens, /@media \(prefers-color-scheme: dark\)/);
+  assert.doesNotMatch(tokens, /#ffffff\b|#fff\b|#000000\b|#000\b/i);
+  assert.doesNotMatch(tokens, /Comanda de Chapa|--prim-brasa|--prim-violeta|--stage-violet/i);
 });
 
-test("exceção declarada: o cardápio do cliente segue isolado e documentado", () => {
+test("cozinha, bar e dashboard usam tokens, sem cores literais ou vidro", () => {
+  const literal = /#[0-9a-fA-F]{3,8}\b|rgba?\(/;
+  for (const [name, css] of [["dashboard", dashboard], ["operacional", operational]]) {
+    assert.doesNotMatch(css, literal, name + " deve consumir tokens");
+    assert.doesNotMatch(css, /radial-gradient|linear-gradient|backdrop-filter/i, name + " não usa glass ou gradiente decorativo");
+    assert.match(css, /var\(--stage-/);
+  }
+  assert.match(dashboard, /grid-column: span 2 !important/);
+  assert.match(dashboard, /grid-column: span 4 !important/);
+  assert.match(dashboard, /\.dash-mesas__stats \{ grid-template-columns: repeat\(2/);
+});
+
+test("superfícies SPA são sólidas e a marca permanece sem placa", () => {
+  const spa = read("src/index.css");
+  assert.match(spa, /\.stage-surface \{[\s\S]*background: var\(--stage-bg\)/);
+  assert.match(spa, /\.stage-surface::before \{ display: none; \}/);
+  assert.match(spa, /\.stage-card \{[\s\S]*background: var\(--stage-card\)/);
+  const mark = spa.match(/\.brand-mark \{([\s\S]*?)\}/);
+  assert.ok(mark);
+  assert.doesNotMatch(mark[1], /background|border/);
+});
+
+test("PWA compartilha fontes Estação e atualiza o shell offline", () => {
+  const sw = read("public/garcom-pwa/sw.js");
+  assert.match(sw, /garcom-pwa-shell-v44/);
+  for (const asset of [
+    "../fonts/landing/dm-sans-latin-wght-normal.woff2",
+    "../fonts/kalam-latin-400-normal.woff2",
+    "../fonts/kalam-latin-700-normal.woff2",
+    "./fonts/jetbrains-mono-latin-wght-normal.woff2",
+  ]) assert.ok(sw.includes(asset), asset + " precisa estar no precache");
+  assert.match(read("public/garcom-pwa/theme-init.js"), /#142622/);
+  assert.match(read("public/garcom-pwa/app.js"), /#142622/);
+});
+
+test("landing usa um único set Phosphor e narrativa progressiva com capturas reais", () => {
+  assert.match(read("src/screens/landing/components/Icon.tsx"), /@phosphor-icons\/react/);
+  const story = read("src/screens/landing/components/ScrollStory.tsx");
+  assert.match(story, /IntersectionObserver/);
+  assert.match(story, /scroll-story__path-progress/);
+  const flow = read("src/screens/landing/sections/FlowSection.tsx");
+  for (const asset of [
+    "cardapio-cliente.webp", "personalizacao-produto.webp", "comanda-cliente.webp",
+    "fila-cozinha.webp", "fila-bar.webp", "entregas-garcom.webp", "fechamento-caixa.webp",
+  ]) assert.ok(flow.includes(asset), asset + " precisa estar na narrativa");
+  const management = read("src/screens/landing/sections/ManagementSection.tsx");
+  for (const asset of ["dashboard-admin.webp", "gestao-cardapio.webp", "mapa-mesas.webp"]) {
+    assert.ok(management.includes(asset), asset + " precisa estar na narrativa de gestão");
+  }
+});
+
+test("menu do cliente continua fora do rebranding", () => {
+  const mesaHtml = read("public/mesa.html");
+  assert.doesNotMatch(mesaHtml, /admin-identity\.css|public-identity\.css/);
+  assert.match(read("src/screens/mesa-praia.css"), /body\[data-mesa-praia\]/);
+  assert.match(read("src/router.tsx"), /segs\[0\] === "mesa"/);
+  const landing = read("src/screens/Landing.tsx");
+  assert.match(landing, /ManagementSection/);
+});
+
+test("contato oficial centralizado e e-mail apresentado como ícone", () => {
+  const contact = read("src/screens/landing/contato.ts");
+  assert.match(contact, /servicosdegestaoqradmin@gmail\.com/);
+  assert.doesNotMatch(contact, /dejesusdemouradeivid|deividmoura729249/);
+  assert.match(read("src/screens/Login.tsx"), /EMAIL_URL/);
+  assert.match(read("src/screens/landing/sections/Footer.tsx"), /site-footer__contact-icon/);
+  assert.match(read("src/screens/landing/components/FloatingActions.tsx"), /floating-actions__channel/);
+  assert.match(read("public/politica-de-privacidade.html"), /servicosdegestaoqradmin@gmail\.com/);
+});
+
+test("a documentação declara a exceção do menu e a identidade Estação", () => {
   const docs = read("docs/DESIGN_SYSTEM.md");
+  assert.match(docs, /Estação/);
   assert.match(docs, /#\/mesa\/:token/);
   assert.match(docs, /exceção/i);
-  assert.match(docs, /Comanda de Chapa/);
+  assert.match(read("REBRANDING.md"), /auditoria/i);
 });

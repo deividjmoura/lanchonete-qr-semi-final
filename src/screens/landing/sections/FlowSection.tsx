@@ -1,56 +1,74 @@
-import { Icon } from "../components/Icon";
-import { SectionIntro } from "../components/SectionIntro";
+import { ScrollStory, type ScrollScene } from "../components/ScrollStory";
 
-const steps = [
-  { number: "01", title: "Acessar", description: "O cliente lê o QR Code fixo da mesa e abre o cardápio digital.", icon: "qr", group: "NA MESA" },
-  { number: "02", title: "Escolher", description: "Consulta os itens, personaliza o pedido e acompanha a comanda.", icon: "grid", group: "NA MESA" },
-  { number: "03", title: "Encaminhar", description: "Cada item segue para a fila da cozinha ou do bar, conforme o setor.", icon: "receipt", group: "NA OPERAÇÃO" },
-  { number: "04", title: "Preparar", description: "Os setores controlam item a item; o garçom é avisado quando fica pronto.", icon: "utensils", group: "NA OPERAÇÃO" },
-  { number: "05", title: "Fechar", description: "O caixa divide a conta, registra pagamentos e gera o QR PIX.", icon: "wallet", group: "NO CAIXA" },
-  { number: "06", title: "Acompanhar", description: "A administração consulta cardápio, estoque, equipe e indicadores.", icon: "chart", group: "NA GESTÃO" },
+const scenes: ScrollScene[] = [
+  {
+    number: "01",
+    label: "NA MESA · QR CODE",
+    title: "O cliente abre o cardápio.",
+    description: "O QR fixo identifica a mesa e abre o cardápio no navegador, sem instalar aplicativo.",
+    image: "/assets/apresentacao/cardapio-cliente.webp",
+    alt: "Captura real do cardápio do QR Admin aberto na mesa 18, com categorias, produtos e preços.",
+  },
+  {
+    number: "02",
+    label: "NA MESA · PERSONALIZAÇÃO",
+    title: "O pedido ganha os detalhes.",
+    description: "Adicionais, remoções e observações seguem vinculados ao item que o cliente escolheu.",
+    image: "/assets/apresentacao/personalizacao-produto.webp",
+    alt: "Captura real da personalização de um produto no cardápio do QR Admin.",
+  },
+  {
+    number: "03",
+    label: "NA MESA · COMANDA",
+    title: "A comanda é confirmada.",
+    description: "O pedido enviado aparece na comanda da mesa e mantém o vínculo com a sessão.",
+    image: "/assets/apresentacao/comanda-cliente.webp",
+    alt: "Captura real da comanda do cliente com o pedido enviado e seu total.",
+  },
+  {
+    number: "04",
+    label: "NA PRODUÇÃO · COZINHA",
+    title: "A cozinha recebe seus itens.",
+    description: "Os itens destinados à cozinha entram na fila com mesa, horário e estado de preparo.",
+    image: "/assets/apresentacao/fila-cozinha.webp",
+    alt: "Captura real da fila de produção da cozinha do QR Admin.",
+  },
+  {
+    number: "05",
+    label: "NA PRODUÇÃO · BAR",
+    title: "O bar trabalha em paralelo.",
+    description: "Bebidas seguem para a fila do bar, sem misturar a preparação com os itens da cozinha.",
+    image: "/assets/apresentacao/fila-bar.webp",
+    alt: "Captura real da fila de produção do bar do QR Admin.",
+  },
+  {
+    number: "06",
+    label: "NO SALÃO · GARÇOM",
+    title: "O pedido pronto chega à mesa.",
+    description: "O garçom acompanha os itens liberados e registra a entrega pelo PWA.",
+    image: "/assets/apresentacao/entregas-garcom.webp",
+    alt: "Captura real do PWA do garçom com pedidos prontos e ações de entrega.",
+  },
+  {
+    number: "07",
+    label: "NO CAIXA · FECHAMENTO",
+    title: "A conta é encerrada.",
+    description: "O caixa confere a comanda, registra pagamentos parciais ou totais e finaliza a sessão.",
+    image: "/assets/apresentacao/fechamento-caixa.webp",
+    alt: "Captura real do fechamento de contas do QR Admin.",
+  },
 ];
 
 export function FlowSection() {
   return (
-    <section className="flow-section" id="como-funciona" aria-labelledby="flow-title">
-      <div className="page-shell">
-        <div className="flow-section__heading">
-          <SectionIntro eyebrow="UM FLUXO, DIFERENTES PONTOS DE CONTATO" title="Da escolha ao fechamento, etapa por etapa." id="flow-title">
-            <p>
-              Esta é a jornada que o QRAdmin implementa hoje: uma sequência única em que os
-              contextos se encontram durante o serviço.
-            </p>
-          </SectionIntro>
-          <p className="flow-section__stamp">
-            <span>01 — 06</span>
-            <br />
-            FLUXO DO PRODUTO
-            <br />
-            EM OPERAÇÃO
-          </p>
-        </div>
-
-        <ol className="flow-track">
-          {steps.map((step) => (
-            <li className="flow-step" key={step.number}>
-              <span className="flow-step__group">{step.group}</span>
-              <span className="flow-step__marker">
-                <span>{step.number}</span>
-                <Icon name={step.icon} size={19} />
-              </span>
-              <h3>{step.title}</h3>
-              <p>{step.description}</p>
-            </li>
-          ))}
-        </ol>
-        <div className="flow-section__foot">
-          <span className="flow-section__foot-line" />
-          <p>
-            <strong>Do QR ao caixa:</strong> o mesmo pedido atravessa mesa, produção, entrega e
-            fechamento — sem retrabalho de digitação entre as etapas.
-          </p>
-        </div>
-      </div>
-    </section>
+    <ScrollStory
+      id="como-funciona"
+      eyebrow="O CAMINHO DE UM PEDIDO"
+      title="Da mesa à produção. Da produção ao caixa."
+      description="Acompanhe o mesmo pedido atravessando cada estação do serviço. A demonstração usa telas reais do QR Admin."
+      stamp="01—07 / FLUXO OPERACIONAL"
+      scenes={scenes}
+      variant="flow"
+    />
   );
 }

@@ -3,7 +3,7 @@ import { AccessButton } from "../components/AccessButton";
 import { Brand } from "../components/Brand";
 import { Icon } from "../components/Icon";
 import { useRolagemInterna } from "../useRolagemInterna";
-import { EMAIL_EXIBIDO, EMAIL_URL, whatsappLink } from "../contato";
+import { EMAIL_URL, whatsappLink } from "../contato";
 
 const footerLinks = [
   { href: "#proposta", label: "Proposta" },
@@ -65,9 +65,8 @@ export function Footer({ aoAbrirAcesso }: { aoAbrirAcesso: () => void }) {
               <Icon name="whatsapp" size={15} />
               WhatsApp
             </a>
-            <a className="site-footer__contato-link" href={EMAIL_URL}>
-              <Icon name="mail" size={15} />
-              {EMAIL_EXIBIDO}
+            <a className="site-footer__contato-link site-footer__contact-icon" href={EMAIL_URL} aria-label="Enviar e-mail para o QR Admin" title="E-mail">
+              <Icon name="mail" size={18} />
             </a>
             <a
               className="site-footer__contato-link"

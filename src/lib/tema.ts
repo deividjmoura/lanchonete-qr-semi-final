@@ -1,7 +1,7 @@
 /**
  * Preferência de tema clara/escura compartilhada entre o SPA e o PWA do garçom.
  * Espelha os tokens semânticos de `public/garcom-pwa/design-tokens.css`
- * (Território A — "Comanda de Chapa", compartilhada entre SPA e PWA).
+ * (Estação — verde mineral e acento cítrico, compartilhada entre SPA e PWA).
  */
 
 export type Tema = "claro" | "escuro";
@@ -11,32 +11,32 @@ export const EVENTO_TEMA = "qradmin-tema";
 
 export const TOKENS_TEMA: Record<Tema, Record<string, string>> = {
   claro: {
-    "--surface": "#e4e8f1",
-    "--surface-raised": "#edf0f6",
-    "--surface-sunken": "#d8deea",
-    "--surface-sidebar": "#0b101b",
-    "--text": "#121829",
-    "--text-muted": "#48536d",
-    "--brand": "#bf3b11",
-    "--brand-contrast": "#edf0f6",
-    "--brand-ink": "#b5360d",
-    "--accent": "#0a5a63",
-    "--line": "#b8c2d4",
-    "--line-strong": "#98a6bd",
+    "--surface": "#f0f4f0",
+    "--surface-raised": "#fafcf9",
+    "--surface-sunken": "#e4ece7",
+    "--surface-sidebar": "#17312f",
+    "--text": "#1d302f",
+    "--text-muted": "#506763",
+    "--brand": "#176d63",
+    "--brand-contrast": "#fafcf9",
+    "--brand-ink": "#14584f",
+    "--accent": "#c4d66a",
+    "--line": "#cbd8d0",
+    "--line-strong": "#aebfb5",
   },
   escuro: {
-    "--surface": "#0b101b",
-    "--surface-raised": "#141b29",
-    "--surface-sunken": "#080d16",
-    "--surface-sidebar": "#080d16",
-    "--text": "#eef1fb",
-    "--text-muted": "#a9b4cc",
-    "--brand": "#ff7d52",
-    "--brand-contrast": "#0b101b",
-    "--brand-ink": "#ffb59a",
-    "--accent": "#4fd1e0",
-    "--line": "#2a3348",
-    "--line-strong": "#3b4660",
+    "--surface": "#142622",
+    "--surface-raised": "#1d3430",
+    "--surface-sunken": "#0f1e1b",
+    "--surface-sidebar": "#0e1d19",
+    "--text": "#ecf4ee",
+    "--text-muted": "#b4c8be",
+    "--brand": "#78c8b6",
+    "--brand-contrast": "#12231f",
+    "--brand-ink": "#bce4d8",
+    "--accent": "#d7e98a",
+    "--line": "#36534a",
+    "--line-strong": "#58776c",
   },
 };
 
@@ -88,8 +88,8 @@ export function aplicarTema(tema: Tema): Tema {
 }
 
 export const QR_SVG_COLORS = {
-  fg: "#0b101b",
-  bg: "#edf0f6",
+  fg: "#1d302f",
+  bg: "#fafcf9",
 } as const;
 
 export function alternarTema(): Tema {

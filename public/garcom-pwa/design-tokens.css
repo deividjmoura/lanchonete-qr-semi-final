@@ -1,503 +1,55 @@
 /*
- * QR Admin — Design Tokens Compartilhados (SPA + PWA do Garçom)
- * Direção estética global: Território A — "Comanda de Chapa" (aprovada em 2026-11-08).
- *   A interface é a comanda térmica digital: o número da mesa é a âncora, o ticket
- *   é a unidade legível a distância e o estado se comunica por posição + forma + cor.
- *   Brasa é a assinatura operacional (orçamento ~10% da área); violeta/ciano ficam
- *   como acentos de dado do palco.
- *
- * Arquitetura em três níveis:
- *   1. Primitivos de marca (--prim-*): paleta base sem branco ou preto puros.
- *   2. Primitivos do palco (--stage-*): superfícies de vidro, camadas, acentos neon e hairlines
- *      que dão profundidade às telas escuras. NENHUM componente escreve hex: consome estes tokens.
- *   3. Tokens semânticos (--surface*, --text*, --brand*, --accent*, --line*, --status-*):
- *      únicos tokens consumidos pelos componentes do SPA e do PWA nos dois temas.
- *
- * Exceção declarada: a interface do cardápio do cliente (rota #/mesa/:token) mantém layout próprio.
+ * QR Admin — Design System "Estação"
+ * Uma linguagem de serviço contemporânea: verde mineral, superfícies de névoa,
+ * acento cítrico e tipografia DM Sans. Os mesmos tokens alimentam SPA e PWA.
+ * Exceção intencional: menu do cliente (#/mesa/:token), fora desta folha.
  */
 
 @font-face {
-  font-family: "Fraunces";
-  src: url("./fonts/fraunces-latin-soft-normal.woff2") format("woff2-variations");
-  font-weight: 100 900;
+  font-family: "DM Sans";
+  src: url("../fonts/landing/dm-sans-latin-wght-normal.woff2") format("woff2");
   font-style: normal;
+  font-weight: 100 1000;
   font-display: swap;
 }
-
 @font-face {
-  font-family: "Plus Jakarta Sans";
-  src: url("./fonts/plus-jakarta-sans-latin-wght-normal.woff2") format("woff2-variations");
-  font-weight: 200 800;
+  font-family: "Kalam";
+  src: url("../fonts/kalam-latin-400-normal.woff2") format("woff2");
   font-style: normal;
+  font-weight: 400;
   font-display: swap;
 }
-
+@font-face {
+  font-family: "Kalam";
+  src: url("../fonts/kalam-latin-700-normal.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
 @font-face {
   font-family: "JetBrains Mono";
-  src: url("./fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
-  font-weight: 100 800;
+  src: url("./fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
   font-style: normal;
+  font-weight: 100 800;
   font-display: swap;
 }
 
-/* ==========================================================================
-   1. PRIMITIVOS DE MARCA (Nível 1 — não consumir diretamente em componentes)
-   ========================================================================== */
 :root {
-  /* Âncoras da casa */
-  --prim-stout: #17120e;
-  --prim-papel: #f0e6d2;
-  --prim-brasa: #e8501f;
-  --prim-latao: #c99a2e;
-  --prim-lupulo: #3e7b3a;
-  --prim-cobalto: #2c5fa8;
-  --prim-carmim: #b3261e;
-  --prim-lousa: #141813;
+  color-scheme: light;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-note: "Kalam", cursive;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
-  /* Derivações tonais quentes — zero branco/preto puros */
-  --prim-stout-profundo: #100c09;
-  --prim-stout-suave: #2b221b;
-  --prim-malte-medio: #594b3e;
-  --prim-malte-claro: #746353;
-
-  --prim-papel-claro: #f7f0e2;
-  --prim-papel-rebaixo: #e5d8be;
-  --prim-papel-hover: #eae0ca;
-  --prim-papel-borda: #cfc0a3;
-  --prim-papel-forte: #b09d7b;
-
-  --prim-lousa-rebaixo: #0f120e;
-  --prim-lousa-elevada: #1c211b;
-  --prim-lousa-hover: #242a22;
-  --prim-lousa-borda: #2e362c;
-  --prim-lousa-forte: #434e40;
-
-  --prim-giz: #ede5d5;
-  --prim-giz-medio: #b0a795;
-  --prim-giz-sutil: #8c8372;
-
-  --prim-brasa-escura: #bf3b11;
-  --prim-brasa-hover-claro: #a3300c;
-  --prim-brasa-tinta: #b5360d;
-  --prim-brasa-clara: #ff7d52;
-  --prim-brasa-hover-escuro: #f26435;
-  --prim-brasa-tinta-escuro: #ffb59a;
-
-  --prim-latao-tinta-claro: #755308;
-  --prim-latao-tinta-escuro: #e5b94e;
-
-  --prim-lupulo-escuro: #255722;
-  --prim-lupulo-claro: #74ba6f;
-
-  --prim-cobalto-escuro: #1f4987;
-  --prim-cobalto-claro: #7aa8eb;
-
-  --prim-carmim-escuro: #941c15;
-  --prim-carmim-claro: #f2847d;
-
-  /* Tipografia expressiva e acolhedora */
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
-  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", "SFMono-Regular", monospace;
-
-  /* Geometria — Território A: raios contidos, de ticket/comanda */
   --radius-none: 0px;
-  --radius-xs: 8px;
-  --radius-sm: 12px;
-  --radius-md: 16px;
-  --radius-lg: 20px;
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
   --radius-xl: 24px;
   --radius-pill: 9999px;
+  --touch-min: 44px;
 
-  /* Elevação quente e sutil para cartões e diálogos */
-  --shadow-card: 0 6px 22px -6px rgba(23, 18, 14, 0.08), 0 2px 6px -1px rgba(23, 18, 14, 0.04);
-  --shadow-card-hover: 0 12px 28px -6px rgba(23, 18, 14, 0.13), 0 4px 10px -2px rgba(23, 18, 14, 0.05);
-  --shadow-modal: 0 24px 52px -12px rgba(23, 18, 14, 0.28);
-
-  /* Espaçamento e alvos operacionais */
-  --sidebar-collapsed: 72px;
-  --sidebar-expanded: 248px;
-  --sidebar-notch: 20px;
-  --touch-min: 48px;
-
-  /* Identidade global azul/violeta (dashboard "Os números da sua casa").
-     Substitui a paleta anterior (papel/madeira/brasa): aquela direção fica restrita
-     à interface do cardápio do cliente (#/mesa/:token), que tem layout próprio. */
-  --prim-meia-noite: #0b101b;
-  --prim-meia-noite-elevada: #141b29;
-  --prim-meia-noite-rebaixo: #080d16;
-  --prim-meia-noite-profunda: #080d16;
-  --prim-nevoa: #e4e8f1;
-  --prim-nevoa-elevada: #edf0f6;
-  --prim-nevoa-rebaixo: #d8deea;
-  --prim-nevoa-hover: #dfe5ef;
-  --prim-nevoa-borda: #b8c2d4;
-  --prim-nevoa-forte: #98a6bd;
-  --prim-azul-tinta: #121829;
-  --prim-azul-medio: #48536d;
-  --prim-azul-claro: #616d88;
-  --prim-noite-tinta: #eef1fb;
-  --prim-noite-medio: #a9b4cc;
-  --prim-noite-claro: #7f8ba6;
-  --prim-noite-borda: #2a3348;
-  --prim-noite-forte: #3b4660;
-  --prim-noite-hover: #1b2232;
-  --prim-azul-linha: #1f2637;
-  --prim-violeta: #7c5cff;
-  --prim-violeta-escuro: #5b3fc4;
-  --prim-violeta-escuro-hover: #4b32b0;
-  --prim-violeta-claro: #8b6fff;
-  --prim-violeta-hover: #6b4bf0;
-  --prim-violeta-tinta-claro: #4a32a6;
-  --prim-violeta-tinta-escuro: #b7a5ff;
-  --prim-azul-agua: #4fd1e0;
-  --prim-azul-agua-claro: #8fe6f0;
-  --prim-azul-agua-tinta-claro: #0a5a63;
-  --prim-verde-ink-claro: #1c6b3e;
-  --prim-verde-ink-escuro: #7fe0b0;
-  --prim-ambar-ink-claro: #8a5600;
-  --prim-ambar-ink-escuro: #ffcf8a;
-  --prim-azul-ink-claro: #17558f;
-  --prim-azul-ink-escuro: #8fd0f0;
-  --prim-vermelho-ink-claro: #9e2b3a;
-  --prim-vermelho-ink-escuro: #ffb3b3;
-
-  /* Motion contido */
-  --ease-ticket: cubic-bezier(0.22, 1.18, 0.36, 1);
-  --ease-snap: cubic-bezier(0.2, 0, 0, 1);
-  --dur-fast: 120ms;
-  --dur-page: 160ms;
-}
-
-/* ==========================================================================
-   1b. PRIMITIVOS DO PALCO (Nível 1b — superfícies, vidro e acentos de dado)
-   Identidade global azul/violeta. Consumidos por dashboard/cozinha/bar/Admin/PWA.
-   ========================================================================== */
-:root {
-  /* Superfícies do palco (fundo escuro com profundidade) */
-  --stage-bg: #0b101b;
-  --stage-bg-2: #101322;
-  --stage-bg-3: #111525;
-  --stage-panel: rgba(27, 34, 50, 0.86);
-  --stage-panel-2: rgba(20, 27, 41, 0.92);
-  --stage-card: rgba(31, 37, 57, 0.95);
-  --stage-card-2: rgba(17, 23, 37, 0.96);
-  --stage-card-3: rgba(28, 35, 53, 0.92);
-  --stage-card-4: rgba(14, 20, 33, 0.94);
-  --stage-inset: #101723;
-  --stage-inset-2: rgba(14, 21, 35, 0.65);
-  --stage-inset-3: #0c1121;
-  --stage-inset-deep: #101827;
-  --stage-scrim: rgba(5, 7, 17, 0.79);
-
-  /* Tinta do palco */
-  --stage-ink: #f5f7ff;
-  --stage-ink-2: #e4eafb;
-  --stage-ink-3: #d7caff;
-  --stage-ink-muted: #aebad0;
-  --stage-ink-muted-2: #b8c4d8;
-  --stage-ink-subtle: #93a1bb;
-  --stage-ink-faint: #6c7691;
-
-  /* Linhas e hairlines */
-  --stage-line: #283044;
-  --stage-line-2: #303a50;
-  --stage-line-3: #3b4660;
-  --stage-line-4: #414c64;
-  --stage-line-5: #39445b;
-  --stage-line-base: #263149;
-  --stage-hairline: rgba(255, 255, 255, 0.04);
-  --stage-hairline-2: rgba(255, 255, 255, 0.07);
-  --stage-hairline-3: rgba(255, 255, 255, 0.10);
-  --stage-hairline-4: rgba(255, 255, 255, 0.145);
-
-  /* Acento violeta (padrão) */
-  --stage-hairline-5: rgba(255, 255, 255, 0.21);
-
-  /* Assinatura de brasa no palco: número de mesa, CTA primário e atraso. */
-  --stage-brasa: #ff9a6b;
-  --stage-brasa-deep: #c2531f;
-  --stage-brasa-soft: rgba(232, 80, 31, 0.18);
-  --stage-brasa-ink: #ffc0a2;
-
-  --stage-violet: #c8b8ff;
-  --stage-violet-deep: #7151bf;
-  --stage-violet-soft: rgba(142, 105, 229, 0.19);
-
-  /* Acentos de dado (ciano, lima, rosa, âmbar, menta) */
-  --stage-violet-text: #b7a5ff;
-  --stage-cyan: #83edee;
-  --stage-cyan-deep: #278a9c;
-  --stage-cyan-soft: rgba(65, 188, 199, 0.17);
-  --stage-lime: #d8fa9c;
-  --stage-lime-deep: #809b40;
-  --stage-lime-soft: rgba(174, 216, 93, 0.16);
-  --stage-lime-ink: #ccf88f;
-  --stage-rose: #ffc2da;
-  --stage-rose-deep: #af5c87;
-  --stage-rose-soft: rgba(224, 123, 168, 0.16);
-  --stage-amber: #ffd2a2;
-  --stage-amber-deep: #af7042;
-  --stage-amber-soft: rgba(232, 153, 89, 0.16);
-  --stage-mint: #8bf8ce;
-  --stage-mint-2: #7bf2c8;
-  --stage-mint-text: #a4f4d5;
-  --stage-mint-text-2: #a7eecf;
-  --stage-mint-bar: #8ce8d1;
-  --stage-on-accent: #151a28;
-
-  /* Estados no palco */
-  --stage-ok-line: #33584f;
-  --stage-ok-soft: rgba(22, 59, 50, 0.53);
-  --stage-ok-ink: #a9ecc8;
-  --stage-warn-line: #6d5a33;
-  --stage-warn-soft: rgba(47, 38, 22, 0.79);
-  --stage-warn-surface: #4a3526;
-  --stage-warn-ink: #ffe0b9;
-  --stage-warn-ink-2: #ffe4af;
-  --stage-warn-line-2: #c39b58;
-  --stage-danger-line: #a95f5c;
-  --stage-danger-soft: rgba(59, 32, 39, 0.79);
-  --stage-danger-soft-2: #3b2027;
-  --stage-danger-surface: #44242c;
-  --stage-danger-border: #c78480;
-  --stage-danger-ink: #ffe1dd;
-  --stage-danger-ink-2: #ffd9d5;
-  --stage-danger-ink-3: #ff9b95;
-  --stage-danger-ink-4: #ffc4be;
-  --stage-danger-deep: #7d4340;
-  --stage-danger-shadow: rgba(42, 13, 18, 0.35);
-  --stage-info-line: #2f6a73;
-  --stage-info-soft: rgba(18, 48, 56, 0.79);
-  --stage-info-ink: #b9f2f6;
-  --stage-shadow-1: rgba(3, 7, 18, 0.29);
-
-  /* Sombras, foco e textura */
-  --stage-shadow-2: rgba(3, 7, 18, 0.42);
-  --stage-shadow-3: rgba(3, 7, 18, 0.62);
-  --stage-shadow-4: rgba(3, 4, 11, 0.67);
-  --stage-shadow-inset: rgba(5, 9, 20, 0.64);
-  --stage-focus: #b8f3ff;
-  --stage-grid: rgba(131, 147, 180, 0.07);
-  --stage-veil: rgba(255, 255, 255, 0.12);
-  /* Halos decorativos com orçamento reduzido: brasa discreta no lugar do halo
-     violeta de "palco SaaS"; ciano só como eco frio. */
-  --stage-glow-brasa: rgba(232, 80, 31, 0.12);
-  --stage-glow-cyan: rgba(15, 143, 159, 0.06);
-  --stage-scroll-thumb: #43506a;
-  --stage-scroll-thumb-hover: #566684;
-  --stage-scroll-track: #1d293c;
-}
-
-/* ==========================================================================
-   2. TOKENS SEMÂNTICOS — TEMA CLARO (Névoa Azul + Violeta)
-   ========================================================================== */
-:root,
-[data-theme="claro"] {
-  color-scheme: light;
-
-  --surface: var(--prim-nevoa);
-  --surface-raised: var(--prim-nevoa-elevada);
-  --surface-sunken: var(--prim-nevoa-rebaixo);
-  --surface-hover: var(--prim-nevoa-hover);
-  --surface-sidebar: var(--prim-meia-noite);
-  --surface-overlay: rgba(16, 22, 38, 0.72);
-
-  --text: var(--prim-azul-tinta);
-  --text-muted: var(--prim-azul-medio);
-  --text-subtle: var(--prim-azul-claro);
-
-  --sidebar-text: var(--prim-noite-tinta);
-  --sidebar-muted: var(--prim-noite-medio);
-  --sidebar-line: var(--prim-azul-linha);
-
-  --brand: var(--prim-brasa-escura);
-  --brand-hover: var(--prim-brasa-hover-claro);
-  --brand-contrast: var(--prim-nevoa-elevada);
-  --brand-ink: var(--prim-brasa-tinta);
-  --brand-surface: color-mix(in srgb, var(--prim-brasa) 12%, var(--prim-nevoa-elevada));
-  --brand-border: color-mix(in srgb, var(--prim-brasa) 38%, var(--prim-nevoa-borda));
-
-  --accent: var(--prim-azul-agua-tinta-claro);
-  --accent-ink: var(--prim-azul-agua-tinta-claro);
-  --accent-surface: color-mix(in srgb, var(--prim-azul-agua) 16%, var(--prim-nevoa-elevada));
-  --accent-border: color-mix(in srgb, var(--prim-azul-agua) 40%, var(--prim-nevoa-borda));
-
-  --line: var(--prim-nevoa-borda);
-  --line-strong: var(--prim-nevoa-forte);
-  --focus-ring: var(--prim-azul-tinta);
-
-  --status-success: var(--prim-verde-ink-claro);
-  --status-success-ink: var(--prim-verde-ink-claro);
-  --status-success-contrast: var(--prim-nevoa-elevada);
-  --status-success-surface: color-mix(in srgb, var(--prim-verde-ink-claro) 12%, var(--prim-nevoa-elevada));
-  --status-success-border: color-mix(in srgb, var(--prim-verde-ink-claro) 40%, var(--prim-nevoa-borda));
-
-  --status-warning: var(--prim-ambar-ink-claro);
-  --status-warning-ink: var(--prim-ambar-ink-claro);
-  --status-warning-surface: color-mix(in srgb, var(--prim-ambar-ink-claro) 14%, var(--prim-nevoa-elevada));
-  --status-warning-border: color-mix(in srgb, var(--prim-ambar-ink-claro) 44%, var(--prim-nevoa-borda));
-
-  --status-info: var(--prim-azul-ink-claro);
-  --status-info-ink: var(--prim-azul-ink-claro);
-  --status-info-surface: color-mix(in srgb, var(--prim-azul-ink-claro) 12%, var(--prim-nevoa-elevada));
-  --status-info-border: color-mix(in srgb, var(--prim-azul-ink-claro) 38%, var(--prim-nevoa-borda));
-
-  --status-danger: var(--prim-vermelho-ink-claro);
-  --status-danger-ink: var(--prim-vermelho-ink-claro);
-  --status-danger-contrast: var(--prim-nevoa-elevada);
-  --status-danger-surface: color-mix(in srgb, var(--prim-vermelho-ink-claro) 11%, var(--prim-nevoa-elevada));
-  --status-danger-border: color-mix(in srgb, var(--prim-vermelho-ink-claro) 38%, var(--prim-nevoa-borda));
-
-  /* Superfície física de código QR e comprovante impresso (invariável em claro/escuro) */
-  --qr-paper: var(--prim-nevoa-elevada);
-  --qr-ink: var(--prim-meia-noite);
-  --qr-border: var(--prim-nevoa-borda);
-
-  /* Aliases semânticos de aviso consumidos por regra auditada no PWA */
-  --qr-amber-500: var(--status-warning);
-  --qr-amber-700: var(--status-warning-ink);
-}
-
-/* ==========================================================================
-   3. TOKENS SEMÂNTICOS — TEMA ESCURO (Meia-noite Azul + Sidebar Profunda)
-   ========================================================================== */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="claro"]) {
-    color-scheme: dark;
-  --surface: var(--prim-meia-noite);
-  --surface-raised: var(--prim-meia-noite-elevada);
-  --surface-sunken: var(--prim-meia-noite-rebaixo);
-  --surface-hover: var(--prim-noite-hover);
-  --surface-sidebar: var(--prim-meia-noite-profunda);
-  --surface-overlay: rgba(5, 8, 14, 0.82);
-
-  --text: var(--prim-noite-tinta);
-  --text-muted: var(--prim-noite-medio);
-  --text-subtle: var(--prim-noite-claro);
-
-  --sidebar-text: var(--prim-noite-tinta);
-  --sidebar-muted: var(--prim-noite-medio);
-  --sidebar-line: var(--prim-azul-linha);
-
-  --brand: var(--prim-brasa-clara);
-  --brand-hover: var(--prim-brasa-hover-escuro);
-  --brand-contrast: var(--prim-meia-noite);
-  --brand-ink: var(--prim-brasa-tinta-escuro);
-  --brand-surface: color-mix(in srgb, var(--prim-brasa) 16%, var(--prim-meia-noite-elevada));
-  --brand-border: color-mix(in srgb, var(--prim-brasa) 44%, var(--prim-noite-borda));
-
-  --accent: var(--prim-azul-agua);
-  --accent-ink: var(--prim-azul-agua-claro);
-  --accent-surface: color-mix(in srgb, var(--prim-azul-agua) 16%, var(--prim-meia-noite-elevada));
-  --accent-border: color-mix(in srgb, var(--prim-azul-agua) 42%, var(--prim-noite-borda));
-
-  --line: var(--prim-noite-borda);
-  --line-strong: var(--prim-noite-forte);
-  --focus-ring: var(--prim-azul-agua-claro);
-
-  --status-success: var(--prim-verde-ink-escuro);
-  --status-success-ink: var(--prim-verde-ink-escuro);
-  --status-success-contrast: var(--prim-meia-noite);
-  --status-success-surface: color-mix(in srgb, var(--prim-verde-ink-escuro) 16%, var(--prim-meia-noite-elevada));
-  --status-success-border: color-mix(in srgb, var(--prim-verde-ink-escuro) 44%, var(--prim-noite-borda));
-
-  --status-warning: var(--prim-ambar-ink-escuro);
-  --status-warning-ink: var(--prim-ambar-ink-escuro);
-  --status-warning-surface: color-mix(in srgb, var(--prim-ambar-ink-escuro) 16%, var(--prim-meia-noite-elevada));
-  --status-warning-border: color-mix(in srgb, var(--prim-ambar-ink-escuro) 44%, var(--prim-noite-borda));
-
-  --status-info: var(--prim-azul-ink-escuro);
-  --status-info-ink: var(--prim-azul-ink-escuro);
-  --status-info-surface: color-mix(in srgb, var(--prim-azul-ink-escuro) 16%, var(--prim-meia-noite-elevada));
-  --status-info-border: color-mix(in srgb, var(--prim-azul-ink-escuro) 44%, var(--prim-noite-borda));
-
-  --status-danger: var(--prim-vermelho-ink-escuro);
-  --status-danger-ink: var(--prim-vermelho-ink-escuro);
-  --status-danger-contrast: var(--prim-meia-noite);
-  --status-danger-surface: color-mix(in srgb, var(--prim-vermelho-ink-escuro) 16%, var(--prim-meia-noite-elevada));
-  --status-danger-border: color-mix(in srgb, var(--prim-vermelho-ink-escuro) 44%, var(--prim-noite-borda));
-
-  --qr-amber-500: var(--status-warning);
-  --qr-amber-700: var(--status-warning-ink);
-
-  --shadow-card: 0 10px 26px -8px rgba(4, 8, 16, 0.55), 0 2px 6px -1px rgba(4, 8, 16, 0.35);
-  --shadow-card-hover: 0 16px 34px -8px rgba(4, 8, 16, 0.62);
-  --shadow-modal: 0 30px 70px -16px rgba(4, 8, 16, 0.72);
-  }
-}
-
-:root[data-theme="escuro"],
-[data-theme="escuro"],
-.dark {
-  color-scheme: dark;
-
-  --surface: var(--prim-meia-noite);
-  --surface-raised: var(--prim-meia-noite-elevada);
-  --surface-sunken: var(--prim-meia-noite-rebaixo);
-  --surface-hover: var(--prim-noite-hover);
-  --surface-sidebar: var(--prim-meia-noite-profunda);
-  --surface-overlay: rgba(5, 8, 14, 0.82);
-
-  --text: var(--prim-noite-tinta);
-  --text-muted: var(--prim-noite-medio);
-  --text-subtle: var(--prim-noite-claro);
-
-  --sidebar-text: var(--prim-noite-tinta);
-  --sidebar-muted: var(--prim-noite-medio);
-  --sidebar-line: var(--prim-azul-linha);
-
-  --brand: var(--prim-brasa-clara);
-  --brand-hover: var(--prim-brasa-hover-escuro);
-  --brand-contrast: var(--prim-meia-noite);
-  --brand-ink: var(--prim-brasa-tinta-escuro);
-  --brand-surface: color-mix(in srgb, var(--prim-brasa) 16%, var(--prim-meia-noite-elevada));
-  --brand-border: color-mix(in srgb, var(--prim-brasa) 44%, var(--prim-noite-borda));
-
-  --accent: var(--prim-azul-agua);
-  --accent-ink: var(--prim-azul-agua-claro);
-  --accent-surface: color-mix(in srgb, var(--prim-azul-agua) 16%, var(--prim-meia-noite-elevada));
-  --accent-border: color-mix(in srgb, var(--prim-azul-agua) 42%, var(--prim-noite-borda));
-
-  --line: var(--prim-noite-borda);
-  --line-strong: var(--prim-noite-forte);
-  --focus-ring: var(--prim-azul-agua-claro);
-
-  --status-success: var(--prim-verde-ink-escuro);
-  --status-success-ink: var(--prim-verde-ink-escuro);
-  --status-success-contrast: var(--prim-meia-noite);
-  --status-success-surface: color-mix(in srgb, var(--prim-verde-ink-escuro) 16%, var(--prim-meia-noite-elevada));
-  --status-success-border: color-mix(in srgb, var(--prim-verde-ink-escuro) 44%, var(--prim-noite-borda));
-
-  --status-warning: var(--prim-ambar-ink-escuro);
-  --status-warning-ink: var(--prim-ambar-ink-escuro);
-  --status-warning-surface: color-mix(in srgb, var(--prim-ambar-ink-escuro) 16%, var(--prim-meia-noite-elevada));
-  --status-warning-border: color-mix(in srgb, var(--prim-ambar-ink-escuro) 44%, var(--prim-noite-borda));
-
-  --status-info: var(--prim-azul-ink-escuro);
-  --status-info-ink: var(--prim-azul-ink-escuro);
-  --status-info-surface: color-mix(in srgb, var(--prim-azul-ink-escuro) 16%, var(--prim-meia-noite-elevada));
-  --status-info-border: color-mix(in srgb, var(--prim-azul-ink-escuro) 44%, var(--prim-noite-borda));
-
-  --status-danger: var(--prim-vermelho-ink-escuro);
-  --status-danger-ink: var(--prim-vermelho-ink-escuro);
-  --status-danger-contrast: var(--prim-meia-noite);
-  --status-danger-surface: color-mix(in srgb, var(--prim-vermelho-ink-escuro) 16%, var(--prim-meia-noite-elevada));
-  --status-danger-border: color-mix(in srgb, var(--prim-vermelho-ink-escuro) 44%, var(--prim-noite-borda));
-
-  --qr-amber-500: var(--status-warning);
-  --qr-amber-700: var(--status-warning-ink);
-
-  --shadow-card: 0 10px 26px -8px rgba(4, 8, 16, 0.55), 0 2px 6px -1px rgba(4, 8, 16, 0.35);
-  --shadow-card-hover: 0 16px 34px -8px rgba(4, 8, 16, 0.62);
-  --shadow-modal: 0 30px 70px -16px rgba(4, 8, 16, 0.72);
-}
-
-/* ==========================================================================
-   4. TOKENS DE ESPAÇAMENTO, MOVIMENTO E SUPERFÍCIE DE VIDRO
-   ========================================================================== */
-:root {
-  /* Escala de espaçamento (múltiplos de 4px) — usar em vez de valores soltos */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -508,49 +60,347 @@
   --space-8: 40px;
   --space-9: 48px;
 
-  /* Durações e curvas de movimento */
-  --dur-instant: 90ms;
-  --dur-quick: 140ms;
-  --dur-base: 200ms;
-  --dur-slow: 320ms;
-  --ease-out: cubic-bezier(0.2, 0, 0, 1);
-  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-instant: 80ms;
+  --dur-fast: 140ms;
+  --dur-quick: 160ms;
+  --dur-base: 220ms;
+  --dur-page: 260ms;
+  --dur-slow: 360ms;
+  --ease-out: cubic-bezier(.2,.7,.2,1);
+  --ease-in-out: cubic-bezier(.4,0,.2,1);
+  --ease-snap: cubic-bezier(.2,0,0,1);
+  --ease-ticket: cubic-bezier(.2,.7,.2,1);
 
-  /* Elevação em camadas (o tom é fixo do palco; a opacidade muda por tema) */
-  --elev-1: 0 1px 2px rgba(4, 8, 16, 0.16);
-  --elev-2: 0 6px 18px -8px rgba(4, 8, 16, 0.32);
-  --elev-3: 0 14px 34px -12px rgba(4, 8, 16, 0.44);
-  --elev-4: 0 26px 60px -18px rgba(4, 8, 16, 0.58);
+  --shell-width: 1240px;
+  --shell-gutter: 56px;
+  --header-height: 76px;
+  --mark-size: 36px;
+  --sidebar-collapsed: 68px;
+  --sidebar-expanded: 244px;
+  --sidebar-notch: 18px;
 
-  /* Vidro: combinações prontas de superfície + hairline + elevação */
-  --glass-blur: 14px;
-  --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.085), transparent 46%);
-  --glass-border: var(--stage-hairline-3);
-  --glass-shadow: 0 12px 28px -10px var(--stage-shadow-2);
+  --elev-1: 0 1px 2px rgba(23,48,44,.06);
+  --elev-2: 0 5px 16px rgba(23,48,44,.08);
+  --elev-3: 0 12px 28px rgba(23,48,44,.12);
+  --elev-4: 0 22px 48px rgba(23,48,44,.16);
+  --shadow-card: 0 2px 8px rgba(23,48,44,.05), 0 10px 24px rgba(23,48,44,.04);
+  --shadow-card-hover: 0 8px 20px rgba(23,48,44,.10);
+  --shadow-modal: 0 24px 56px rgba(12,35,31,.22);
+
+  /* Compatibilidade com superfícies legadas não pertencentes ao menu do cliente. */
+  --paper: #f0f4f0;
+  --paper-light: #fafcf9;
+  --ink: #1d302f;
+  --muted: #506763;
+  --pine: #176d63;
+  --pine-light: #27877a;
+  --white: #f8fbf6;
+  --line-dark: rgba(230,241,235,.18);
+  --accent-deep: #526b2b;
+  --accent-surface: #edf3cf;
+  --accent-border: #c5d78a;
+  --accent-ink: #526b2b;
+  --accent: #c4d66a;
+  --qr-paper: #f8fbf6;
+  --qr-ink: #1d302f;
+  --qr-border: #b9c9c0;
+  --qr-amber-500: #8a5a12;
+  --qr-amber-700: #6d450c;
+
+  /* Superfície de operação: sólida e sem efeitos decorativos. */
+  --stage-bg: #142622;
+  --stage-bg-2: #10211e;
+  --stage-bg-3: #1b302c;
+  --stage-panel: #1b332e;
+  --stage-panel-2: #1a302b;
+  --stage-card: #203b35;
+  --stage-card-2: #1a312c;
+  --stage-card-3: #25423b;
+  --stage-card-4: #1c332e;
+  --stage-inset: #10231f;
+  --stage-inset-2: #162b26;
+  --stage-inset-3: #0f201c;
+  --stage-inset-deep: #0e1d19;
+  --stage-scrim: rgba(7,19,16,.78);
+
+  --stage-ink: #edf5ef;
+  --stage-ink-2: #dbe9df;
+  --stage-ink-3: #c4d9cd;
+  --stage-ink-muted: #b4c8be;
+  --stage-ink-muted-2: #a4bcb1;
+  --stage-ink-subtle: #8da69b;
+  --stage-ink-faint: #728a7f;
+
+  --stage-line: #36534a;
+  --stage-line-2: #3e5c52;
+  --stage-line-3: #4b6b60;
+  --stage-line-4: #58776c;
+  --stage-line-5: #2d493f;
+  --stage-line-base: #314d43;
+  --stage-hairline: rgba(238,247,240,.025);
+  --stage-hairline-2: rgba(238,247,240,.045);
+  --stage-hairline-3: rgba(238,247,240,.07);
+  --stage-hairline-4: rgba(238,247,240,.10);
+  --stage-hairline-5: rgba(238,247,240,.14);
+
+  --stage-teal: #80d0bd;
+  --stage-teal-2: #a6e5d5;
+  --stage-teal-deep: #2b8274;
+  --stage-teal-soft: rgba(83,181,158,.15);
+  --stage-teal-ink: #bce9dc;
+  --stage-lime: #d7e98a;
+  --stage-lime-deep: #84984a;
+  --stage-lime-soft: rgba(194,214,106,.15);
+  --stage-lime-ink: #e3efb1;
+  --stage-warning: #ffd28c;
+  --stage-warning-deep: #936a32;
+  --stage-warning-soft: rgba(255,210,140,.14);
+  --stage-warning-ink: #ffe2b2;
+  --stage-danger: #ffb5b7;
+  --stage-danger-deep: #9e5155;
+  --stage-danger-soft: rgba(255,181,183,.13);
+  --stage-danger-ink: #ffd4d4;
+  --stage-info-ink: #a9d9f3;
+  --stage-info-line: #426d83;
+  --stage-info-soft: rgba(92,165,200,.14);
+  --stage-ok-line: #3d7660;
+  --stage-ok-soft: rgba(50,125,92,.18);
+  --stage-ok-ink: #a6e5c2;
+  --stage-warn-line: #8b6d3e;
+  --stage-warn-soft: rgba(180,130,58,.17);
+  --stage-warn-surface: #443923;
+  --stage-warn-ink: #ffe2b2;
+  --stage-warn-ink-2: #ffe8c4;
+  --stage-warn-line-2: #b89155;
+  --stage-danger-border: #a96669;
+  --stage-danger-line: #925a5c;
+  --stage-danger-soft-2: #43282b;
+  --stage-danger-surface: #482a2d;
+  --stage-danger-ink-2: #ffd4d4;
+  --stage-danger-ink-3: #ffb5b7;
+  --stage-danger-ink-4: #ffdddd;
+  --stage-danger-deep: #7b4144;
+  --stage-danger-shadow: rgba(45,14,17,.35);
+  --stage-focus: #d7e98a;
+  --stage-grid: transparent;
+  --stage-glow-teal: transparent;
+  --stage-glow-lime: transparent;
+  --stage-shadow-1: rgba(4,15,12,.16);
+  --stage-shadow-2: rgba(4,15,12,.24);
+  --stage-shadow-3: rgba(4,15,12,.32);
+  --stage-shadow-4: rgba(4,15,12,.40);
+  --stage-shadow-inset: rgba(4,15,12,.22);
+  --stage-scroll-thumb: #58776c;
+  --stage-scroll-thumb-hover: #739286;
+  --stage-scroll-track: #1b302b;
+  --stage-on-accent: #142622;
+
+  /* Semânticos claros — também são os fallbacks do primeiro paint. */
+  --surface: #f0f4f0;
+  --surface-raised: #fafcf9;
+  --surface-sunken: #e4ece7;
+  --surface-hover: #e8f0eb;
+  --surface-overlay: #fafcf9;
+  --surface-sidebar: #17312f;
+  --text: #1d302f;
+  --text-muted: #506763;
+  --text-subtle: #6c817b;
+  --line: #cbd8d0;
+  --line-strong: #aebfb5;
+  --brand: #176d63;
+  --brand-hover: #11584f;
+  --brand-contrast: #fafcf9;
+  --brand-ink: #14584f;
+  --brand-surface: #e1f0ea;
+  --brand-border: #9dc9bb;
+  --accent-surface: #edf3cf;
+  --accent-border: #c5d78a;
+  --accent-ink: #526b2b;
+  --focus-ring: #176d63;
+  --sidebar-text: #edf5ef;
+  --sidebar-muted: #b4c8be;
+  --sidebar-line: #36534a;
+  --status-success: #1b6a50;
+  --status-success-ink: #1b6a50;
+  --status-success-contrast: #fafcf9;
+  --status-success-surface: #e4f1e9;
+  --status-success-border: #b6d8c4;
+  --status-warning: #8a5a12;
+  --status-warning-ink: #8a5a12;
+  --status-warning-surface: #f6eddc;
+  --status-warning-border: #e5c995;
+  --status-info: #245f91;
+  --status-info-ink: #245f91;
+  --status-info-surface: #e7f0f6;
+  --status-info-border: #b6d0e0;
+  --status-danger: #a33b46;
+  --status-danger-ink: #a33b46;
+  --status-danger-contrast: #fafcf9;
+  --status-danger-surface: #f5e8e8;
+  --status-danger-border: #e3bfc1;
+  --neon: var(--stage-teal);
+  --neon-soft: var(--stage-teal-soft);
+  --ops-accent: var(--stage-teal);
+  --ops-accent-soft: var(--stage-teal-soft);
+  --header-height: 76px;
 }
 
-/* Estados de interação compartilhados: nenhum componente redefine a regra. */
+[data-theme="claro"] {
+  color-scheme: light;
+  --surface: #f0f4f0;
+  --surface-raised: #fafcf9;
+  --surface-sunken: #e4ece7;
+  --surface-hover: #e8f0eb;
+  --surface-overlay: #fafcf9;
+  --surface-sidebar: #17312f;
+  --text: #1d302f;
+  --text-muted: #506763;
+  --text-subtle: #6c817b;
+  --line: #cbd8d0;
+  --line-strong: #aebfb5;
+  --brand: #176d63;
+  --brand-hover: #11584f;
+  --brand-contrast: #fafcf9;
+  --brand-ink: #14584f;
+  --brand-surface: #e1f0ea;
+  --brand-border: #9dc9bb;
+  --accent: #c4d66a;
+  --accent-ink: #526b2b;
+  --accent-surface: #edf3cf;
+  --accent-border: #c5d78a;
+  --focus-ring: #176d63;
+  --sidebar-text: #edf5ef;
+  --sidebar-muted: #b4c8be;
+  --sidebar-line: #36534a;
+  --status-success: #1b6a50;
+  --status-success-ink: #1b6a50;
+  --status-success-contrast: #fafcf9;
+  --status-success-surface: #e4f1e9;
+  --status-success-border: #b6d8c4;
+  --status-warning: #8a5a12;
+  --status-warning-ink: #8a5a12;
+  --status-warning-surface: #f6eddc;
+  --status-warning-border: #e5c995;
+  --status-info: #245f91;
+  --status-info-ink: #245f91;
+  --status-info-surface: #e7f0f6;
+  --status-info-border: #b6d0e0;
+  --status-danger: #a33b46;
+  --status-danger-ink: #a33b46;
+  --status-danger-contrast: #fafcf9;
+  --status-danger-surface: #f5e8e8;
+  --status-danger-border: #e3bfc1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="claro"]) {
+    color-scheme: dark;
+    --surface: #142622;
+    --surface-raised: #1d3430;
+    --surface-sunken: #0f1e1b;
+    --surface-hover: #243c36;
+    --surface-overlay: #203b35;
+    --surface-sidebar: #0e1d19;
+    --text: #ecf4ee;
+    --text-muted: #b4c8be;
+    --text-subtle: #8da69b;
+    --line: #36534a;
+    --line-strong: #58776c;
+    --brand: #78c8b6;
+    --brand-hover: #94d9c9;
+    --brand-contrast: #12231f;
+    --brand-ink: #bce4d8;
+    --brand-surface: #1d3b34;
+    --brand-border: #467b6e;
+    --accent: #d7e98a;
+    --accent-ink: #e3efb1;
+    --accent-surface: #35432a;
+    --accent-border: #738449;
+    --focus-ring: #d7e98a;
+    --sidebar-text: #ecf4ee;
+    --sidebar-muted: #b4c8be;
+    --sidebar-line: #36534a;
+    --status-success: #8de0b6;
+    --status-success-ink: #8de0b6;
+    --status-success-contrast: #142622;
+    --status-success-surface: #1e3b31;
+    --status-success-border: #477a63;
+    --status-warning: #ffd28c;
+    --status-warning-ink: #ffd28c;
+    --status-warning-surface: #42351f;
+    --status-warning-border: #876a3c;
+    --status-info: #91d0f1;
+    --status-info-ink: #91d0f1;
+    --status-info-surface: #1c3543;
+    --status-info-border: #426c82;
+    --status-danger: #ffb5b7;
+    --status-danger-ink: #ffb5b7;
+    --status-danger-contrast: #142622;
+    --status-danger-surface: #44292d;
+    --status-danger-border: #8d585c;
+  }
+}
+
+:root[data-theme="escuro"] {
+  color-scheme: dark;
+  --surface: #142622;
+  --surface-raised: #1d3430;
+  --surface-sunken: #0f1e1b;
+  --surface-hover: #243c36;
+  --surface-overlay: #203b35;
+  --surface-sidebar: #0e1d19;
+  --text: #ecf4ee;
+  --text-muted: #b4c8be;
+  --text-subtle: #8da69b;
+  --line: #36534a;
+  --line-strong: #58776c;
+  --brand: #78c8b6;
+  --brand-hover: #94d9c9;
+  --brand-contrast: #12231f;
+  --brand-ink: #bce4d8;
+  --brand-surface: #1d3b34;
+  --brand-border: #467b6e;
+  --accent: #d7e98a;
+  --accent-ink: #e3efb1;
+  --accent-surface: #35432a;
+  --accent-border: #738449;
+  --focus-ring: #d7e98a;
+  --sidebar-text: #ecf4ee;
+  --sidebar-muted: #b4c8be;
+  --sidebar-line: #36534a;
+  --status-success: #8de0b6;
+  --status-success-ink: #8de0b6;
+  --status-success-contrast: #142622;
+  --status-success-surface: #1e3b31;
+  --status-success-border: #477a63;
+  --status-warning: #ffd28c;
+  --status-warning-ink: #ffd28c;
+  --status-warning-surface: #42351f;
+  --status-warning-border: #876a3c;
+  --status-info: #91d0f1;
+  --status-info-ink: #91d0f1;
+  --status-info-surface: #1c3543;
+  --status-info-border: #426c82;
+  --status-danger: #ffb5b7;
+  --status-danger-ink: #ffb5b7;
+  --status-danger-contrast: #142622;
+  --status-danger-surface: #44292d;
+  --status-danger-border: #8d585c;
+}
+
 :where(a, button, summary, [role="button"], input, select, textarea):focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
-
 :where(button, [role="button"])[aria-pressed="true"],
 :where(button, [role="button"])[aria-selected="true"] {
   border-color: var(--brand-border);
 }
-
 :where(button, [role="button"], a, summary):disabled,
 :where(button, [role="button"])[aria-disabled="true"] {
   cursor: not-allowed;
-  opacity: 0.55;
+  opacity: .55;
 }
-
 @media (prefers-reduced-motion: reduce) {
-  :root {
-    --dur-instant: 0ms;
-    --dur-quick: 0ms;
-    --dur-base: 0ms;
-    --dur-slow: 0ms;
-  }
+  :root { --dur-instant: 0ms; --dur-fast: 0ms; --dur-quick: 0ms; --dur-base: 0ms; --dur-page: 0ms; --dur-slow: 0ms; }
 }
