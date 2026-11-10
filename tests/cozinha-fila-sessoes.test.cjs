@@ -92,19 +92,19 @@ test('linguagem visual do dashboard chega ao caixa e ao PWA sem perder contraste
   const pwa = read('public/garcom-pwa/styles.css');
   const sw = read('public/garcom-pwa/sw.js');
 
-  assert.match(index, /\.ops-card-surface \{/);
-  assert.match(index, /color-mix\(in srgb, var\(--surface-raised\) 93%, var\(--brand-surface\)\)/);
-  assert.match(index, /var\(--shadow-card-hover/);
+  assert.match(index, /\.ops-card-surface,/);
+  assert.match(index, /background: var\(--surface-raised\)/);
+  assert.match(index, /\.ops-card-surface:hover,[\s\S]*?box-shadow: none/);
   assert.equal((caixa.match(/ops-card-surface/g) || []).length, 2, 'lista e comanda do caixa usam a superfície');
 
-  assert.match(pwa, /backdrop-filter: blur\(14px\) saturate\(140%\)/);
-  assert.match(pwa, /\.order \{[\s\S]*?var\(--shadow-card-hover\)/);
+  assert.match(pwa, /\.app-footer \{[^}]*backdrop-filter: none/);
+  assert.match(pwa, /\.order \{ background: var\(--surface-raised\); box-shadow: none;/);
   assert.match(pwa, /scrollbar-width: thin/);
   assert.match(sw, /garcom-pwa-shell-v(3[3-9]|[4-9]\d)/, 'cache novo para os aparelhos pegarem o CSS');
 
-  // Cartões de vidro do panorama/mapa recebem o movimento por cartão.
+  // Os cartões do panorama usam superfícies sólidas e respeitam reduced motion.
   assert.match(index, /\[data-surface-card\] \{/);
-  assert.match(index, /article\[data-surface-card\] \{\s*animation: glass-card-in/);
-  assert.match(index, /@media \(prefers-reduced-motion: reduce\)[\s\S]{0,120}article\[data-surface-card\]/);
+  assert.match(index, /background: var\(--surface-raised\)/);
+  assert.match(index, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(read('src/screens/admin/PanoramaMesas.tsx'), /data-surface-card/);
 });
