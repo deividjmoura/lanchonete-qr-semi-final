@@ -95,12 +95,25 @@ try {
   // Aguarda cada recurso de verdade; não transforma uma corrida de rede em falha.
   const imagensCaptura = page.locator(".hero-art img, .product-stage img");
   for (const imagem of await imagensCaptura.all()) {
+    // O browser não inicia necessariamente imagens loading="lazy" que estão
+    // fora da viewport. Traz cada captura para a área visível antes de esperar.
+    await imagem.scrollIntoViewIfNeeded();
     const handle = await imagem.elementHandle();
-    await page.waitForFunction(
-      (img) => img.complete && img.naturalWidth > 0,
-      handle,
-      { timeout: 15000 },
-    );
+    try {
+      await page.waitForFunction(
+        (img) => img.complete && img.naturalWidth > 0,
+        handle,
+        { timeout: 15000 },
+      );
+    } catch {
+      const estado = await imagem.evaluate((img) => ({
+        src: img.getAttribute("src"),
+        currentSrc: img.currentSrc,
+        complete: img.complete,
+        naturalWidth: img.naturalWidth,
+      }));
+      throw new Error("Captura da landing não carregou após entrar na viewport: " + JSON.stringify(estado));
+    }
   }
   const capturas = await page.evaluate(() =>
     [...document.querySelectorAll(".hero-art img, .product-stage img")].map((img) => ({
