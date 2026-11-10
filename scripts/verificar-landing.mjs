@@ -523,20 +523,23 @@ try {
       return false;
     }
   }, { timeout: 5000 });
-  /* location.replace() aborta o ciclo de carga do documento anterior.
-     Aguarde a troca efetiva do frame principal, sem depender do evento "load"
-     da navegação que foi substituída. */
-  const frameNoPwa = page2.waitForEvent("framenavigated", (frame) => {
-    if (frame !== page2.mainFrame()) return false;
-    try {
-      return new URL(frame.url()).pathname === "/garcom-pwa/";
-    } catch {
-      return false;
-    }
-  }, { timeout: 5000 });
-  await page2.goto(BASE + "/#/garcom/" + tokenGarcom, { waitUntil: "domcontentloaded" });
+  /* O app.js consome o token e remove a query da barra por segurança.
+     A requisição observada acima prova que o redirect enviou o token; aguardar
+     o pathname e o localStorage prova que o shell do PWA executou e persistiu
+     a credencial. Não depender de eventos de ciclo de vida do documento que
+     location.replace() pode abortar. */
+  await page2.goto(BASE + "/#/garcom/" + tokenGarcom, { waitUntil: "commit" }).catch((erro) => {
+    /* Chromium pode reportar ERR_ABORTED quando o redirect substitui o
+       documento inicial; a requisição de destino e o estado do PWA são a
+       confirmação funcional, não o resultado do primeiro goto. */
+    if (!/ERR_ABORTED|net::ERR_ABORTED/i.test(erro.message)) throw erro;
+  });
   const requestPwa = await navegacaoPwa;
-  await frameNoPwa;
+  await page2.waitForFunction(
+    (token) => location.pathname === "/garcom-pwa/" && localStorage.getItem("waiter-token") === token,
+    tokenGarcom,
+    { timeout: 10000 },
+  );
   assert(page2.url().includes("/garcom-pwa/"), "/#/garcom/<token> mantém o redirecionamento ao PWA");
   assert(new URL(requestPwa.url()).searchParams.get("token") === tokenGarcom, "redirecionamento envia o token individual ao PWA");
   await page2.waitForFunction((token) => localStorage.getItem("waiter-token") === token, tokenGarcom, { timeout: 5000 });
