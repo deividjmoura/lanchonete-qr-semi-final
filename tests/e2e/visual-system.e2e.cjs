@@ -551,7 +551,17 @@ async function main() {
     await page.waitForFunction(() => !!navigator.serviceWorker.controller);
     await offline.setOffline(true);
     await page.reload();
-    await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+      // Fontes com font-display: swap só são requisitadas quando usadas.
+      // Faça o pedido depois de ficar offline para provar que o SW precacheou
+      // os três arquivos, em vez de confiar em document.fonts.check() sem load.
+      await Promise.all([
+        document.fonts.load('700 20px "Kalam"'),
+        document.fonts.load('600 15px "DM Sans"'),
+        document.fonts.load('600 13px "JetBrains Mono"'),
+      ]);
+    });
     assert.equal(await page.locator("html").getAttribute("data-theme"), "escuro");
     assert.ok(await page.evaluate(() => document.fonts.check('700 20px "Kalam"')));
     assert.ok(await page.evaluate(() => document.fonts.check('600 15px "DM Sans"')));
