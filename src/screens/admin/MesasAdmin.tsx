@@ -128,7 +128,7 @@ export default function MesasAdmin() {
         </div>
 
         <div className="flex items-center gap-2">
-          {carregando && <span className="font-mono text-[10px] uppercase tracking-wider text-text-subtle">Atualizando…</span>}
+          {carregando && <span className="font-mono text-[11px] uppercase tracking-wider text-text-subtle">Atualizando…</span>}
           <Btn size="sm" variant="outline" onClick={() => setPracasAberto(true)}>
             <MapPin size={15} weight="bold" /> Praças
           </Btn>

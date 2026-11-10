@@ -1,25 +1,25 @@
 import type { ReactNode } from "react";
 
+/* Cabeçalho de seção: a estação (um nó da linha de passe e o rótulo), o
+   título na voz da identidade e, opcionalmente, um parágrafo de apoio. */
 export function SectionIntro({
   eyebrow,
   title,
   children,
   className = "",
-  light = false,
   id,
 }: {
   eyebrow?: string;
   title: ReactNode;
   children?: ReactNode;
   className?: string;
-  light?: boolean;
   id?: string;
 }) {
   return (
-    <div className={`section-intro${light ? " section-intro--light" : ""} ${className}`}>
+    <div className={`section-intro ${className}`}>
       {eyebrow && (
-        <p className="eyebrow">
-          <span className="eyebrow-rule" />
+        <p className="estacao">
+          <span className="estacao__no" aria-hidden="true" />
           {eyebrow}
         </p>
       )}
@@ -27,8 +27,4 @@ export function SectionIntro({
       {children && <div className="section-intro__body">{children}</div>}
     </div>
   );
-}
-
-export function SectionIndex({ children, light = false }: { children: ReactNode; light?: boolean }) {
-  return <p className={`section-index${light ? " section-index--light" : ""}`}>{children}</p>;
 }

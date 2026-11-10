@@ -56,14 +56,17 @@ async function aguardarLayoutDashboard(page, width) {
     // o resize; callbacks em requestAnimationFrame podem ficar suspensos.
     detalhe = await page.evaluate((largura) => {
       const grid = document.querySelector('.dashboard-grid');
-      const valor = document.querySelector('.card-neon .metric-value');
+      const valor = document.querySelector('.indicador .metric-value');
       const main = document.querySelector('.ops-main');
       const colunas = grid && getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length;
       const fonte = valor && parseFloat(getComputedStyle(valor).fontSize);
       const margem = main && parseFloat(getComputedStyle(main).marginLeft);
       return { inner: innerWidth, colunas, fonte, margem,
         pronto: innerWidth === largura && colunas === (largura <= 700 ? 4 : largura <= 1050 ? 8 : 12) &&
-          (largura > 420 || (fonte != null && fonte <= 18)) &&
+          // O número do indicador acompanha a largura do cartão (container
+          // query). Com dois por linha em telas de até 420px ele fica entre
+          // 18 e 26px; acima disso é sinal de layout de desktop espremido.
+          (largura > 420 || (fonte != null && fonte >= 18 && fonte <= 26)) &&
           (largura >= 1024 ? margem != null && margem >= 70 : margem === 0) };
     }, width);
     if (detalhe.pronto) return;

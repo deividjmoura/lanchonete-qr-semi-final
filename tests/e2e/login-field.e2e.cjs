@@ -23,11 +23,32 @@ async function check(page, id) {
   assert.ok(style.inside, 'input cabe no contêiner');
   assert.ok(style.page <= style.width + 1, 'sem overflow de página');
 }
+/* Espera o leiaute assentar depois de mexer na janela, em vez de dormir um
+   tempo fixo. Com "reduzir movimento" ligado, a regra global transforma toda
+   mudança de estilo numa transição de 0,01 ms, que só termina no quadro
+   seguinte. Os 100 ms fixos que havia aqui bastavam em máquina rápida e
+   perdiam a corrida em máquina lenta: o rodapé era medido ainda na posição
+   antiga (falhava também contra o build anterior ao rebranding). O que se
+   confere depois continua igual; só a espera deixou de depender do relógio. */
+async function assentar(page, altura) {
+  await page.evaluate((alturaEsperada) => new Promise((resolve) => {
+    const limite = performance.now() + 3000;
+    let quadrosParados = 0;
+    const olhar = () => {
+      const janelaPronta = alturaEsperada == null || window.innerHeight === alturaEsperada;
+      const transicoes = document.getAnimations().some((a) => a.playState === 'running' && 'transitionProperty' in a);
+      quadrosParados = janelaPronta && !transicoes ? quadrosParados + 1 : 0;
+      if (quadrosParados >= 2 || performance.now() > limite) resolve();
+      else requestAnimationFrame(olhar);
+    };
+    requestAnimationFrame(olhar);
+  }), altura ?? null);
+}
 async function checkViewport(page, width) {
   const original = await page.locator('.login-brand img').boundingBox();
   for (const height of [420, 360, 320, 900]) {
     await page.setViewportSize({ width, height });
-    await page.waitForTimeout(100);
+    await assentar(page, height);
     const layout = await page.evaluate(() => {
       const rect = (selector) => {
         const r = document.querySelector(selector).getBoundingClientRect();
@@ -66,7 +87,7 @@ async function checkViewport(page, width) {
     visualViewport.dispatchEvent(new Event('resize'));
     visualViewport.dispatchEvent(new Event('scroll'));
   });
-  await page.waitForTimeout(100);
+  await assentar(page);
   const visible = await page.locator('.login-page > footer').boundingBox();
   assert.ok(visible.y >= 20 && visible.y + visible.height <= 341, 'rodapé acompanha visualViewport');
   const contentFits = await page.locator('.login-card-content').evaluate(el => el.scrollHeight <= el.clientHeight + 1);
@@ -79,7 +100,7 @@ async function checkViewport(page, width) {
     delete visualViewport.offsetTop;
     visualViewport.dispatchEvent(new Event('resize'));
   });
-  await page.waitForTimeout(100);
+  await assentar(page);
 }
 async function main() {
   const browser = await chromium.launch({ executablePath: await binary.executablePath(), args: binary.args.filter((a) => a !== '--single-process'), headless: true });

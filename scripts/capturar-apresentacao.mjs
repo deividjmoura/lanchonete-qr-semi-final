@@ -408,7 +408,7 @@ async function capturarAplicacao(page, api, origem, envArquivo, connectionString
 
     // Equipe: autenticação real no servidor local, sem credenciais no log.
     await navegar(page, `${origem}/#/login`, "Login da equipe");
-    await page.getByRole("heading", { name: "Acesso Equipe" }).waitFor({ state: "visible" });
+    await page.locator("#login-titulo").waitFor({ state: "visible" });
     await page.getByRole("button", { name: /^Admin/ }).click();
     await page.locator("#login-senha").fill(String(senhaAdmin));
     await page.getByRole("button", { name: /Entrar em Admin/ }).click();
@@ -416,7 +416,7 @@ async function capturarAplicacao(page, api, origem, envArquivo, connectionString
 
     await navegar(page, `${origem}/#/admin/painel`, "Dashboard administrativo");
     await page.locator(".dashboard-stage").waitFor({ state: "visible" });
-    await page.waitForFunction(() => Boolean(document.querySelector(".card-neon .metric-value")) && !document.querySelector(".dash-error"), null, { timeout: 18000 });
+    await page.waitForFunction(() => Boolean(document.querySelector(".indicador .metric-value")) && !document.querySelector(".dash-error"), null, { timeout: 18000 });
     const semana = page.getByRole("button", { name: "Semana", exact: true });
     if (await semana.count()) {
       await semana.click();

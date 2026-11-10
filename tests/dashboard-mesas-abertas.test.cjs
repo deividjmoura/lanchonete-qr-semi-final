@@ -35,7 +35,9 @@ test('o modal cobre o painel e usa o mesmo vocabulário visual do dashboard', ()
 
   assert.match(css, /\.dash-dialog--full\[open\] \{ display: flex; \}/);
   assert.match(css, /\.dash-dialog--full \{[^}]*width: min\(1360px, calc\(100vw - 24px\)\)/s);
-  assert.match(css, /\.dash-mesas \{[^}]*var\(--stage-bg\)/s);
+  // Mesma folha e mesma tinta do painel (identidade "Passe"): nada de fundo próprio.
+  assert.match(css, /\.dash-mesas \{[^}]*background: var\(--surface\);[^}]*color: var\(--text\)/s);
+  assert.doesNotMatch(css, /var\(--stage-/, 'os tokens de "palco" saíram com a identidade anterior');
 });
 
 test('só entram no modal as mesas com sessão aberta, com quem pediu e quem leva', () => {

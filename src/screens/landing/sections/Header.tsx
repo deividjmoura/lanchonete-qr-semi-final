@@ -1,4 +1,5 @@
 import { useEffect, useState, type MouseEvent } from "react";
+import { ThemeToggle } from "../../../components/ui";
 import { AccessButton } from "../components/AccessButton";
 import { Brand } from "../components/Brand";
 import { Icon } from "../components/Icon";
@@ -8,6 +9,7 @@ const navigation = [
   { href: "#como-funciona", label: "Como funciona" },
   { href: "#funcionalidades", label: "Módulos" },
   { href: "#para-quem", label: "Para quem é" },
+  { href: "#contato", label: "Contato" },
 ];
 
 export function Header({
@@ -56,34 +58,25 @@ export function Header({
               {item.label}
             </a>
           ))}
-          <AccessButton className="main-nav__mobile-access" onClick={abrirAcessoDoMenu} />
+          <AccessButton className="botao botao--primario main-nav__mobile-access" onClick={abrirAcessoDoMenu} />
         </nav>
 
         <div className="site-header__actions">
-          <AccessButton className="header-access" onClick={aoAbrirAcesso} />
-          <a
-            className="button button--dark button--small"
-            href="#produto"
-            onClick={(event) => rolar(event, "#produto")}
+          <ThemeToggle className="site-header__tema" />
+          <AccessButton className="botao botao--primario botao--compacto header-access" onClick={aoAbrirAcesso} />
+          <button
+            className="menu-toggle"
+            type="button"
+            aria-label={menuOpen ? "Fechar navegação" : "Abrir navegação"}
+            aria-expanded={menuOpen}
+            aria-controls="primary-navigation"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-disabled={aberto ? true : undefined}
+            tabIndex={aberto ? -1 : undefined}
           >
-            <span className="site-header__button-label site-header__button-label--wide">Conhecer o produto</span>
-            <span className="site-header__button-label site-header__button-label--compact">Ver produto</span>
-            <Icon name="arrow-right" size={16} />
-          </a>
+            <Icon name={menuOpen ? "close" : "menu"} size={22} />
+          </button>
         </div>
-
-        <button
-          className="menu-toggle"
-          type="button"
-          aria-label={menuOpen ? "Fechar navegação" : "Abrir navegação"}
-          aria-expanded={menuOpen}
-          aria-controls="primary-navigation"
-          onClick={() => setMenuOpen((open) => !open)}
-          aria-disabled={aberto ? true : undefined}
-          tabIndex={aberto ? -1 : undefined}
-        >
-          <Icon name={menuOpen ? "close" : "menu"} size={21} />
-        </button>
       </div>
     </header>
   );

@@ -1,44 +1,17 @@
 /**
  * Preferência de tema clara/escura compartilhada entre o SPA e o PWA do garçom.
- * Espelha os tokens semânticos de `public/garcom-pwa/design-tokens.css`
- * (Território A — "Comanda de Chapa", compartilhada entre SPA e PWA).
+ *
+ * Os valores de cor NÃO moram aqui: a fonte única é
+ * `public/garcom-pwa/design-tokens.css` (identidade "Passe"). Este módulo só
+ * liga e desliga o tema no <html>; a cor da barra do navegador é lida do token
+ * `--surface` já resolvido, de modo que ela acompanha a identidade em uso
+ * (inclusive a do cardápio do cliente, que conserva a anterior).
  */
 
 export type Tema = "claro" | "escuro";
 
 const CHAVE_TEMA = "qradmin-tema";
 export const EVENTO_TEMA = "qradmin-tema";
-
-export const TOKENS_TEMA: Record<Tema, Record<string, string>> = {
-  claro: {
-    "--surface": "#e4e8f1",
-    "--surface-raised": "#edf0f6",
-    "--surface-sunken": "#d8deea",
-    "--surface-sidebar": "#0b101b",
-    "--text": "#121829",
-    "--text-muted": "#48536d",
-    "--brand": "#bf3b11",
-    "--brand-contrast": "#edf0f6",
-    "--brand-ink": "#b5360d",
-    "--accent": "#0a5a63",
-    "--line": "#b8c2d4",
-    "--line-strong": "#98a6bd",
-  },
-  escuro: {
-    "--surface": "#0b101b",
-    "--surface-raised": "#141b29",
-    "--surface-sunken": "#080d16",
-    "--surface-sidebar": "#080d16",
-    "--text": "#eef1fb",
-    "--text-muted": "#a9b4cc",
-    "--brand": "#ff7d52",
-    "--brand-contrast": "#0b101b",
-    "--brand-ink": "#ffb59a",
-    "--accent": "#4fd1e0",
-    "--line": "#2a3348",
-    "--line-strong": "#3b4660",
-  },
-};
 
 function normalizar(valor: string | null | undefined): Tema | null {
   if (valor === "escuro" || valor === "dark") return "escuro";
@@ -69,12 +42,10 @@ export function aplicarTema(tema: Tema): Tema {
     root.classList.toggle("dark", tema === "escuro");
     root.classList.toggle("tema-escuro", tema === "escuro");
     root.classList.toggle("tema-claro", tema === "claro");
-    const vars = TOKENS_TEMA[tema];
-    for (const [nome, valor] of Object.entries(vars)) {
-      root.style.setProperty(nome, valor);
-    }
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", vars["--surface"]);
+    const fundo =
+      typeof getComputedStyle === "function" ? getComputedStyle(root).getPropertyValue("--surface").trim() : "";
+    if (meta && fundo) meta.setAttribute("content", fundo);
   }
   try {
     localStorage.setItem(CHAVE_TEMA, tema);
@@ -87,9 +58,13 @@ export function aplicarTema(tema: Tema): Tema {
   return tema;
 }
 
+/* QR Code é sempre tinta escura sobre papel claro, nos dois temas: é o que a
+   câmera do cliente lê. A biblioteca recebe a cor como atributo SVG e o
+   download gera PNG, então aqui precisa ser literal — os dois valores são os
+   tokens `--qr-ink` e `--qr-paper` (conferido em tests/design-system.test.cjs). */
 export const QR_SVG_COLORS = {
-  fg: "#0b101b",
-  bg: "#edf0f6",
+  fg: "#081726",
+  bg: "#fffdf8",
 } as const;
 
 export function alternarTema(): Tema {

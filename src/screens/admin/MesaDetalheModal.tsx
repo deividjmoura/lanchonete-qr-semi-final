@@ -160,7 +160,7 @@ export function MesaDetalheModal({ numero, pracas, garcons, agora, onClose, onAl
     <Modal open={numero != null} onClose={onClose} wide>
       <div className="p-5 pr-16 sm:p-6 sm:pr-16">
         <header>
-          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-text-muted">Detalhe da mesa</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-text-muted">Detalhe da mesa</p>
           <h3 className="mt-1 font-display text-2xl font-bold tracking-tight text-text">
             Mesa {String(numero ?? "").padStart(2, "0")}
           </h3>
@@ -168,11 +168,11 @@ export function MesaDetalheModal({ numero, pracas, garcons, agora, onClose, onAl
             <Badge tone={ocupada ? "brass" : "sage"} dot>
               {ocupada ? "Ocupada" : "Livre"}
             </Badge>
-            <span className="rounded-full border border-line bg-surface-sunken px-2 py-0.5 text-[10px] font-semibold text-text-muted">
+            <span className="rounded-xs border border-line bg-surface-sunken px-2 py-0.5 text-[11px] font-semibold text-text-muted">
               {detalhe?.pracaNome || "Sem praça"}
             </span>
             {faixa && (
-              <span className={cn("rounded-full border px-2 py-0.5 font-mono text-[10px] font-bold", faixa.classe)}>
+              <span className={cn("rounded-xs border px-2 py-0.5 font-mono text-[11px] font-bold", faixa.classe)}>
                 {formatarDuracao(tempo?.minutos)} · {faixa.rotulo}
               </span>
             )}
@@ -191,7 +191,7 @@ export function MesaDetalheModal({ numero, pracas, garcons, agora, onClose, onAl
           <div className="mt-4 space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-sm border border-line bg-surface-sunken p-3">
-                <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">Sessão</p>
+                <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">Sessão</p>
                 <dl className="mt-1.5 space-y-1 text-xs">
                   <Linha rotulo="Aberta" valor={formatarHora(detalhe.abertaEm)} />
                   <Linha rotulo="Garçom" valor={detalhe.garcomResponsavelNome || "a definir"} />
@@ -204,13 +204,13 @@ export function MesaDetalheModal({ numero, pracas, garcons, agora, onClose, onAl
               </div>
 
               <div className="rounded-sm border border-line bg-surface-sunken p-3">
-                <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">Financeiro da sessão</p>
+                <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">Financeiro da sessão</p>
                 <dl className="mt-1.5 space-y-1 text-xs">
                   <Linha rotulo="Consumo entregue" valor={BRL(detalhe.consumo)} />
                   <Linha rotulo="Já pago (parcial)" valor={BRL(detalhe.pago)} />
                   <Linha rotulo="Consumo em aberto" valor={BRL(detalhe.saldo)} destaque />
                 </dl>
-                <p className="mt-1.5 text-[10px] leading-relaxed text-text-subtle">
+                <p className="mt-1.5 text-[11px] leading-relaxed text-text-subtle">
                   Consumo em aberto é o entregue ainda não pago. Só contas fechadas entram em vendas: isto não é
                   receita recebida.
                 </p>
@@ -218,7 +218,7 @@ export function MesaDetalheModal({ numero, pracas, garcons, agora, onClose, onAl
             </div>
 
             <section className="rounded-sm border border-line bg-surface-sunken p-3">
-              <p className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-text-muted">
+              <p className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-text-muted">
                 <MapPin size={13} weight="bold" /> Praça da mesa
               </p>
               <div className="mt-2 flex flex-wrap items-end gap-2">
@@ -247,14 +247,14 @@ export function MesaDetalheModal({ numero, pracas, garcons, agora, onClose, onAl
                   {salvandoPraca ? "Salvando…" : "Salvar praça"}
                 </Btn>
               </div>
-              <p className="mt-1.5 text-[10px] text-text-subtle">
+              <p className="mt-1.5 text-[11px] text-text-subtle">
                 Os nomes das praças ficam no banco e podem ser alterados no panorama.
               </p>
             </section>
 
             {ocupada && (
               <section className="rounded-sm border border-line bg-surface-sunken p-3">
-                <p className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                <p className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-text-muted">
                   <UserSwitch size={13} weight="bold" /> Transferir responsabilidade
                 </p>
                 <div className="mt-2 flex flex-wrap items-end gap-2">
@@ -285,14 +285,14 @@ export function MesaDetalheModal({ numero, pracas, garcons, agora, onClose, onAl
                     {transferindo ? "Transferindo…" : "Transferir"}
                   </Btn>
                 </div>
-                <p className="mt-1.5 text-[10px] text-text-subtle">
+                <p className="mt-1.5 text-[11px] text-text-subtle">
                   Retiradas já assumidas continuam com seus garçons.
                 </p>
               </section>
             )}
 
             <section>
-              <p className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-text-muted">
+              <p className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-text-muted">
                 <Receipt size={13} weight="bold" /> Pedidos da sessão
               </p>
               {detalhe.pedidos.length === 0 ? (
@@ -314,7 +314,7 @@ export function MesaDetalheModal({ numero, pracas, garcons, agora, onClose, onAl
                               </span>
                             )}
                           </p>
-                          <span className={cn("rounded-full border px-2 py-0.5 text-[10px] font-semibold", status.classe)}>
+                          <span className={cn("rounded-xs border px-2 py-0.5 text-[11px] font-semibold", status.classe)}>
                             {status.rotulo}
                           </span>
                         </div>
@@ -324,7 +324,7 @@ export function MesaDetalheModal({ numero, pracas, garcons, agora, onClose, onAl
                               <span className={cn("min-w-0 truncate", item.status === "cancelado" && "line-through opacity-60")}>
                                 <strong className="mr-1 font-mono text-brand-ink">{item.quantidade}×</strong>
                                 {item.nome}
-                                <span className="ml-1 text-[10px] uppercase tracking-wider text-text-subtle">
+                                <span className="ml-1 text-[11px] uppercase tracking-wider text-text-subtle">
                                   {item.setor}
                                 </span>
                               </span>
@@ -341,7 +341,7 @@ export function MesaDetalheModal({ numero, pracas, garcons, agora, onClose, onAl
 
             {detalhe.pagamentos.length > 0 && (
               <section>
-                <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">Pagamentos parciais</p>
+                <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">Pagamentos parciais</p>
                 <ul className="mt-1.5 space-y-1">
                   {detalhe.pagamentos.map((pagamento) => (
                     <li key={pagamento.id} className="flex items-baseline justify-between gap-2 text-[11px]">

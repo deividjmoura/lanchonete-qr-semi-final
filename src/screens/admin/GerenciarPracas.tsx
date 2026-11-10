@@ -117,7 +117,7 @@ export function GerenciarPracas({
   return (
     <Modal open={aberto} onClose={onClose}>
       <div className="p-5 pr-16 sm:p-6 sm:pr-16">
-        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-text-muted">Classificação interna</p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-text-muted">Classificação interna</p>
         <h3 className="mt-1 flex items-center gap-2 font-display text-2xl font-bold tracking-tight text-text">
           <MapPin size={20} weight="fill" className="text-brand-ink" /> Praças
         </h3>
@@ -166,7 +166,7 @@ export function GerenciarPracas({
                     className="mt-1 h-10 w-full rounded-sm border border-line-strong bg-surface-raised px-2.5 text-sm text-text"
                   />
                 </label>
-                <span className="pb-2 font-mono text-[10px] uppercase tracking-wider text-text-subtle">
+                <span className="pb-2 font-mono text-[11px] uppercase tracking-wider text-text-subtle">
                   {praca.mesas} {praca.mesas === 1 ? "mesa" : "mesas"}
                 </span>
                 <Btn
@@ -192,7 +192,7 @@ export function GerenciarPracas({
         </ul>
 
         <div className="mt-4 rounded-sm border border-line bg-surface-sunken p-3">
-          <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">Nova praça</p>
+          <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">Nova praça</p>
           <div className="mt-2 flex flex-wrap items-end gap-2">
             <label className="min-w-0 flex-1 text-[11px] text-text-muted">
               Nome

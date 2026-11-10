@@ -50,7 +50,7 @@ export function MapaQrMesas({ dados, agora, onAbrirMesa, onAtualizado, onErro }:
             Pesquise para visualizar as mesas desejadas. Toque no cartão para abrir os detalhes da mesa.
           </p>
         </div>
-        <label className="block w-full sm:w-auto font-mono text-[10px] uppercase tracking-wider text-text-muted">
+        <label className="block w-full sm:w-auto font-mono text-[11px] uppercase tracking-wider text-text-muted">
           Pesquisar nº da mesa
           <input
             type="text"
@@ -84,7 +84,7 @@ export function MapaQrMesas({ dados, agora, onAbrirMesa, onAtualizado, onErro }:
         </p>
       ) : (
         <>
-          <p className="font-mono text-[10px] uppercase tracking-wider text-text-subtle">
+          <p className="font-mono text-[11px] uppercase tracking-wider text-text-subtle">
             {mesasFiltradas.length}{" "}
             {mesasFiltradas.length === 1 ? "mesa encontrada" : "mesas encontradas"} · {dados.mesas.length} habilitadas
           </p>

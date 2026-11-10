@@ -121,6 +121,17 @@ jobs:
           test "$(find dist/assets -name 'react-*.js' 2>/dev/null | wc -l)" -ge 1
           echo "dist/ ok after build (hash names may differ from committed tree)"
 
+      # O cardápio do cliente (#/mesa/:token) ficou fora do rebranding e é
+      # conferido contra um commit de referência fixo. O checkout é raso, então
+      # esse commit é buscado à parte. O hash mora em um lugar só: o gerador.
+      # Sem ele, tests/cardapio-isolamento.test.cjs falha no CI (não pula).
+      - name: Fetch the customer-menu reference commit
+        run: |
+          ref="$(sed -n 's/^export const COMMIT_DE_REFERENCIA = "\([0-9a-f]\{40\}\)";$/\1/p' scripts/gerar-identidade-cardapio.mjs)"
+          test -n "$ref"
+          git fetch --no-tags --depth=1 origin "$ref"
+          git cat-file -e "${ref}^{commit}"
+
       - name: Regression tests
         run: npm run test:regression
 

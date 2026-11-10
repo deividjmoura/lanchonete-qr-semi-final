@@ -5,7 +5,6 @@ import { Hero } from "./landing/sections/Hero";
 import { ValueSection } from "./landing/sections/ValueSection";
 import { FlowSection } from "./landing/sections/FlowSection";
 import { FeaturesSection } from "./landing/sections/FeaturesSection";
-import { ProductSection } from "./landing/sections/ProductSection";
 import { AudienceSection } from "./landing/sections/AudienceSection";
 import { PrinciplesSection } from "./landing/sections/PrinciplesSection";
 import { ContatoSection } from "./landing/sections/ContatoSection";
@@ -14,30 +13,24 @@ import { Footer } from "./landing/sections/Footer";
 import { FloatingActions } from "./landing/components/FloatingActions";
 import "./landing/styles/main.css";
 
-/* Landing comercial oficial do QR Admin.
+/* Landing oficial do QR Admin, na identidade "Passe".
  *
- * Layout, tipografia, paleta, composição e responsividade vêm da apresentação
- * aprovada (deividjmoura/Exercices · apresentacao, PR #2). As adaptações são
- * apenas de integração: logo oficial, capturas reais do sistema, links
- * institucionais preservados e CTAs abrindo o modal de autenticação real. */
+ * A página conta o percurso de um pedido: hero, o que se perde entre uma
+ * estação e outra, a narrativa de rolagem com as seis estações e as capturas
+ * reais do sistema, os módulos, para quem serve, princípios e contato. Segue
+ * o tema claro/escuro do produto e usa os mesmos tokens das telas internas.
+ * Os CTAs de acesso abrem o modal de autenticação real. */
 export default function Landing() {
   const [acessoAberto, setAcessoAberto] = useState(false);
   const abrirAcesso = useCallback(() => setAcessoAberto(true), []);
   const fecharAcesso = useCallback(() => setAcessoAberto(false), []);
 
-  /* A landing é a página inicial: título e tema do documento acompanham a marca. */
+  /* A landing é a página inicial: o título do documento acompanha a marca. */
   useEffect(() => {
     const tituloAnterior = document.title;
-    document.title = "QRAdmin — Gestão para operações de alimentação";
+    document.title = "QR Admin — Gestão para operações de alimentação";
     return () => {
       document.title = tituloAnterior;
-    };
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.dataset.regime = "landing";
-    return () => {
-      delete document.documentElement.dataset.regime;
     };
   }, []);
 
@@ -52,7 +45,6 @@ export default function Landing() {
         <ValueSection />
         <FlowSection />
         <FeaturesSection />
-        <ProductSection />
         <AudienceSection />
         <PrinciplesSection />
         <ContatoSection />

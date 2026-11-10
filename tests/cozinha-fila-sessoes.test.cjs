@@ -71,40 +71,64 @@ test('ação por item usa a rota de item; ação de comanda diz que é só desta
   assert.match(fila, /disabled=\{ocupado \|\| algumOcupado\}/);
 });
 
-test('identidade visual do dashboard nas telas ativas (vidro, acento, sombra)', () => {
+test('identidade "Passe" nas telas ativas: comanda é ficha plana com régua de etapa', () => {
   for (const classe of ['ops-stage', 'ops-sessao', 'ops-card', 'ops-pill']) {
     assert.ok(css.includes('.' + classe), `classe ${classe} definida`);
   }
-  // A camada de vidro do palco não escreve cor literal: tudo vem de token.
+  // A camada visual não escreve cor literal: tudo vem de token.
   assert.doesNotMatch(css, /#[0-9a-fA-F]{3,8}\b|rgba?\(/, 'operacional.css sem hex/rgba literais');
-  assert.match(css, /border-radius:\s*var\(--radius-lg\)/);
-  assert.match(css, /box-shadow:[^;]*inset 0 1px 0/);
-  assert.match(css, /color-mix\(in srgb, var\(--ops-accent\)/);
   assert.match(fila, /import "\.\.\/screens\/operacional\.css"/);
-  // Contraste: texto principal e muted claros sobre o vidro escuro, agora por token.
-  assert.match(css, /color:\s*var\(--stage-ink\)/);
-  assert.match(css, /color:\s*var\(--stage-ink-muted\)/);
+
+  // A comanda é uma ficha de papel: superfície opaca, contorno de 1px e a
+  // régua da etapa no topo. Sem vidro, sem brilho interno, sem desfoque.
+  const cartao = /\.ops-card \{([^}]*)\}/.exec(css);
+  assert.ok(cartao, 'regra .ops-card');
+  assert.match(cartao[1], /border: 1px solid var\(--line-strong\)/);
+  assert.match(cartao[1], /border-top: 3px solid var\(--ops-accent\)/);
+  assert.match(cartao[1], /border-radius: var\(--radius-md\)/);
+  assert.match(cartao[1], /background: var\(--surface-raised\)/);
+  assert.doesNotMatch(css, /backdrop-filter/, 'sem vidro');
+  assert.doesNotMatch(css, /inset 0 1px 0/, 'sem brilho interno de vidro');
+  assert.doesNotMatch(css, /var\(--stage-/, 'tokens do palco antigo não existem mais');
+
+  // A cor da etapa vem de uma variável só, definida por estação.
+  assert.match(css, /\.ops-stage \{\s*--ops-accent: var\(--route-active\);/);
+  // Contraste: texto e texto secundário pelos tokens semânticos do tema.
+  assert.match(css, /color:\s*var\(--text\)/);
+  assert.match(css, /color:\s*var\(--text-muted\)/);
+  // Atraso não depende só de cor: há uma faixa com texto além do contorno.
+  assert.match(css, /\.ops-card\[data-atrasado="true"\] \{\s*border-color: var\(--status-danger\);/);
+  assert.match(css, /\.ops-card__alerta \{[^}]*background: var\(--status-danger\);[^}]*color: var\(--status-danger-contrast\);/);
+  assert.match(fila, /ops-card__alerta/);
+
+  // Hierarquia das ações: a unidade é o item, então a ação do item é a
+  // principal (tinta cheia) e a da comanda inteira é secundária (contorno).
+  assert.match(css, /\.ops-card__acao \{\s*border-color: var\(--brand\);\s*background: var\(--brand\);\s*color: var\(--brand-contrast\);/);
+  assert.doesNotMatch(css, /\.ops-card__todos \{[^}]*background: var\(--brand\)/, 'a ação da comanda não disputa com a do item');
 });
 
-test('linguagem visual do dashboard chega ao caixa e ao PWA sem perder contraste', () => {
-  const index = read('src/index.css');
+test('a ficha do passe chega ao caixa, ao panorama e ao PWA sem perder contraste', () => {
+  const passe = read('src/styles/passe.css');
   const caixa = read('src/screens/Caixa.tsx');
   const pwa = read('public/garcom-pwa/styles.css');
   const sw = read('public/garcom-pwa/sw.js');
 
-  assert.match(index, /\.ops-card-surface \{/);
-  assert.match(index, /color-mix\(in srgb, var\(--surface-raised\) 93%, var\(--brand-surface\)\)/);
-  assert.match(index, /var\(--shadow-card-hover/);
-  assert.equal((caixa.match(/ops-card-surface/g) || []).length, 2, 'lista e comanda do caixa usam a superfície');
+  // Uma superfície de cartão para o produto inteiro, definida uma vez.
+  assert.match(passe, /\.ficha,\s*\[data-ficha\] \{\s*background: var\(--surface-raised\);\s*box-shadow: var\(--shadow-card\);/);
+  assert.match(passe, /button\.ficha:hover,\s*\[data-ficha\]:hover \{\s*border-color: var\(--line-strong\);\s*box-shadow: var\(--shadow-card-hover\);/);
+  assert.equal((caixa.match(/"ficha |className="ficha /g) || []).length, 2, 'lista e comanda do caixa usam a ficha');
+  assert.match(read('src/screens/admin/PanoramaMesas.tsx'), /<article\s+data-ficha\b/);
 
-  assert.match(pwa, /backdrop-filter: blur\(14px\) saturate\(140%\)/);
-  assert.match(pwa, /\.order \{[\s\S]*?var\(--shadow-card-hover\)/);
-  assert.match(pwa, /scrollbar-width: thin/);
+  // PWA do garçom: mesmo cartão plano, sem vidro.
+  assert.match(pwa, /\.order \{[^}]*box-shadow: var\(--shadow-card\);/);
+  assert.match(pwa, /\.order:hover \{[^}]*box-shadow: var\(--shadow-card-hover\);/);
+  assert.doesNotMatch(pwa, /backdrop-filter/);
   assert.match(sw, /garcom-pwa-shell-v(3[3-9]|[4-9]\d)/, 'cache novo para os aparelhos pegarem o CSS');
 
-  // Cartões de vidro do panorama/mapa recebem o movimento por cartão.
-  assert.match(index, /\[data-glass-card\] \{/);
-  assert.match(index, /article\[data-glass-card\] \{\s*animation: glass-card-in/);
-  assert.match(index, /@media \(prefers-reduced-motion: reduce\)[\s\S]{0,120}article\[data-glass-card\]/);
-  assert.match(read('src/screens/admin/PanoramaMesas.tsx'), /data-glass-card/);
+  // Movimento: a página entra uma vez; os cartões não animam um a um. Quem
+  // pede menos movimento não recebe nenhum.
+  assert.match(passe, /\.anim-ticket \{\s*animation: passe-entrar var\(--dur-base\) var\(--ease-out\) both;/);
+  assert.match(read('src/components/OpsShell.tsx'), /<main className="anim-ticket /);
+  assert.doesNotMatch(passe, /\[data-ficha\][^{]*\{[^}]*animation:/, 'cartão não tem animação própria');
+  assert.match(passe, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]{0,200}animation-duration: 0\.01ms !important;/);
 });

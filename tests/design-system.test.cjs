@@ -8,30 +8,11 @@ const ts = require("typescript");
 const read = (p) => fs.readFileSync(p, "utf8");
 const tokens = read("public/garcom-pwa/design-tokens.css");
 
-function extractVars(block) {
-  return Object.fromEntries(
-    [...block.matchAll(/(--[\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]),
-  );
-}
+const { temaResolvido, superficieDoCardapio, contraste: contrast, misturar, blocos } = require("./helpers/tokens.cjs");
 
-const primBlock = tokens.slice(0, tokens.indexOf('[data-theme="claro"]'));
-const lightBlock = tokens.slice(
-  tokens.indexOf('[data-theme="claro"]'),
-  tokens.indexOf("@media (prefers-color-scheme: dark)"),
-);
-const darkBlock = tokens.slice(tokens.indexOf(':root[data-theme="escuro"]'));
-
-const primitives = extractVars(primBlock);
-const resolveVar = (val) => {
-  const m = /^var\((--[\w-]+)\)$/.exec(val || "");
-  return m ? primitives[m[1]] || val : val;
-};
-const light = Object.fromEntries(
-  Object.entries(extractVars(lightBlock)).map(([k, v]) => [k, resolveVar(v)]),
-);
-const dark = Object.fromEntries(
-  Object.entries(extractVars(darkBlock)).map(([k, v]) => [k, resolveVar(v)]),
-);
+// Tokens de cada tema com as referências var(--x) já resolvidas.
+const light = temaResolvido("claro");
+const dark = temaResolvido("escuro");
 
 test("React e PWA importam fonte única de tokens, override completo do Tailwind e bootstrap compartilhado", () => {
   const spaCss = read("src/index.css");
@@ -48,73 +29,141 @@ test("React e PWA importam fonte única de tokens, override completo do Tailwind
   assert.doesNotMatch(tokens, /#ffffff\b|#fff\b|#000000\b|#000\b/i, "proibido branco ou preto puros nos tokens");
 });
 
-test("fallbacks inline do React não divergem dos tokens semânticos compartilhados", () => {
+test("tema.ts não escreve token inline: a folha de estilo é a única dona dos valores", () => {
   const code = ts.transpileModule(read("src/lib/tema.ts"), {
     compilerOptions: { module: ts.ModuleKind.CommonJS },
   }).outputText;
-  for (const [themeName, expected] of [
-    ["claro", light],
-    ["escuro", dark],
-  ]) {
+  for (const themeName of ["claro", "escuro"]) {
     const values = {};
+    const meta = {};
+    const root = {
+      style: {
+        setProperty(k, v) {
+          values[k] = v;
+        },
+      },
+      setAttribute() {},
+      getAttribute() {
+        return null;
+      },
+      classList: { toggle() {} },
+    };
     const context = {
       exports: {},
       document: {
-        documentElement: {
-          style: {
-            setProperty(k, v) {
-              values[k] = v;
-            },
-          },
-          setAttribute() {},
-          getAttribute() {
-            return null;
-          },
-          classList: { toggle() {} },
-        },
+        documentElement: root,
         querySelector() {
-          return null;
+          return { setAttribute: (k, v) => (meta[k] = v) };
         },
       },
+      getComputedStyle: () => ({ getPropertyValue: (nome) => (nome === "--surface" ? (themeName === "claro" ? light : dark)["--surface"] : "") }),
       localStorage: { setItem() {}, getItem() { return null; } },
       window: { dispatchEvent() {} },
       CustomEvent: class {},
     };
     vm.runInNewContext(code, context);
     context.exports.aplicarTema(themeName);
-    for (const [key, value] of Object.entries(values)) {
-      assert.equal(value.toLowerCase(), String(expected[key]).toLowerCase(), `${themeName}: ${key}`);
-    }
+    // Token inline no <html> vence a folha de estilo: travaria a troca de tema
+    // e apagaria a identidade própria do cardápio do cliente.
+    assert.deepEqual(values, {}, `${themeName}: aplicarTema não fixa tokens inline`);
+    assert.equal(meta.content, (themeName === "claro" ? light : dark)["--surface"], `${themeName}: theme-color lê o --surface computado`);
   }
+  assert.doesNotMatch(read("src/lib/tema.ts"), /style\.setProperty\(\s*["'`]--/);
 });
 
-function luminance(hex) {
-  const values = hex
-    .replace("#", "")
-    .match(/../g)
-    .map((c) => parseInt(c, 16) / 255)
-    .map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
-  return values[0] * 0.2126 + values[1] * 0.7152 + values[2] * 0.0722;
-}
-function contrast(a, b) {
-  const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m);
-  return (x + 0.05) / (y + 0.05);
-}
+test("cores repetidas fora do CSS acompanham os tokens (barra do navegador, manifest e QR Code)", () => {
+  const cardapio = superficieDoCardapio();
+  const script = read("public/garcom-pwa/theme-init.js");
+  // theme-init.js roda antes de o CSS carregar: os quatro literais dele têm de
+  // ser o --surface de cada identidade em cada tema.
+  for (const [hash, pathname, esperado] of [
+    ["#/dashboard", "/", { claro: light["--surface"], escuro: dark["--surface"] }],
+    ["#/mesa/abc", "/", cardapio],
+    ["", "/garcom-pwa/", { claro: light["--surface"], escuro: dark["--surface"] }],
+    ["#/mesa/abc", "/garcom-pwa/", { claro: light["--surface"], escuro: dark["--surface"] }],
+  ]) {
+    for (const tema of ["claro", "escuro"]) {
+      const meta = {};
+      const root = { style: {}, setAttribute() {}, classList: { toggle() {} } };
+      vm.runInNewContext(script, {
+        document: {
+          documentElement: root,
+          querySelector: (seletor) => (seletor === 'meta[name="theme-color"]' ? { setAttribute: (k, v) => (meta[k] = v) } : null),
+        },
+        localStorage: { getItem: () => tema },
+        location: { hash, pathname },
+        window: {},
+      });
+      assert.equal(meta.content, esperado[tema], `theme-init em ${pathname}${hash} (${tema})`);
+    }
+  }
+  // Valor escrito no HTML para o primeiro instante, antes de qualquer script.
+  assert.match(read("index.html"), new RegExp(`<meta name="theme-color" content="${light["--surface"]}"`));
+  assert.match(read("public/garcom-pwa/index.html"), new RegExp(`<meta name="theme-color" content="${light["--surface"]}"`));
+  // O PWA troca a cor da barra ao alternar o tema.
+  const app = read("public/garcom-pwa/app.js");
+  assert.ok(
+    app.includes(`meta.setAttribute('content',next==='escuro'?'${dark["--surface"]}':'${light["--surface"]}')`),
+    "app.js do PWA usa o --surface de cada tema na barra do navegador",
+  );
+  // Instalação do PWA: fundo da abertura = papel; cor do sistema = tinta da marca.
+  const manifest = JSON.parse(read("public/garcom-pwa/manifest.webmanifest"));
+  assert.equal(manifest.background_color, light["--surface"]);
+  assert.equal(manifest.theme_color, blocos().primitivos.get("--passe-tinta-700"));
+  // O QR Code é desenhado em SVG com cores fixas (precisa ser lido por câmera
+  // nos dois temas): os literais de tema.ts são os tokens --qr-*.
+  const tema = read("src/lib/tema.ts");
+  const qr = /QR_SVG_COLORS = \{\s*fg: "(#[0-9a-f]{6})",\s*bg: "(#[0-9a-f]{6})",\s*\}/.exec(tema);
+  assert.ok(qr, "QR_SVG_COLORS precisa existir em src/lib/tema.ts");
+  for (const t of [light, dark]) {
+    assert.equal(qr[1], t["--qr-ink"], "QR_SVG_COLORS.fg = --qr-ink");
+    assert.equal(qr[2], t["--qr-paper"], "QR_SVG_COLORS.bg = --qr-paper");
+  }
+  assert.ok(contrast(qr[1], qr[2]) >= 12, "o QR Code mantém contraste alto para a câmera");
+});
 
 test("tokens semânticos atendem contraste WCAG AA nos dois temas", () => {
   for (const [label, theme] of [
     ["claro", light],
     ["escuro", dark],
   ]) {
-    assert.ok(contrast(theme["--text"], theme["--surface"]) >= 7, `${label}: --text sobre --surface`);
-    assert.ok(contrast(theme["--text"], theme["--surface-raised"]) >= 7, `${label}: --text sobre --surface-raised`);
-    assert.ok(contrast(theme["--text-muted"], theme["--surface-raised"]) >= 4.5, `${label}: --text-muted`);
-    assert.ok(contrast(theme["--brand"], theme["--brand-contrast"]) >= 4.5, `${label}: botão primário`);
-    assert.ok(contrast(theme["--brand-ink"], theme["--surface-raised"]) >= 4.5, `${label}: --brand-ink`);
-    assert.ok(contrast(theme["--status-success-ink"], theme["--surface-raised"]) >= 4.5, `${label}: success-ink`);
-    assert.ok(contrast(theme["--status-warning-ink"], theme["--surface-raised"]) >= 4.5, `${label}: warning-ink`);
-    assert.ok(contrast(theme["--status-info-ink"], theme["--surface-raised"]) >= 4.5, `${label}: info-ink`);
-    assert.ok(contrast(theme["--status-danger-ink"], theme["--surface-raised"]) >= 4.5, `${label}: danger-ink`);
+    const par = (a, b) => contrast(misturar(theme[a]), misturar(theme[b]));
+    assert.ok(par("--text", "--surface") >= 7, `${label}: --text sobre --surface`);
+    assert.ok(par("--text", "--surface-raised") >= 7, `${label}: --text sobre --surface-raised`);
+    assert.ok(par("--text", "--surface-sunken") >= 7, `${label}: --text sobre --surface-sunken`);
+    assert.ok(par("--text-muted", "--surface-raised") >= 4.5, `${label}: --text-muted`);
+    assert.ok(par("--text-muted", "--surface") >= 4.5, `${label}: --text-muted sobre a página`);
+    assert.ok(par("--text-muted", "--surface-sunken") >= 4.5, `${label}: --text-muted sobre --surface-sunken`);
+    assert.ok(par("--text-subtle", "--surface-raised") >= 4.5, `${label}: --text-subtle`);
+    assert.ok(par("--text-subtle", "--surface") >= 4.5, `${label}: --text-subtle sobre a página`);
+    assert.ok(par("--brand", "--brand-contrast") >= 4.5, `${label}: botão primário`);
+    assert.ok(par("--brand-hover", "--brand-contrast") >= 4.5, `${label}: botão primário em hover`);
+    assert.ok(par("--brand-ink", "--surface-raised") >= 4.5, `${label}: --brand-ink`);
+    assert.ok(par("--brand-ink", "--surface") >= 4.5, `${label}: --brand-ink sobre a página`);
+    assert.ok(par("--brand-ink", "--brand-surface") >= 4.5, `${label}: --brand-ink sobre --brand-surface`);
+    assert.ok(par("--accent-ink", "--surface-raised") >= 4.5, `${label}: --accent-ink`);
+    assert.ok(par("--accent-ink", "--accent-surface") >= 4.5, `${label}: --accent-ink sobre --accent-surface`);
+    for (const estado of ["success", "warning", "info", "danger"]) {
+      assert.ok(par(`--status-${estado}-ink`, "--surface-raised") >= 4.5, `${label}: ${estado}-ink`);
+      assert.ok(par(`--status-${estado}-ink`, "--surface") >= 4.5, `${label}: ${estado}-ink sobre a página`);
+      assert.ok(par(`--status-${estado}-ink`, `--status-${estado}-surface`) >= 4.5, `${label}: ${estado}-ink sobre a própria superfície`);
+      assert.ok(par(`--status-${estado}`, `--status-${estado}-contrast`) >= 4.5, `${label}: texto sobre o estado ${estado} cheio`);
+    }
+    // Plaquinha da mesa: número e rótulo.
+    assert.ok(par("--plaque-text", "--plaque") >= 7, `${label}: número da plaquinha`);
+    assert.ok(par("--plaque-label", "--plaque") >= 4.5, `${label}: rótulo da plaquinha`);
+    // Faixa de tinta (barra lateral e rodapé do PWA).
+    assert.ok(par("--ink-band-text", "--ink-band") >= 7, `${label}: texto na faixa de tinta`);
+    assert.ok(par("--ink-band-muted", "--ink-band") >= 4.5, `${label}: texto secundário na faixa de tinta`);
+    assert.ok(par("--ink-band-signal", "--ink-band") >= 4.5, `${label}: sinal na faixa de tinta`);
+    assert.ok(par("--ink-band-text", "--ink-band-raised") >= 7, `${label}: texto na estação ativa`);
+    // Contorno de campo e foco precisam de 3:1 contra o fundo (WCAG 1.4.11).
+    assert.ok(par("--line-strong", "--surface-raised") >= 3, `${label}: contorno de campo`);
+    assert.ok(par("--line-strong", "--surface") >= 3, `${label}: contorno de campo sobre a página`);
+    assert.ok(par("--focus-ring", "--surface-raised") >= 3, `${label}: anel de foco`);
+    assert.ok(par("--focus-ring", "--surface") >= 3, `${label}: anel de foco sobre a página`);
+    // Papel do QR Code: tinta escura sobre papel claro nos dois temas.
+    assert.ok(par("--qr-ink", "--qr-paper") >= 12, `${label}: QR Code`);
   }
 });
 
@@ -180,29 +229,32 @@ test("PWA renderiza múltiplos pedidos recolhidos por padrão com expansão inli
 });
 
 
-test("fontes Fraunces + Plus Jakarta Sans + JetBrains Mono (~150 KB máx), cantos suaves e sprite Phosphor fazem parte do shell offline", () => {
+test("fonte Archivo (até 100 KB), cantos curtos e sprite Phosphor fazem parte do shell offline", () => {
   const sw = read("public/garcom-pwa/sw.js");
   for (const asset of [
     "design-tokens.css",
     "theme-init.js",
     "icons.svg",
-    "fonts/fraunces-latin-soft-normal.woff2",
-    "fonts/plus-jakarta-sans-latin-wght-normal.woff2",
-    "fonts/jetbrains-mono-latin-wght-normal.woff2",
+    "fonts/archivo-latin-wdth-normal.woff2",
     "brand-mark.webp",
     "brand-wordmark.webp",
   ]) {
     assert.ok(sw.includes("'./" + asset + "'"), asset + " está no precache");
     assert.ok(fs.existsSync("public/garcom-pwa/" + asset), asset + " existe");
   }
-  const fontBytes =
-    fs.statSync("public/garcom-pwa/fonts/fraunces-latin-soft-normal.woff2").size +
-    fs.statSync("public/garcom-pwa/fonts/plus-jakarta-sans-latin-wght-normal.woff2").size +
-    fs.statSync("public/garcom-pwa/fonts/jetbrains-mono-latin-wght-normal.woff2").size;
-  assert.ok(fontBytes <= 155 * 1024, `orçamento de fontes respeitado (${fontBytes} bytes)`);
+  // Nada no precache aponta para arquivo que não existe (um 404 derruba a
+  // instalação inteira do service worker).
+  const lista = /const SHELL=\[([^\]]*)\]/.exec(sw);
+  assert.ok(lista, "lista SHELL do service worker");
+  for (const item of lista[1].match(/'[^']+'/g).map((x) => x.slice(1, -1))) {
+    if (item === "./") continue;
+    assert.ok(fs.existsSync(require("node:path").join("public/garcom-pwa", item)), `${item} do precache existe`);
+  }
+  const fontBytes = fs.statSync("public/garcom-pwa/fonts/archivo-latin-wdth-normal.woff2").size;
+  assert.ok(fontBytes <= 100 * 1024, `orçamento de fontes respeitado (${fontBytes} bytes)`);
   assert.match(tokens, /font-display:\s*swap/);
-  assert.match(tokens, /--radius-md:\s*16px/);
-  assert.match(tokens, /--radius-lg:\s*20px/);
+  assert.match(tokens, /--radius-md:\s*8px/);
+  assert.match(tokens, /--radius-lg:\s*10px/);
   assert.doesNotMatch(read("index.html"), /fonts\.googleapis\.com/);
   assert.ok(fs.existsSync("docs/DESIGN_SYSTEM.md"), "docs/DESIGN_SYSTEM.md existe");
 });

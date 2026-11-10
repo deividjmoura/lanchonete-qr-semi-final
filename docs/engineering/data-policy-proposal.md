@@ -30,7 +30,7 @@ A inspeção de `public/garcom-pwa/offline.js` e `app.js` confirma:
 - `localStorage` mantém `waiter-token` (credencial bearer), preferências de tema e notificações, identificadores de avisos já exibidos e tentativa de pagamento pendente com sessão, mesa, valor, forma de pagamento e chave idempotente.
 - A exportação de pedidos pendentes remove `ownerToken` do JSON exportado. Isso não significa que a credencial deixe de existir no IndexedDB original.
 - Não foi encontrada rotina de expurgo automático da store local de pedidos. O código preserva pendências para replay idempotente; a retenção efetiva depende do uso do app, do usuário e do navegador. Limpar dados do site/desinstalar pode eliminar pendências ainda não sincronizadas.
-- O Service Worker usa `garcom-pwa-shell-v42`, armazena somente arquivos estáticos do shell e ignora `/api/`; respostas de API não são cacheadas.
+- O Service Worker usa `garcom-pwa-shell-v43`, armazena somente arquivos estáticos do shell e ignora `/api/`; respostas de API não são cacheadas.
 
 A sessão interna de funcionário usa o cookie `lqr_session` com atributos `HttpOnly`, `SameSite=Lax`, `Secure` em produção e validade configurada de 12 horas. O código remove registros expirados de `staff_sessoes` em ciclos de 30 minutos. Isso não deve ser confundido com o token bearer individual do garçom salvo no navegador.
 
@@ -104,8 +104,9 @@ A rota exige papel admin, opera em dry-run por padrão e exige confirmação exp
 
 ## 5. Atendimento a solicitações de titulares
 
-Canal e procedimento estão definidos em **05/11/2026**:
-`dejesusdemouradeivid@gmail.com` responde em até 15 dias, e o passo a passo
+Canal e procedimento estão definidos desde **05/11/2026**; o endereço do
+canal foi alterado em **10/11/2026**:
+`servicosdegestaoqradmin@gmail.com` responde em até 15 dias, e o passo a passo
 (papéis, protocolo sem duplicar dado pessoal, confirmação de identidade,
 consulta somente leitura, análise de vínculos, prazos e o que não prometer)
 está em **`docs/engineering/procedimento-titulares.md`**. O registro é manual
@@ -115,7 +116,7 @@ está em **`docs/engineering/procedimento-titulares.md`**. O registro é manual
 
 - [ ] Confirmar as finalidades e os campos que realmente precisam ser coletados no atendimento.
 - [x] Confirmar a identificação legal do controlador (nome empresarial e CNPJ/endereço quando aplicável) e o estabelecimento a que esta instalação corresponde. — **05/11/2026:** MEI `69.987.201 DEIVID DE JESUS DE MOURA`, CNPJ 69.987.201/0001-20 (`docs/FORNECEDOR-E-SERVICOS-QR-ADMIN.md`).
-- [x] Confirmar se o e-mail atualmente publicado como contato de privacidade é canal oficial, monitorado e autorizado para receber solicitações de titulares. — **05/11/2026:** `dejesusdemouradeivid@gmail.com`, com resposta em até 15 dias.
+- [x] Confirmar se o e-mail atualmente publicado como contato de privacidade é canal oficial, monitorado e autorizado para receber solicitações de titulares. — **05/11/2026:** canal confirmado, com resposta em até 15 dias. **10/11/2026:** o endereço passou a ser `servicosdegestaoqradmin@gmail.com`; a mesma confirmação de monitoramento vale para a nova caixa.
 - [x] Confirmar fornecedores efetivamente contratados, suboperadores, local de armazenamento e transferências internacionais a partir dos contratos/configuração reais. — **05/11/2026:** Railway (aplicação + PostgreSQL, região `us-east`) e Google OAuth quando habilitado. Contrato de tratamento (DPA) **ainda não firmado**; nenhum outro suboperador identificado.
 - [x] Aprovar prazos por classe, após validação contábil/jurídica. — **05/11/2026:** prazos aprovados em §3.1; validação contábil/jurídica segue como etapa do responsável.
 - [x] Definir quem aprova e com que frequência se executa a purga. — **05/11/2026:** administrador da instalação, revisão a cada 90 dias, sempre com prévia.

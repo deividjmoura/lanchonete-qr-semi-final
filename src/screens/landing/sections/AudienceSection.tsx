@@ -1,5 +1,4 @@
 import { SectionIntro } from "../components/SectionIntro";
-import { Icon } from "../components/Icon";
 
 const audiences = [
   "Restaurantes",
@@ -12,35 +11,27 @@ const audiences = [
 
 export function AudienceSection() {
   return (
-    <section className="audience-section" id="para-quem" aria-labelledby="audience-title">
-      <div className="page-shell audience-section__grid">
-        <div className="audience-section__copy">
-          <SectionIntro eyebrow="PARA QUEM SERVE" title="Para casas em que o pedido passa por muitas mãos." id="audience-title">
-            <p>
-              O QRAdmin atende a operação diária de negócios de alimentação — do atendimento no
-              salão ao trabalho de quem organiza a casa.
-            </p>
-          </SectionIntro>
-          <p className="audience-section__aside">
-            <span>01 / PERFIL</span>Feito para rotinas reais de salão, balcão e cozinha — sem
-            presumir um modelo único de atendimento.
+    <section className="publico" id="para-quem" aria-labelledby="audience-title">
+      <div className="page-shell publico__grade">
+        <SectionIntro
+          eyebrow="Para quem serve"
+          title="Para casas em que o pedido passa por muitas mãos."
+          id="audience-title"
+        >
+          <p>
+            O QR Admin atende a operação diária de negócios de alimentação — do atendimento no
+            salão ao trabalho de quem organiza a casa. Feito para rotinas reais de salão, balcão e
+            cozinha, sem presumir um modelo único de atendimento.
           </p>
-        </div>
-        <div className="audience-list-wrap">
-          <p className="audience-list-wrap__label">OPERAÇÕES DE ALIMENTAÇÃO</p>
-          <ul className="audience-list">
-            {audiences.map((audience, index) => (
-              <li key={audience}>
-                <span className="audience-list__number">0{index + 1}</span>
-                <span>{audience}</span>
-                <span className="audience-list__plus" aria-hidden="true">
-                  <Icon name="arrow-up-right" size={15} />
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="audience-list-wrap__foot">Segmentos atendidos pelo produto em operação.</p>
-        </div>
+        </SectionIntro>
+        <ul className="publico__lista" aria-label="Operações de alimentação atendidas">
+          {audiences.map((audience, index) => (
+            <li key={audience}>
+              <span className="dado publico__numero">0{index + 1}</span>
+              <span>{audience}</span>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );

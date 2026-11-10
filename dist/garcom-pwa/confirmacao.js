@@ -1,20 +1,24 @@
 (() => {
   if (window.confirmarQR) return;
+  /* Identidade "Passe": folha plana, cantos curtos, régua de 1px. No PWA do
+     garçom os tokens vêm de design-tokens.css; nas páginas estáticas antigas
+     (admin.html, caixa.html), que não carregam esse arquivo, vale o segundo
+     valor de cada var() — a mesma identidade, em tinta. */
   const css = `
-    .qr-confirm-overlay{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;padding:18px;background:rgba(5,8,18,.68);backdrop-filter:blur(7px)}
-    .qr-confirm-dialog{width:min(480px,100%);max-height:min(86dvh,760px);overflow:auto;border:1px solid var(--line-strong,var(--stage-line-4,#46516a));border-radius:18px;background:var(--surface-raised,var(--stage-panel,#171d2a));color:var(--text,var(--stage-ink,#f4f6ff));box-shadow:0 28px 90px rgba(0,0,0,.42);padding:24px;font:inherit}
-    .qr-confirm-head{display:flex;align-items:flex-start;gap:13px;padding-right:32px}
-    .qr-confirm-icon{display:grid;place-items:center;flex:none;width:42px;height:42px;border:1px solid var(--brand-border,var(--stage-violet-soft,#5b4aa0));border-radius:13px;background:var(--brand-surface,var(--stage-violet-soft,#28213f));color:var(--brand-ink,var(--stage-violet-text,#c4b5fd));font-size:21px}
-    .qr-confirm-eyebrow{margin:0 0 4px;color:var(--text-muted,var(--stage-ink-muted,#9aa4b8));font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
-    .qr-confirm-title{margin:0;font-size:20px;font-weight:800;line-height:1.2}
-    .qr-confirm-message{margin:18px 0 0;color:var(--text-muted,var(--stage-ink-muted,#b5bdcd));font-size:13px;line-height:1.65;white-space:pre-wrap}
-    .qr-confirm-input{display:block;width:100%;min-height:44px;margin-top:14px;padding:10px 12px;border:1px solid var(--line,var(--stage-line-4,#46516a));border-radius:9px;background:var(--surface-sunken,var(--stage-inset,#111724));color:inherit;font:inherit}
-    .qr-confirm-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:9px;margin-top:24px}
-    .qr-confirm-actions button{min-height:42px;padding:9px 15px;border:1px solid var(--line,var(--stage-line-4,#46516a));border-radius:9px;background:transparent;color:inherit;font:inherit;font-size:12px;font-weight:750;cursor:pointer}
-    .qr-confirm-actions .qr-confirm-primary{border-color:var(--brand,var(--stage-violet,#8170d8));background:var(--brand,var(--stage-violet,#8170d8));color:var(--brand-contrast,#fff)}
-    .qr-confirm-actions .qr-confirm-danger{border-color:var(--status-danger,var(--stage-danger-border,#b84b60));background:var(--status-danger,var(--stage-danger-surface,#57202d));color:var(--status-danger-contrast,#fff)}
-    .qr-confirm-actions button:focus-visible,.qr-confirm-input:focus-visible{outline:3px solid var(--focus,var(--stage-focus,#9f8cff));outline-offset:3px}
-    @media(max-width:480px){.qr-confirm-dialog{padding:20px}.qr-confirm-title{font-size:18px}}
+    .qr-confirm-overlay{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;padding:18px;background:var(--surface-overlay,rgba(2,8,15,.76))}
+    .qr-confirm-dialog{width:min(480px,100%);max-height:min(86dvh,760px);overflow:auto;border:1px solid var(--line-strong,#5a7b9c);border-radius:var(--radius-lg,10px);background:var(--surface-raised,#0f2338);color:var(--text,#eef2ec);box-shadow:var(--shadow-modal,0 28px 64px -24px rgba(2,8,15,.8));padding:22px;font:inherit}
+    .qr-confirm-head{display:flex;align-items:flex-start;gap:12px;padding-right:32px}
+    .qr-confirm-icon{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:var(--radius-sm,5px);background:var(--plaque,#e4cc94);color:var(--plaque-text,#081726);font-size:20px;font-weight:800;line-height:1}
+    .qr-confirm-eyebrow{margin:0 0 4px;color:var(--text-muted,#a9bccb);font-size:11px;font-weight:700;letter-spacing:.13em;text-transform:uppercase}
+    .qr-confirm-title{margin:0;font-size:20px;font-stretch:118%;font-weight:800;letter-spacing:-.012em;line-height:1.15}
+    .qr-confirm-message{margin:16px 0 0;color:var(--text-muted,#a9bccb);font-size:14px;line-height:1.6;white-space:pre-wrap}
+    .qr-confirm-input{display:block;width:100%;min-height:48px;margin-top:12px;padding:10px 12px;border:1px solid var(--line-strong,#5a7b9c);border-radius:var(--radius-sm,5px);background:var(--surface-sunken,#06121f);color:inherit;font:inherit}
+    .qr-confirm-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-top:22px;padding-top:16px;border-top:1px solid var(--line,#213b55)}
+    .qr-confirm-actions button{min-height:48px;padding:10px 16px;border:1px solid var(--line-strong,#5a7b9c);border-radius:var(--radius-sm,5px);background:transparent;color:inherit;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+    .qr-confirm-actions .qr-confirm-primary{border-color:var(--brand,#6cdccc);background:var(--brand,#6cdccc);color:var(--brand-contrast,#06222b)}
+    .qr-confirm-actions .qr-confirm-danger{border-color:var(--status-danger,#ffb0a6);background:var(--status-danger,#ffb0a6);color:var(--status-danger-contrast,#081726)}
+    .qr-confirm-actions button:focus-visible,.qr-confirm-input:focus-visible{outline:2px solid var(--focus-ring,#9be8dc);outline-offset:2px}
+    @media(max-width:480px){.qr-confirm-dialog{padding:18px}.qr-confirm-title{font-size:18px}}
   `;
   function estilos(){if(document.getElementById('qr-confirm-styles'))return;const s=document.createElement('style');s.id='qr-confirm-styles';s.textContent=css;document.head.appendChild(s)}
   function abrir({title,message,confirmText='Confirmar',cancelText='Cancelar',danger=false,inputLabel='',placeholder='',expectedText=''}){

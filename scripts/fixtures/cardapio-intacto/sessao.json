@@ -1,0 +1,109 @@
+{
+  "mesa": 3,
+  "sessaoAberta": true,
+  "sessaoId": 1,
+  "abertaEm": "2026-11-10T01:57:18.997Z",
+  "clienteNome": "Mariana Alves",
+  "pixInformadoEm": null,
+  "pixAvisos": [],
+  "pedidos": [
+    {
+      "id": 2,
+      "status": "entregue",
+      "criado_em": "2026-11-10T02:21:19.007Z",
+      "observacao_geral": "Molho da casa à parte.",
+      "cliente_nome": "Mariana Alves",
+      "garcom_nome": "Ana Ribeiro",
+      "claimed_at": null,
+      "editado_em": null,
+      "editadoEm": null,
+      "itens": [
+        {
+          "id": 2,
+          "produtoId": 6,
+          "nome": "Batata Rústica com Páprica",
+          "quantidade": 1,
+          "preco_unitario": "28.50",
+          "ponto_carne": null,
+          "observacao": null,
+          "status": "entregue",
+          "setor": "cozinha",
+          "adicionais": [],
+          "remocoes": [],
+          "totalLinha": 28.5
+        }
+      ],
+      "totalPedido": 28.5,
+      "podeEditar": false
+    },
+    {
+      "id": 1,
+      "status": "em_producao",
+      "criado_em": "2026-11-10T02:30:19.000Z",
+      "observacao_geral": "Se possível, trazer a bebida antes dos lanches.",
+      "cliente_nome": "Mariana Alves",
+      "garcom_nome": "Ana Ribeiro",
+      "claimed_at": null,
+      "editado_em": null,
+      "editadoEm": null,
+      "itens": [
+        {
+          "id": 1,
+          "produtoId": 1,
+          "nome": "X-Bacon da Casa",
+          "quantidade": 1,
+          "preco_unitario": "32.00",
+          "ponto_carne": "AO_PONTO",
+          "observacao": "Sem cebola; maionese à parte.",
+          "status": "em_producao",
+          "setor": "cozinha",
+          "adicionais": [
+            {
+              "id": 1,
+              "nome": "Cheddar extra",
+              "preco": 5.5
+            }
+          ],
+          "remocoes": [
+            "Cebola"
+          ],
+          "totalLinha": 37.5
+        }
+      ],
+      "totalPedido": 37.5,
+      "podeEditar": false
+    },
+    {
+      "id": 3,
+      "status": "em_producao",
+      "criado_em": "2026-11-10T02:33:19.009Z",
+      "observacao_geral": null,
+      "cliente_nome": "Mariana Alves",
+      "garcom_nome": "Ana Ribeiro",
+      "claimed_at": null,
+      "editado_em": null,
+      "editadoEm": null,
+      "itens": [
+        {
+          "id": 3,
+          "produtoId": 19,
+          "nome": "Chopp Pilsen 300 ml",
+          "quantidade": 2,
+          "preco_unitario": "11.50",
+          "ponto_carne": null,
+          "observacao": null,
+          "status": "em_producao",
+          "setor": "bar",
+          "adicionais": [],
+          "remocoes": [],
+          "totalLinha": 23
+        }
+      ],
+      "totalPedido": 23,
+      "podeEditar": false
+    }
+  ],
+  "totalDevido": 28.5,
+  "valorPago": 0,
+  "valorRestante": 28.5
+}

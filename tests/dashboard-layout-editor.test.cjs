@@ -10,7 +10,6 @@ const dashboardCss = fs.readFileSync("src/screens/dashboard.css", "utf8");
 const admin = fs.readFileSync("src/screens/Admin.tsx", "utf8");
 const shell = fs.readFileSync("src/components/OpsShell.tsx", "utf8");
 const shellCss = fs.readFileSync("src/components/OpsShell.css", "utf8");
-const dock = fs.readFileSync("src/hooks/useDockMagnify.ts", "utf8");
 
 function carregarMotorLayout() {
   const filename = require.resolve("../src/lib/dashboard-layout.ts");
@@ -58,7 +57,7 @@ test("cards e painéis podem ser movidos, redimensionados e ocultados", () => {
   assert.match(dashboard, /onDragStart/);
   assert.match(dashboard, /onPointerDown=\{iniciarResize\}/);
   assert.match(dashboard, /onPointerMove=\{moverResize\}/);
-  assert.match(dashboard, /card-neon__resize-handle/);
+  assert.match(dashboard, /indicador__resize-handle/);
   assert.match(dashboard, /dashboard-widget__resize/);
   assert.match(dashboard, /alternarVisibilidade/);
   assert.match(dashboard, /visible: true/);
@@ -119,7 +118,7 @@ test("arraste usa a posição do ponteiro e não introduz controles direcionais"
   assert.match(dashboard, /placeWidget\(atual\.widgets, id/);
   assert.match(dashboard, /data-dashboard-drop-preview/);
   // O requisito é arraste real com o mouse: nada de setas ou botões de passo.
-  assert.doesNotMatch(dashboard, /card-neon__resize(?![-\w])/);
+  assert.doesNotMatch(dashboard, /indicador__resize(?![-\w])/);
   assert.doesNotMatch(dashboard, /aria-label=\{`Mover/);
   assert.doesNotMatch(dashboard, /title="Mover/);
 });
@@ -143,11 +142,14 @@ test("canvas usa grade ampla no desktop e empilha widgets sem destruir o layout 
   assert.match(dashboard, /gridRow: `\$\{layout\.y \+ 1\} \/ span \$\{layout\.h\}`/);
 });
 
-test("header e controles ficam transparentes e o dock horizontal usa magnificação", () => {
-  assert.match(shell, /ops-toolbar-dock/);
-  assert.match(shell, /toolbarDock\.onMouseMove/);
-  assert.match(shell, /toolbarDock\.setItemRef/);
-  assert.match(dock, /axis: "x" \| "y"/);
-  assert.match(shellCss, /\.ops-topbar\s*\{[^}]*background:\s*transparent\s*!important/s);
-  assert.match(shellCss, /\.ops-topbar \.ops-toolbar-dock button\s*\{[^}]*background:\s*transparent\s*!important/s);
+test("as ações rápidas do topo ficam numa barra sólida, sem efeito de dock", () => {
+  // A identidade anterior deixava o topo transparente e ampliava os ícones sob
+  // o ponteiro (dock). Na identidade "Passe" o topo é uma faixa de papel com
+  // régua, e os botões ficam parados: o lápis de edição do painel continua
+  // entrando por `toolbarAction`, que é o que este arquivo protege.
+  assert.match(shell, /<nav className="ops-toolbar-dock" aria-label="Ações rápidas">/);
+  assert.match(shell, /\{toolbarAction && <span className="ops-toolbar-dock-item">\{toolbarAction\}<\/span>\}/);
+  assert.doesNotMatch(shell, /toolbarDock|useDockMagnify|onMouseMove/);
+  assert.match(shellCss, /\.ops-topbar \{[^}]*background: var\(--surface\);[^}]*border-bottom: 1px solid var\(--line\)/s);
+  assert.doesNotMatch(shellCss, /!important/);
 });

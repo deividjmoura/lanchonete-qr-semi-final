@@ -9,39 +9,26 @@ export function FinalCta({ aoAbrirAcesso }: { aoAbrirAcesso: () => void }) {
 
   return (
     <section className="final-cta" aria-labelledby="final-cta-title">
-      <div className="page-shell final-cta__inner">
-        <div className="final-cta__copy">
-          <p className="eyebrow eyebrow--light">
-            <span className="eyebrow-rule" />
-            QRADMIN · GESTÃO PARA ALIMENTAÇÃO
+      <div className="page-shell final-cta__grade">
+        <div>
+          <p className="estacao">
+            <span className="estacao__no" aria-hidden="true" />
+            QR Admin · gestão para alimentação
           </p>
           <h2 id="final-cta-title">
-            Mais contexto para servir. <em>Mais clareza para gerir.</em>
+            Mais contexto para servir. <span className="grifo">Mais clareza</span> para gerir.
           </h2>
+        </div>
+        <div className="final-cta__lado">
           <p>Conheça o sistema em funcionamento e veja como ele se conecta à realidade da sua operação.</p>
-          <div className="final-cta__actions">
-            <a className="button button--paper" href="#funcionalidades" onClick={aoExplorar}>
+          <div className="final-cta__acoes">
+            <a className="botao botao--sinal" href="#funcionalidades" onClick={aoExplorar}>
               <span>Explorar os módulos</span>
-              <Icon name="arrow-right" size={17} />
+              <Icon name="arrow-up" size={18} />
             </a>
-            <AccessButton className="final-cta__access" onClick={aoAbrirAcesso} />
+            <AccessButton className="botao botao--sobre-tinta final-cta__access" onClick={aoAbrirAcesso} />
           </div>
         </div>
-        <div className="final-cta__motif" aria-hidden="true">
-          <span className="final-cta__motif-ring final-cta__motif-ring--outer" />
-          <span className="final-cta__motif-ring final-cta__motif-ring--inner" />
-          <span className="final-cta__motif-core">
-            <Icon name="qr" size={36} />
-          </span>
-          <span className="final-cta__motif-caption">
-            PEDIDO
-            <br />
-            EM FLUXO
-          </span>
-        </div>
-        <span className="final-cta__index" aria-hidden="true">
-          QR / 06
-        </span>
       </div>
     </section>
   );

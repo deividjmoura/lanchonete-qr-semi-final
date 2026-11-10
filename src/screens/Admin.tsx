@@ -100,7 +100,7 @@ export default function Admin({ secao }: { secao?: string }) {
           initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.2, 0, 0, 1] }}
         >
           {aba === "painel" && <Dashboard editMode={dashboardEditMode} />}
           {aba === "cardapio" && <Cardapio />}
@@ -448,7 +448,7 @@ function Cardapio() {
               </div>
 
               {open && (
-                <div className="border-t border-dashed border-line-strong">
+                <div className="border-t border-line-strong">
                   <div className="flex justify-end px-4 py-2 bg-surface-sunken border-b border-line">
                     <Btn size="sm" variant="secondary" onClick={() => setNovoAberto(true)}>
                       <Plus size={14} weight="bold" /> Produto nesta categoria
@@ -660,7 +660,7 @@ function ProdutoForm({
   return (
     <Modal className="admin-dialog" open={open} onClose={onClose} wide closeOnBackdrop={false}>
       <div className="p-5 sm:p-6">
-        <h3 className="font-display text-3xl font-bold tracking-tight text-text pb-3 border-b border-dashed border-line-strong mb-5">
+        <h3 className="font-display text-3xl font-bold tracking-tight text-text pb-3 border-b border-line-strong mb-5">
           {editando ? "Editar produto" : "Novo produto"}
         </h3>
 
@@ -705,7 +705,7 @@ function ProdutoForm({
               />
             </div>
             {foto.startsWith("data:") && (
-              <p className="mt-1.5 text-[10px] text-status-success-ink font-mono">
+              <p className="mt-1.5 text-[11px] text-status-success-ink font-mono">
                 WebP otimizado (~960px)
               </p>
             )}
@@ -729,7 +729,7 @@ function ProdutoForm({
               </select>
             </div>
 
-            <div className="pt-2 border-t border-dashed border-line space-y-2.5">
+            <div className="pt-2 border-t border-line space-y-2.5">
               <label className="flex items-center gap-2.5 cursor-pointer select-none">
                 <input
                   type="checkbox"
@@ -745,13 +745,13 @@ function ProdutoForm({
               {controlaEstoque && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted mb-1">
+                    <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-1">
                       Quantidade
                     </p>
                     <Input value={estoqueQtd} onChange={setEstoqueQtd} placeholder="0" type="number" />
                   </div>
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted mb-1">
+                    <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-1">
                       Alerta mínimo
                     </p>
                     <Input value={estoqueMin} onChange={setEstoqueMin} placeholder="0" type="number" />
@@ -760,7 +760,7 @@ function ProdutoForm({
               )}
             </div>
 
-            <div className="pt-2 border-t border-dashed border-line space-y-1.5">
+            <div className="pt-2 border-t border-line space-y-1.5">
               <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-text-muted">
                 Setor de preparo
               </p>
@@ -1022,7 +1022,7 @@ function Garcons() {
         <p className="font-mono text-[11px] text-text-muted truncate max-w-[15rem] sm:max-w-md">
           {g.token}
         </p>
-        <p className="font-mono text-[10px] text-text-subtle mt-0.5">
+        <p className="font-mono text-[11px] text-text-subtle mt-0.5">
           {g.entregas ?? 0} entrega{(g.entregas ?? 0) === 1 ? "" : "s"}
           {!g.ativo && " · inativo"}
         </p>
@@ -1037,7 +1037,7 @@ function Garcons() {
         className="inline-flex size-9 items-center justify-center rounded-sm border border-line bg-surface-sunken text-text-muted hover:text-text"
       >
         {copiado === g.id ? (
-          <span className="font-mono text-[10px] font-bold text-status-success-ink">OK</span>
+          <span className="font-mono text-[11px] font-bold text-status-success-ink">OK</span>
         ) : (
           <Copy size={15} />
         )}
@@ -1086,7 +1086,7 @@ function Garcons() {
         className="rounded-md border border-line bg-surface-raised p-5"
         aria-label="Desempenho de garçons por período"
       >
-        <div className="flex flex-wrap items-end justify-between gap-3 pb-4 border-b border-dashed border-line-strong mb-4">
+        <div className="flex flex-wrap items-end justify-between gap-3 pb-4 border-b border-line-strong mb-4">
           <div>
             <h3 className="font-display text-2xl font-bold tracking-tight text-text">
               Desempenho da equipe
@@ -1096,13 +1096,13 @@ function Garcons() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <label className="grid gap-1 text-[10px] font-mono uppercase tracking-wider text-text-muted">
+            <label className="grid gap-1 text-[11px] font-mono uppercase tracking-wider text-text-muted">
               De
               <input type="date" aria-label="Início do período" value={dataMetricas}
                 max={dataMetricasAte} onChange={(e) => setDataMetricas(e.target.value)}
                 className="h-10 rounded-sm border border-line-strong bg-surface-sunken px-3 font-mono text-xs text-text" />
             </label>
-            <label className="grid gap-1 text-[10px] font-mono uppercase tracking-wider text-text-muted">
+            <label className="grid gap-1 text-[11px] font-mono uppercase tracking-wider text-text-muted">
               Até
               <input type="date" aria-label="Fim do período" value={dataMetricasAte}
                 min={dataMetricas} onChange={(e) => setDataMetricasAte(e.target.value)}
@@ -1117,7 +1117,7 @@ function Garcons() {
         )}
         <div className="overflow-x-auto">
           <table role="table" className="admin-data-table w-full min-w-[1450px] text-sm text-left">
-            <thead className="border-b border-line font-mono text-[10px] uppercase tracking-wider text-text-muted">
+            <thead className="border-b border-line font-mono text-[11px] uppercase tracking-wider text-text-muted">
               <tr>
                 <th className="py-2.5 pr-3">Garçom</th>
                 <th className="py-2.5 px-2 text-right">Pedidos registrados</th>
@@ -1200,7 +1200,7 @@ function Garcons() {
       </section>
 
       <section className="rounded-md border border-line bg-surface-raised overflow-hidden">
-        <div className="p-5 flex flex-wrap items-end justify-between gap-3 border-b border-dashed border-line-strong">
+        <div className="p-5 flex flex-wrap items-end justify-between gap-3 border-b border-line-strong">
           <div>
             <h3 className="font-display text-2xl font-bold tracking-tight text-text leading-tight">
               Credenciais de garçom
@@ -1519,7 +1519,7 @@ function Relatorio() {
           <p className="font-display text-xl text-status-success-ink font-bold tnum mt-1">
             {BRL(totalCobrado)}
           </p>
-          <p className="font-mono text-[10px] text-text-muted mt-1">
+          <p className="font-mono text-[11px] text-text-muted mt-1">
             = vendas − descontos + serviço
           </p>
         </div>
@@ -1547,7 +1547,7 @@ function Relatorio() {
             Por dia
           </h3>
           <table role="table" className="admin-data-table w-full text-left text-sm">
-            <thead className="font-mono text-[10px] uppercase tracking-wider text-text-muted border-b border-line">
+            <thead className="font-mono text-[11px] uppercase tracking-wider text-text-muted border-b border-line">
               <tr>
                 <th className="py-2 pr-3">Dia</th>
                 <th className="py-2 pr-3">Contas</th>
@@ -1591,7 +1591,7 @@ function Relatorio() {
             Comissão atribuída ao garçom responsável por cada sessão fechada no período.
           </p>
           <table role="table" className="admin-data-table w-full text-left text-sm">
-            <thead className="font-mono text-[10px] uppercase tracking-wider text-text-muted border-b border-line">
+            <thead className="font-mono text-[11px] uppercase tracking-wider text-text-muted border-b border-line">
               <tr>
                 <th className="py-2 pr-3">Garçom</th>
                 <th className="py-2 pr-3">Contas</th>
@@ -1658,7 +1658,7 @@ function Relatorio() {
           </p>
         ) : (
           <table role="table" className="admin-data-table w-full text-left text-xs sm:text-sm">
-            <thead className="font-mono text-[10px] uppercase tracking-wider text-text-muted border-b border-line">
+            <thead className="font-mono text-[11px] uppercase tracking-wider text-text-muted border-b border-line">
               <tr>
                 <th className="py-2 pr-2">#</th>
                 <th className="py-2 pr-2">Mesa</th>
@@ -1807,7 +1807,7 @@ function HistoricoPedidos({ histFrom, setHistFrom, histTo, setHistTo }: {
 
   return (
     <section aria-label="Histórico de pedidos" className="rounded-md border border-line bg-surface-raised p-5">
-      <div className="flex flex-wrap items-end justify-between gap-3 pb-4 border-b border-dashed border-line-strong">
+      <div className="flex flex-wrap items-end justify-between gap-3 pb-4 border-b border-line-strong">
         <div>
           <h3 className="font-display text-2xl font-bold tracking-tight text-text">
             Histórico de pedidos
@@ -1903,7 +1903,7 @@ function HistoricoPedidos({ histFrom, setHistFrom, histTo, setHistTo }: {
                 )}
               </button>
               {isOpen && (
-                <div className="border-t border-dashed border-line px-3 py-3 space-y-2 bg-surface-sunken">
+                <div className="border-t border-line px-3 py-3 space-y-2 bg-surface-sunken">
                   <div className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-text-muted">
                     {criado && <span>Criado: {String(criado).slice(0, 19).replace("T", " ")}</span>}
                     {(p.garcom_nome || p.garcomNome) && (
@@ -1965,7 +1965,7 @@ function HistoricoPedidos({ histFrom, setHistFrom, histTo, setHistTo }: {
                       )}
                     </ListaLimitada>
                   )}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-dashed border-line">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-line">
                     <Btn
                       size="sm"
                       variant="outline"
@@ -2019,7 +2019,7 @@ function ComprovantesRecentes() {
 
   return (
     <section className="rounded-md border border-line bg-surface-raised overflow-hidden" aria-label="Comprovantes de contas fechadas">
-      <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-3 border-b border-dashed border-line-strong">
+      <div className="px-5 py-4 flex flex-wrap items-center justify-between gap-3 border-b border-line-strong">
         <div>
           <h3 className="font-display text-xl font-bold tracking-tight text-text">Comprovantes recentes</h3>
           <p className="text-xs text-text-muted mt-0.5">Reimpressão de consumo e pagamentos das últimas contas encerradas</p>
@@ -2349,7 +2349,7 @@ function Funcoes() {
               aria-controls="purgeRetentionInfo"
               aria-label="Prazos de retenção e o que esta anonimização faz"
               title="Prazos de retenção e o que esta anonimização faz"
-              className="mt-1 inline-grid h-7 w-7 shrink-0 place-items-center rounded-full border border-line-strong text-text-muted hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              className="mt-1 inline-grid h-7 w-7 shrink-0 place-items-center rounded-sm border border-line-strong text-text-muted hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             >
               <Info size={16} weight="regular" aria-hidden="true" />
             </button>

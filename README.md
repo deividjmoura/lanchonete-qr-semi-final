@@ -196,7 +196,7 @@ O primeiro login exige troca da senha de bootstrap. Não existe senha padrão. N
 | **npm run dev** | Interface Vite em desenvolvimento |
 | **npm start** | Inicialização pelo gate de migrations e servidor |
 | **npm run typecheck** | Verificação TypeScript |
-| **npm run build** | Build de produção da interface |
+| **npm run build** | Build de produção da interface. O `dist/` é versionado e servido como está: se o seu `.env` local tiver `NODE_ENV=development`, o Vite gera um build de desenvolvimento sem avisar — use `NODE_ENV=production npm run build`. `npm test` acusa um `dist/` de desenvolvimento que esteja no Git: ele confere o que já passou por `git add`, não a pasta em disco |
 | **npm run build:check** | Typecheck seguido do build |
 | **npm test** | Regressão sem as suítes que exigem PostgreSQL dedicado |
 | **npm run test:pg** | Suítes PostgreSQL; exige **DATABASE_URL** de banco de teste |
@@ -207,6 +207,8 @@ O primeiro login exige troca da senha de bootstrap. Não existe senha padrão. N
 | **npm run pg:local** | Sobe PostgreSQL local dedicado aos testes (encerre com Ctrl+C; os dados ficam em `.tmp-pgdata` entre execuções) |
 | **npm run db:seed** | Popula dados iniciais de demonstração, sem sobrescrever cardápio existente por padrão |
 | **npm run test:landing** | Inspeção visual e funcional da landing em 1440/768/390/320 px, modal de acesso, links e rotas preservadas; exige **BASE_URL** de servidor local |
+| **npm run test:contraste** | Mede no Chromium o contraste de cada texto renderizado, nos temas claro e escuro, em desktop e celular; exige **BASE_URL** de servidor local. Com `-- --com-equipe` inclui as telas internas (banco de demonstração) |
+| **npm run test:cardapio-intacto** | Prova de que o cardápio do cliente (`#/mesa/:token`) continua idêntico ao commit de referência: marcação, estilo computado, pixels e arquivos baixados |
 
 **Banco PostgreSQL local para testes:** `npm run pg:local` inicia um PostgreSQL embarcado na porta `55433`, com o banco `qradmin_test`. Em outro terminal, aplique o schema e rode a suíte:
 
@@ -237,11 +239,11 @@ A página inicial (`/`) é a landing comercial do QR Admin, integrada ao build d
 |---|---|---|
 | Landing comercial | `/` | Página inicial; capturas reais do sistema com dados fictícios |
 | Acesso da equipe | `/#/login` | Página de login preservada |
-| Apresentação institucional | `/apresentacao.html` | Página estática preservada |
-| Guia demonstrativo | `/guia-sistema.html` | Página estática preservada |
-| Privacidade e Termos | `/politica-de-privacidade.html`, `/termos-de-servico.html` | Preservados, também ligados no rodapé da landing |
+| Apresentação institucional | `/apresentacao.html` | Página estática, na mesma identidade do produto |
+| Guia demonstrativo | `/guia-sistema.html` | Página estática, na mesma identidade do produto |
+| Privacidade e Termos | `/politica-de-privacidade.html`, `/termos-de-servico.html`, `/termos-de-uso.html` | Texto legal preservado; ligados no rodapé da landing e do login |
 
-A landing usa os assets oficiais (`public/logo/qradmin-mark.png`) e as capturas de `public/assets/apresentacao/`, geradas por `scripts/capturar-apresentacao.mjs` em ambiente isolado. As fontes editoriais (DM Sans e DM Serif Display, licença SIL OFL) são servidas localmente em `public/fonts/landing/`.
+A landing usa o logotipo oficial (`public/logo/qradmin-mark.png`), o símbolo reduzido (`public/logo/simbolo.svg`) e as capturas de `public/assets/apresentacao/`, geradas por `scripts/capturar-apresentacao.mjs` em ambiente isolado — sempre que o visual de uma tela mudar, gere as capturas de novo. Landing, login, sistema, PWA do garçom e páginas estáticas compartilham a identidade "Passe" e uma única família tipográfica variável, Archivo (licença SIL OFL), servida localmente em `public/garcom-pwa/fonts/`. O cardápio do cliente mantém a identidade própria, com as fontes dele em `src/screens/cardapio-identidade/fontes/`.
 
 ### Contato e adesão
 
@@ -249,8 +251,8 @@ A seção **Contate-nos** (`/#contato`) fica antes do CTA final e repete os dois
 
 | Canal | Endereço | Origem |
 |---|---|---|
-| WhatsApp | `https://wa.me/5547996162721` | Mesmo número de `src/screens/Login.tsx` |
-| E-mail | `dejesusdemouradeivid@gmail.com` | Mesmo endereço de `src/screens/Login.tsx` |
+| WhatsApp | `https://wa.me/5547996162721` | `src/screens/landing/contato.ts` |
+| E-mail | `servicosdegestaoqradmin@gmail.com` | `src/screens/landing/contato.ts` |
 
 Os dois endereços estão centralizados em `src/screens/landing/contato.ts`. A seção também lista os três formatos de adesão (assinatura mensal, aquisição do sistema e venda exclusiva) **sem valores publicados**: preço, prazo e escopo ficam "sob consulta" e são confirmados na conversa.
 
@@ -261,6 +263,8 @@ O rodapé mantém **Contate-nos** ao lado de **Acesso ao sistema**. Durante a ro
 | Documento | Conteúdo |
 |---|---|
 | [Guia visual interativo](https://qradmin.up.railway.app/guia-sistema.html) | Demonstração navegável das áreas do produto. É uma página estática demonstrativa, não uma sessão conectada ao banco/API. |
+| [Design system "Passe"](docs/DESIGN_SYSTEM.md) | Identidade visual em vigor: tokens, tipografia, primitivos, navegação, a exceção do cardápio do cliente e as regras travadas por teste. |
+| [Relatório do rebranding](REBRANDING.md) | O que mudou e por quê, o que foi preservado, como foi verificado e o que conferir antes de mesclar. |
 | [PWA do garçom](docs/PWA-ATENDIMENTO-GARCOM.md) | Arquitetura, sincronização offline e comportamento da PWA. |
 | [Contrato do atendimento](docs/CONTRATO-ATENDIMENTO-GARCOM.md) | Estados dos itens, regras de autoria e rotas de entrega. |
 | [Importação de cardápio CSV](docs/IMPORTAR-CARDAPIO-CSV.md) | Formato e regras de importação. |
@@ -322,7 +326,7 @@ O status abaixo separa código integrado de validações que dependem de disposi
 O QR Admin é fornecido tecnicamente por **69.987.201 DEIVID DE JESUS DE MOURA**, Microempreendedor Individual (MEI), inscrito no **CNPJ 69.987.201/0001-20**, com situação cadastral ativa conforme Certificado da Condição de MEI emitido em 05/11/2026.
 
 - **Titular:** Deivid de Jesus de Moura.
-- **Contato profissional:** [dejesusdemouradeivid@gmail.com](mailto:dejesusdemouradeivid@gmail.com).
+- **Contato profissional:** [servicosdegestaoqradmin@gmail.com](mailto:servicosdegestaoqradmin@gmail.com).
 - **Produto:** QR Admin — sistema de pedidos por QR Code e gestão operacional para estabelecimento.
 - **Aplicação documentada:** [qradmin.up.railway.app](https://qradmin.up.railway.app/).
 - **Infraestrutura documentada:** Railway e PostgreSQL.

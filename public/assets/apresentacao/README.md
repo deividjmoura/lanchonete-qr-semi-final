@@ -28,13 +28,27 @@ Opcional: variantes `-mobile.webp` se houver ganho em srcset.
 ## Proveniência e atualização
 
 Os scripts e a seleção de telas vieram do PR #282 (commit `aadc1d7`).
-As dez capturas foram **regeneradas em 05/11/2026** sobre a main atual,
-com dados fictícios e sem interceptação da API. `gestao-cardapio` já mostra
-**Cardápio & Estoque**, integrado no PR #279.
+As dez capturas foram **regeneradas em 10/11/2026**, depois da troca da
+identidade visual (Passe — ver `docs/DESIGN_SYSTEM.md`), com dados fictícios e
+sem interceptação da API. Sete delas mostram a identidade nova. As três do
+cardápio do cliente (`cardapio-cliente`, `personalizacao-produto`,
+`comanda-cliente`) mostram a identidade própria do cardápio, que **não mudou**:
+só os dados do seed são outros.
 
-Validação local: 34 respostas 2xx na captura da SPA, 16 no PWA;
+Validação local dessa execução: 34 respostas 2xx na captura da SPA, 16 no PWA
+— os mesmos números da captura anterior, feita antes da troca de identidade;
 nenhuma chamada à API nas páginas estáticas. Acesso direto e refresh das
-páginas e carregamento das 10 imagens foram conferidos em Chromium.
+páginas e carregamento das imagens (10 na apresentação, 6 no guia) foram
+conferidos em Chromium.
+
+Capture sempre sobre um `dist/` de produção (`NODE_ENV=production npm run
+build`). Com build de desenvolvimento o React dispara os efeitos em dobro e a
+contagem de chamadas à API sobe (57 em vez de 34 na SPA) sem que nada tenha
+mudado no produto.
+
+Sempre que a aparência de uma tela capturada mudar, regenere as imagens: a
+landing, a apresentação e o guia mostram esses arquivos como "capturas reais",
+e uma captura antiga passaria a mostrar um produto que não existe mais.
 
 O seed **apaga os dados operacionais do banco alvo**. Use um banco exclusivo
 chamado **`qradmin_apresentacao_test`**, em loopback, nunca `qradmin_test`

@@ -1,259 +1,323 @@
-/* Navegação desktop em formato dock: ícones fixos, sem expansão nem placas. */
+/* ==========================================================================
+   CASCO DAS TELAS INTERNAS (cozinha, bar, caixa, administração)
+   Identidade "Passe": a navegação é uma linha de passe — um trajeto vertical
+   em que cada tela é uma estação quadrada; a estação atual acende em sinal.
+   No computador ela é um trilho fixo de 72px com ícone e nome; abaixo de
+   1024px vira uma gaveta, aberta pelo botão de menu da barra superior.
+   ========================================================================== */
+
+.ops-shell {
+  min-height: 100dvh;
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* ---------------------------------------------------------------- trilho -- */
+.ops-sidebar {
+  /* sobre a tinta, o anel de foco é o sinal */
+  --focus-ring: var(--ink-band-signal);
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  width: min(var(--sidebar-expanded), 86vw);
+  background: var(--surface-sidebar);
+  color: var(--sidebar-text);
+  border-right: 1px solid var(--sidebar-line);
+  transform: translateX(-102%);
+  visibility: hidden;
+  transition: transform var(--dur-base) var(--ease-out), visibility 0s linear var(--dur-base);
+}
+
+.ops-sidebar[data-open="true"] {
+  transform: none;
+  visibility: visible;
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+.ops-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  border: 0;
+  background: var(--surface-overlay);
+}
+
+.ops-sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 64px;
+  padding: 0 12px 0 18px;
+  border-bottom: 1px solid var(--sidebar-line);
+}
+
+.ops-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: var(--sidebar-text);
+  border-radius: var(--radius-sm);
+}
+
+.ops-brand-name {
+  font-stretch: var(--wdth-display);
+  font-weight: 800;
+  font-size: 1.0625rem;
+  letter-spacing: -0.015em;
+  line-height: 1;
+}
+
+.ops-brand-name b {
+  font-weight: 800;
+  color: var(--ink-band-signal);
+}
+
+.ops-sidebar-close,
+.ops-menu-trigger {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+}
+
+.ops-sidebar-close {
+  color: var(--sidebar-muted);
+  border: 1px solid var(--sidebar-line);
+}
+
+.ops-sidebar-close:hover {
+  color: var(--sidebar-text);
+}
+
+.ops-menu-trigger {
+  color: var(--text);
+  background: var(--surface-raised);
+  border: 1px solid var(--line-strong);
+}
+
+.ops-menu-trigger:hover {
+  background: var(--surface-hover);
+}
+
+/* a linha de passe */
+.ops-nav-list {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  padding: 14px 12px 20px 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.ops-nav-list::-webkit-scrollbar {
+  display: none;
+}
+
+.ops-nav-list::before {
+  content: "";
+  position: absolute;
+  top: 38px;
+  bottom: 44px;
+  left: 21px;
+  width: 1px;
+  background: var(--sidebar-line);
+}
+
+.ops-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  margin-left: 36px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  color: var(--sidebar-muted);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-align: left;
+  transition: color var(--dur-fast) var(--ease-snap), background-color var(--dur-fast) var(--ease-snap);
+}
+
+/* estação */
+.ops-nav-item::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -19px;
+  width: 9px;
+  height: 9px;
+  margin-top: -4.5px;
+  border: 1.5px solid var(--sidebar-muted);
+  border-radius: 2px;
+  background: var(--surface-sidebar);
+  transition: background-color var(--dur-fast) var(--ease-snap), border-color var(--dur-fast) var(--ease-snap);
+}
+
+.ops-nav-item:hover {
+  color: var(--sidebar-text);
+  background: color-mix(in srgb, var(--sidebar-text) 9%, transparent);
+}
+
+.ops-nav-item[data-active="true"] {
+  color: var(--sidebar-text);
+  background: color-mix(in srgb, var(--ink-band-signal) 14%, transparent);
+}
+
+.ops-nav-item[data-active="true"]::before {
+  border-color: var(--ink-band-signal);
+  background: var(--ink-band-signal);
+}
+
+.ops-nav-item[data-active="true"] .ops-nav-icon {
+  color: var(--ink-band-signal);
+}
+
+.ops-nav-icon {
+  flex: 0 0 auto;
+}
+
+.ops-sidebar-label {
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------- barra superior -- */
+.ops-main {
+  min-height: 100dvh;
+}
+
+.ops-topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.ops-home {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  color: var(--text);
+  border-radius: var(--radius-sm);
+}
+
+.ops-kicker {
+  color: var(--brand-ink);
+}
+
+.ops-title {
+  margin-top: 2px;
+  font-size: 1.375rem;
+  font-weight: 800;
+  line-height: 1.12;
+  color: var(--text);
+}
+
+.ops-toolbar-dock {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ops-toolbar-dock-item {
+  display: inline-flex;
+}
+
+@media (min-width: 640px) {
+  .ops-title {
+    font-size: 1.75rem;
+  }
+}
+
+@media (max-width: 479px) {
+  .ops-title {
+    font-size: 1.1875rem;
+  }
+
+  .ops-toolbar-dock {
+    gap: 4px;
+  }
+
+  .ops-toolbar-dock .qr-icon-button {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* --------------------------------------------- computador: trilho de 72px -- */
 @media (min-width: 1024px) {
   .ops-sidebar {
-    width: var(--sidebar-collapsed, 72px) !important;
-    overflow: visible;
-    border-right: 0 !important;
-    box-shadow: none;
-    transition: none !important;
+    width: var(--sidebar-collapsed);
+    transform: none;
+    visibility: visible;
+    transition: none;
   }
 
-  .ops-sidebar:hover,
-  .ops-sidebar:focus-within {
-    width: var(--sidebar-collapsed, 72px) !important;
+  .ops-sidebar-backdrop,
+  .ops-sidebar-close,
+  .ops-menu-trigger {
+    display: none;
   }
 
-  .ops-sidebar > div:first-child {
+  .ops-main {
+    margin-left: var(--sidebar-collapsed);
+  }
+
+  .ops-sidebar-head {
     justify-content: center;
-    padding-inline: 0;
+    padding: 0;
   }
 
-  .ops-sidebar .ops-brand {
-    justify-content: center;
-    width: 100%;
-  }
-
-  .ops-sidebar .ops-brand > .ops-sidebar-label {
+  .ops-brand-name {
     display: none;
   }
 
   .ops-nav-list {
-    align-items: center;
-    gap: 8px;
-    padding: 12px 0;
-    overflow: visible;
+    gap: 4px;
+    padding: 14px 0 20px;
+  }
+
+  .ops-nav-list::before {
+    top: 44px;
+    bottom: 50px;
+    left: 9px;
   }
 
   .ops-nav-item {
-    display: flex;
-    align-items: center;
+    flex-direction: column;
     justify-content: center;
-    width: 52px;
-    min-width: 52px;
-    height: 52px;
-    min-height: 52px;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    border-radius: 16px;
-    background: transparent !important;
-    color: var(--sidebar-muted);
-    transform-origin: center center !important;
-    transition: color 140ms ease, transform 120ms cubic-bezier(.2, 0, 0, 1);
+    gap: 4px;
+    min-height: 58px;
+    margin: 0 4px 0 15px;
+    padding: 6px 1px;
+    font-size: 11px;
+    font-stretch: var(--wdth-data);
+    font-weight: 650;
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+    text-align: center;
   }
 
-  .ops-nav-item:hover,
-  .ops-nav-item:focus-visible,
-  .ops-nav-item[data-active="true"] {
-    margin: 0;
-    border: 0;
-    border-radius: 16px;
-    background: transparent !important;
-    color: var(--brand);
-  }
-
-  .ops-nav-item > .ops-sidebar-label {
-    display: none !important;
-  }
-
-  .ops-nav-item::after {
-    content: attr(data-label);
-    position: absolute;
-    z-index: 100;
-    left: calc(100% + 12px);
-    top: 50%;
-    transform: translateY(-50%) translateX(-3px);
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-    color: var(--text);
-    font: 600 13px/1.2 var(--font-sans);
-    white-space: nowrap;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity 120ms ease, transform 120ms ease, visibility 120ms;
-  }
-
-  .ops-nav-item:hover::after,
-  .ops-nav-item:focus-visible::after {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(-50%) translateX(0);
-  }
-
-  .ops-nav-item > svg {
-    flex: none;
-  }
-
-  .ops-topbar {
-    border-bottom: 0 !important;
-    box-shadow: none !important;
+  .ops-nav-item::before {
+    left: -10px;
+    width: 8px;
+    height: 8px;
+    margin-top: -4px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .ops-sidebar,
   .ops-nav-item,
-  .ops-nav-item::after {
-    transition: none !important;
-  }
-}
-
-/* Linhas internas redundantes: mantém cartões e estados, remove só os cortes
-   decorativos que fragmentavam dashboard e filas operacionais. */
-.dash-ranking__item,
-.dash-detail-list,
-.dash-mini,
-.dash-detail-row,
-.ops-sessao__corpo,
-.ops-card__topo,
-.ops-card__rodape,
-.ops-card__alerta {
-  border-top: 0 !important;
-  border-bottom: 0 !important;
-}
-
-/* O recorte decorativo do item ativo não deve competir com o tooltip. */
-@media (min-width: 1024px) {
-  .ops-nav-item[data-active="true"]::before,
-  .ops-nav-item[data-active="true"]::after {
-    display: none !important;
-  }
-
-  .ops-nav-item[data-active="true"]:hover::after,
-  .ops-nav-item[data-active="true"]:focus-visible::after {
-    display: block !important;
-    content: attr(data-label) !important;
-    position: absolute;
-    z-index: 100;
-    left: calc(100% + 12px);
-    top: 50%;
-    width: auto;
-    height: auto;
-    transform: translateY(-50%);
-    padding: 0;
-    background: transparent;
-    color: var(--text);
-    opacity: 1;
-    visibility: visible;
-    pointer-events: none;
-  }
-}
-
-
-/* Acabamento minimalista solicitado: a navegação reserva espaço, mas não pinta
-   uma faixa sólida; os ícones ficam diretamente sobre o fundo da aplicação. */
-@media (min-width: 1024px) {
-  .ops-sidebar {
-    background: transparent !important;
-  }
-
-  .ops-nav-item {
-    width: 54px;
-    min-width: 54px;
-    height: 54px;
-    min-height: 54px;
-  }
-}
-
-/* Remove os contornos decorativos ainda visíveis na fila e no dashboard.
-   As bordas dos cartões de conteúdo e dos controles funcionais permanecem. */
-.ops-stage,
-.dashboard-stage {
-  border: 0 !important;
-}
-
-.ops-pill,
-.ops-sessao__contagem {
-  border: 0 !important;
-  box-shadow: none !important;
-}
-
-.ops-sessao__contagem {
-  background: transparent !important;
-  padding-inline: 6px;
-}
-
-
-/* Header sem faixa de fundo: os controles seguem a linguagem visual do dock. */
-.ops-topbar {
-  background: transparent !important;
-  border-bottom: 0 !important;
-  box-shadow: none !important;
-}
-.ops-topbar .ops-toolbar-dock {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  overflow: visible;
-}
-.ops-toolbar-dock-item {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  transform-origin: center bottom;
-  will-change: transform;
-}
-.ops-topbar .ops-toolbar-dock button {
-  border-color: transparent !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  color: var(--sidebar-muted, var(--text-muted));
-  transition: color 140ms ease, transform 120ms cubic-bezier(.2, 0, 0, 1);
-}
-.ops-topbar .ops-toolbar-dock button:hover,
-.ops-topbar .ops-toolbar-dock button:focus-visible,
-.ops-topbar .ops-toolbar-dock button[aria-pressed="true"] {
-  color: var(--brand);
-  background: transparent !important;
-  border-color: transparent !important;
-  outline-offset: 3px;
-}
-.ops-topbar .ops-toolbar-dock button svg {
-  width: 21px;
-  height: 21px;
-}
-
-
-@media (max-width: 420px) {
-  .ops-topbar .ops-toolbar-dock { gap: 1px; }
-  .ops-topbar .ops-toolbar-dock button {
-    width: 34px !important;
-    min-width: 34px !important;
-    height: 34px !important;
-    min-height: 34px !important;
-    padding: 0 !important;
-  }
-  .ops-topbar .ops-toolbar-dock button svg { width: 18px; height: 18px; }
-}
-
-
-@media (min-width: 1024px) {
-  .ops-nav-item:hover,
-  .ops-nav-item:focus-visible {
-    transform: scale(1.6) !important;
-    z-index: 5 !important;
-  }
-}
-
-
-@media (prefers-reduced-motion: reduce) {
-  .ops-nav-item:hover,
-  .ops-nav-item:focus-visible {
-    transform: none !important;
-    transition: none !important;
+  .ops-nav-item::before {
+    transition: none;
   }
 }

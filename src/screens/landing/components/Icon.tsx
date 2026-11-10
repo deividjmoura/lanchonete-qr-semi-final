@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
 
-/* Ícones de traço da apresentação aprovada (PR #2 de Exercices/apresentacao).
-   Mantidos deliberadamente como SVG inline: a landing não importa o conjunto
-   pesado de ícones do produto só para desenhar a navegação. */
+/* Ícones de traço da landing, em SVG inline: a página inicial não carrega o
+   conjunto de ícones do produto só para desenhar a navegação. */
 
 const paths: Record<string, ReactNode> = {
   "arrow-right": <path d="M5 12h14m-6-6 6 6-6 6" />,

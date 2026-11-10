@@ -205,11 +205,11 @@ export function FormularioAcesso({
   return (
     <>
       {etapa === "credencial" && (
-        <p className="login-sector-caption text-xs font-semibold uppercase tracking-[0.08em] text-text-muted mb-3">
+        <p className="login-sector-caption rotulo text-text-muted mb-3">
           Selecione o setor
         </p>
       )}
-      <div className={cn("login-sectors grid grid-cols-2 sm:grid-cols-4 gap-2.5", etapa !== "credencial" && "hidden")}>
+      <div className={cn("login-sectors grid grid-cols-4 gap-2", etapa !== "credencial" && "hidden")}>
         {PAPEIS.map((p) => {
           const selecionado = papel === p.id;
           const Icon = p.Icon;
@@ -223,14 +223,12 @@ export function FormularioAcesso({
                 setErro(false);
               }}
               className={cn(
-                "login-sector-button min-h-24 rounded-lg px-2.5 py-4 flex flex-col items-center justify-center gap-2 text-center transition-colors duration-150",
-                selecionado
-                  ? "is-selected bg-brand-surface text-brand-ink"
-                  : "text-text-muted hover:text-text hover:bg-surface-hover",
+                "login-sector-button min-h-[76px] rounded-sm px-1 py-3 flex flex-col items-center justify-center gap-2 text-center transition-colors duration-150",
+                selecionado ? "is-selected" : "text-text-muted hover:text-text hover:bg-surface-hover",
               )}
             >
               <Icon size={22} weight={selecionado ? "fill" : "regular"} />
-              <span className="font-display text-sm font-bold tracking-tight leading-none mt-0.5">{p.nome}</span>
+              <span className="text-[13px] font-bold leading-none mt-0.5">{p.nome}</span>
             </button>
           );
         })}
@@ -243,7 +241,7 @@ export function FormularioAcesso({
             initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.2, 0, 0, 1] }}
           >
             <form
               className="login-form login-mfa-form mt-7 space-y-4"
@@ -265,7 +263,7 @@ export function FormularioAcesso({
                 </span>
                 <span
                   className={cn(
-                    "login-credential flex h-12 items-center gap-2.5 border-b bg-transparent px-1 transition-colors",
+                    "login-credential flex h-12 items-center gap-2.5 rounded-sm border bg-surface-raised px-3 transition-colors",
                     erro2fa ? "border-status-danger-border" : "border-line-strong focus-within:border-brand",
                   )}
                 >
@@ -342,7 +340,7 @@ export function FormularioAcesso({
             initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: reduceMotion ? 0 : 0.15, ease: [0.2, 0, 0, 1] }}
           >
             <form
               className="login-password-form mt-5 pt-5 border-t border-line space-y-3"
@@ -370,7 +368,7 @@ export function FormularioAcesso({
                 </span>
                 <span
                   className={cn(
-                    "login-credential flex items-center gap-2.5 border-b bg-transparent px-1 h-12 transition-colors",
+                    "login-credential flex items-center gap-2.5 rounded-sm border bg-surface-raised px-3 h-12 transition-colors",
                     erro ? "border-status-danger-border" : "border-line-strong focus-within:border-brand",
                   )}
                 >
@@ -430,7 +428,7 @@ export function FormularioAcesso({
             onClick={() => {
               window.location.assign("/api/auth/google");
             }}
-            className="w-full min-h-12 rounded-md bg-surface-hover/70 text-text font-semibold text-sm inline-flex items-center justify-center gap-2 hover:bg-surface-hover transition-colors"
+            className="w-full min-h-12 rounded-md border border-line-strong bg-surface-raised text-text font-semibold text-sm inline-flex items-center justify-center gap-2 hover:bg-surface-hover transition-colors"
           >
             <span aria-hidden="true" className="font-bold text-base">
               G

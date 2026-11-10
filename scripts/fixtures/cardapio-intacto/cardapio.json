@@ -1,0 +1,439 @@
+[
+  {
+    "id": 1,
+    "nome": "Hambúrgueres",
+    "ordem": 1,
+    "produtos": [
+      {
+        "id": 1,
+        "nome": "X-Bacon da Casa",
+        "descricao": "Pão brioche tostado, hambúrguer bovino de 160 g, queijo prato, bacon crocante, alface, tomate e molho da casa.",
+        "preco": 32,
+        "fotoUrl": "/assets/demo/xbacon.webp",
+        "pedePontoCarne": true,
+        "ordem": 1,
+        "adicionais": [
+          {
+            "id": 1,
+            "nome": "Cheddar extra",
+            "preco": 5.5
+          },
+          {
+            "id": 2,
+            "nome": "Bacon extra",
+            "preco": 6
+          },
+          {
+            "id": 3,
+            "nome": "Ovo",
+            "preco": 3.5
+          },
+          {
+            "id": 4,
+            "nome": "Hambúrguer extra",
+            "preco": 10
+          }
+        ],
+        "removiveis": [
+          "Alface",
+          "Tomate",
+          "Cebola"
+        ]
+      },
+      {
+        "id": 2,
+        "nome": "Smash Duplo",
+        "descricao": "Dois discos bovinos prensados na chapa, cheddar, cebola caramelizada e molho especial no pão selado.",
+        "preco": 38.5,
+        "fotoUrl": "/assets/demo/burger.webp",
+        "pedePontoCarne": true,
+        "ordem": 2,
+        "adicionais": [
+          {
+            "id": 5,
+            "nome": "Cheddar extra",
+            "preco": 5.5
+          },
+          {
+            "id": 6,
+            "nome": "Bacon extra",
+            "preco": 6
+          }
+        ],
+        "removiveis": [
+          "Cebola caramelizada"
+        ]
+      },
+      {
+        "id": 3,
+        "nome": "X-Salada da Horta",
+        "descricao": "Hambúrguer bovino, queijo prato, alface fresca, tomate e maionese verde da casa.",
+        "preco": 29.5,
+        "fotoUrl": "/assets/demo/salad.webp",
+        "pedePontoCarne": true,
+        "ordem": 3,
+        "adicionais": [
+          {
+            "id": 7,
+            "nome": "Cheddar extra",
+            "preco": 5.5
+          },
+          {
+            "id": 8,
+            "nome": "Ovo",
+            "preco": 3.5
+          }
+        ],
+        "removiveis": [
+          "Alface",
+          "Tomate"
+        ]
+      },
+      {
+        "id": 4,
+        "nome": "Frango Crocante",
+        "descricao": "Filé de frango empanado, queijo, alface, tomate e maionese de limão no pão brioche.",
+        "preco": 31,
+        "fotoUrl": "/assets/demo/chicken.webp",
+        "pedePontoCarne": false,
+        "ordem": 4,
+        "adicionais": [
+          {
+            "id": 9,
+            "nome": "Cheddar extra",
+            "preco": 5.5
+          },
+          {
+            "id": 10,
+            "nome": "Bacon extra",
+            "preco": 6
+          }
+        ],
+        "removiveis": [
+          "Alface",
+          "Tomate"
+        ]
+      },
+      {
+        "id": 5,
+        "nome": "Veggie da Casa",
+        "descricao": "Hambúrguer de grão-de-bico, queijo coalho, rúcula, tomate e molho de ervas.",
+        "preco": 30.5,
+        "fotoUrl": "/assets/demo/salad.webp",
+        "pedePontoCarne": false,
+        "ordem": 5,
+        "adicionais": [
+          {
+            "id": 11,
+            "nome": "Queijo coalho extra",
+            "preco": 5
+          }
+        ],
+        "removiveis": [
+          "Rúcula",
+          "Tomate"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "nome": "Porções",
+    "ordem": 2,
+    "produtos": [
+      {
+        "id": 6,
+        "nome": "Batata Rústica com Páprica",
+        "descricao": "Batatas douradas com páprica defumada, sal de ervas e maionese da casa à parte.",
+        "preco": 28.5,
+        "fotoUrl": "/assets/demo/fries.webp",
+        "pedePontoCarne": false,
+        "ordem": 6,
+        "adicionais": [
+          {
+            "id": 12,
+            "nome": "Cheddar cremoso",
+            "preco": 7
+          },
+          {
+            "id": 13,
+            "nome": "Bacon crocante",
+            "preco": 6
+          }
+        ],
+        "removiveis": []
+      },
+      {
+        "id": 7,
+        "nome": "Mandioca Frita",
+        "descricao": "Mandioca macia por dentro e dourada por fora, com manteiga de ervas.",
+        "preco": 26,
+        "fotoUrl": "/assets/demo/mandioca.webp",
+        "pedePontoCarne": false,
+        "ordem": 7,
+        "adicionais": [],
+        "removiveis": []
+      },
+      {
+        "id": 8,
+        "nome": "Iscas de Frango",
+        "descricao": "Tiras de frango empanadas, servidas com molho de alho e limão.",
+        "preco": 38.5,
+        "fotoUrl": "/assets/demo/chicken.webp",
+        "pedePontoCarne": false,
+        "ordem": 8,
+        "adicionais": [
+          {
+            "id": 14,
+            "nome": "Molho barbecue",
+            "preco": 3
+          }
+        ],
+        "removiveis": []
+      },
+      {
+        "id": 9,
+        "nome": "Anéis de Cebola",
+        "descricao": "Cebola empanada na hora, sequinha e crocante.",
+        "preco": 27.5,
+        "fotoUrl": "/assets/demo/onion.webp",
+        "pedePontoCarne": false,
+        "ordem": 9,
+        "adicionais": [],
+        "removiveis": []
+      },
+      {
+        "id": 10,
+        "nome": "Polenta Frita",
+        "descricao": "Palitos de polenta crocantes com parmesão ralado.",
+        "preco": 24,
+        "fotoUrl": "/assets/demo/polenta.webp",
+        "pedePontoCarne": false,
+        "ordem": 10,
+        "adicionais": [],
+        "removiveis": []
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "nome": "Pastéis",
+    "ordem": 3,
+    "produtos": [
+      {
+        "id": 11,
+        "nome": "Pastel de Carne",
+        "descricao": "Massa fina e crocante, recheada com carne moída refogada.",
+        "preco": 14.5,
+        "fotoUrl": "/assets/demo/misto.webp",
+        "pedePontoCarne": false,
+        "ordem": 11,
+        "adicionais": [],
+        "removiveis": []
+      },
+      {
+        "id": 12,
+        "nome": "Pastel de Queijo",
+        "descricao": "Queijo derretido em massa aberta e frita na hora.",
+        "preco": 13.5,
+        "fotoUrl": "/assets/demo/misto.webp",
+        "pedePontoCarne": false,
+        "ordem": 12,
+        "adicionais": [],
+        "removiveis": []
+      },
+      {
+        "id": 13,
+        "nome": "Pastel de Frango com Catupiry",
+        "descricao": "Frango desfiado temperado e requeijão cremoso.",
+        "preco": 16.5,
+        "fotoUrl": "/assets/demo/chicken.webp",
+        "pedePontoCarne": false,
+        "ordem": 13,
+        "adicionais": [],
+        "removiveis": []
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "nome": "Sucos Naturais",
+    "ordem": 4,
+    "produtos": [
+      {
+        "id": 14,
+        "nome": "Suco de Laranja Natural",
+        "descricao": "Laranja espremida na hora, sem mistura.",
+        "preco": 14,
+        "fotoUrl": "/assets/demo/juice.webp",
+        "pedePontoCarne": false,
+        "ordem": 14,
+        "adicionais": [],
+        "removiveis": []
+      },
+      {
+        "id": 15,
+        "nome": "Suco de Maracujá",
+        "descricao": "Polpa batida com água ou leite. Escolha na hora do pedido.",
+        "preco": 14.5,
+        "fotoUrl": "/assets/demo/natural.webp",
+        "pedePontoCarne": false,
+        "ordem": 15,
+        "adicionais": [
+          {
+            "id": 15,
+            "nome": "Com leite",
+            "preco": 2
+          }
+        ],
+        "removiveis": []
+      },
+      {
+        "id": 16,
+        "nome": "Limonada Suíça",
+        "descricao": "Limão batido com gelo e um toque de leite condensado.",
+        "preco": 16,
+        "fotoUrl": "/assets/demo/juice.webp",
+        "pedePontoCarne": false,
+        "ordem": 16,
+        "adicionais": [],
+        "removiveis": []
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "nome": "Bebidas e Chopes",
+    "ordem": 5,
+    "produtos": [
+      {
+        "id": 17,
+        "nome": "Refrigerante Lata 350 ml",
+        "descricao": "Lata gelada. Escolha o sabor.",
+        "preco": 7.5,
+        "fotoUrl": "/assets/demo/soda-cola.webp",
+        "pedePontoCarne": false,
+        "ordem": 17,
+        "adicionais": [
+          {
+            "id": 16,
+            "nome": "Coca-Cola",
+            "preco": 0
+          },
+          {
+            "id": 17,
+            "nome": "Coca-Cola Zero",
+            "preco": 0
+          },
+          {
+            "id": 18,
+            "nome": "Guaraná Antarctica",
+            "preco": 0
+          }
+        ],
+        "removiveis": []
+      },
+      {
+        "id": 18,
+        "nome": "Água Mineral 500 ml",
+        "descricao": "Com ou sem gás.",
+        "preco": 5.5,
+        "fotoUrl": "/assets/demo/water.webp",
+        "pedePontoCarne": false,
+        "ordem": 18,
+        "adicionais": [
+          {
+            "id": 19,
+            "nome": "Com gás",
+            "preco": 0
+          }
+        ],
+        "removiveis": []
+      },
+      {
+        "id": 19,
+        "nome": "Chopp Pilsen 300 ml",
+        "descricao": "Chopp claro, leve e servido bem gelado.",
+        "preco": 11.5,
+        "fotoUrl": "/assets/demo/beer.webp",
+        "pedePontoCarne": false,
+        "ordem": 19,
+        "adicionais": [],
+        "removiveis": []
+      },
+      {
+        "id": 20,
+        "nome": "Chopp Pilsen 500 ml",
+        "descricao": "Copo grande de chopp pilsen, tirado na hora.",
+        "preco": 17.5,
+        "fotoUrl": "/assets/demo/beer.webp",
+        "pedePontoCarne": false,
+        "ordem": 20,
+        "adicionais": [],
+        "removiveis": []
+      },
+      {
+        "id": 21,
+        "nome": "Chopp IPA 300 ml",
+        "descricao": "Amargor cítrico e aroma de lúpulo, servido no copo de 300 ml.",
+        "preco": 18.5,
+        "fotoUrl": "/assets/demo/beer.webp",
+        "pedePontoCarne": false,
+        "ordem": 21,
+        "adicionais": [],
+        "removiveis": []
+      },
+      {
+        "id": 22,
+        "nome": "Cerveja Long Neck",
+        "descricao": "Cerveja 330 ml. Consulte as opções da casa.",
+        "preco": 16.5,
+        "fotoUrl": "/assets/demo/beer.webp",
+        "pedePontoCarne": false,
+        "ordem": 22,
+        "adicionais": [],
+        "removiveis": []
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "nome": "Sobremesas",
+    "ordem": 6,
+    "produtos": [
+      {
+        "id": 23,
+        "nome": "Brownie com Sorvete",
+        "descricao": "Brownie de chocolate aquecido com uma bola de sorvete de creme.",
+        "preco": 19.5,
+        "fotoUrl": "/assets/demo/brownie.webp",
+        "pedePontoCarne": false,
+        "ordem": 23,
+        "adicionais": [],
+        "removiveis": []
+      },
+      {
+        "id": 24,
+        "nome": "Churros com Doce de Leite",
+        "descricao": "Mini churros passados no açúcar e canela, com doce de leite.",
+        "preco": 17.5,
+        "fotoUrl": "/assets/demo/churros.webp",
+        "pedePontoCarne": false,
+        "ordem": 24,
+        "adicionais": [],
+        "removiveis": []
+      },
+      {
+        "id": 25,
+        "nome": "Petit Gâteau",
+        "descricao": "Bolo de chocolate com centro cremoso, acompanhado de sorvete.",
+        "preco": 24.5,
+        "fotoUrl": "/assets/demo/petit.webp",
+        "pedePontoCarne": false,
+        "ordem": 25,
+        "adicionais": [],
+        "removiveis": []
+      }
+    ]
+  }
+]

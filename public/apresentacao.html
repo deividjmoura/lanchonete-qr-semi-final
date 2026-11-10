@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>QR Admin — Do pedido ao fechamento da conta na mesma comanda</title>
   <meta name="description" content="Sistema de operação para lanchonete, bar e restaurante: pedido por QR Code, filas de cozinha e bar por item, atendimento do garçom, caixa e administração em um único fluxo.">
-  <meta name="theme-color" content="#bf3b11">
+  <meta name="theme-color" content="#f4efe6">
   <link rel="canonical" href="https://qradmin.up.railway.app/apresentacao.html">
 
   <!-- Open Graph -->
@@ -23,557 +23,21 @@
   <meta name="twitter:description" content="Pedido por QR Code, produção por setor, entrega progressiva e cobrança em um fluxo único.">
   <meta name="twitter:image" content="https://qradmin.up.railway.app/public/logo/qradmin-horizontal.png">
 
-  <link rel="icon" href="/logo/favicon.png" type="image/png">
-
-  <style>
-    /* Fontes self-hosted do produto */
-    @font-face {
-      font-family: "Fraunces";
-      src: url("/garcom-pwa/fonts/fraunces-latin-soft-normal.woff2") format("woff2-variations");
-      font-weight: 100 900;
-      font-style: normal;
-      font-display: swap;
-    }
-    @font-face {
-      font-family: "Plus Jakarta Sans";
-      src: url("/garcom-pwa/fonts/plus-jakarta-sans-latin-wght-normal.woff2") format("woff2-variations");
-      font-weight: 200 800;
-      font-style: normal;
-      font-display: swap;
-    }
-    @font-face {
-      font-family: "JetBrains Mono";
-      src: url("/garcom-pwa/fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
-      font-weight: 100 800;
-      font-style: normal;
-      font-display: swap;
-    }
-
-    :root {
-      --surface: #eef1f8;
-      --surface-raised: #f8faff;
-      --surface-sunken: #e0e5f1;
-      --text: #121829;
-      --text-muted: #48536d;
-      --brand: #bf3b11;
-      --brand-ink: #b5360d;
-      --brand-contrast: #f8faff;
-      --accent: #0a5a63;
-      --line: #c7cfe0;
-      --line-strong: #a5b0c8;
-      --focus: #bf3b11;
-      --radius-sm: 6px;
-      --radius-md: 10px;
-      --radius-lg: 14px;
-      --radius-frame: 12px;
-      --shadow-soft: 0 4px 16px -4px rgba(18, 24, 41, 0.12);
-      --shadow-frame: 0 8px 28px -8px rgba(18, 24, 41, 0.18);
-      --font-display: "Fraunces", "Georgia", serif;
-      --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
-      --font-mono: "JetBrains Mono", ui-monospace, monospace;
-      --max: 1180px;
-    }
-
-    *, *::before, *::after { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    @media (prefers-reduced-motion: reduce) {
-      html { scroll-behavior: auto; }
-      *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        transition-duration: 0.01ms !important;
-      }
-    }
-
-    body {
-      margin: 0;
-      font-family: var(--font-sans);
-      font-size: 16px;
-      line-height: 1.6;
-      color: var(--text);
-      background: var(--surface);
-      -webkit-font-smoothing: antialiased;
-    }
-
-    a { color: var(--brand-ink); text-underline-offset: 3px; }
-    a:hover { color: var(--brand); }
-    a:focus-visible {
-      outline: 2px solid var(--focus);
-      outline-offset: 3px;
-    }
-
-    img { max-width: 100%; height: auto; display: block; }
-
-    .skip {
-      position: absolute;
-      left: -9999px;
-      top: 0;
-      background: var(--brand);
-      color: var(--brand-contrast);
-      padding: 0.6rem 1rem;
-      z-index: 100;
-    }
-    .skip:focus { left: 1rem; top: 1rem; }
-
-    /* Header */
-    .site-header {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      background: color-mix(in srgb, var(--surface-raised) 92%, transparent);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid var(--line);
-    }
-    .site-header .inner {
-      max-width: var(--max);
-      margin: 0 auto;
-      padding: 0.75rem 1.25rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-    }
-    .logo img { height: 32px; width: auto; }
-    .nav-cta {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-
-    /* Buttons */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.4rem;
-      font-family: var(--font-sans);
-      font-weight: 600;
-      font-size: 0.9rem;
-      line-height: 1.2;
-      padding: 0.65rem 1.1rem;
-      border-radius: var(--radius-sm);
-      border: 1px solid transparent;
-      cursor: pointer;
-      text-decoration: none;
-      transition: background 150ms, border-color 150ms, color 150ms, box-shadow 150ms;
-      min-height: 44px;
-      min-width: 44px;
-    }
-    .btn:focus-visible {
-      outline: 2px solid var(--focus);
-      outline-offset: 2px;
-    }
-    .btn-primary {
-      background: var(--brand);
-      color: var(--brand-contrast);
-    }
-    .btn-primary:hover {
-      background: var(--brand-ink);
-      color: var(--brand-contrast);
-    }
-    .btn-secondary {
-      background: var(--surface-raised);
-      color: var(--text);
-      border-color: var(--line-strong);
-    }
-    .btn-secondary:hover {
-      border-color: var(--brand);
-      color: var(--brand-ink);
-    }
-    .btn-ghost {
-      background: transparent;
-      color: var(--text-muted);
-    }
-    .btn-ghost:hover { color: var(--brand-ink); }
-
-    /* Layout helpers */
-    .wrap {
-      max-width: var(--max);
-      margin: 0 auto;
-      padding: 0 1.25rem;
-    }
-    section {
-      padding: 3.5rem 0;
-    }
-    section + section {
-      border-top: 1px solid var(--line);
-    }
-
-    .eyebrow {
-      font-family: var(--font-mono);
-      font-size: 0.7rem;
-      font-weight: 600;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--brand-ink);
-      margin: 0 0 0.6rem;
-    }
-    h1, h2, h3 {
-      font-family: var(--font-display);
-      font-weight: 600;
-      line-height: 1.15;
-      letter-spacing: -0.02em;
-      color: var(--text);
-      margin: 0 0 0.75rem;
-    }
-    h1 { font-size: clamp(2rem, 5vw, 3.25rem); }
-    h2 { font-size: clamp(1.5rem, 3.5vw, 2.25rem); }
-    h3 { font-size: 1.25rem; }
-    .lead {
-      font-size: 1.125rem;
-      line-height: 1.55;
-      color: var(--text-muted);
-      max-width: 38rem;
-    }
-    p { margin: 0 0 1rem; }
-    p:last-child { margin-bottom: 0; }
-
-    /* Hero */
-    .hero {
-      padding: 3rem 0 4rem;
-      background:
-        radial-gradient(ellipse 80% 60% at 70% 0%, color-mix(in srgb, var(--brand) 8%, transparent), transparent 70%),
-        var(--surface);
-    }
-    .hero-grid {
-      display: grid;
-      gap: 2.5rem;
-      align-items: center;
-    }
-    @media (min-width: 900px) {
-      .hero-grid {
-        grid-template-columns: 1.05fr 0.95fr;
-        gap: 3rem;
-      }
-    }
-    .hero-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      margin-top: 1.75rem;
-    }
-    .hero-note {
-      margin-top: 1.25rem;
-      font-size: 0.875rem;
-      color: var(--text-muted);
-    }
-
-    /* Frame for screenshots / placeholders */
-    .frame {
-      background: var(--surface-raised);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-frame);
-      box-shadow: var(--shadow-frame);
-      overflow: hidden;
-    }
-    .frame img {
-      width: 100%;
-      aspect-ratio: 16 / 10;
-      object-fit: cover;
-      background: var(--surface-sunken);
-    }
-    .frame--portrait { max-width: 360px; margin-inline: auto; }
-    .frame--portrait img { aspect-ratio: 390 / 844; object-fit: contain; }
-    .caption {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      margin-top: 0.6rem;
-      line-height: 1.45;
-    }
-
-    /* Problem + flow */
-    .problem-list {
-      display: grid;
-      gap: 1rem;
-      margin: 1.5rem 0 0;
-      padding: 0;
-      list-style: none;
-    }
-    .problem-list li {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 0.75rem;
-      align-items: start;
-      padding: 1rem 1.1rem;
-      background: var(--surface-raised);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-    }
-    .problem-list .num {
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      font-weight: 700;
-      color: var(--brand-ink);
-      padding-top: 0.15rem;
-    }
-
-    .flow {
-      display: grid;
-      gap: 0.75rem;
-      margin-top: 2rem;
-    }
-    @media (min-width: 720px) {
-      .flow {
-        grid-template-columns: repeat(4, 1fr);
-      }
-    }
-    .flow-step {
-      padding: 1.1rem;
-      background: var(--surface-raised);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-    }
-    .flow-step .step {
-      font-family: var(--font-mono);
-      font-size: 0.65rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--brand-ink);
-      margin-bottom: 0.4rem;
-    }
-    .flow-step h3 {
-      font-size: 1.05rem;
-      margin-bottom: 0.35rem;
-    }
-    .flow-step p {
-      font-size: 0.9rem;
-      color: var(--text-muted);
-      margin: 0;
-    }
-
-    /* Area sections */
-    .area {
-      display: grid;
-      gap: 2rem;
-      align-items: start;
-    }
-    @media (min-width: 860px) {
-      .area {
-        grid-template-columns: 1fr 1fr;
-        gap: 2.5rem;
-      }
-      .area.reverse .area-text { order: 2; }
-      .area.reverse .area-media { order: 1; }
-      .area.admin-wide {
-        grid-template-columns: 1.15fr 0.85fr;
-      }
-    }
-    .area-text ul {
-      margin: 1rem 0 0;
-      padding: 0 0 0 1.1rem;
-      color: var(--text-muted);
-    }
-    .area-text li { margin-bottom: 0.4rem; }
-    .area-text li strong { color: var(--text); font-weight: 600; }
-
-    /* Diferenciais */
-    .diff-grid {
-      display: grid;
-      gap: 1rem;
-      margin-top: 1.5rem;
-    }
-    @media (min-width: 700px) {
-      .diff-grid {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-    .diff-item {
-      padding: 1.15rem 1.25rem;
-      background: var(--surface-raised);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-    }
-    .diff-item h3 {
-      font-size: 1.05rem;
-      margin-bottom: 0.4rem;
-    }
-    .diff-item p {
-      font-size: 0.925rem;
-      color: var(--text-muted);
-      margin: 0;
-    }
-
-    /* Transparency */
-    .limits {
-      display: grid;
-      gap: 0.75rem;
-      margin-top: 1.25rem;
-    }
-    .limits details {
-      background: var(--surface-raised);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      padding: 0.85rem 1.1rem;
-    }
-    .limits summary {
-      font-weight: 600;
-      cursor: pointer;
-      list-style: none;
-    }
-    .limits summary::-webkit-details-marker { display: none; }
-    .limits summary::before {
-      content: "+";
-      display: inline-block;
-      width: 1.2em;
-      color: var(--brand-ink);
-      font-family: var(--font-mono);
-    }
-    .limits details[open] summary::before { content: "−"; }
-    .limits details p {
-      margin-top: 0.6rem;
-      font-size: 0.925rem;
-      color: var(--text-muted);
-    }
-
-    /* FAQ */
-    .faq {
-      display: grid;
-      gap: 0.6rem;
-      margin-top: 1.5rem;
-    }
-    .faq details {
-      background: var(--surface-raised);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      padding: 0.9rem 1.15rem;
-    }
-    .faq summary {
-      font-weight: 600;
-      cursor: pointer;
-      list-style: none;
-    }
-    .faq summary::-webkit-details-marker { display: none; }
-    .faq details p {
-      margin-top: 0.65rem;
-      font-size: 0.95rem;
-      color: var(--text-muted);
-    }
-
-    /* CTA final */
-    .cta-final {
-      background:
-        linear-gradient(160deg, color-mix(in srgb, var(--brand) 9%, var(--surface-raised)), var(--surface-raised));
-      border: 1px solid var(--line);
-      border-radius: var(--radius-lg);
-      padding: 2rem 1.5rem;
-      text-align: center;
-    }
-    @media (min-width: 700px) {
-      .cta-final { padding: 2.5rem 3rem; }
-    }
-    .cta-final .actions {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 0.75rem;
-      margin-top: 1.5rem;
-    }
-    .cta-final .contact {
-      margin-top: 1.5rem;
-      font-size: 0.95rem;
-      color: var(--text-muted);
-    }
-    .cta-final .contact a { font-weight: 600; }
-
-    .cta-final .contact { margin-top: 1.5rem; color: var(--text-muted); }
-    .cta-final .contact-name { margin-bottom: 0.75rem; font-weight: 600; }
-    .contact-links { display: flex; justify-content: center; align-items: center; gap: 0.75rem; }
-    .contact-link {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 48px; height: 48px; border: 1px solid var(--line-strong);
-      border-radius: 50%; background: var(--surface-raised); color: var(--brand-ink);
-      transition: background 150ms, border-color 150ms, color 150ms, transform 150ms;
-    }
-    .contact-link svg { width: 22px; height: 22px; fill: currentColor; }
-    .contact-link:hover { background: color-mix(in srgb, var(--brand) 9%, var(--surface-raised)); border-color: var(--brand); color: var(--brand); transform: translateY(-2px); }
-    .contact-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
-
-    /* Footer */
-    .site-footer {
-      padding: 2rem 0 2.5rem;
-      border-top: 1px solid var(--line);
-      font-size: 0.85rem;
-      color: var(--text-muted);
-    }
-    .site-footer .inner {
-      max-width: var(--max);
-      margin: 0 auto;
-      padding: 0 1.25rem;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .site-footer nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
-    .site-footer a { color: var(--text-muted); text-decoration: none; }
-    .site-footer a:hover { color: var(--brand-ink); }
-
-    .demo-note {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      margin-top: 2rem;
-      padding-top: 1rem;
-      border-top: 1px dashed var(--line);
-    }
-
-    /* Rolagem discreta sem trilho visível; a navegação continua funcionando. */
-    html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
-    *::-webkit-scrollbar { display: none; width: 0; height: 0; }
-  
-    /* Layout fluido: usa a largura disponível sem um max-width global rígido. */
-    :root { --max: 100%; }
-    html, body { width: 100%; max-width: 100%; overflow-x: clip; }
-    .site-header .inner, .wrap, .site-footer .inner {
-      width: 100%;
-      max-width: none;
-      padding-left: clamp(1rem, 4vw, 3.5rem);
-      padding-right: clamp(1rem, 4vw, 3.5rem);
-    }
-    .hero-grid, .area, .flow, .diff-grid, .problem-list,
-    .hero-grid > *, .area > * { min-width: 0; }
-    .frame, figure, .area-media { min-width: 0; max-width: 100%; }
-    .frame img { max-width: 100%; height: auto; }
-    .frame--portrait { width: min(100%, 360px); }
-    .site-header .inner { flex-wrap: wrap; }
-    .nav-cta { margin-left: auto; }
-    @media (max-width: 720px) {
-      .site-header .inner { gap: .5rem; padding-top: .65rem; padding-bottom: .65rem; }
-      .logo img { height: 28px; max-width: min(42vw, 140px); }
-      .nav-cta { gap: .25rem; }
-      .btn { min-height: 42px; padding: .6rem .8rem; font-size: .82rem; }
-      section { padding: clamp(2rem, 7vw, 3rem) 0; }
-      .hero { padding: 2rem 0 2.5rem; }
-      .hero-grid { gap: 1.5rem; }
-      .hero-actions { gap: .5rem; }
-      .lead { font-size: 1rem; }
-      .problem-list li { padding: .85rem; }
-      .flow-step, .diff-item { padding: .95rem; }
-      .cta-final { padding: 1.5rem 1rem; }
-      .site-footer .inner { align-items: flex-start; flex-direction: column; }
-      .site-footer nav { gap: .75rem; }
-    }
-    @media (max-width: 380px) {
-      .site-header .inner { align-items: flex-start; }
-      .nav-cta { width: 100%; margin-left: 0; }
-      .nav-cta .btn { flex: 1 1 auto; }
-      h1 { font-size: clamp(1.8rem, 9vw, 2.35rem); }
-      .hero-actions .btn { width: 100%; }
-    }
-
-  </style>
+  <link rel="icon" type="image/png" href="/logo/simbolo-96.png">
+  <link rel="apple-touch-icon" href="/logo/simbolo-180.png">
+  <link rel="preload" href="/garcom-pwa/fonts/archivo-latin-wdth-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/garcom-pwa/design-tokens.css">
+  <link rel="stylesheet" href="/institucional.css">
+  <script src="/garcom-pwa/theme-init.js"></script>
 </head>
-<body>
+<body class="pagina pagina--apresentacao">
   <a class="skip" href="#conteudo">Pular para o conteúdo</a>
 
   <header class="site-header">
     <div class="inner">
-      <a class="logo" href="/apresentacao.html" aria-label="QR Admin — início">
-        <img src="/logo/qradmin-horizontal.png" alt="QR Admin" width="140" height="32">
+      <a class="logo assinatura" href="/apresentacao.html" aria-label="QR Admin — início">
+        <svg class="simbolo" width="26" height="26" viewBox="6 6 20 20" aria-hidden="true" focusable="false"><rect class="simbolo__anel" x="7.5" y="7.5" width="17" height="17" rx="3.5"/><rect class="simbolo__centro" x="13" y="13" width="6" height="6" rx="1.25"/></svg>
+        <span class="assinatura__nome"><b>QR</b>Admin</span>
       </a>
       <div class="nav-cta">
         <a class="btn btn-ghost" href="/guia-sistema.html">Guia demonstrativo</a>
@@ -710,7 +174,7 @@
             </div>
             <figcaption class="caption">Personalização no cardápio do cliente. Dados fictícios de demonstração.</figcaption>
           </figure>
-          <figure style="margin-top:1.25rem">
+          <figure>
             <div class="frame">
               <img src="/assets/apresentacao/comanda-cliente.webp" width="1440" height="900" alt="Comanda da mesa 18 com um X-Bacon personalizado, nome do cliente e total do envio." loading="lazy" decoding="async">
             </div>
@@ -743,7 +207,7 @@
             </div>
             <figcaption class="caption">Fila da cozinha — controle por item. Dados de demonstração.</figcaption>
           </figure>
-          <figure style="margin-top:1.25rem">
+          <figure>
             <div class="frame">
               <img src="/assets/apresentacao/fila-bar.webp" width="1440" height="900" alt="Fila do bar com bebida em produção e pedido aguardando preparo." loading="lazy" decoding="async">
             </div>
@@ -834,13 +298,13 @@
             </div>
             <figcaption class="caption">Dashboard administrativo personalizável. Dados fictícios de demonstração.</figcaption>
           </figure>
-          <figure style="margin-top:1.25rem">
+          <figure>
             <div class="frame">
               <img src="/assets/apresentacao/gestao-cardapio.webp" width="1440" height="900" alt="Cardápio & Estoque com categoria expandida, produtos, preços e ativação de controle de estoque." loading="lazy" decoding="async">
             </div>
             <figcaption class="caption">Cardápio & Estoque no admin. Dados de demonstração.</figcaption>
           </figure>
-          <figure style="margin-top:1.25rem">
+          <figure>
             <div class="frame">
               <img src="/assets/apresentacao/mapa-mesas.webp" width="1440" height="900" alt="Mapa de mesas com pesquisa por número e cartões de mesas ocupadas e livres." loading="lazy" decoding="async">
             </div>
@@ -973,7 +437,7 @@
       <div class="wrap">
         <div class="cta-final">
           <h2 id="cta-title">Próximo passo</h2>
-          <p class="lead" style="margin-inline: auto;">
+          <p class="lead">
             Quer conhecer o QR Admin no seu estabelecimento? Entre em contato para conversarmos sobre a apresentação do sistema.
           </p>
           <div class="actions">
@@ -985,14 +449,14 @@
               <a class="contact-link" href="https://wa.me/5547996162721" target="_blank" rel="noopener noreferrer" aria-label="Conversar pelo WhatsApp" title="WhatsApp">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.1 3.9A11.8 11.8 0 0 0 1.5 18.1L0 24l6-1.6A11.9 11.9 0 0 0 24 12a11.8 11.8 0 0 0-3.9-8.1ZM12 21.8a9.8 9.8 0 0 1-5-1.4l-.4-.2-3.6 1 1-3.5-.2-.4A9.8 9.8 0 1 1 12 21.8Zm5.4-7.3c-.3-.2-1.7-.9-2-.9s-.5-.2-.7.2-.8.9-1 1.1-.4.2-.7.1a8 8 0 0 1-2.4-1.5 9 9 0 0 1-1.7-2.1c-.2-.3 0-.5.1-.7l.5-.6c.2-.2.2-.4.3-.6.1-.2 0-.5 0-.6s-.7-1.6-1-2.2c-.2-.5-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4s-1.2 1.2-1.2 2.8 1.2 3.2 1.4 3.4a12 12 0 0 0 4.6 4c.6.3 1.1.5 1.5.6.6.2 1.2.2 1.7.1.5-.1 1.7-.7 1.9-1.4.2-.7.2-1.3.1-1.4-.1-.1-.3-.2-.6-.4Z"/></svg>
               </a>
-              <a class="contact-link" href="mailto:dejesusdemouradeivid@gmail.com" aria-label="Enviar e-mail" title="E-mail">
+              <a class="contact-link" href="mailto:servicosdegestaoqradmin@gmail.com" aria-label="Enviar e-mail" title="E-mail">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 4-8 5L4 8V6l8 5 8-5Z"/></svg>
               </a>
             </div>
           </div>
         </div>
         <p class="demo-note">
-          As imagens desta página serão capturas reais de um ambiente de demonstração com dados fictícios.
+          As imagens desta página são capturas reais de um ambiente de demonstração com dados fictícios.
           Nenhuma captura mostra dados de produção.
         </p>
       </div>

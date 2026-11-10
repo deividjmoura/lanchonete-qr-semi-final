@@ -78,7 +78,7 @@ async function main() {
     const grupo = page.getByRole('group', { name: 'Período do dashboard' });
     await grupo.getByRole('button', { name: 'Hoje' }).waitFor();
     assert.equal(await grupo.getByRole('button', { name: 'Hoje' }).getAttribute('aria-pressed'), 'true');
-    assert.equal(await page.locator('.card-neon').count(), 12);
+    assert.equal(await page.locator('.indicador').count(), 12);
     const faturamento = page.getByRole('button', { name: /Detalhar Faturamento/ });
     await faturamento.getByText('R$ 1.284,50').waitFor();
 
@@ -188,23 +188,27 @@ async function main() {
       assert.ok(await page.locator('.metric-value').evaluateAll((values) => values.every((e) => e.scrollWidth <= e.clientWidth)), `valores sem truncar em ${width}px`);
     }
 
-    // Mouse fora dos cards também altera o tilt, sem state por mousemove.
+    // Identidade Passe: o painel é uma mesa de trabalho, não um palco. Os
+    // indicadores ficam parados — o parallax 3D que seguia o ponteiro pertencia
+    // à identidade anterior e saiu junto com ela. Nada é escrito por mousemove.
     await page.setViewportSize({ width: 1440, height: 900 });
+    const parado = async () => ({
+      variavel: await page.locator('.dashboard-stage').evaluate((e) => e.style.getPropertyValue('--dash-hx')),
+      transform: await page.locator('.indicador').first().evaluate((e) => getComputedStyle(e).transform),
+    });
     await page.mouse.move(300, 20);
     await page.waitForTimeout(60);
-    const primeiro = await page.locator('.dashboard-stage').evaluate((e) => e.style.getPropertyValue('--dash-hx'));
-    const transform1 = await page.locator('.card-neon').first().evaluate((e) => getComputedStyle(e).transform);
+    const primeiro = await parado();
     await page.mouse.move(1300, 20);
     await page.waitForTimeout(60);
-    const segundo = await page.locator('.dashboard-stage').evaluate((e) => e.style.getPropertyValue('--dash-hx'));
-    const transform2 = await page.locator('.card-neon').first().evaluate((e) => getComputedStyle(e).transform);
-    assert.notEqual(primeiro, segundo, 'parallax acompanha o mouse fora dos cards');
-    assert.notEqual(transform1, transform2, 'variáveis alteram o transform');
+    const segundo = await parado();
+    assert.deepEqual(primeiro, { variavel: '', transform: 'none' }, 'indicador não inclina com o ponteiro à esquerda');
+    assert.deepEqual(segundo, { variavel: '', transform: 'none' }, 'indicador não inclina com o ponteiro à direita');
 
     // Editor: resize por gesto no canto, visibilidade e persistência explícita.
     await page.getByRole('button', { name: 'Editar dashboard' }).click();
     // Requisito: mover é arraste real de mouse, não setas nem botões de passo.
-    assert.equal(await page.locator('.card-neon__resize button, .dashboard-widget__resize button, [aria-label^="Mover "]').count(), 0,
+    assert.equal(await page.locator('.indicador__resize button, .dashboard-widget__resize button, [aria-label^="Mover "]').count(), 0,
       'o editor não oferece controles direcionais');
     const cardFaturamento = page.locator('[data-dashboard-card="faturamento"]');
     const alca = page.getByRole('button', { name: 'Arraste para redimensionar Faturamento' });
@@ -297,7 +301,7 @@ async function main() {
     assert.equal(await cardFaturamento.getAttribute('data-visible'), 'false');
     await page.getByRole('button', { name: 'Salvar layout do dashboard' }).click();
     await page.reload();
-    await page.waitForFunction(() => document.querySelectorAll('.card-neon').length === 11);
+    await page.waitForFunction(() => document.querySelectorAll('.indicador').length === 11);
     assert.equal(await page.locator('[data-dashboard-card="faturamento"]').count(), 0, 'card oculto permanece oculto após recarregar');
     await page.getByRole('button', { name: 'Editar dashboard' }).click();
     await page.getByRole('button', { name: 'Exibir Faturamento' }).click();
@@ -305,7 +309,7 @@ async function main() {
     await page.getByRole('button', { name: 'Restaurar padrão' }).click();
     const confirmacao = page.getByRole('alertdialog').filter({ hasText: 'Restaurar o dashboard padrão?' });
     await confirmacao.getByRole('button', { name: 'Restaurar padrão' }).click();
-    await page.waitForFunction(() => document.querySelectorAll('.card-neon').length === 12);
+    await page.waitForFunction(() => document.querySelectorAll('.indicador').length === 12);
 
     // O layout responsivo continua íntegro com o editor aberto.
     for (const width of [375, 768, 1440]) {
@@ -323,10 +327,10 @@ async function main() {
     await reducedPage.getByRole('button', { name: /Detalhar Faturamento/ }).getByText('R$ 1.284,50').waitFor();
     await reducedPage.mouse.move(1300, 20);
     await reducedPage.waitForTimeout(60);
-    assert.equal(await reducedPage.locator('.card-neon').first().evaluate((e) => getComputedStyle(e).transform), 'none');
-    assert.equal(await reducedPage.locator('.dashboard-stage').evaluate((e) => e.style.getPropertyValue('--dash-hx')), '0');
+    assert.equal(await reducedPage.locator('.indicador').first().evaluate((e) => getComputedStyle(e).transform), 'none');
+    assert.equal(await reducedPage.locator('.dashboard-stage').evaluate((e) => e.style.getPropertyValue('--dash-hx')), '');
     await reduzido.context.close();
-    console.log('✓ Dashboard: períodos, detalhes, acessibilidade, erro, layout e parallax global/reduced motion.');
+    console.log('✓ Dashboard: períodos, detalhes, acessibilidade, erro, layout, editor e indicadores sem parallax.');
   } finally { await browser.close(); }
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });
