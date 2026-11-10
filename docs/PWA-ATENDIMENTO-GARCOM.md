@@ -118,7 +118,7 @@ cozinha** — a tela mostra isso explicitamente.
 - Um rascunho de pedido pode conter mesa, nome do cliente, itens/produtos, quantidades, adicionais, remoções, observações, chave de idempotência, horários, estado de sincronização e o identificador do garçom usado para isolar a fila.
 - O `localStorage` mantém o token individual do garçom (`waiter-token`), preferências de tema/notificações, identificadores de avisos já exibidos e uma tentativa de pagamento pendente (sessão, mesa, valor, forma e chave idempotente).
 - Não há prazo automático de expurgo implementado para a store local de pedidos. Limpar os dados do site, remover o perfil do navegador ou desinstalar o PWA pode apagar dados ainda não sincronizados; o armazenamento persistente é apenas uma solicitação ao navegador, não uma garantia de backup.
-- O Service Worker usa o cache `garcom-pwa-shell-v42` apenas para arquivos do shell. Ele não intercepta nem armazena respostas de `/api/`.
+- O Service Worker usa o cache `garcom-pwa-shell-v44` apenas para arquivos do shell. Ele não intercepta nem armazena respostas de `/api/`.
 
 ## Mesas e pedidos
 
