@@ -91,6 +91,10 @@ test("menu do cliente continua fora do rebranding", () => {
   for (const page of ["apresentacao.html", "guia-sistema.html", "termos-de-uso.html", "termos-de-servico.html", "politica-de-privacidade.html"]) {
     assert.match(read("public/" + page), /public-identity\.css/);
   }
+  for (const page of ["termos-de-uso.html", "termos-de-servico.html", "politica-de-privacidade.html"]) {
+    assert.match(read("public/" + page), /contact-email-icon/);
+  }
+  assert.match(read("public/public-identity.css"), /\.contact-email-icon/);
 });
 
 test("contato oficial centralizado e e-mail apresentado como ícone", () => {
