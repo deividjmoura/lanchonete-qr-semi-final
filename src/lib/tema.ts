@@ -11,32 +11,32 @@ export const EVENTO_TEMA = "qradmin-tema";
 
 export const TOKENS_TEMA: Record<Tema, Record<string, string>> = {
   claro: {
-    "--surface": "#e4e8f1",
-    "--surface-raised": "#edf0f6",
-    "--surface-sunken": "#d8deea",
-    "--surface-sidebar": "#0b101b",
-    "--text": "#121829",
-    "--text-muted": "#48536d",
+    "--surface": "#f1eadc",
+    "--surface-raised": "#faf5e9",
+    "--surface-sunken": "#e7dcc8",
+    "--surface-sidebar": "#17120e",
+    "--text": "#2b2118",
+    "--text-muted": "#5b4a39",
     "--brand": "#bf3b11",
-    "--brand-contrast": "#edf0f6",
+    "--brand-contrast": "#faf5e9",
     "--brand-ink": "#b5360d",
-    "--accent": "#0a5a63",
-    "--line": "#b8c2d4",
-    "--line-strong": "#98a6bd",
+    "--accent": "#76521f",
+    "--line": "#cbbda6",
+    "--line-strong": "#a89578",
   },
   escuro: {
-    "--surface": "#0b101b",
-    "--surface-raised": "#141b29",
-    "--surface-sunken": "#080d16",
-    "--surface-sidebar": "#080d16",
-    "--text": "#eef1fb",
-    "--text-muted": "#a9b4cc",
+    "--surface": "#17120e",
+    "--surface-raised": "#241c15",
+    "--surface-sunken": "#100c09",
+    "--surface-sidebar": "#100c09",
+    "--text": "#f4ecdc",
+    "--text-muted": "#c8b79f",
     "--brand": "#ff7d52",
-    "--brand-contrast": "#0b101b",
+    "--brand-contrast": "#17120e",
     "--brand-ink": "#ffb59a",
-    "--accent": "#4fd1e0",
-    "--line": "#2a3348",
-    "--line-strong": "#3b4660",
+    "--accent": "#b88d54",
+    "--line": "#49392c",
+    "--line-strong": "#69513d",
   },
 };
 
@@ -88,8 +88,8 @@ export function aplicarTema(tema: Tema): Tema {
 }
 
 export const QR_SVG_COLORS = {
-  fg: "#0b101b",
-  bg: "#edf0f6",
+  fg: "#17120e",
+  bg: "#faf5e9",
 } as const;
 
 export function alternarTema(): Tema {
