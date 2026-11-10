@@ -4860,6 +4860,7 @@ footer [id] {
   --sage-strong: var(--line-strong);
   --butter: var(--stage-amber);
   --white: var(--brand-contrast);
+  color-scheme: dark;
 }
 .landing-root .floating-actions__email {
   flex: 0 0 40px;

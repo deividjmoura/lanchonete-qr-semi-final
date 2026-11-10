@@ -62,7 +62,7 @@ const esperarTexto = async (alvo, texto, timeout = 6000) => {
 };
 
 try {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
   const page = await context.newPage();
   const erros = [];
   page.on("pageerror", (e) => erros.push(e.message));
@@ -297,9 +297,12 @@ try {
   await page.locator(".floating-actions__access").click();
   assert((await page.getByRole("dialog").count()) === 1, "mobile: Acessar flutuante abre o modal real");
   await page.keyboard.press("Escape");
-  await page.waitForTimeout(220);
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
   await page.locator(".floating-actions__contato").click();
-  await page.waitForTimeout(900);
+  await page.waitForFunction(() => {
+    const r = document.querySelector("#contato")?.getBoundingClientRect();
+    return Boolean(r && r.top < window.innerHeight && r.bottom > 0);
+  }, null, { timeout: 5000 });
   const contatoNaTela = await page.evaluate(() => {
     const r = document.querySelector("#contato")?.getBoundingClientRect();
     return Boolean(r && r.top < window.innerHeight && r.bottom > 0);
@@ -352,7 +355,7 @@ try {
 
   /* 6b. Escape fecha e devolve o foco ao CTA */
   await page.keyboard.press("Escape");
-  await page.waitForTimeout(250);
+  await dialogo.waitFor({ state: "hidden" });
   assert((await page.getByRole("dialog").count()) === 0, "ESC fecha o modal");
   assert(
     await page.evaluate(() => document.activeElement?.classList.contains("header-access")),
@@ -363,7 +366,7 @@ try {
   await page.locator(".site-header .header-access").click();
   await page.getByRole("dialog").waitFor();
   await page.mouse.click(6, 6);
-  await page.waitForTimeout(250);
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
   assert((await page.getByRole("dialog").count()) === 0, "clique fora fecha o modal");
 
   /* 6d. Tab preso no modal */
@@ -413,7 +416,7 @@ try {
   assert(texto2fa.includes("código do autenticador"), "2FA pendente abre a etapa do código");
   assert(texto2fa.includes("usar um código de recuperação"), "etapa 2 oferece recuperação");
   await page.keyboard.press("Escape");
-  await page.waitForTimeout(250);
+  await modal.waitFor({ state: "hidden" });
 
   /* --- 7. #/login continua funcionando ----------------------------------- */
   const page2 = page;
@@ -457,8 +460,8 @@ try {
       filete: getComputedStyle(document.querySelector(".hero__lead")).color,
     }));
     assert(tema.atributo === "escuro", "tema escuro do produto é aplicado ao documento");
-    assert(tema.raiz === "rgb(245, 242, 235)", "landing mantém o papel claro no tema escuro");
-    assert(tema.tinta === "rgb(32, 44, 39)", "texto da landing mantém a tinta editorial");
+    assert(tema.raiz === "rgb(23, 18, 14)", "landing usa superfície stout no tema escuro");
+    assert(tema.tinta === "rgb(244, 236, 220)", "texto da landing usa tinta clara no tema escuro");
     assert(tema.filete !== "rgb(255, 255, 255)" && tema.filete !== "rgb(0, 0, 0)", "texto secundário legível");
     /* Não fechamos o contexto aqui: no Chromium single-process do sandbox
        fechar um contexto derruba o navegador. Ele é encerrado no finally. */
