@@ -902,8 +902,8 @@
   .dash-mesas__grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
   .dash-panel { padding: 15px; }
 }
-@media (max-width: 360px) {
+@media (max-width: 420px) {
   .dashboard-grid { gap: 8px; }
   .card-neon { padding: 12px; }
-  .card-neon .metric-value { font-size: clamp(16px, 5.5vw, 20px); }
+  .card-neon .metric-value { font-size: clamp(16px, 4.8vw, 18px); }
 }
