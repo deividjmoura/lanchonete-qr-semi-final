@@ -184,6 +184,31 @@ jobs:
 
       - name: Build for E2E
         run: npm run build
+
+      # Smoke dedicado da landing: navegação, capturas reais, 320/390/768/1440px,
+      # CTAs, modal, foco/teclado, contato e páginas institucionais.
+      - name: Landing visual and interaction smoke
+        env:
+          LD_LIBRARY_PATH: /tmp/al2023/lib:/tmp/al2023/usr/lib
+        run: |
+          set -euo pipefail
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/vite-preview.log 2>&1 &
+          preview_pid=$!
+          trap 'kill "$preview_pid" 2>/dev/null || true' EXIT
+          for tentativa in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4173/ >/dev/null
+          BASE_URL=http://127.0.0.1:4173 npm run test:landing -- --screenshots
+      - name: Upload landing review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: landing-visual-review
+          path: docs/screenshots/landing/*.png
+          if-no-files-found: warn
+
       # Roda todos os E2E: offline, lote/cobrança, abas CSRF, redefinição de senha
       # pelo admin, importação de cardápio por CSV e sistema visual. O runner sobe
       # e encerra o `vite preview` necessário aos testes que usam API simulada
