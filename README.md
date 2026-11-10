@@ -196,7 +196,7 @@ O primeiro login exige troca da senha de bootstrap. Não existe senha padrão. N
 | **npm run dev** | Interface Vite em desenvolvimento |
 | **npm start** | Inicialização pelo gate de migrations e servidor |
 | **npm run typecheck** | Verificação TypeScript |
-| **npm run build** | Build de produção da interface. O `dist/` é versionado e servido como está: se o seu `.env` local tiver `NODE_ENV=development`, o Vite gera um build de desenvolvimento sem avisar — use `NODE_ENV=production npm run build`. `npm test` acusa um `dist/` de desenvolvimento |
+| **npm run build** | Build de produção da interface. O `dist/` é versionado e servido como está: se o seu `.env` local tiver `NODE_ENV=development`, o Vite gera um build de desenvolvimento sem avisar — use `NODE_ENV=production npm run build`. `npm test` acusa um `dist/` de desenvolvimento que esteja no Git: ele confere o que já passou por `git add`, não a pasta em disco |
 | **npm run build:check** | Typecheck seguido do build |
 | **npm test** | Regressão sem as suítes que exigem PostgreSQL dedicado |
 | **npm run test:pg** | Suítes PostgreSQL; exige **DATABASE_URL** de banco de teste |

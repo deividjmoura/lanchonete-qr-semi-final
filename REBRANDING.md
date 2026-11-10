@@ -270,7 +270,9 @@ lacunas são cobertas de forma estática por `tests/cardapio-isolamento.test.cjs
 CI): nenhuma regra de fora consegue casar com um elemento do cardápio, o cardápio não consome token
 que só a identidade nova define, e os nomes globais (animações, fontes, camadas) não colidem.
 
-A prova visual **não roda no CI**: precisa de Chromium e do build da base. Rode-a antes do merge.
+A prova visual **não roda no CI**: precisa também do build da base e leva cerca de 3 minutos. Rode-a
+antes do merge. O workflow `postgres-integration.yml` já tem Chromium, então incluí-la lá parece
+viável; não foi tentado neste PR.
 
 Dos 21 módulos compartilhados que também desenham o cardápio, 7 mudaram: `index.html`,
 `public/garcom-pwa/theme-init.js`, `src/App.tsx`, `src/components/ui.tsx`, `src/lib/identidade.ts`,
@@ -388,6 +390,11 @@ Resultado sobre o build final:
 | `npm run test:contraste -- --com-equipe` | 84 estados, 0 abaixo de AA |
 | `npm run smoke:panorama`, `fila`, `2fa`, `mesas` | 4 de 4 |
 
+**O que o GitHub Actions roda a cada PR.** `ci.yml`: migrações e testes de integração em PostgreSQL
+limpo, typecheck, build, três smokes e `npm test`. `postgres-integration.yml`: os demais testes de
+integração com PostgreSQL e os E2E em Chromium. Não rodam lá, e precisam ser rodados à mão: a prova do
+cardápio, a auditoria de contraste, `test:landing` e `test:paginas-publicas`.
+
 **Testes novos**
 - `tests/cardapio-isolamento.test.cjs` (10): o cardápio não é alcançado por regras de fora.
 - `tests/contato-oficial.test.cjs` (6): um único endereço de contato, inclusive no build.
@@ -423,10 +430,13 @@ Em nenhum dos dois casos o código do produto foi alterado para o teste passar.
 `dist/` é versionado e servido como está. **Gere-o sempre com `NODE_ENV=production npm run build`.**
 
 Um `.env` local com `NODE_ENV=development` faz o `npm run build` produzir, sem aviso, um build de
-desenvolvimento: bundle quase duas vezes maior, React em modo de desenvolvimento e efeitos executados
-duas vezes (a captura das telas registrou 57 respostas de API em vez de 34).
-`tests/dist-producao.test.cjs` falha se um build assim for versionado. A configuração do build não foi
-alterada.
+desenvolvimento: JavaScript 46% maior (1.437.097 bytes contra 986.660), React em modo de
+desenvolvimento e efeitos executados duas vezes (a captura das telas registrou 57 respostas de API em
+vez de 34). A configuração do build não foi alterada.
+
+`tests/dist-producao.test.cjs` falha se um build assim for versionado. Ele lê o `dist/` que está no
+Git (o que já passou por `git add`), não a pasta em disco: um build recém-gerado só é conferido depois
+de `git add dist`. O motivo é o CI, que regrava a pasta antes dos testes (ponto 6 da seção 12).
 
 | Tamanho (produção) | `main` | agora |
 |---|---:|---:|
@@ -470,6 +480,15 @@ alterada.
 5. **Aparelhos com o PWA instalado** buscam o novo shell quando abrirem o app com rede, porque o nome
    do cache mudou; pode ser preciso abrir uma segunda vez para a aparência nova aparecer. Vale conferir
    num celular de garçom depois do deploy.
+6. **O CI gera o build em modo de teste, não de produção.** Os dois workflows (`ci.yml` e
+   `postgres-integration.yml`) definem `NODE_ENV: test` para o job inteiro e rodam `npm run build` sem
+   trocar esse valor. O resultado embute o React de desenvolvimento (JavaScript 46% maior) e nunca vai
+   ao ar. Já era assim na `main`, e este PR não mudou isso. Duas consequências: os E2E do CI rodam
+   sobre esse build, embora o comentário do workflow diga "build de produção"; e o build de produção
+   só existe no `dist/` versionado, que o CI não gera. É também a explicação provável para o
+   comentário do `ci.yml` sobre nomes de arquivo diferentes entre a máquina local e o CI (aqui, o
+   build de produção sai idêntico byte a byte a cada vez). Para o CI exercitar o que vai ao ar, basta
+   `env: NODE_ENV: production` nos dois passos de build. Não foi feito aqui porque muda o alvo dos E2E.
 
 ---
 
@@ -535,8 +554,8 @@ Se o hash é o mesmo, vá ao passo 4. Se não, classifique cada arquivo que mudo
 `--glass-*`, `--elev-*`, `--prim-*`, `backdrop-filter`, o hook `useDockMagnify` ou o paralaxe do
 painel, os testes de identidade falham. Não os reative para o teste passar: reescreva o trecho.
 
-**4. Rode tudo sobre o resultado** (seção 15). A prova do cardápio e a auditoria de contraste não rodam
-no CI: rode-as à mão.
+**4. Rode tudo sobre o resultado** (seção 15). A prova do cardápio, a auditoria de contraste,
+`test:landing` e `test:paginas-publicas` não rodam no CI: rode-as à mão.
 
 **5. Confira o que nenhum teste cobre.**
 - O PWA instalado num celular: abre, atualiza o shell, envia pedido offline e sincroniza.
