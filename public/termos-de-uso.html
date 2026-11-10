@@ -3,29 +3,51 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0b101b">
+  <meta name="theme-color" content="#17120e">
   <meta name="description" content="Condições gerais de uso do QR Admin.">
   <title>Termos de Uso | QR Admin</title>
   <style>
-    :root{color-scheme:light;--ink:#172033;--muted:#58647a;--line:#dce2ed;--accent:#b5360d;--paper:#fff;--bg:#f2f4f9}
-    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-    header{padding:42px 22px 34px;background:#101626;color:#f3f4fb}header>div,main,footer{max-width:820px;margin:auto}
-    .eyebrow{font-size:.76rem;letter-spacing:.14em;text-transform:uppercase;color:#b7a5ff;font-weight:700}
-    h1{font-size:clamp(2rem,5vw,3rem);line-height:1.12;margin:.5rem 0}header p{color:#b9c2d5;margin:.5rem 0 0}
-    main{background:var(--paper);margin:28px auto;padding:clamp(22px,5vw,48px);border:1px solid var(--line);border-radius:22px}
-    h2{font-size:1.12rem;margin:2rem 0 .45rem}p,li{color:var(--muted)}a{color:var(--accent);font-weight:650;text-decoration:none}a:hover{text-decoration:underline}
-    footer{padding:0 22px 30px;color:var(--muted);font-size:.85rem}
-    .note{padding:14px 16px;border-left:3px solid var(--accent);background:#f5f2ff;border-radius:0 10px 10px 0}
+    @font-face{font-family:"Fraunces";src:url("/garcom-pwa/fonts/fraunces-latin-soft-normal.woff2") format("woff2-variations");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Plus Jakarta Sans";src:url("/garcom-pwa/fonts/plus-jakarta-sans-latin-wght-normal.woff2") format("woff2-variations");font-weight:200 800;font-style:normal;font-display:swap}
+:root{color-scheme:light;--stout:#17120e;--stout-deep:#100c09;--paper:#f0e6d2;--paper-light:#f7f0e2;--paper-line:#cfc0a3;--brasa:#e8501f;--brasa-dark:#b5360d;--ink:#2b2118;--muted:#746353;--font-sans:"Plus Jakarta Sans",ui-sans-serif,system-ui,sans-serif;--font-display:"Fraunces",Georgia,serif;--radius:16px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+body{margin:0;background:radial-gradient(ellipse at 8% 0%,rgba(232,80,31,.08),transparent 32%),var(--paper);color:var(--ink);font:16px/1.75 var(--font-sans)}
+header{position:relative;isolation:isolate;overflow:hidden;background:linear-gradient(135deg,var(--stout-deep),var(--stout) 62%,#2b2119);color:var(--paper-light);padding:34px 22px 38px;border-bottom:4px solid var(--brasa)}
+header:after{content:"";position:absolute;z-index:-1;inset:0;background:radial-gradient(ellipse at 90% 0%,rgba(232,80,31,.18),transparent 38%);pointer-events:none}
+header>div,main,footer{max-width:880px;margin-left:auto;margin-right:auto}
+.brand{display:inline-flex;align-items:center;gap:9px;margin-bottom:26px;color:var(--paper-light);font-size:.78rem;font-weight:800;letter-spacing:.16em;text-decoration:none}
+.brand:before{content:"";width:10px;height:10px;border-radius:3px;background:var(--brasa);box-shadow:0 0 0 4px rgba(232,80,31,.14);transform:rotate(45deg)}
+.eyebrow{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:#ff9a6b;font-weight:800}
+h1{max-width:760px;font:700 clamp(2.2rem,6vw,3.7rem)/1.06 var(--font-display);letter-spacing:-.035em;margin:.45rem 0}
+header p{max-width:660px;color:#c8b79f;margin:.75rem 0 0;font-size:.98rem}
+main{position:relative;background:var(--paper-light);margin:28px auto;padding:clamp(22px,5vw,52px);border:1px solid var(--paper-line);border-radius:var(--radius);box-shadow:0 12px 32px rgba(23,18,14,.09),inset 0 1px 0 rgba(255,255,255,.65)}
+h2{font:700 1.42rem/1.25 var(--font-display);letter-spacing:-.015em;color:var(--stout);margin:2.15rem 0 .6rem;padding-top:.2rem}
+h2:first-child{margin-top:0}
+p,li{color:#594b3e}
+p{margin:.8rem 0}
+li{margin:.45rem 0}
+a{color:var(--brasa-dark);font-weight:700;text-decoration-thickness:1px;text-underline-offset:3px;overflow-wrap:anywhere}
+a:hover{color:#8f2a0a}
+a:focus-visible{outline:3px solid var(--brasa);outline-offset:3px;border-radius:4px}
+.updated{font-size:.82rem;color:var(--muted);font-weight:700;letter-spacing:.025em;border-bottom:1px solid var(--paper-line);padding-bottom:16px;margin-bottom:22px}
+.notice,.note{padding:16px 18px;background:#f3e5cf;border:1px solid #dfc49a;border-left:4px solid var(--brasa);border-radius:0 var(--radius) var(--radius) 0;color:#594b3e}
+.notice strong,.note strong{color:var(--stout)}
+footer{display:flex;flex-wrap:wrap;gap:10px;padding:0 22px 34px;color:var(--muted);font-size:.85rem}
+footer a{display:inline-flex;align-items:center;min-height:40px;padding:8px 13px;border:1px solid var(--paper-line);border-radius:999px;background:rgba(247,240,226,.72);text-decoration:none}
+footer a:hover{background:var(--paper-light);border-color:var(--brasa)}
+@media(max-width:600px){header{padding:26px 20px 30px}.brand{margin-bottom:20px}main{margin:16px 12px;padding:24px 20px}h2{font-size:1.28rem}footer{padding:0 16px 26px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
   </style>
 </head>
 <body>
-  <header><div>
+  <header><div><a class="brand" href="/" aria-label="QR Admin — página inicial">QR ADMIN</a>
     <div class="eyebrow">QR Admin</div>
     <h1>Termos de Uso</h1>
     <p>Condições gerais para utilização da plataforma de gestão de comandas e pedidos.</p>
   </div></header>
   <main>
-    <p><strong>Última atualização: 5 de novembro de 2026.</strong></p>
+    <p><strong>Última atualização: 10 de novembro de 2026.</strong></p>
     <p>Estes termos descrevem as condições gerais de uso do QR Admin. Ao acessar a plataforma, o estabelecimento e seus operadores concordam em utilizá-la de forma responsável e de acordo com as orientações aqui apresentadas.</p>
 
     <h2>1. Finalidade da plataforma</h2>
@@ -59,7 +81,7 @@
     <p>Estes termos podem ser atualizados para refletir mudanças na plataforma, nos recursos ou nas exigências aplicáveis. A versão vigente será disponibilizada nesta página com sua data de atualização.</p>
 
     <h2>9. Contato</h2>
-    <p>Para dúvidas sobre estes termos ou sobre a plataforma, entre em contato pelo <a href="https://wa.me/5547996162721" target="_blank" rel="noopener noreferrer">WhatsApp</a> ou pelo e-mail <a href="mailto:dejesusdemouradeivid@gmail.com">dejesusdemouradeivid@gmail.com</a>.</p>
+    <p>Para dúvidas sobre estes termos ou sobre a plataforma, entre em contato pelo <a href="https://wa.me/5547996162721" target="_blank" rel="noopener noreferrer">WhatsApp</a> ou pelo e-mail <a href="mailto:servicosdegestaoqradmin@gmail.com">servicosdegestaoqradmin@gmail.com</a>.</p>
 
     <p class="note"><strong>Nota:</strong> este texto apresenta condições gerais de uso da plataforma e deve ser revisado por assessoria jurídica antes de ser adotado como instrumento contratual definitivo.</p>
   </main>
