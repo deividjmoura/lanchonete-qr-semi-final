@@ -87,8 +87,8 @@ try {
       serifa: getComputedStyle(em).fontFamily,
     };
   });
-  assert(/DM Sans/.test(fontes.corpo), "corpo em DM Sans");
-  assert(/DM Serif Display/.test(fontes.serifa), "ênfase em DM Serif Display");
+  assert(/Plus Jakarta Sans/.test(fontes.corpo), "corpo em Plus Jakarta Sans");
+  assert(/Fraunces/.test(fontes.serifa), "ênfase em Fraunces");
 
   /* --- 2. Capturas reais carregadas --------------------------------------- */
   const capturas = await page.evaluate(() =>
@@ -107,6 +107,20 @@ try {
     capturas.every((c) => /^\/assets\/apresentacao\/.+\.webp$/.test(c.src || "")),
     "capturas vêm de /assets/apresentacao",
   );
+
+  /* --- 2b. Jornada de scroll com capturas reais -------------------------- */
+  const cenas = page.locator(".flow-scene");
+  assert(await cenas.count() === 8, "jornada contém oito etapas reais do produto");
+  assert(await page.locator(".flow-narrative__progress").count() === 1, "linha SVG de progresso está presente");
+  for (let i = 0; i < await cenas.count(); i++) {
+    const cena = cenas.nth(i);
+    await cena.scrollIntoViewIfNeeded();
+    const img = cena.locator("img");
+    await img.waitFor({ state: "attached" });
+    await page.waitForFunction((element) => element.complete && element.naturalWidth > 0, await img.elementHandle());
+    assert((await img.getAttribute("src"))?.startsWith("/assets/apresentacao/"), "etapa " + (i + 1) + " usa captura real");
+  }
+  await page.evaluate(() => window.scrollTo(0, 0));
 
   /* --- 3. Responsividade -------------------------------------------------- */
   for (const largura of [1440, 768, 390, 320]) {
@@ -180,7 +194,7 @@ try {
     "WhatsApp do contato é o mesmo número do login, aberto em nova aba",
   );
   assert(
-    canais.some((c) => c.href === "mailto:dejesusdemouradeivid@gmail.com"),
+    canais.some((c) => c.href === "mailto:servicosdegestaoqradmin@gmail.com"),
     "e-mail do contato é o mesmo do login",
   );
   /* Número e e-mail precisam ser idênticos aos publicados na tela de acesso:
@@ -249,7 +263,7 @@ try {
   });
   assert(cabecalhoVisivel, "desktop: acesso continua visível durante a rolagem");
 
-  /* Abaixo de 960 px o par flutuante assume e desaparece sobre o rodapé. */
+  /* Abaixo de 960 px o conjunto flutuante assume e desaparece sobre o rodapé. */
   await page.setViewportSize({ width: 390, height: 844 });
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(260);
@@ -268,13 +282,13 @@ try {
   });
   assert(
     Boolean(larguraFlutuante && larguraFlutuante.right <= 391 && larguraFlutuante.bottom <= 845),
-    "mobile: par flutuante cabe na tela",
+    "mobile: ações flutuantes cabem na tela",
   );
   await page.locator(".site-footer").scrollIntoViewIfNeeded();
   await page.waitForTimeout(420);
   assert(
     (await page.locator(".floating-actions--visible").count()) === 0,
-    "mobile: par flutuante se recolhe sobre o rodapé",
+    "mobile: ações flutuantes se recolhem sobre o rodapé",
   );
 
   /* O botão "Acessar" do par flutuante abre o mesmo modal real. */

@@ -272,7 +272,7 @@ body.board-page .burger-dock .conta-btn {
   height: auto !important;
 }
 body.board-page .burger-hint {
-  font-family: Inter, system-ui, sans-serif !important;
+  font-family: var(--font-sans) !important;
   font-size: 0.78rem !important;
   font-weight: 600;
   color: rgba(245, 242, 238, 0.95) !important;
@@ -307,7 +307,7 @@ body.board-page .mesa-logo {
   flex-shrink: 0;
 }
 body.board-page .board-header .menu-title {
-  font-family: Inter, system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-weight: 800;
   letter-spacing: 0.18em;
   color: #fff;
@@ -317,7 +317,7 @@ body.board-page .board-header .menu-title {
   text-align: left;
 }
 body.board-page .board-header .mesa-line {
-  font-family: Inter, system-ui, sans-serif;
+  font-family: var(--font-sans);
   color: rgba(245, 242, 238, 0.75);
   margin-top: 2px;
   text-align: left;
@@ -344,7 +344,7 @@ body.board-page .chalk-cat {
 }
 
 body.board-page .chalk-cat__head {
-  font-family: Inter, system-ui, sans-serif !important;
+  font-family: var(--font-sans) !important;
   color: #f7f4ef !important;
   font-weight: 600;
   font-size: 1rem;
@@ -363,7 +363,7 @@ body.board-page .chalk-item {
 }
 
 body.board-page .chalk-item h3 {
-  font-family: Inter, system-ui, sans-serif !important;
+  font-family: var(--font-sans) !important;
   color: #f7f4ef !important;
 }
 

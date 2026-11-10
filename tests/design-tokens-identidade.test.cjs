@@ -24,6 +24,8 @@ const tokens = read("public/garcom-pwa/design-tokens.css");
 const dashboard = read("src/screens/dashboard.css");
 const operacional = read("src/screens/operacional.css");
 const spaCss = read("src/index.css");
+const landingCss = read("src/screens/landing/styles/main.css");
+const flow = read("src/screens/landing/sections/FlowSection.tsx");
 
 const LITERAL = /#[0-9a-fA-F]{3,8}\b|rgba?\(/;
 
@@ -59,8 +61,8 @@ test("tokens semânticos globais seguem o Território A (brasa) nos dois temas",
   const escuro = tokens.slice(tokens.indexOf(':root[data-theme="escuro"]'));
   // Brasa como ação primária e assinatura operacional; superfícies de tinta/nevoeiro.
   assert.match(tokens, /--prim-brasa: #e8501f;/);
-  assert.match(tokens, /--prim-meia-noite: #0b101b;/);
-  assert.match(tokens, /--prim-nevoa: #e4e8f1;/);
+  assert.match(tokens, /--prim-meia-noite: #17120e;/);
+  assert.match(tokens, /--prim-nevoa: #f1eadc;/);
   assert.match(claro, /--brand: var\(--prim-brasa-escura\)/);
   assert.match(escuro, /--brand: var\(--prim-brasa-clara\)/);
   assert.match(escuro, /--surface: var\(--prim-meia-noite\)/);
@@ -114,6 +116,20 @@ test("PWA consome a mesma fonte de tokens e mantém a imagem no shell offline", 
   assert.match(read("public/garcom-pwa/index.html"), /design-tokens\.css/);
   const sw = read("public/garcom-pwa/sw.js");
   assert.match(sw, /design-tokens\.css/, "o shell precisa versionar os tokens para o aparelho atualizar");
+});
+
+test("landing compartilha tipografia, contatos e jornada visual real", () => {
+  assert.match(landingCss, /font-family: var\(--font-sans\)/);
+  assert.match(landingCss, /font-family: var\(--font-display\)/);
+  assert.doesNotMatch(landingCss, /DM Sans|DM Serif Display/);
+  assert.match(landingCss, /flow-narrative__progress/);
+  assert.match(flow, /fila-cozinha\.webp/);
+  assert.match(flow, /fechamento-caixa\.webp/);
+  assert.match(flow, /dashboard-admin\.webp/);
+  assert.match(read("src/screens/landing/contato.ts"), /servicosdegestaoqradmin@gmail\.com/);
+  assert.match(read("src/screens/landing/components/FloatingActions.tsx"), /floating-actions__email/);
+  assert.match(read("src/screens/landing/components/Icon.tsx"), /@phosphor-icons\/react/);
+  assert.doesNotMatch(read("src/screens/landing/components/Icon.tsx"), /const paths:/);
 });
 
 test("exceção declarada: o cardápio do cliente segue isolado e documentado", () => {

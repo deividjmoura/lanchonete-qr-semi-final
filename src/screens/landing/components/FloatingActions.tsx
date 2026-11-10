@@ -7,11 +7,11 @@ import { useRolagemInterna } from "../useRolagemInterna";
  *
  * No desktop o cabeçalho já é sticky e mantém "Acessar o sistema" visível o
  * tempo todo. Abaixo de 960 px o CTA do cabeçalho dá lugar ao menu (para o
- * logotipo não disputar a linha em 320–390 px), então o acesso e o contato
- * passam a acompanhar a rolagem em um par discreto no canto inferior.
+ * logotipo não disputar a linha em 320–390 px), então o acesso e os dois canais de contato
+ * acompanham a rolagem em um conjunto discreto no canto inferior.
  *
  * Comportamento: aparece depois que o hero sai da tela e se recolhe quando o
- * rodapé entra na viewport — lá os dois mesmos destinos já estão à vista, e a
+ * rodapé entra na viewport — lá os canais de contato já estão à vista, e a
  * barra não deve cobrir o conteúdo do rodapé. */
 export function FloatingActions({ aoAbrirAcesso }: { aoAbrirAcesso: () => void }) {
   const [visivel, setVisivel] = useState(false);
@@ -53,7 +53,10 @@ export function FloatingActions({ aoAbrirAcesso }: { aoAbrirAcesso: () => void }
       </AccessButton>
       <a className="floating-actions__contato" href="#contato" onClick={irParaContato}>
         <Icon name="whatsapp" size={17} />
-        <span>Contate-nos</span>
+        <span>WhatsApp</span>
+      </a>
+      <a className="floating-actions__email" href="mailto:servicosdegestaoqradmin@gmail.com" aria-label="Enviar e-mail" title="E-mail">
+        <Icon name="mail" size={17} />
       </a>
     </div>
   );

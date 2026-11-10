@@ -689,3 +689,27 @@
     transform: none !important;
   }
 }
+
+
+/* Tickets operacionais: papel/tinta e hierarquia de estado, sem brilho decorativo. */
+.ops-stage {
+  background: var(--stage-bg);
+  border-color: var(--stage-line);
+  box-shadow: none;
+}
+.ops-stage::before { display: none; }
+.ops-sessao {
+  background: var(--stage-card);
+  border-color: var(--stage-line);
+  box-shadow: none;
+}
+.ops-card {
+  background: var(--stage-card);
+  border-color: var(--stage-line);
+  box-shadow: none;
+}
+.ops-card:hover {
+  border-color: var(--stage-brasa);
+  box-shadow: none;
+  transform: none;
+}

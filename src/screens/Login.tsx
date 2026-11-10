@@ -3,6 +3,7 @@ import { EnvelopeSimple, WhatsappLogo } from "@phosphor-icons/react";
 import { useEffect, useRef } from "react";
 import { FormularioAcesso, useFluxoAcesso } from "../components/AuthFlow";
 import { ThemeToggle } from "../components/ui";
+import { EMAIL_URL, WHATSAPP_URL } from "./landing/contato";
 import "./login-fields.css";
 
 export default function Login() {
@@ -95,7 +96,7 @@ export default function Login() {
           <nav aria-label="Contato e aparência" className="flex items-center gap-1">
             <a
               className="login-footer-link"
-              href="https://wa.me/5547996162721"
+              href={WHATSAPP_URL}
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Contato pelo WhatsApp"
@@ -105,7 +106,7 @@ export default function Login() {
             </a>
             <a
               className="login-footer-link"
-              href="mailto:dejesusdemouradeivid@gmail.com"
+              href={EMAIL_URL}
               aria-label="Contato por e-mail"
               title="E-mail"
             >

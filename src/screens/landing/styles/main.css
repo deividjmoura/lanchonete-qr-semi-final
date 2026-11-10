@@ -6,50 +6,26 @@
    carregar as fontes self-hosted em /fonts/landing/.
    -------------------------------------------------------------------------- */
 
-@font-face {
-  font-family: 'DM Sans';
-  src: url('/fonts/landing/dm-sans-latin-wght-normal.woff2') format('woff2-variations');
-  font-weight: 100 1000;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'DM Serif Display';
-  src: url('/fonts/landing/dm-serif-display-latin-400-normal.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'DM Serif Display';
-  src: url('/fonts/landing/dm-serif-display-latin-400-italic.woff2') format('woff2');
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
-
 /* Tokens locais da landing: escopados para não colidir com os tokens
    semânticos do produto (--line, --paper, --muted já existem em
    public/garcom-pwa/design-tokens.css). */
 .landing-root {
-  --paper: #f5f2eb;
-  --paper-light: #fcfaf5;
-  --paper-deep: #ece8dd;
-  --ink: #202c27;
-  --ink-soft: #34443b;
-  --pine: #293e34;
-  --pine-light: #3d5949;
-  --muted: #69746d;
-  --line: #d9d5cb;
-  --line-dark: rgba(248, 246, 239, 0.19);
-  --accent: #bd583f;
-  --accent-deep: #a64934;
-  --sage: #e5e9df;
-  --sage-strong: #b7c5b2;
-  --butter: #e6c47e;
-  --white: #fffdf8;
+  --paper: var(--surface);
+  --paper-light: var(--surface-raised);
+  --paper-deep: var(--surface-sunken);
+  --ink: var(--text);
+  --ink-soft: var(--text-muted);
+  --pine: var(--stage-bg);
+  --pine-light: var(--stage-panel);
+  --muted: var(--text-muted);
+  --line: var(--line-strong);
+  --line-dark: var(--stage-line);
+  --accent: var(--brand);
+  --accent-deep: var(--brand-hover);
+  --sage: var(--surface-hover);
+  --sage-strong: var(--line-strong);
+  --butter: var(--stage-amber);
+  --white: var(--brand-contrast);
   --shell-width: 1280px;
   --shell-gutter: 64px;
   --header-height: 82px;
@@ -57,7 +33,7 @@
 }
 
 .landing-root {
-  font-family: 'DM Sans', 'Avenir Next', Avenir, sans-serif;
+  font-family: var(--font-sans);
   color: var(--ink);
   background: var(--paper);
   font-synthesis: none;
@@ -94,7 +70,7 @@ html {
 
 .landing-root button,
 .landing-root a {
-  font-family: 'DM Sans', 'Avenir Next', Avenir, sans-serif;
+  font-family: var(--font-sans);
 }
 
 button,
@@ -216,7 +192,7 @@ footer [id] {
 
 .section-intro h2 em {
   color: var(--accent);
-  font-family: 'DM Serif Display', Georgia, serif;
+  font-family: var(--font-display);
   font-weight: 400;
   letter-spacing: -0.045em;
 }
@@ -547,7 +523,7 @@ footer [id] {
 
 .hero h1 em {
   color: var(--accent);
-  font-family: 'DM Serif Display', Georgia, serif;
+  font-family: var(--font-display);
   font-weight: 400;
   letter-spacing: -0.065em;
 }
@@ -757,7 +733,7 @@ footer [id] {
   border-radius: 9px;
   background: #fffefa;
   color: #26352d;
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--font-sans);
   box-shadow: 0 4px 12px rgba(32, 44, 39, 0.05);
 }
 
@@ -1194,7 +1170,7 @@ footer [id] {
   position: relative;
   z-index: 1;
   margin-top: 3px;
-  font-family: 'DM Serif Display', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 19px;
   font-weight: 400;
   line-height: 1.1;
@@ -1412,7 +1388,7 @@ footer [id] {
 
 .value-section__note-mark {
   color: #e5a588;
-  font-family: 'DM Serif Display', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 30px;
   line-height: 0.8;
 }
@@ -1817,7 +1793,7 @@ footer [id] {
 
 .feature-stage__index {
   color: #e4d2c5;
-  font-family: 'DM Serif Display', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 47px;
   line-height: 0.9;
 }
@@ -2304,7 +2280,7 @@ footer [id] {
 }
 
 .principles-section__seal span:first-child {
-  font-family: 'DM Serif Display', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 26px;
   letter-spacing: -0.07em;
 }
@@ -2437,7 +2413,7 @@ footer [id] {
 
 .final-cta__copy h2 em {
   color: #f4d7bf;
-  font-family: 'DM Serif Display', Georgia, serif;
+  font-family: var(--font-display);
   font-weight: 400;
 }
 
@@ -4040,8 +4016,7 @@ footer [id] {
   margin-top: 17px;
 }
 
-/* Fonte variável + acento: o carregamento de DM Serif Display é assíncrono;
-   enquanto isso o fallback Georgia preserva a composição editorial. */
+/* Tipografia editorial: Fraunces e Plus Jakarta Sans vêm dos tokens globais. */
 
 /* --------------------------------------------------------------------------
    Tema escuro do produto
@@ -4266,7 +4241,7 @@ footer [id] {
 .contato-formato h3 {
   margin: 18px 0 0;
   color: var(--ink);
-  font-family: 'DM Serif Display', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 25px;
   font-weight: 400;
   letter-spacing: -0.02em;
@@ -4577,4 +4552,349 @@ footer [id] {
   .contato-canal:hover {
     transform: none;
   }
+}
+
+
+/* --------------------------------------------------------------------------
+   QR Admin · integração da landing ao design system global
+   -------------------------------------------------------------------------- */
+.landing-root {
+  color: var(--text);
+  background: var(--surface);
+  font-family: var(--font-sans);
+}
+.landing-root .flow-section,
+.landing-root .features-section,
+.landing-root .audience-section,
+.landing-root .principles-section,
+.landing-root .contato-section {
+  color: var(--text);
+  background: var(--surface);
+}
+.landing-root .flow-section__heading,
+.landing-root .features-section__heading,
+.landing-root .audience-section__heading,
+.landing-root .contato-section__heading {
+  color: var(--text);
+}
+.landing-root .section-intro__body,
+.landing-root .flow-scene__description,
+.landing-root .flow-section__foot,
+.landing-root .contato-section__note {
+  color: var(--text-muted);
+}
+.landing-root .section-intro h2,
+.landing-root .flow-scene h3,
+.landing-root .contato-formato h3,
+.landing-root .feature-picker__main strong {
+  color: var(--text);
+}
+.landing-root .section-intro h2 em,
+.landing-root .eyebrow,
+.landing-root .flow-scene__group,
+.landing-root .feature-stage__kicker {
+  color: var(--brand-ink);
+}
+.landing-root .flow-section__stamp,
+.landing-root .flow-scene__group,
+.landing-root .flow-scene__visual figcaption,
+.landing-root .feature-explorer__menu-label {
+  font-family: var(--font-mono);
+}
+.landing-root .feature-stage,
+.landing-root .contato-formato,
+.landing-root .contato-canal {
+  color: var(--text);
+  border-color: var(--line);
+  background: var(--surface-raised);
+}
+.landing-root .feature-stage__row-copy strong,
+.landing-root .feature-stage__connection,
+.landing-root .contato-canal__value {
+  color: var(--text);
+}
+.landing-root .feature-stage__row-copy small,
+.landing-root .feature-stage__connections-label,
+.landing-root .feature-stage__connections-foot,
+.landing-root .feature-stage__bottom,
+.landing-root .feature-stage__topline {
+  color: var(--text-muted);
+}
+.landing-root .product-section {
+  color: var(--stage-ink);
+  background: var(--stage-bg);
+}
+.landing-root .product-section .section-intro h2,
+.landing-root .product-section .section-intro h2 em {
+  color: var(--stage-ink);
+}
+.landing-root .product-section .section-intro__body,
+.landing-root .product-section__tab-note,
+.landing-root .product-section__visual-head,
+.landing-root .product-section__visual-foot {
+  color: var(--stage-ink-muted);
+}
+.landing-root .product-section__disclaimer {
+  color: var(--stage-ink-muted-2);
+  border-color: var(--stage-line);
+}
+.landing-root .floating-actions__email {
+  display: inline-grid;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: var(--ink);
+  background: var(--surface-raised);
+}
+.landing-root .floating-actions__email svg { color: var(--brand); }
+.landing-root .floating-actions__email:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Jornada: o trilho permanece legível em qualquer largura; a tinta acompanha
+   o scroll, sem depender de animações de entrada genéricas. */
+.landing-root .flow-section {
+  padding: clamp(76px, 9vw, 124px) 0;
+  background: var(--surface);
+}
+.landing-root .flow-narrative {
+  position: relative;
+  margin-top: clamp(48px, 7vw, 88px);
+}
+.landing-root .flow-narrative__rail {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  bottom: 0;
+  left: 20px;
+  width: 48px;
+  pointer-events: none;
+}
+.landing-root .flow-narrative__rail svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.landing-root .flow-narrative__track,
+.landing-root .flow-narrative__progress {
+  fill: none;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.landing-root .flow-narrative__track { stroke: var(--line); }
+.landing-root .flow-narrative__progress {
+  stroke: var(--brand);
+  stroke-linecap: round;
+  stroke-dasharray: 1000;
+  transition: stroke-dashoffset 80ms linear;
+}
+.landing-root .flow-scenes {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: clamp(54px, 8vw, 112px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.landing-root .flow-scene {
+  display: grid;
+  grid-template-columns: minmax(220px, .72fr) minmax(0, 1.28fr);
+  align-items: center;
+  gap: clamp(28px, 6vw, 84px);
+  min-width: 0;
+  padding-left: 88px;
+}
+.landing-root .flow-scene__copy { min-width: 0; }
+.landing-root .flow-scene__marker {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 24px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  color: var(--text-muted);
+  background: var(--surface);
+  transition: color 160ms ease, border-color 160ms ease, background-color 160ms ease;
+}
+.landing-root .flow-scene__marker > span {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+.landing-root .flow-scene__marker svg { width: 14px; height: 14px; }
+.landing-root .flow-scene__group {
+  margin: 0 0 10px;
+  color: var(--brand-ink);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+.landing-root .flow-scene h3 {
+  max-width: 420px;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 3.2vw, 3.2rem);
+  font-weight: 650;
+  letter-spacing: -.045em;
+  line-height: 1.06;
+  text-wrap: balance;
+}
+.landing-root .flow-scene__description {
+  max-width: 380px;
+  margin: 18px 0 0;
+  font-size: 14px;
+  line-height: 1.75;
+}
+.landing-root .flow-scene__visual {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--surface-raised);
+  box-shadow: 0 12px 28px rgba(23, 18, 14, .08);
+  transform: translateY(8px);
+  transition: transform 240ms ease, border-color 240ms ease;
+}
+.landing-root .flow-scene__visual img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: contain;
+  background: var(--surface-sunken);
+}
+.landing-root .flow-scene__visual figcaption {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 13px;
+  border-top: 1px dashed var(--line);
+  color: var(--text-muted);
+  font-size: 9px;
+  letter-spacing: .08em;
+}
+.landing-root .flow-scene--active .flow-scene__marker {
+  border-color: var(--brand);
+  color: var(--brand-contrast);
+  background: var(--brand);
+}
+.landing-root .flow-scene--active .flow-scene__visual {
+  border-color: var(--brand-border);
+  transform: translateY(0);
+}
+.landing-root .flow-section__foot {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin: clamp(44px, 7vw, 78px) 0 0 88px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.landing-root .flow-section__foot-line {
+  width: 28px;
+  height: 2px;
+  flex: 0 0 auto;
+  margin-top: 10px;
+  background: var(--brand);
+}
+.landing-root .flow-section__foot strong { color: var(--text); }
+@media (max-width: 900px) {
+  .landing-root .flow-scene {
+    grid-template-columns: minmax(0, .72fr) minmax(0, 1.28fr);
+    gap: 26px;
+    padding-left: 66px;
+  }
+  .landing-root .flow-narrative__rail { left: 9px; }
+  .landing-root .flow-section__foot { margin-left: 66px; }
+}
+@media (max-width: 680px) {
+  .landing-root .flow-section { padding: 70px 0; }
+  .landing-root .flow-section__heading { display: block; }
+  .landing-root .flow-section__stamp { margin-top: 22px; text-align: left; }
+  .landing-root .flow-narrative { margin-top: 42px; }
+  .landing-root .flow-narrative__rail { left: -13px; width: 32px; }
+  .landing-root .flow-scenes { gap: 58px; }
+  .landing-root .flow-scene {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 22px;
+    padding-left: 40px;
+  }
+  .landing-root .flow-scene__marker { margin-bottom: 16px; }
+  .landing-root .flow-scene h3 { max-width: 100%; font-size: clamp(1.7rem, 8vw, 2.35rem); }
+  .landing-root .flow-scene__description { margin-top: 12px; font-size: 13px; }
+  .landing-root .flow-scene__visual { margin-left: 0; }
+  .landing-root .flow-scene__visual img { aspect-ratio: 4 / 3; }
+  .landing-root .flow-section__foot { margin: 42px 0 0 40px; }
+  .landing-root .flow-section__stamp { color: var(--text-muted); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-root .flow-narrative__progress,
+  .landing-root .flow-scene__marker,
+  .landing-root .flow-scene__visual { transition: none; }
+  .landing-root .flow-scene__visual { transform: none; }
+}
+
+[data-theme="escuro"] .landing-root {
+  --paper: var(--surface);
+  --paper-light: var(--surface-raised);
+  --paper-deep: var(--surface-sunken);
+  --ink: var(--text);
+  --ink-soft: var(--text-muted);
+  --pine: var(--stage-bg);
+  --pine-light: var(--stage-panel);
+  --muted: var(--text-muted);
+  --line: var(--line-strong);
+  --line-dark: var(--stage-line);
+  --accent: var(--brand);
+  --accent-deep: var(--brand-hover);
+  --sage: var(--surface-hover);
+  --sage-strong: var(--line-strong);
+  --butter: var(--stage-amber);
+  --white: var(--brand-contrast);
+}
+.landing-root .floating-actions__email {
+  flex: 0 0 40px;
+  padding: 0;
+}
+.landing-root .floating-actions__access:focus-visible,
+.landing-root .floating-actions__contato:focus-visible,
+.landing-root .floating-actions__email:focus-visible {
+  outline-color: var(--focus-ring);
+}
+@media (max-width: 390px) {
+  .landing-root .floating-actions__email {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+  }
+}
+
+
+[data-theme="escuro"] .landing-root .floating-actions {
+  color: var(--text);
+  border-color: var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-card);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+[data-theme="escuro"] .landing-root .floating-actions__access {
+  color: var(--brand-contrast);
+  background: var(--brand);
+}
+[data-theme="escuro"] .landing-root .floating-actions__contato,
+[data-theme="escuro"] .landing-root .floating-actions__email {
+  color: var(--text);
+  border-color: var(--line);
+  background: var(--surface);
 }

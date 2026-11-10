@@ -156,7 +156,7 @@
   isolation: isolate;
 }
 
-/* Grade discreta do palco (identidade azul/violeta), restrita ao regime expressivo.
+/* Grade discreta do palco (identidade papel, stout e brasa), restrita ao regime expressivo.
    Só definição de malha: nenhum tom fixo aqui, tudo vem de --stage-grid. */
 [data-regime="expressive"]::before {
   content: "";

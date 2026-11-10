@@ -12,7 +12,7 @@
   overflow: hidden;
   isolation: isolate;
   border: 1px solid var(--stage-line);
-  border-radius: var(--radius-lg)
+  border-radius: var(--radius-lg);
   background: linear-gradient(145deg, var(--stage-bg-2) 0%, var(--stage-bg) 56%, var(--stage-bg-2) 100%);
   color: var(--stage-ink);
 }
@@ -858,4 +858,66 @@
   .dash-mesas__body { padding: 14px 15px 18px; }
   .dash-mesas__stats { grid-template-columns: minmax(0, 1fr); }
   .dash-mesas__grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+
+/* Comanda de Chapa — grade responsiva com largura mínima real por cartão. */
+@media (max-width: 1050px) {
+  .dashboard-stage { padding: clamp(16px, 2vw, 24px); }
+  .dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-bottom { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 700px) {
+  .dashboard-stage { gap: 20px; padding: 14px; border-radius: var(--radius-md); }
+  .dashboard-intro { align-items: flex-start; flex-direction: column; gap: 16px; }
+  .dashboard-period { width: 100%; justify-items: start; }
+  .dashboard-period__group { max-width: 100%; }
+  .dashboard-period__group button { min-width: 0; flex: 1 1 0; }
+  .dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .card-neon { min-height: 170px; padding: 14px; }
+  .card-neon .metric-value { font-size: clamp(19px, 4.6vw, 27px); }
+  .dash-panel { padding: 16px; }
+  .dash-section-heading { align-items: flex-start; flex-direction: column; }
+  .dash-section-meta { text-align: left; }
+}
+@media (max-width: 420px) {
+  .dashboard-grid { grid-template-columns: minmax(0, 1fr); }
+  .card-neon { min-height: 0; }
+  .card-neon__top { margin-bottom: 8px; }
+  .card-neon .metric-value { font-size: 24px; }
+  .dashboard-period__group { width: 100%; }
+  .dash-panel { padding: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-stage *, .dashboard-stage *::before, .dashboard-stage *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+
+/* Superfícies operacionais: contraste de plano e linha, sem glass/halos decorativos. */
+.dashboard-stage {
+  background: var(--stage-bg);
+  border-color: var(--stage-line);
+}
+.dashboard-stage::before { display: none; }
+.card-neon {
+  border-color: var(--stage-line);
+  border-radius: var(--radius-md);
+  background: var(--stage-card);
+  box-shadow: none;
+}
+.card-neon::before { display: none; }
+.card-neon:hover {
+  border-color: var(--stage-brasa);
+  box-shadow: none;
+}
+.dash-panel {
+  border-color: var(--stage-line);
+  border-radius: var(--radius-md);
+  background: var(--stage-panel);
+  box-shadow: none;
 }

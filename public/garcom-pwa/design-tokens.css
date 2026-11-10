@@ -3,12 +3,12 @@
  * Direção estética global: Território A — "Comanda de Chapa" (aprovada em 2026-11-08).
  *   A interface é a comanda térmica digital: o número da mesa é a âncora, o ticket
  *   é a unidade legível a distância e o estado se comunica por posição + forma + cor.
- *   Brasa é a assinatura operacional (orçamento ~10% da área); violeta/ciano ficam
- *   como acentos de dado do palco.
+ *   Brasa é a assinatura operacional (orçamento ~10% da área); latão é o apoio secundário.
+ *   Azul e violeta não são cores dominantes da interface.
  *
  * Arquitetura em três níveis:
  *   1. Primitivos de marca (--prim-*): paleta base sem branco ou preto puros.
- *   2. Primitivos do palco (--stage-*): superfícies de vidro, camadas, acentos neon e hairlines
+ *   2. Primitivos do palco (--stage-*): superfícies escuras quentes, camadas, acentos contidos e hairlines
  *      que dão profundidade às telas escuras. NENHUM componente escreve hex: consome estes tokens.
  *   3. Tokens semânticos (--surface*, --text*, --brand*, --accent*, --line*, --status-*):
  *      únicos tokens consumidos pelos componentes do SPA e do PWA nos dois temas.
@@ -120,39 +120,39 @@
   --sidebar-notch: 20px;
   --touch-min: 48px;
 
-  /* Identidade global azul/violeta (dashboard "Os números da sua casa").
+  /* Identidade global papel, stout e brasa (dashboard "Os números da sua casa").
      Substitui a paleta anterior (papel/madeira/brasa): aquela direção fica restrita
      à interface do cardápio do cliente (#/mesa/:token), que tem layout próprio. */
-  --prim-meia-noite: #0b101b;
-  --prim-meia-noite-elevada: #141b29;
-  --prim-meia-noite-rebaixo: #080d16;
-  --prim-meia-noite-profunda: #080d16;
-  --prim-nevoa: #e4e8f1;
-  --prim-nevoa-elevada: #edf0f6;
-  --prim-nevoa-rebaixo: #d8deea;
-  --prim-nevoa-hover: #dfe5ef;
-  --prim-nevoa-borda: #b8c2d4;
-  --prim-nevoa-forte: #98a6bd;
-  --prim-azul-tinta: #121829;
-  --prim-azul-medio: #48536d;
-  --prim-azul-claro: #616d88;
-  --prim-noite-tinta: #eef1fb;
-  --prim-noite-medio: #a9b4cc;
-  --prim-noite-claro: #7f8ba6;
-  --prim-noite-borda: #2a3348;
-  --prim-noite-forte: #3b4660;
-  --prim-noite-hover: #1b2232;
-  --prim-azul-linha: #1f2637;
-  --prim-violeta: #7c5cff;
-  --prim-violeta-escuro: #5b3fc4;
-  --prim-violeta-escuro-hover: #4b32b0;
-  --prim-violeta-claro: #8b6fff;
-  --prim-violeta-hover: #6b4bf0;
-  --prim-violeta-tinta-claro: #4a32a6;
-  --prim-violeta-tinta-escuro: #b7a5ff;
-  --prim-azul-agua: #4fd1e0;
-  --prim-azul-agua-claro: #8fe6f0;
-  --prim-azul-agua-tinta-claro: #0a5a63;
+  --prim-meia-noite: #17120e;
+  --prim-meia-noite-elevada: #241c15;
+  --prim-meia-noite-rebaixo: #100c09;
+  --prim-meia-noite-profunda: #100c09;
+  --prim-nevoa: #f1eadc;
+  --prim-nevoa-elevada: #faf5e9;
+  --prim-nevoa-rebaixo: #e7dcc8;
+  --prim-nevoa-hover: #eee4d2;
+  --prim-nevoa-borda: #cbbda6;
+  --prim-nevoa-forte: #a89578;
+  --prim-azul-tinta: #2b2118;
+  --prim-azul-medio: #5b4a39;
+  --prim-azul-claro: #776858;
+  --prim-noite-tinta: #f4ecdc;
+  --prim-noite-medio: #c8b79f;
+  --prim-noite-claro: #a39179;
+  --prim-noite-borda: #49392c;
+  --prim-noite-forte: #69513d;
+  --prim-noite-hover: #30251b;
+  --prim-azul-linha: #403126;
+  --prim-violeta: #b38a4e;
+  --prim-violeta-escuro: #76521f;
+  --prim-violeta-escuro-hover: #624318;
+  --prim-violeta-claro: #d9b77b;
+  --prim-violeta-hover: #9b7135;
+  --prim-violeta-tinta-claro: #76521f;
+  --prim-violeta-tinta-escuro: #e8c98e;
+  --prim-azul-agua: #b88d54;
+  --prim-azul-agua-claro: #e6c58f;
+  --prim-azul-agua-tinta-claro: #76521f;
   --prim-verde-ink-claro: #1c6b3e;
   --prim-verde-ink-escuro: #7fe0b0;
   --prim-ambar-ink-claro: #8a5600;
@@ -171,47 +171,47 @@
 
 /* ==========================================================================
    1b. PRIMITIVOS DO PALCO (Nível 1b — superfícies, vidro e acentos de dado)
-   Identidade global azul/violeta. Consumidos por dashboard/cozinha/bar/Admin/PWA.
+   Identidade global stout/papel/brasa. Consumidos por dashboard/cozinha/bar/Admin/PWA.
    ========================================================================== */
 :root {
   /* Superfícies do palco (fundo escuro com profundidade) */
-  --stage-bg: #0b101b;
-  --stage-bg-2: #101322;
-  --stage-bg-3: #111525;
-  --stage-panel: rgba(27, 34, 50, 0.86);
-  --stage-panel-2: rgba(20, 27, 41, 0.92);
-  --stage-card: rgba(31, 37, 57, 0.95);
-  --stage-card-2: rgba(17, 23, 37, 0.96);
-  --stage-card-3: rgba(28, 35, 53, 0.92);
-  --stage-card-4: rgba(14, 20, 33, 0.94);
-  --stage-inset: #101723;
-  --stage-inset-2: rgba(14, 21, 35, 0.65);
-  --stage-inset-3: #0c1121;
-  --stage-inset-deep: #101827;
-  --stage-scrim: rgba(5, 7, 17, 0.79);
+  --stage-bg: #17120e;
+  --stage-bg-2: #201811;
+  --stage-bg-3: #2b2119;
+  --stage-panel: rgba(43, 34, 25, 0.92);
+  --stage-panel-2: rgba(36, 28, 21, 0.96);
+  --stage-card: rgba(48, 37, 27, 0.98);
+  --stage-card-2: rgba(31, 24, 18, 0.98);
+  --stage-card-3: rgba(44, 34, 24, 0.96);
+  --stage-card-4: rgba(26, 20, 14, 0.96);
+  --stage-inset: #201811;
+  --stage-inset-2: rgba(16, 12, 9, 0.72);
+  --stage-inset-3: #100c09;
+  --stage-inset-deep: #100c09;
+  --stage-scrim: rgba(10, 7, 4, 0.82);
 
   /* Tinta do palco */
-  --stage-ink: #f5f7ff;
-  --stage-ink-2: #e4eafb;
-  --stage-ink-3: #d7caff;
-  --stage-ink-muted: #aebad0;
-  --stage-ink-muted-2: #b8c4d8;
-  --stage-ink-subtle: #93a1bb;
-  --stage-ink-faint: #6c7691;
+  --stage-ink: #f4ecdc;
+  --stage-ink-2: #e9dfcd;
+  --stage-ink-3: #ddc9a8;
+  --stage-ink-muted: #c8b79f;
+  --stage-ink-muted-2: #c8b79f;
+  --stage-ink-subtle: #a39179;
+  --stage-ink-faint: #806d58;
 
   /* Linhas e hairlines */
-  --stage-line: #283044;
-  --stage-line-2: #303a50;
-  --stage-line-3: #3b4660;
-  --stage-line-4: #414c64;
-  --stage-line-5: #39445b;
-  --stage-line-base: #263149;
+  --stage-line: #49392c;
+  --stage-line-2: #554333;
+  --stage-line-3: #69513d;
+  --stage-line-4: #765c43;
+  --stage-line-5: #624b36;
+  --stage-line-base: #49392c;
   --stage-hairline: rgba(255, 255, 255, 0.04);
   --stage-hairline-2: rgba(255, 255, 255, 0.07);
   --stage-hairline-3: rgba(255, 255, 255, 0.10);
   --stage-hairline-4: rgba(255, 255, 255, 0.145);
 
-  /* Acento violeta (padrão) */
+  /* Acento de latão (secundário) */
   --stage-hairline-5: rgba(255, 255, 255, 0.21);
 
   /* Assinatura de brasa no palco: número de mesa, CTA primário e atraso. */
@@ -220,25 +220,25 @@
   --stage-brasa-soft: rgba(232, 80, 31, 0.18);
   --stage-brasa-ink: #ffc0a2;
 
-  --stage-violet: #c8b8ff;
-  --stage-violet-deep: #7151bf;
-  --stage-violet-soft: rgba(142, 105, 229, 0.19);
+  --stage-violet: #e8c98e;
+  --stage-violet-deep: #76521f;
+  --stage-violet-soft: rgba(232, 80, 31, 0.16);
 
-  /* Acentos de dado (ciano, lima, rosa, âmbar, menta) */
-  --stage-violet-text: #b7a5ff;
-  --stage-cyan: #83edee;
-  --stage-cyan-deep: #278a9c;
-  --stage-cyan-soft: rgba(65, 188, 199, 0.17);
-  --stage-lime: #d8fa9c;
-  --stage-lime-deep: #809b40;
-  --stage-lime-soft: rgba(174, 216, 93, 0.16);
+  /* Acentos de estado e dados (sucesso, atenção, erro e apoio) */
+  --stage-violet-text: #e8c98e;
+  --stage-cyan: #d9b77b;
+  --stage-cyan-deep: #76521f;
+  --stage-cyan-soft: rgba(184, 141, 84, 0.16);
+  --stage-lime: #9fbd85;
+  --stage-lime-deep: #47633a;
+  --stage-lime-soft: rgba(116, 186, 111, 0.16);
   --stage-lime-ink: #ccf88f;
-  --stage-rose: #ffc2da;
-  --stage-rose-deep: #af5c87;
-  --stage-rose-soft: rgba(224, 123, 168, 0.16);
-  --stage-amber: #ffd2a2;
-  --stage-amber-deep: #af7042;
-  --stage-amber-soft: rgba(232, 153, 89, 0.16);
+  --stage-rose: #f2847d;
+  --stage-rose-deep: #941c15;
+  --stage-rose-soft: rgba(178, 38, 30, 0.16);
+  --stage-amber: #ffb072;
+  --stage-amber-deep: #a64920;
+  --stage-amber-soft: rgba(232, 80, 31, 0.16);
   --stage-mint: #8bf8ce;
   --stage-mint-2: #7bf2c8;
   --stage-mint-text: #a4f4d5;
@@ -281,7 +281,7 @@
   --stage-grid: rgba(131, 147, 180, 0.07);
   --stage-veil: rgba(255, 255, 255, 0.12);
   /* Halos decorativos com orçamento reduzido: brasa discreta no lugar do halo
-     violeta de "palco SaaS"; ciano só como eco frio. */
+     violeta de "palco SaaS"; latão como apoio quente e contido. */
   --stage-glow-brasa: rgba(232, 80, 31, 0.12);
   --stage-glow-cyan: rgba(15, 143, 159, 0.06);
   --stage-scroll-thumb: #43506a;
@@ -290,7 +290,7 @@
 }
 
 /* ==========================================================================
-   2. TOKENS SEMÂNTICOS — TEMA CLARO (Névoa Azul + Violeta)
+   2. TOKENS SEMÂNTICOS — TEMA CLARO (Papel Quente + Tinta)
    ========================================================================== */
 :root,
 [data-theme="claro"] {
@@ -360,7 +360,7 @@
 }
 
 /* ==========================================================================
-   3. TOKENS SEMÂNTICOS — TEMA ESCURO (Meia-noite Azul + Sidebar Profunda)
+   3. TOKENS SEMÂNTICOS — TEMA ESCURO (Stout + Madeira Profunda)
    ========================================================================== */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="claro"]) {

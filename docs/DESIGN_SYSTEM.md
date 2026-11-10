@@ -9,10 +9,9 @@
 >
 > A assinatura de cor é a **brasa** (`--prim-brasa`), com orçamento de ~10% da área: número de mesa,
 > ação primária, "em produção"/atenção e atraso. Desde a onda 5, o dashboard também usa a família
-> brasa como acento padrão (`--stage-brasa*`); ciano/lima/rosa/âmbar seguem como acentos de dado
-> secundários e `--stage-violet*` permanece definido nos tokens apenas por compatibilidade, sem
-> consumidor visual. Violeta e ciano continuam como **acentos de dado**
-> do palco (`--stage-violet*`, `--stage-cyan`).
+> brasa como acento padrão (`--stage-brasa*`); latão é o apoio secundário. Verde, âmbar, azul e
+> vermelho ficam reservados aos estados semânticos. Tokens históricos `--stage-violet*` e
+> `--stage-cyan` permanecem apenas por compatibilidade, sem dominar a interface.
 >
 > A direção "Palco Azul/Violeta" (dashboard "Os números da sua casa") foi **substituída** pela
 > decisão de 2026-11-08. Dela sobreviveram a arquitetura de três níveis de tokens, o palco escuro com
@@ -30,8 +29,8 @@ divergem).
 
 | Nível | Prefixo | Papel | Quem consome |
 |---|---|---|---|
-| 1. Primitivos de marca | `--prim-*` | Valores brutos de paleta (brasa, meia-noite, névoa, violeta/azul-água como acentos, verdes/âmbar/azul/vermelho de tinta) | apenas os níveis 2 e 3 |
-| 1b. Primitivos do palco | `--stage-*` | Superfícies de vidro, camadas, hairlines, acentos neon e sombras das telas escuras | `dashboard.css`, `operacional.css`, `.stage-*` do SPA e PWA |
+| 1. Primitivos de marca | `--prim-*` | Valores brutos de paleta (brasa, stout, papel, latão e tintas semânticas de estado) | apenas os níveis 2 e 3 |
+| 1b. Primitivos do palco | `--stage-*` | Superfícies escuras quentes, camadas, hairlines, acentos contidos e sombras das telas escuras | `dashboard.css`, `operacional.css`, `.stage-*` do SPA e PWA |
 | 2. Semânticos | `--surface*`, `--text*`, `--brand*`, `--accent*`, `--line*`, `--status-*` | Papel funcional por tema (claro/escuro) | todos os componentes |
 | 3. Transversais | `--space-*`, `--dur-*`, `--ease-*`, `--elev-*`, `--glass-*` | Espaçamento, movimento, elevação e composição de vidro | componentes e camadas CSS |
 
@@ -43,19 +42,19 @@ token em vez de escrever a cor no componente.
 
 | Token | Hex | Papel |
 |---|---|---|
-| `--prim-meia-noite` | `#0B101B` | Superfície escura base (fundo do palco) |
-| `--prim-meia-noite-elevada` | `#141B29` | Cartão/painel sobre a meia-noite |
-| `--prim-meia-noite-rebaixo` | `#080D16` | Campos e áreas rebaixadas no escuro |
-| `--prim-nevoa` | `#EEF1F8` | Superfície clara base |
-| `--prim-nevoa-elevada` | `#F8FAFF` | Cartão elevado no claro |
-| `--prim-nevoa-rebaixo` | `#E0E5F1` | Campo/trilho no claro |
+| `--prim-meia-noite` | `#17120E` | Superfície escura base (fundo do palco) |
+| `--prim-meia-noite-elevada` | `#241C15` | Cartão/painel sobre a meia-noite |
+| `--prim-meia-noite-rebaixo` | `#100C09` | Campos e áreas rebaixadas no escuro |
+| `--prim-nevoa` | `#F1EADC` | Superfície clara base |
+| `--prim-nevoa-elevada` | `#FAF5E9` | Cartão elevado no claro |
+| `--prim-nevoa-rebaixo` | `#E7DCC8` | Campo/trilho no claro |
 | `--prim-brasa` | `#E8501F` | **Assinatura operacional** (ação primária, mesa em destaque, atenção) |
 | `--prim-brasa-escura` / `--prim-brasa-tinta` | `#BF3B11` / `#B5360D` | Brasa sobre superfície clara (fundo / tinta) |
 | `--prim-brasa-clara` / `--prim-brasa-tinta-escuro` | `#FF7D52` / `#FFB59A` | Brasa sobre palco escuro (fundo / tinta) |
-| `--prim-violeta` | `#7C5CFF` | Acento de dado do palco (não é mais a cor de marca) |
-| `--prim-azul-agua` | `#4FD1E0` | Acento secundário / informação operacional |
-| `--prim-azul-tinta` / `--prim-azul-medio` / `--prim-azul-claro` | `#121829` / `#48536D` / `#616D88` | Texto e apoio no tema claro |
-| `--prim-noite-tinta` / `--prim-noite-medio` / `--prim-noite-claro` | `#EEF1FB` / `#A9B4CC` / `#7F8BA6` | Texto e apoio no tema escuro |
+| `--prim-violeta` | `#B38A4E` | Alias legado de latão (não é cor de marca) |
+| `--prim-azul-agua` | `#B88D54` | Acento secundário / informação operacional |
+| `--prim-azul-tinta` / `--prim-azul-medio` / `--prim-azul-claro` | `#2B2118` / `#5B4A39` / `#776858` | Texto e apoio no tema claro |
+| `--prim-noite-tinta` / `--prim-noite-medio` / `--prim-noite-claro` | `#F4ECDC` / `#C8B79F` / `#A39179` | Texto e apoio no tema escuro |
 
 Nenhum token usa `#FFFFFF` ou `#000000` puros (teste de design system).
 
@@ -63,12 +62,12 @@ Nenhum token usa `#FFFFFF` ou `#000000` puros (teste de design system).
 
 | Token | Claro | Escuro | Contraste medido |
 |---|---|---|---|
-| `--surface` | `#EEF1F8` | `#0B101B` | — |
-| `--text` sobre `--surface` | `#121829` | `#EEF1FB` | 15,6:1 / 16,9:1 (AAA) |
-| `--text-muted` sobre `--surface-raised` | `#48536D` | `#A9B4CC` | 7,4:1 / 8,3:1 |
-| `--brand` sobre `--brand-contrast` | `#BF3B11` / `#EDF0F6` | `#FF7D52` / `#0B101B` | 4,8:1 / 7,5:1 |
-| `--brand-ink` sobre `--surface-raised` | `#B5360D` | `#FFB59A` | 5,3:1 / 10,1:1 |
-| `--accent-ink` | `#0A5A63` | `#8FE6F0` | 7,6:1 / 12,1:1 |
+| `--surface` | `#F1EADC` | `#17120E` | — |
+| `--text` sobre `--surface` | `#2B2118` | `#F4ECDC` | 13,16:1 / 15,83:1 (AAA) |
+| `--text-muted` sobre `--surface-raised` | `#5B4A39` | `#C8B79F` | 7,77:1 / 8,57:1 |
+| `--brand` sobre `--brand-contrast` | `#BF3B11` / `#FAF5E9` | `#FF7D52` / `#17120E` | 5,01:1 / 7,36:1 |
+| `--brand-ink` sobre `--surface-raised` | `#B5360D` | `#FFB59A` | 5,52:1 / 9,85:1 |
+| `--accent-ink` sobre `--surface-raised` | `#76521F` | `#E6C58F` | 6,44:1 / 10,18:1 |
 | `--status-*` (success/warning/info/danger) | verdes/âmbar/azul/vermelho escuros | versões claras | ≥ 4,5:1 no escuro, ≥ 5,8:1 no claro |
 
 Todos os pares são validados por `tests/design-system.test.cjs` (WCAG AA/AAA) — nenhuma cor entra
@@ -187,7 +186,7 @@ Servida localmente em `public/garcom-pwa/fonts/` sob CSP `'self'`, totalizando *
 A exceção declarada no topo deste documento ganhou uma identidade própria, **escopada na rota**:
 `src/screens/mesa-praia.css` reescreve os tokens semânticos somente sob `body[data-mesa-praia]`
 (atributo ligado/desligado no ciclo de vida de `src/screens/Mesa.tsx`). Fora dessa rota nada muda —
-o palco azul/violeta e os testes de identidade seguem valendo para o resto do sistema.
+o palco de tinta quente e os testes de identidade seguem valendo para o resto do sistema.
 
 - **Paleta:** areia (`#f4ecda`), espuma (`#fffdf6`), maré (`#2fb3ba`), mar fundo (`#0b6b74`),
   sol (`#ffc861`) e coral (`#f2724a`) como primitivos `--praia-*`; eles alimentam os mesmos nomes
@@ -262,3 +261,12 @@ Acima desse breakpoint, o layout desktop permanece. O escopo `data-admin`
 impede que as regras do cabeçalho afetem caixa, cozinha, bar ou PWA.
 O E2E `admin-mobile.e2e.cjs` usa o build de produção e API sintética para
 verificar as cinco abas em 320, 390, 768 e 1440 px, estoque, modal e gaveta.
+
+
+## 7.1 Landing e narrativa de scroll (revisão 2026-11-09)
+
+A landing usa a mesma fundação tipográfica do produto: Fraunces para títulos, Plus Jakarta Sans para interface e JetBrains Mono para identificadores e rótulos técnicos. Não mantém mais famílias DM Sans/DM Serif Display nem uma paleta local concorrente.
+
+A jornada do pedido é uma narrativa em oito cenas com capturas reais de `public/assets/apresentacao/`. A linha SVG progride com a rolagem e o estado ativo é acompanhado por observação das cenas. O movimento é funcional, respeita `prefers-reduced-motion` e não depende de fades automáticos.
+
+O contato flutuante mantém acesso e WhatsApp e acrescenta e-mail por ícone. A ação de e-mail usa a constante compartilhada `EMAIL_URL` em `src/screens/landing/contato.ts`.
