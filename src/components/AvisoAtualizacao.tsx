@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowClockwise, X } from "@phosphor-icons/react";
 
+declare const __BUILD_VERSION__: string;
+
 const INTERVALO_VERIFICACAO_MS = 60_000;
 
 type RespostaVersao = { version?: string };
@@ -38,7 +40,8 @@ function existeTrabalhoNaoSalvo(): boolean {
 }
 
 export function AvisoAtualizacao() {
-  const versaoConhecida = useRef<string | null>(null);
+  // Esta versão pertence ao bundle carregado, não à primeira resposta da API.
+  // Assim uma aba antiga detecta o deploy mesmo se consultar a API só depois dele.
   const versaoNotificada = useRef<string | null>(null);
   const [atualizacaoDisponivel, setAtualizacaoDisponivel] = useState(false);
   const [dispensado, setDispensado] = useState(false);
@@ -56,22 +59,18 @@ export function AvisoAtualizacao() {
 
   const verificar = useCallback(async () => {
     if (document.visibilityState === "hidden") return;
-    const versao = await consultarVersao();
-    if (!versao) return;
-    if (versaoConhecida.current === null) {
-      versaoConhecida.current = versao;
-      return;
-    }
-    if (versao !== versaoConhecida.current && versaoNotificada.current !== versao) {
-      versaoNotificada.current = versao;
-      setAtualizacaoDisponivel(true);
-      setDispensado(false);
-      try {
-        const canal = new BroadcastChannel("qr-admin-update");
-        canal.postMessage({ type: "update-available", version: versao });
-        canal.close();
-      } catch { /* BroadcastChannel indisponível: cada aba continua verificando */ }
-    }
+    const versaoPublicada = await consultarVersao();
+    if (!versaoPublicada || versaoPublicada === __BUILD_VERSION__) return;
+    if (versaoNotificada.current === versaoPublicada) return;
+
+    versaoNotificada.current = versaoPublicada;
+    setAtualizacaoDisponivel(true);
+    setDispensado(false);
+    try {
+      const canal = new BroadcastChannel("qr-admin-update");
+      canal.postMessage({ type: "update-available", version: versaoPublicada });
+      canal.close();
+    } catch { /* BroadcastChannel indisponível: cada aba continua verificando */ }
   }, []);
 
   useEffect(() => {
@@ -81,7 +80,8 @@ export function AvisoAtualizacao() {
     try {
       canal = new BroadcastChannel("qr-admin-update");
       canal.onmessage = (evento: MessageEvent<{ type?: string; version?: string }>) => {
-        if (evento.data?.type === "update-available" && evento.data.version) {
+        if (evento.data?.type === "update-available" && evento.data.version &&
+            evento.data.version !== __BUILD_VERSION__) {
           versaoNotificada.current = evento.data.version;
           setAtualizacaoDisponivel(true);
           setDispensado(false);
