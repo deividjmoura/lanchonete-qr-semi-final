@@ -58,7 +58,7 @@ export function AvisoAtualizacao() {
   }, [atualizacaoDisponivel]);
 
   const verificar = useCallback(async () => {
-    if (document.visibilityState === "hidden") return;
+    if (import.meta.env.DEV || document.visibilityState === "hidden") return;
     const versaoPublicada = await consultarVersao();
     if (!versaoPublicada || versaoPublicada === __BUILD_VERSION__) return;
     if (versaoNotificada.current === versaoPublicada) return;
