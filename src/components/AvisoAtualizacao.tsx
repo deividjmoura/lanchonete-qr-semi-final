@@ -91,9 +91,9 @@ export function AvisoAtualizacao() {
     <aside
       role="status"
       aria-live="polite"
-      className="fixed inset-x-3 top-3 z-[100] mx-auto flex max-w-2xl items-center gap-3 rounded-lg border border-status-info-border bg-surface-raised px-4 py-3 shadow-modal"
+      className="fixed inset-x-3 top-3 z-[100] mx-auto flex max-w-2xl items-center gap-3 rounded-lg border border-line bg-surface-raised px-4 py-3 shadow-modal"
     >
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-status-info-surface text-status-info-ink">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-hover text-brand-ink">
         <ArrowClockwise size={19} weight="bold" />
       </span>
       <div className="min-w-0 flex-1">
