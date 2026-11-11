@@ -21,6 +21,22 @@ async function consultarVersao(): Promise<string | null> {
   }
 }
 
+function existeTrabalhoNaoSalvo(): boolean {
+  const campos = Array.from(document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+    "input:not([type=hidden]):not([type=submit]):not([type=button]), textarea, select"
+  ));
+  const formularioAlterado = campos.some((campo) => {
+    if (campo instanceof HTMLInputElement && (campo.type === "checkbox" || campo.type === "radio")) {
+      return campo.checked !== campo.defaultChecked;
+    }
+    return campo.value !== campo.defaultValue;
+  });
+  const operacaoSinalizadaComoAtiva = Boolean(document.querySelector(
+    '[aria-busy="true"], [data-operation-pending="true"], form[data-submitting="true"]'
+  ));
+  return formularioAlterado || operacaoSinalizadaComoAtiva;
+}
+
 export function AvisoAtualizacao() {
   const versaoConhecida = useRef<string | null>(null);
   const versaoNotificada = useRef<string | null>(null);
