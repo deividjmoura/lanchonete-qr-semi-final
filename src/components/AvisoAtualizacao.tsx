@@ -103,9 +103,11 @@ export function AvisoAtualizacao() {
 
   const atualizar = () => {
     if (verificando) return;
-    const confirmou = window.confirm(
-      "Uma nova versão do QR Admin está disponível. Salve ou conclua qualquer operação em andamento antes de atualizar a página. Deseja atualizar agora?"
-    );
+    const trabalhoPendente = existeTrabalhoNaoSalvo();
+    const mensagem = trabalhoPendente
+      ? "Detectei alterações em formulários ou uma operação sinalizada como ativa. Atualizar agora pode descartar esse trabalho. Deseja realmente atualizar?"
+      : "Uma nova versão do QR Admin está disponível. Confirme que pedidos e operações em andamento foram concluídos antes de atualizar. Deseja continuar?";
+    const confirmou = window.confirm(mensagem);
     if (!confirmou) return;
     setVerificando(true);
     window.location.reload();
