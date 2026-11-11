@@ -44,6 +44,16 @@ export function AvisoAtualizacao() {
   const [dispensado, setDispensado] = useState(false);
   const [verificando, setVerificando] = useState(false);
 
+  useEffect(() => {
+    const protegerSaida = (evento: BeforeUnloadEvent) => {
+      if (!atualizacaoDisponivel || !existeTrabalhoNaoSalvo()) return;
+      evento.preventDefault();
+      evento.returnValue = "";
+    };
+    window.addEventListener("beforeunload", protegerSaida);
+    return () => window.removeEventListener("beforeunload", protegerSaida);
+  }, [atualizacaoDisponivel]);
+
   const verificar = useCallback(async () => {
     if (document.visibilityState === "hidden") return;
     const versao = await consultarVersao();
