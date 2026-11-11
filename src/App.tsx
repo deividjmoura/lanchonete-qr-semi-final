@@ -13,6 +13,7 @@ import Caixa from "./screens/Caixa";
 import Admin from "./screens/Admin";
 import { RotaStaff } from "./components/RotaStaff";
 import { IdentidadeContexto } from "./lib/identidade";
+import { AvisoAtualizacao } from "./components/AvisoAtualizacao";
 
 export default function App() {
   const rota = useRota();
@@ -35,6 +36,7 @@ export default function App() {
     <ConfirmacaoGlobal>
       <>
       <Toasts />
+      {["cozinha", "bar", "garcom", "caixa", "admin"].includes(rota.path) && <AvisoAtualizacao />}
       {/* Rota raiz e a landing comercial oficial. O acesso da equipe continua em
           #/login (mesma tela de antes) e pelo modal de cada CTA. */}
       {rota.path === "home" && <Landing />}
