@@ -7,32 +7,28 @@ const os = require('node:os');
 const path = require('node:path');
 const { obterVersaoBuild } = require('../lib/build-version');
 
-test('a versão do build é estável para o mesmo HTML compilado', () => {
+test('lê a versão gerada pelo build com formato válido', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'qr-build-version-'));
-  const file = path.join(dir, 'index.html');
+  const file = path.join(dir, 'build-version.json');
   try {
-    fs.writeFileSync(file, '<script src="/assets/app-a1.js"></script>');
-    const primeira = obterVersaoBuild(file);
-    assert.match(primeira, /^[a-f0-9]{16}$/);
-    assert.equal(obterVersaoBuild(file), primeira);
+    fs.writeFileSync(file, JSON.stringify({ version: '0123456789abcdef' }));
+    assert.equal(obterVersaoBuild(file), '0123456789abcdef');
+    assert.equal(obterVersaoBuild(file), '0123456789abcdef');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test('a versão muda quando o HTML aponta para outro build', () => {
+test('rejeita arquivo ausente, JSON inválido ou versão fora do formato', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'qr-build-version-'));
-  const file = path.join(dir, 'index.html');
+  const file = path.join(dir, 'build-version.json');
   try {
-    fs.writeFileSync(file, '<script src="/assets/app-a1.js"></script>');
-    const anterior = obterVersaoBuild(file);
-    fs.writeFileSync(file, '<script src="/assets/app-b2.js"></script>');
-    assert.notEqual(obterVersaoBuild(file), anterior);
+    assert.equal(obterVersaoBuild(file), null);
+    fs.writeFileSync(file, '{inválido');
+    assert.equal(obterVersaoBuild(file), null);
+    fs.writeFileSync(file, JSON.stringify({ version: 'versao-invalida' }));
+    assert.equal(obterVersaoBuild(file), null);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
-});
-
-test('retorna null quando o build ainda não existe', () => {
-  assert.equal(obterVersaoBuild(path.join(os.tmpdir(), 'qr-build-inexistente', 'index.html')), null);
 });
