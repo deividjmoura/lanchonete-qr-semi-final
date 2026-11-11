@@ -275,10 +275,10 @@ const server = http.createServer(async (req, res) => {
     reqId = requestIdDaRequisicao(req);
     res.setHeader('X-Request-Id', reqId);
 
-    // Identificador público do build ativo. Não contém SHA do Git, segredos ou
-    // configuração; o HTML compilado muda seus assets hash a cada build do Vite.
+    // A versão é gerada pelo Vite e compartilhada com o bundle do navegador.
+    // Ambos leem o mesmo identificador para detectar deploys em abas antigas.
     if (p === '/api/version' && req.method === 'GET') {
-      const version = obterVersaoBuild(path.join(ROOT, 'dist', 'index.html'));
+      const version = obterVersaoBuild(path.join(ROOT, 'dist', 'build-version.json'));
       if (!version) return json(res, 503, { error: 'Versão indisponível' }, {
         'Cache-Control': 'no-store',
       });
