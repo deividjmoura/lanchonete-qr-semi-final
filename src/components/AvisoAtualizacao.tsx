@@ -23,6 +23,7 @@ async function consultarVersao(): Promise<string | null> {
 
 export function AvisoAtualizacao() {
   const versaoConhecida = useRef<string | null>(null);
+  const versaoNotificada = useRef<string | null>(null);
   const [atualizacaoDisponivel, setAtualizacaoDisponivel] = useState(false);
   const [dispensado, setDispensado] = useState(false);
   const [verificando, setVerificando] = useState(false);
@@ -35,15 +36,32 @@ export function AvisoAtualizacao() {
       versaoConhecida.current = versao;
       return;
     }
-    if (versao !== versaoConhecida.current) {
+    if (versao !== versaoConhecida.current && versaoNotificada.current !== versao) {
+      versaoNotificada.current = versao;
       setAtualizacaoDisponivel(true);
       setDispensado(false);
+      try {
+        const canal = new BroadcastChannel("qr-admin-update");
+        canal.postMessage({ type: "update-available", version: versao });
+        canal.close();
+      } catch { /* BroadcastChannel indisponível: cada aba continua verificando */ }
     }
   }, []);
 
   useEffect(() => {
     void verificar();
     const intervalo = window.setInterval(() => void verificar(), INTERVALO_VERIFICACAO_MS);
+    let canal: BroadcastChannel | null = null;
+    try {
+      canal = new BroadcastChannel("qr-admin-update");
+      canal.onmessage = (evento: MessageEvent<{ type?: string; version?: string }>) => {
+        if (evento.data?.type === "update-available" && evento.data.version) {
+          versaoNotificada.current = evento.data.version;
+          setAtualizacaoDisponivel(true);
+          setDispensado(false);
+        }
+      };
+    } catch { /* Navegadores sem BroadcastChannel usam a consulta periódica */ }
     const aoVoltar = () => {
       if (document.visibilityState === "visible") void verificar();
     };
@@ -51,6 +69,7 @@ export function AvisoAtualizacao() {
     window.addEventListener("focus", aoVoltar);
     return () => {
       window.clearInterval(intervalo);
+      canal?.close();
       document.removeEventListener("visibilitychange", aoVoltar);
       window.removeEventListener("focus", aoVoltar);
     };
