@@ -129,7 +129,7 @@ O rodapé tem exatamente **duas abas**: **Mesas** e **Entregas**. As antigas aba
 |---|---|
 | Pedidos do aparelho (rascunhos offline, fila de sincronização, conflitos, exportar JSON) | atalho **Pedidos do aparelho**, no topo da aba Mesas; a página abre com **← Voltar para mesas** |
 | Ver pedidos de uma mesa | detalhe da mesa → **Ver pedidos** |
-| Novo pedido / acrescentar itens | aba Mesas (botão do topo) e detalhe da mesa → **Novo pedido** |
+| Novo pedido / acrescentar itens | detalhe da mesa → **Novo pedido** |
 | Recebimento parcial e sua idempotência | detalhe da mesa → **Fechar conta**, que abre a página de cobrança (também com **← Voltar para mesas**) |
 | Fechamento total da comanda e liberação da mesa | **Caixa** — o fluxo financeiro continua sendo o do servidor (`db/caixa.js`); a PWA não fecha conta por conta própria |
 
