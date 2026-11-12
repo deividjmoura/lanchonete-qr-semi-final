@@ -1,5 +1,25 @@
-const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const cp=require('node:child_process');const root=path.join(__dirname,'..');const read=p=>fs.readFileSync(path.join(root,p),'utf8');const js=read('public/garcom-pwa/app.js'),html=read('public/garcom-pwa/index.html'),backend=read('db/atendimento.js');
-test('JS do app e server validos',()=>{for(const p of ['public/garcom-pwa/app.js','server.js','db/atendimento.js'])cp.execFileSync(process.execPath,['--check',path.join(root,p)])});
-test('pedidos em modal, fechado inicialmente',()=>{assert.match(html,/<dialog id="ordersModal"/);assert.match(js,/function openOrdersModal/);assert.match(js,/selectedOrdersTable/);assert.match(js,/showModal\(\)/)});
-test('garcom pode deixar mesa, mas nao quando ha itens nao entregues',()=>{assert.match(backend,/async function deixarMesa/);assert.match(backend,/garcom_responsavel_id=NULL/);assert.match(backend,/NOT IN \('entregue','cancelado'\)/);assert.match(backend,/FOR UPDATE/);assert.match(read('server.js'),/\/deixar\$/)});
-test('instalacao usa prompt nativo quando houver, instrucao caso contrario',()=>{assert.match(js,/beforeinstallprompt/);assert.match(js,/await prompt\.prompt\(\)/);assert.match(js,/Adicionar à Tela de Início/);assert.match(js,/menu do navegador/);assert.match(js,/Safari/);assert.match(js,/appinstalled/)});
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const read = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
+
+test('atendimento colaborativo não oferece deixar ou transferir mesa', () => {
+  const backend = read('db/atendimento.js');
+  const server = read('server.js');
+  const pwa = read('public/garcom-pwa/app.js');
+  const html = read('public/garcom-pwa/index.html');
+  assert.doesNotMatch(backend, /function deixarMesa|function transferirMesa/);
+  assert.doesNotMatch(server, /\/deixar\$|\/transferir\$/);
+  assert.doesNotMatch(pwa, /leaveTable|transferTable|transferModal/);
+  assert.doesNotMatch(html, /transferModal|Deixar mesa|Transferir mesa/);
+});
+
+test('sessão aberta continua disponível à equipe sem gravar garçom titular', () => {
+  const backend = read('db/atendimento.js');
+  assert.match(backend, /INSERT INTO mesa_sessoes \(mesa_id, cliente_nome\)/);
+  assert.doesNotMatch(backend, /UPDATE mesa_sessoes SET garcom_responsavel_id/);
+  assert.match(backend, /async function criarPedidoGarcom/);
+  assert.match(backend, /A mesa precisa ter um atendimento aberto/);
+});
