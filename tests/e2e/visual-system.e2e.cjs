@@ -542,7 +542,10 @@ async function main() {
           await page.locator("#closeTableDetails").click();
 
           await page.setViewportSize({ width: 375, height: 900 });
-          await page.locator("#newOrderTables").click();
+          await page.locator("#tableSearch").fill("Marina");
+          await page.locator("#tableGrid .table-tile").first().click();
+          await page.locator("#tableDetailsModal[open]").waitFor();
+          await page.getByRole("button", { name: "Novo pedido", exact: true }).click();
           const box = await inViewport(page, page.locator("#orderModal"));
           assert.ok(box.y > 0 && box.y + box.height < 900, "Diálogo centralizado com margens");
           await page.locator("#closeOrder").click();
