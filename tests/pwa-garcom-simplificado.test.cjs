@@ -24,9 +24,14 @@ test('PWA mantém navegação fixa e controles discretos no fluxo da aba Mesas',
   }
   assert.match(mesas, /class="utility-bar"/);
   assert.doesNotMatch(footer, /class="utility-bar"/);
-  assert.match(footer, /class="bottom-nav"/, 'as quatro abas continuam no rodapé');
-  for (const tab of ['tables', 'orders', 'deliveries', 'billing']) {
+  assert.match(footer, /class="bottom-nav"/, 'navegação continua no rodapé');
+  // #305: apenas Mesas e Entregas no rodapé; Pedidos e Cobrança seguem como
+  // páginas secundárias, acessadas por atalho e com botão de voltar.
+  for (const tab of ['tables', 'deliveries']) {
     assert.match(footer, new RegExp('data-tab="' + tab + '"'));
+  }
+  for (const tab of ['orders', 'billing']) {
+    assert.doesNotMatch(footer, new RegExp('data-tab="' + tab + '"'), 'aba ' + tab + ' saiu do rodapé');
   }
   // Nada de controle de tema/sync antes do conteúdo.
   assert.equal(html.indexOf('id="themeToggleBtn"') > html.indexOf('<main'), true);
@@ -250,67 +255,108 @@ test('a transferência tem uma única confirmação: o próprio modal', () => {
   assert.match(html, /action-row[\s\S]{0,400}id="cancelTransfer"/);
 });
 
-/* ---------------------------------------- salão completo a partir da busca */
+/* -------------------------------------- salão completo como grade (#305) */
 
 function carregarBusca(mesas) {
   const search = new Elemento('input');
   const grid = new Elemento('div');
-  grid.hidden = true;
   const message = new Elemento('p');
-  const ctx = contexto({ ids: { tableSearch: search, tableGrid: grid, tableSearchMessage: message }, globais: { mesas } });
-  carregar(ctx, ['normalizarBusca', 'analisarBuscaMesas', 'mesasFiltradas', 'renderTableGrid']);
-  return { ctx, search, grid, message };
+  const pracaSelect = new Elemento('select');
+  pracaSelect.value = '';
+  const ctx = contexto({
+    ids: { tableSearch: search, tableGrid: grid, tableSearchMessage: message, pracaFilter: pracaSelect },
+    globais: { mesas, currentWaiterId: 7 },
+  });
+  carregar(ctx, [
+    'normalizarBusca',
+    'analisarBuscaMesas',
+    'mesasFiltradas',
+    'situacoesMesa',
+    'situacaoMesa',
+    'minutosDesdePrimeiroPedido',
+    'tempoAtendimentoTexto',
+    'pracasDisponiveis',
+    'chavePracaDaMesa',
+    'renderTableGrid',
+  ]);
+  return { ctx, search, grid, message, pracaSelect };
 }
 
 const MESAS = [
-  { numero: 3, sessaoId: 10, clienteNome: 'João Prado' },
-  { numero: 12, sessaoId: null, clienteNome: null },
-  { numero: 27, sessaoId: 11, clienteNome: 'Ana' },
-  { numero: 5, sessaoId: null, clienteNome: 'Cliente do QR' },
+  {
+    numero: 3, sessaoId: 10, clienteNome: 'João Prado', garcomResponsavelId: 7, garcomResponsavelNome: 'Ana',
+    pracaId: 1, pracaNome: 'Praia', pracaOrdem: 1,
+    primeiroPedidoEm: new Date(Date.now() - 95 * 60000).toISOString(), pedidosValidos: 2, situacao: 'em_atendimento',
+  },
+  { numero: 12, sessaoId: null, clienteNome: null, pracaId: 3, pracaNome: 'Salão', pracaOrdem: 3 },
+  {
+    numero: 27, sessaoId: 11, clienteNome: 'Ana', garcomResponsavelId: null,
+    pracaId: 1, pracaNome: 'Praia', pracaOrdem: 1,
+  },
+  { numero: 5, sessaoId: null, clienteNome: 'Cliente do QR', pracaId: null, pracaNome: null },
 ];
 
-test('salão completo fica oculto até uma busca por número', () => {
-  const { ctx, search, grid, message } = carregarBusca(MESAS);
-  ctx.renderTableGrid();
-  assert.equal(grid.hidden, true);
-  assert.equal(grid.children.length, 0);
-  assert.equal(message.textContent, '');
+/** Apenas os cards do salão (o estado vazio é um <p>, não um card). */
+function cards(grid) {
+  return grid.children.filter((c) => String(c.className || '').split(/\s+/).includes('table-tile'));
+}
 
-  search.value = ' 12 ';
+/** Primeiro filho com a classe pedida (o card é montado por blocos). */
+function parte(card, classe) {
+  const andar = (n) => {
+    for (const f of n.children) {
+      if (String(f.className || '').split(/\s+/).includes(classe)) return f;
+      const achado = andar(f);
+      if (achado) return achado;
+    }
+    return null;
+  };
+  return andar(card);
+}
+
+test('todas as mesas aparecem em cards sem digitar busca', () => {
+  const { ctx, grid, message } = carregarBusca(MESAS);
   ctx.renderTableGrid();
-  assert.equal(grid.hidden, false);
-  assert.equal(grid.children.length, 1);
-  assert.match(grid.children[0].children[0].textContent, /Mesa 12/);
+  assert.equal(grid.hidden, false, 'a grade não depende mais de busca');
+  assert.equal(cards(grid).length, 4, 'salão inteiro por padrão');
+  assert.deepEqual(
+    cards(grid).map((c) => c.dataset.numero),
+    ['3', '12', '27', '5'],
+  );
+  assert.match(message.textContent, /4 mesas no salão/);
 });
 
-test('busca aceita vários números separados por vírgula', () => {
+test('busca por número filtra a grade e aceita vírgula', () => {
   const { ctx, search, grid, message } = carregarBusca(MESAS);
+  search.value = ' 12 ';
+  ctx.renderTableGrid();
+  assert.equal(cards(grid).length, 1);
+  assert.match(cards(grid)[0].textos().join(' '), /Mesa 12/);
+  assert.match(message.textContent, /1 mesa encontrada/);
+
   search.value = '3, 27 ,5';
   ctx.renderTableGrid();
-  assert.deepEqual(
-    grid.children.map((c) => c.children[0].textContent),
-    ['Mesa 03', 'Mesa 27', 'Mesa 05'],
-  );
-  assert.match(message.textContent, /3 mesas encontradas/);
+  assert.deepEqual(cards(grid).map((c) => c.dataset.numero), ['3', '27', '5']);
 
   search.value = '999';
   ctx.renderTableGrid();
-  assert.equal(grid.children.length, 0);
+  assert.equal(cards(grid).length, 0);
   assert.match(message.textContent, /Sem resultado para: 999/);
   assert.match(message.textContent, /Confira os números das mesas habilitadas/);
 });
 
-test('busca parcial informa quais números não existem sem listar o salão inteiro', () => {
+test('busca parcial informa quais números não existem sem esconder os demais', () => {
   const { ctx, search, grid, message } = carregarBusca(MESAS);
   search.value = '3, 99';
   ctx.renderTableGrid();
-  assert.deepEqual(grid.children.map((c) => c.children[0].textContent), ['Mesa 03']);
+  assert.deepEqual(cards(grid).map((c) => c.dataset.numero), ['3']);
   assert.match(message.textContent, /1 mesa encontrada/);
   assert.match(message.textContent, /Sem resultado para: 99/);
 
   search.value = ', ,';
   ctx.renderTableGrid();
-  assert.equal(grid.children.length, 1, 'entrada inválida não lista o salão');
+  assert.equal(cards(grid).length, 0, 'entrada inválida não finge filtrar');
+  assert.equal(grid.children.length, 0, 'entrada inválida só mostra a orientação');
   assert.match(message.textContent, /números separados por vírgula/i);
 });
 
@@ -321,21 +367,72 @@ test('busca por cliente ignora caixa, espaços e acentos e exige sessão aberta'
   assert.deepEqual(numeros('ana'), [27]);
   assert.deepEqual(numeros('ANA'), [27], 'caixa alta do cliente');
   assert.deepEqual(numeros('cliente do qr'), [], 'sem sessão aberta o nome não aparece');
-  assert.deepEqual(numeros(''), [], 'busca vazia não lista nada');
+  assert.deepEqual(numeros(''), [3, 12, 27, 5], 'busca vazia mostra o salão, não o esconde');
   assert.equal(ctx.analisarBuscaMesas(' , ').vazia, true);
 });
 
-test('limpar a busca volta a esconder o salão e o campo está descrito no HTML', () => {
+test('limpar a busca volta a mostrar o salão inteiro e o campo está descrito no HTML', () => {
   const { ctx, search, grid } = carregarBusca(MESAS);
   search.value = '3';
   ctx.renderTableGrid();
-  assert.equal(grid.hidden, false);
+  assert.equal(cards(grid).length, 1);
   search.value = '';
   ctx.renderTableGrid();
-  assert.equal(grid.hidden, true);
+  assert.equal(cards(grid).length, 4, 'sem filtro a grade continua completa');
   assert.match(html, /id="tableSearch"[^>]*aria-describedby="tableSearchHint"/);
   assert.match(html, /separados por vírgula/);
   assert.match(js, /\$\('#tableSearch'\)\?\.addEventListener\('input',renderTableGrid\)/);
+});
+
+test('o card mostra praça, estado por extenso e responsável, sem depender da cor', () => {
+  const { ctx, grid } = carregarBusca(MESAS);
+  ctx.renderTableGrid();
+  const ocupada = cards(grid)[0];
+  assert.equal(ocupada.dataset.situacao, 'em_atendimento');
+  assert.match(parte(ocupada, 'table-tile-praca').textContent, /Praia/);
+  assert.match(parte(ocupada, 'table-tile-state').textContent, /Em atendimento/);
+  assert.match(parte(ocupada, 'table-tile-resp').textContent, /Ana/);
+
+  const livre = cards(grid)[1];
+  assert.equal(livre.dataset.situacao, 'livre');
+  assert.match(parte(livre, 'table-tile-state').textContent, /^Livre$/);
+
+  const semPraca = cards(grid)[3];
+  assert.match(parte(semPraca, 'table-tile-praca').textContent, /Sem praça/);
+});
+
+test('sessão aberta sem pedido é "Aguardando pedido" e não conta tempo', () => {
+  const { ctx, grid } = carregarBusca(MESAS);
+  ctx.renderTableGrid();
+  const aguardando = cards(grid)[2];
+  assert.equal(aguardando.dataset.situacao, 'aguardando_pedido');
+  assert.match(parte(aguardando, 'table-tile-state').textContent, /Aguardando pedido/);
+  assert.equal(parte(aguardando, 'table-tile-time').textContent, 'sem pedido');
+  assert.equal(ctx.minutosDesdePrimeiroPedido(MESAS[2]), null);
+});
+
+test('tempo de atendimento conta do primeiro pedido, não da abertura da sessão', () => {
+  const { ctx } = carregarBusca(MESAS);
+  const minutos = ctx.minutosDesdePrimeiroPedido(MESAS[0], Date.now());
+  assert.ok(minutos >= 95 && minutos <= 96, 'primeiro pedido há 95 min: ' + minutos);
+  assert.equal(ctx.tempoAtendimentoTexto(95), '1h35');
+  assert.equal(ctx.tempoAtendimentoTexto(0), 'agora');
+  assert.equal(ctx.tempoAtendimentoTexto(42), '42 min');
+});
+
+test('filtro por praça usa as praças existentes e pode ser combinado com a busca', () => {
+  const { ctx, search, grid, pracaSelect } = carregarBusca(MESAS);
+  const pracas = ctx.pracasDisponiveis();
+  assert.deepEqual([...pracas.map((p) => p.nome)], ['Praia', 'Salão', 'Sem praça']);
+  pracaSelect.value = 'p1';
+  ctx.renderTableGrid();
+  assert.deepEqual(cards(grid).map((c) => c.dataset.numero), ['3', '27']);
+  search.value = '27';
+  ctx.renderTableGrid();
+  assert.deepEqual(cards(grid).map((c) => c.dataset.numero), ['27']);
+  pracaSelect.value = 'p3';
+  ctx.renderTableGrid();
+  assert.equal(cards(grid).length, 0, 'busca e praça se combinam');
 });
 
 /* ------------------------------------------------------------- service worker */

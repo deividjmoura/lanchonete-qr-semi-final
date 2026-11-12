@@ -32,10 +32,19 @@ async function listarMesasGarcom(token) {
            EXISTS (
              SELECT 1 FROM pedidos p
               WHERE p.sessao_id = s.id AND p.origem_pedido = 'cliente'
-           ) AS pedido_cliente_qr
+           ) AS pedido_cliente_qr,
+           -- Campos ADITIVOS de leitura (#305): praça cadastrada e horário do
+           -- primeiro pedido válido (não cancelado) da sessão aberta. Nenhuma
+           -- transição depende deles; servem só para o card do salão.
+           mp.id AS praca_id, mp.nome AS praca_nome, mp.ordem AS praca_ordem,
+           (SELECT MIN(p.criado_em) FROM pedidos p
+             WHERE p.sessao_id = s.id AND p.status <> 'cancelado') AS primeiro_pedido_em,
+           (SELECT COUNT(*)::int FROM pedidos p
+             WHERE p.sessao_id = s.id AND p.status <> 'cancelado') AS pedidos_validos
       FROM mesas m
       LEFT JOIN mesa_sessoes s ON s.mesa_id = m.id AND s.status = 'aberta'
       LEFT JOIN garcons g ON g.id = s.garcom_responsavel_id
+      LEFT JOIN mesa_pracas mp ON mp.id = m.praca_id
      WHERE m.numero <= COALESCE((SELECT quantidade FROM configuracao_mesas WHERE id=1), 20)
      ORDER BY m.numero`);
   return { garcom: { id: garcom.id, nome: garcom.nome }, mesas: rows.map(r => ({
@@ -47,6 +56,18 @@ async function listarMesasGarcom(token) {
     garcomResponsavelId: r.garcom_responsavel_id,
     garcomResponsavelNome: r.garcom_responsavel_nome,
     pedidoClienteQr: r.pedido_cliente_qr === true,
+    // Praça: nome vem do cadastro (mesa_pracas); null = "Sem praça".
+    pracaId: r.praca_id != null ? Number(r.praca_id) : null,
+    pracaNome: r.praca_nome || null,
+    pracaOrdem: r.praca_ordem != null ? Number(r.praca_ordem) : null,
+    // Tempo de atendimento começa no PRIMEIRO PEDIDO VÁLIDO, nunca na abertura
+    // da sessão: uma mesa aberta que ainda não pediu está "Aguardando pedido".
+    primeiroPedidoEm: r.primeiro_pedido_em ? new Date(r.primeiro_pedido_em).toISOString() : null,
+    pedidosValidos: Number(r.pedidos_validos || 0),
+    // Estado derivado (só apresentação): a autoridade continua no servidor.
+    situacao: r.sessao_id == null
+      ? 'livre'
+      : (r.primeiro_pedido_em ? 'em_atendimento' : 'aguardando_pedido'),
   })) };
 }
 async function iniciarAtendimentoGarcom(token, numeroBruto, body = {}, requestId = null) {

@@ -351,7 +351,8 @@ async function main() {
     ok('cenário de envio interrompido criado com lease de aba morta ainda válido');
 
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.click('[data-tab="orders"]');
+    // #305: a fila do aparelho virou página secundária, sem aba no rodapé.
+    await page.click('#openOrdersPage');
     await page.waitForSelector('#orders .order', { timeout: 20000 });
     const temBotao = await page.locator('#orders button:has-text("Verificar envio agora")').count();
     assert.ok(temBotao >= 1, 'pedido em sync precisa de ação manual na tela');

@@ -45,9 +45,12 @@ test('todo botão/campo do shell do garçom tem handler em app.js', () => {
 
 test('navegação inferior chama switchTab para cada aba', () => {
   const abas = [...html.matchAll(/data-tab="([^"]+)"/g)].map((m) => m[1]);
-  assert.ok(abas.length >= 4, 'as quatro abas precisam existir no shell');
-  for (const aba of ['tables', 'orders', 'deliveries', 'billing']) {
-    assert.ok(abas.includes(aba), 'aba ausente do HTML: ' + aba);
+  // #305: o rodapé tem exatamente duas abas (Mesas e Entregas). Pedidos e
+  // Cobrança continuam existindo como páginas secundárias (data-page), sem aba.
+  assert.deepEqual(abas, ['tables', 'deliveries'], 'o rodapé expõe apenas Mesas e Entregas');
+  for (const aba of ['orders', 'billing']) {
+    assert.ok(!abas.includes(aba), 'aba ' + aba + ' saiu da navegação principal');
+    assert.match(html, new RegExp('data-page="' + aba + '"'), 'página ' + aba + ' continua no shell');
   }
   assert.match(
     app,

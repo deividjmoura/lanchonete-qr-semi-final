@@ -74,7 +74,7 @@ async function loadMesas(){
  currentWaiterId=Number(data.garcom.id);
  try{await loadActiveWaiters();}
  catch(e){activeWaiters=[];$('#tableMessage').textContent='Mesas carregadas. Lista de garçons indisponível no momento.';}
- populateTables();updateQr();renderTableGrid();
+ populateTables();updateQr();renderPracaFilter();renderTableGrid();
  $('#identity').textContent='Garçom · '+data.garcom.nome;
  renderBillingSessions();
 }
@@ -408,8 +408,13 @@ $('#themeToggleBtn')?.addEventListener('click',()=>{
 for (const btn of document.querySelectorAll('[data-tab]')) {
   btn.addEventListener('click',()=>switchTab(btn.dataset.tab));
 }
+$('#openOrdersPage')?.addEventListener('click',()=>switchTab('orders'));
+$('#backFromOrders')?.addEventListener('click',()=>switchTab('tables'));
+$('#backFromBilling')?.addEventListener('click',()=>switchTab('tables'));
 $('#newOrderTables')?.addEventListener('click',()=>openOrder());
 $('#newOrderOrders')?.addEventListener('click',()=>openOrder());
+$('#tableSearch')?.addEventListener('input',renderTableGrid);
+$('#pracaFilter')?.addEventListener('change',renderTableGrid);
 $('#refreshTables')?.addEventListener('click',async()=>{
  const btn=$('#refreshTables');btn.disabled=true;
  try{await loadMesas();$('#tableMessage').textContent='Mesas atualizadas.';}
@@ -446,7 +451,7 @@ async function boot(){
   if(navigator.storage?.persist)void navigator.storage.persist().catch(()=>{});
  }catch(e){console.error('[garcom-pwa] armazenamento:',e);setConnection('storage');$('#identity').textContent='Armazenamento offline indisponível';}
  await Promise.allSettled([loadProducts(),loadMesas()]);
- if(!mesas.length&&offlineStore){try{const cached=await offlineStore.getMeta('mesas');if(cached?.mesas){mesas=cached.mesas;currentWaiterId=Number(cached.garcom?.id);tables.splice(0,tables.length,...mesas.map(m=>Number(m.numero)));populateTables();renderTableGrid();$('#identity').textContent='Garçom · '+(cached.garcom?.nome||'')+' (local)';}}catch{}}
+ if(!mesas.length&&offlineStore){try{const cached=await offlineStore.getMeta('mesas');if(cached?.mesas){mesas=cached.mesas;currentWaiterId=Number(cached.garcom?.id);tables.splice(0,tables.length,...mesas.map(m=>Number(m.numero)));populateTables();renderPracaFilter();renderTableGrid();$('#identity').textContent='Garçom · '+(cached.garcom?.nome||'')+' (local)';}}catch{}}
  if(waiterToken&&window.LQRRealtime){realtimeOff=window.LQRRealtime.connect(()=>{void refreshLiveData();void syncEngine?.flush();},{garcom:waiterToken,fallbackMs:20000,debounceMs:200}).close;}
 }
 void boot();
@@ -600,20 +605,29 @@ async function showOrderHistory(orderId){
 $('#closeHistory')?.addEventListener('click',()=>$('#historyModal').close());
 document.querySelector('#refreshDeliveries')?.addEventListener('click',loadDeliveries);
 
+/* Navegação principal (#305): o rodapé expõe apenas Mesas e Entregas.
+   Pedidos (fila do aparelho) e Cobrança (fechar conta) continuam existindo
+   como páginas secundárias, abertas por atalho explícito e com botão de volta.
+   Nenhuma função dessas duas telas foi removida. */
 const pageCopy={
  tables:['Mesas','Atendimentos e mapa do salão'],
- orders:['Pedidos','Fila local e pedidos nas mesas'],
+ orders:['Pedidos do aparelho','Fila local e pedidos nas mesas'],
  deliveries:['Entregas','Pratos e bebidas prontos para retirada'],
- billing:['Cobrança','Recebimento parcial validado no servidor']
+ billing:['Fechar conta','Recebimento e fechamento validados no servidor']
 };
+const MAIN_TABS=['tables','deliveries'];
 function switchTab(tab){
  if(!pageCopy[tab])return;
+ const principal=MAIN_TABS.includes(tab);
  document.querySelectorAll('.page').forEach(el=>el.classList.toggle('active',el.dataset.page===tab));
- document.querySelectorAll('[data-tab]').forEach(el=>{const active=el.dataset.tab===tab;el.classList.toggle('active',active);if(active)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});
+ // As abas secundárias não ficam no rodapé: nenhuma aba fica marcada e a
+ // página mostra o próprio botão de volta.
+ document.querySelectorAll('[data-tab]').forEach(el=>{const active=principal&&el.dataset.tab===tab;el.classList.toggle('active',active);if(active)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});
  document.title=pageCopy[tab][0]+' · Atendimento QR Admin';
  window.scrollTo({top:0,behavior:'instant'});
  if(tab==='deliveries'){void loadDeliveries();void loadOrderStatuses();}
- if(tab==='orders')void loadOrderStatuses();
+ if(tab==='orders'){void renderOrders().catch(()=>{});void loadOrderStatuses();}
+ if(tab==='billing')renderBillingSessions();
  if(tab==='tables'&&navigator.onLine)void loadMesas().catch(e=>{$('#tableMessage').textContent=e.message});
 }
 function openOrder(tableNumber,parentOrderId=null){
@@ -659,7 +673,9 @@ function analisarBuscaMesas(termo){
 }
 function mesasFiltradas(termo){
  const busca=analisarBuscaMesas(termo);
- if(busca.vazia)return [];
+ // Sem termo a grade mostra o salão inteiro: a busca passou a ser filtro, não
+ // a única forma de revelar as mesas (#305).
+ if(busca.vazia)return [...mesas];
  return mesas.filter(m=>{
   if(busca.numeros.includes(Number(m.numero)))return true;
   if(!busca.alvo||!m.sessaoId)return false;
@@ -667,49 +683,125 @@ function mesasFiltradas(termo){
   return Boolean(nome)&&nome.includes(busca.alvo);
  });
 }
+/* Estado de apresentação da mesa. A fonte de verdade continua no servidor:
+   livre = sem sessão aberta; aguardando = sessão aberta sem pedido válido;
+   em atendimento = existe pelo menos um pedido válido na sessão. */
+function situacoesMesa(){
+ return {
+  livre:{rotulo:'Livre',classe:'state-livre'},
+  aguardando_pedido:{rotulo:'Aguardando pedido',classe:'state-aguardando'},
+  em_atendimento:{rotulo:'Em atendimento',classe:'state-atendimento'}
+ };
+}
+function situacaoMesa(m){
+ if(!m)return 'livre';
+ if(!m.sessaoId)return 'livre';
+ if(m.situacao&&situacoesMesa()[m.situacao])return m.situacao;
+ return m.primeiroPedidoEm||Number(m.pedidosValidos)>0?'em_atendimento':'aguardando_pedido';
+}
+/* Minutos desde o PRIMEIRO PEDIDO VÁLIDO (nunca desde a abertura da sessão). */
+function minutosDesdePrimeiroPedido(m,agora=Date.now()){
+ if(!m?.primeiroPedidoEm)return null;
+ const inicio=new Date(m.primeiroPedidoEm).getTime();
+ if(!Number.isFinite(inicio))return null;
+ const referencia=Number(agora);
+ if(!Number.isFinite(referencia))return null;
+ return Math.max(0,Math.floor((referencia-inicio)/60000));
+}
+function tempoAtendimentoTexto(minutos){
+ if(minutos==null)return '';
+ if(minutos<1)return 'agora';
+ if(minutos<60)return minutos+' min';
+ const horas=Math.floor(minutos/60);
+ const resto=minutos%60;
+ return horas+'h'+(resto?String(resto).padStart(2,'0'):'');
+}
+function pracasDisponiveis(lista=mesas){
+ const mapa=new Map();
+ for(const m of lista){
+  const id=m.pracaId==null?null:Number(m.pracaId);
+  const chave=id==null?'sem':'p'+id;
+  if(!mapa.has(chave))mapa.set(chave,{chave,id,nome:m.pracaNome||'Sem praça',ordem:m.pracaOrdem==null?Number.MAX_SAFE_INTEGER:Number(m.pracaOrdem)});
+ }
+ return [...mapa.values()].sort((a,b)=>a.ordem-b.ordem||a.nome.localeCompare(b.nome,'pt-BR'));
+}
+function chavePracaDaMesa(m){return m.pracaId==null?'sem':'p'+Number(m.pracaId);}
+/* O filtro por praça é populado só com as praças que existem nas mesas
+   carregadas: o cadastro continua sendo o do admin (mesa_pracas). */
+function renderPracaFilter(){
+ const select=$('#pracaFilter');if(!select)return;
+ const anterior=select.value||'';
+ const lista=pracasDisponiveis();
+ select.replaceChildren();
+ const todas=document.createElement('option');todas.value='';todas.textContent='Todas as praças';select.append(todas);
+ for(const p of lista){const o=document.createElement('option');o.value=p.chave;o.textContent=p.nome;select.append(o);}
+ select.value=lista.some(p=>p.chave===anterior)?anterior:'';
+}
 function renderTableGrid(){
  const root=$('#tableGrid');if(!root)return;
  const message=$('#tableSearchMessage');
  const termo=$('#tableSearch')?.value||'';
+ const pracaSel=$('#pracaFilter')?.value||'';
  const busca=analisarBuscaMesas(termo);
  if(String(termo||'').trim()&&busca.vazia){
-  // Entrada inválida (só vírgulas, símbolos): não lista o salão, orienta a busca.
-  root.hidden=false;root.replaceChildren('Digite um número de mesa ou o nome do cliente.');
+  // Entrada inválida (só vírgulas, símbolos): não finge filtrar, orienta a busca.
+  root.replaceChildren();
+  root.textContent='Digite um número de mesa ou o nome do cliente.';
   if(message)message.textContent='Use números separados por vírgula (ex.: 3, 12, 27) ou o nome do cliente de uma mesa com atendimento aberto.';
   return;
  }
- if(busca.vazia){
-  root.hidden=true;root.replaceChildren();
-  if(message)message.textContent='';
-  return;
- }
- root.hidden=false;root.replaceChildren();
+ root.replaceChildren();
  if(!mesas.length){
-  root.textContent='Nenhuma mesa carregada. Conecte-se para atualizar.';
+  const vazio=document.createElement('p');vazio.className='muted';
+  vazio.textContent='Nenhuma mesa carregada. Conecte-se para atualizar.';
+  root.append(vazio);
   if(message)message.textContent='Sem conexão com o servidor: as mesas do salão não puderam ser carregadas.';
   return;
  }
- const encontradas=mesasFiltradas(termo);
- const faltando=busca.numeros.filter(n=>!mesas.some(m=>Number(m.numero)===n));
- if(encontradas.length){
-  for(const m of encontradas){
-   const card=document.createElement('button');card.type='button';card.className='table-tile';
-   if(m.garcomResponsavelId&&m.garcomResponsavelNome)card.classList.add('taken');
-   const title=document.createElement('strong');title.textContent='Mesa '+String(m.numero).padStart(2,'0');
-   const desc=document.createElement('small');
-   desc.textContent=m.garcomResponsavelNome?('Resp.: '+m.garcomResponsavelNome):(m.pedidoClienteQr?'Pedido via QR':(m.sessaoId?'Sessão aberta':'Livre'));
-   card.append(title,desc);card.onclick=()=>openTableDetails(m.numero);
-   root.append(card);
-  }
- }else{
-  root.textContent=busca.numeros.length?'Nenhuma mesa com esses números.':'Nenhum cliente com sessão aberta com esse nome.';
+ const filtradas=mesasFiltradas(termo);
+ const encontradas=pracaSel?filtradas.filter(m=>chavePracaDaMesa(m)===pracaSel):filtradas;
+ if(!encontradas.length){
+  const vazio=document.createElement('p');vazio.className='muted';
+  vazio.textContent=[busca.vazia?'':(busca.numeros.length?'Nenhuma mesa com esses números.':'Nenhum cliente com sessão aberta com esse nome.'),pracaSel?'Nenhuma mesa nesta praça com o filtro atual.':''].filter(Boolean).join(' ')||'Nenhuma mesa para mostrar.';
+  root.append(vazio);
+ }
+ for(const m of encontradas){
+  const situacao=situacaoMesa(m);
+  const dados=situacoesMesa()[situacao];
+  const minutos=minutosDesdePrimeiroPedido(m);
+  const card=document.createElement('button');
+  card.type='button';
+  card.className='table-tile '+dados.classe+(Number(m.garcomResponsavelId)===Number(currentWaiterId)&&m.garcomResponsavelId?' mine':'');
+  card.dataset.numero=String(m.numero);
+  card.dataset.situacao=situacao;
+  const linha=document.createElement('span');linha.className='table-tile-top';
+  const title=document.createElement('strong');title.textContent='Mesa '+String(m.numero).padStart(2,'0');
+  const prazo=document.createElement('span');prazo.className='table-tile-time';
+  const tempo=tempoAtendimentoTexto(minutos);
+  prazo.textContent=situacao==='em_atendimento'&&tempo?tempo:(situacao==='aguardando_pedido'?'sem pedido':'');
+  if(prazo.textContent)prazo.title=situacao==='em_atendimento'&&tempo?'Tempo desde o primeiro pedido desta mesa':'Sessão aberta ainda sem pedido';
+  linha.append(title,prazo);
+  const praca=document.createElement('small');praca.className='table-tile-praca';
+  praca.textContent=m.pracaNome||'Sem praça';
+  // O estado é escrito por extenso: a cor nunca é o único sinal.
+  const estado=document.createElement('small');estado.className='table-tile-state';
+  estado.textContent=dados.rotulo;
+  const resp=document.createElement('small');resp.className='table-tile-resp';
+  resp.textContent=m.garcomResponsavelNome?'Resp.: '+m.garcomResponsavelNome:(situacao==='livre'?'Sem responsável':'Sem responsável definido');
+  card.append(linha,praca,estado,resp);
+  card.onclick=()=>openTableDetails(m.numero);
+  root.append(card);
  }
  if(message){
   const partes=[];
-  if(encontradas.length)partes.push(encontradas.length===1?'1 mesa encontrada.':encontradas.length+' mesas encontradas.');
+  const total=mesas.length;
+  const filtroAtivo=Boolean(String(termo||'').trim())||Boolean(pracaSel);
+  if(filtroAtivo)partes.push(encontradas.length===1?'1 mesa encontrada.':encontradas.length+' mesas encontradas.');
+  else partes.push(total===1?'1 mesa no salão.':total+' mesas no salão.');
+  const faltando=busca.numeros.filter(n=>!mesas.some(m=>Number(m.numero)===n));
   if(faltando.length)partes.push('Sem resultado para: '+faltando.join(', ')+'.');
   if(!encontradas.length&&faltando.length)partes.push('Confira os números das mesas habilitadas.');
-  if(!encontradas.length&&!faltando.length)partes.push('A busca por nome considera apenas mesas com sessão aberta.');
+  if(!encontradas.length&&!faltando.length&&filtroAtivo)partes.push('A busca por nome considera apenas mesas com sessão aberta.');
   message.textContent=partes.join(' ');
  }
 }
@@ -718,6 +810,26 @@ function openTableDetails(tableNumber){
  const m=mesas.find(x=>Number(x.numero)===Number(tableNumber));if(!m)return;
  const root=$('#tableDetailsActions');root.replaceChildren();
  $('#tableDetailsTitle').textContent='Mesa '+m.numero;
+ // Fatos objetivos do atendimento: situação (por extenso), praça, responsável e
+ // tempo desde o primeiro pedido válido. Nada aqui altera sessão nem conta.
+ const fatos=$('#tableDetailsFacts');
+ if(fatos){
+  fatos.replaceChildren();
+  const situacao=situacaoMesa(m);
+  const minutos=minutosDesdePrimeiroPedido(m);
+  const tempo=tempoAtendimentoTexto(minutos);
+  const linhas=[
+   ['Situação',situacoesMesa()[situacao].rotulo],
+   ['Praça',m.pracaNome||'Sem praça'],
+   ['Responsável',m.garcomResponsavelNome||'Sem responsável'],
+   ['Tempo de atendimento',situacao==='em_atendimento'&&tempo?tempo+' desde o primeiro pedido':(situacao==='aguardando_pedido'?'Conta o tempo a partir do primeiro pedido':'—')],
+  ];
+  for(const [rotulo,valor] of linhas){
+   const dt=document.createElement('dt');dt.textContent=rotulo;
+   const dd=document.createElement('dd');dd.textContent=valor;
+   fatos.append(dt,dd);
+  }
+ }
  $('#tableDetailsStatus').textContent=m.garcomResponsavelNome
    ?'Responsável atual: '+m.garcomResponsavelNome
    :(m.pedidoClienteQr?'O cliente já fez um pedido pelo QR.':'Mesa livre para novos pedidos.');
@@ -750,7 +862,10 @@ function openTableDetails(tableNumber){
    root.append(start);
  }else if(Number(m.garcomResponsavelId)===Number(currentWaiterId)&&m.sessaoId){
    const viewOrders=document.createElement('button');viewOrders.type='button';viewOrders.className='secondary';viewOrders.textContent='Ver pedidos';viewOrders.onclick=()=>{$('#tableDetailsModal').close();openOrdersModal(m.numero);};root.append(viewOrders);
-   const charge=document.createElement('button');charge.type='button';charge.className='secondary';charge.textContent='Cobrar';
+   // "Fechar conta" abre a página de cobrança (secundária, sem aba no rodapé).
+   // O fechamento financeiro continua sendo o do servidor/caixa: a PWA só
+   // registra o recebimento e a mesa só é liberada quando a conta é quitada.
+   const charge=document.createElement('button');charge.type='button';charge.className='secondary';charge.textContent='Fechar conta';
    charge.onclick=()=>{$('#tableDetailsModal').close();openBillingForSession(m.sessaoId,m.numero);};root.append(charge);
    const transfer=document.createElement('button');transfer.type='button';transfer.className='primary';transfer.textContent='Transferir mesa';
    transfer.onclick=()=>{$('#tableDetailsModal').close();openTransferModal(m.numero);};root.append(transfer);
@@ -1215,7 +1330,6 @@ async function leaveTable(table){
 }
 $('#closeOrdersModal').addEventListener('click',()=>$('#ordersModal').close());
 $('#ordersModal').addEventListener('close',()=>{selectedOrdersTable=null});
-$('#tableSearch')?.addEventListener('input',renderTableGrid);
 $('#helpBtn')?.addEventListener('click',()=>{const dialog=$('#helpModal');if(dialog&&!dialog.open)dialog.showModal();});
 $('#closeHelp')?.addEventListener('click',()=>$('#helpModal').close());
 $('#closeTransfer')?.addEventListener('click',()=>$('#transferModal').close());

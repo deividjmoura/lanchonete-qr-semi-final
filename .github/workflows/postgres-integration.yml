@@ -90,6 +90,10 @@ jobs:
         run: node --test tests/postgres-sse-ticket-http.test.cjs
       - name: Tables panorama and praças PostgreSQL integration tests
         run: node --test tests/postgres-mesas-panorama.test.cjs
+      # #305: campos aditivos do salão do garçom (praça, situação e primeiro
+      # pedido) — prova no banco que a listagem é somente leitura.
+      - name: Waiter tables cards PostgreSQL integration tests
+        run: node --test tests/postgres-garcom-mesas-cards.test.cjs
       - name: Waiter billing with service fee PostgreSQL integration tests
         run: node --test tests/postgres-garcom-servico.test.cjs
 

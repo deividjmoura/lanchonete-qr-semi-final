@@ -265,8 +265,8 @@ async function main() {
           { waitUntil: "load" },
         );
         if (screen === "pwa") {
-          // O salão completo só aparece depois da busca por número.
-          await page.locator("#tableSearch").fill("1");
+          // #305: o salão já aparece completo; a busca é apenas filtro.
+          await page.locator("#tableGrid .table-tile").first().waitFor();
         }
         await page
           .locator(
@@ -504,15 +504,24 @@ async function main() {
           await clicarEstavel(secondSummary);
           await esperarAria(1, "false");
 
-          for (const tab of ["orders", "deliveries", "billing", "tables"]) {
+          // #305: só Mesas e Entregas no rodapé; Pedidos e Cobrança são
+          // páginas secundárias abertas por atalho explícito.
+          for (const tab of ["orders", "billing"]) {
+            assert.equal(await page.locator(`[data-tab="${tab}"]`).count(), 0, `aba ${tab} saiu do rodapé`);
+          }
+          for (const tab of ["deliveries", "tables"]) {
             await page.locator(`[data-tab="${tab}"]`).click();
             assert.equal(await page.locator(".page.active").getAttribute("data-page"), tab);
           }
+          await page.locator("#openOrdersPage").click();
+          assert.equal(await page.locator(".page.active").getAttribute("data-page"), "orders");
+          await page.locator("#backFromOrders").click();
+          assert.equal(await page.locator(".page.active").getAttribute("data-page"), "tables");
           // As ações de uma mesa ficam no modal do salão; a lista duplicada foi removida.
           await page.locator("#tableSearch").fill("Marina");
           await page.locator("#tableGrid .table-tile").first().click();
           await page.locator("#tableDetailsModal[open]").waitFor();
-          for (const label of ["Ver pedidos", "Cobrar", "Transferir mesa", "Deixar mesa"]) {
+          for (const label of ["Ver pedidos", "Fechar conta", "Transferir mesa", "Deixar mesa"]) {
             assert.equal(await page.getByRole("button", { name: label, exact: true }).count(), 1, `mesa responsável: ${label}`);
           }
           await page.locator("#closeTableDetails").click();
