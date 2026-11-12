@@ -12,7 +12,7 @@ import type {
   Role,
   Sessao,
 } from "../lib/types";
-import { api, ApiError, aoTrocarSessao } from "../lib/api";
+import { api, ApiError, aoExpirarSessao, aoTrocarSessao } from "../lib/api";
 import {
   itensToApiBody,
   mapCaixaSessoes,
@@ -203,6 +203,43 @@ function filaSig(list: { id: number; status: string; itens?: { id: string; statu
     .join(";");
 }
 
+let logoutPendente: Promise<void> | null = null;
+const CHAVE_INDICIO_SESSAO = "qradmin-sessao-ativa";
+
+function marcarIndicioSessao(ativa: boolean) {
+  if (typeof localStorage === "undefined") return;
+  try {
+    if (ativa) localStorage.setItem(CHAVE_INDICIO_SESSAO, "1");
+    else localStorage.removeItem(CHAVE_INDICIO_SESSAO);
+  } catch {
+    /* modo privado / storage restrito */
+  }
+}
+
+/** Indica apenas se alguma aba autenticou recentemente (zero tokens/dados sensíveis). */
+export function temIndicioDeSessao(): boolean {
+  try {
+    if (typeof sessionStorage !== "undefined" && sessionStorage.getItem("pub-auth")) return true;
+  } catch {
+    /* ignorar */
+  }
+  try {
+    if (typeof localStorage !== "undefined" && localStorage.getItem(CHAVE_INDICIO_SESSAO) === "1") return true;
+  } catch {
+    /* ignorar */
+  }
+  return false;
+}
+
+function lerAuthInicial() {
+  if (typeof sessionStorage === "undefined") return null;
+  try {
+    return JSON.parse(sessionStorage.getItem("pub-auth") || "null");
+  } catch {
+    return null;
+  }
+}
+
 export const usePub = create<PubState>((set, get) => ({
   mesas: [],
   produtos: [],
@@ -210,7 +247,7 @@ export const usePub = create<PubState>((set, get) => ({
   sessoes: [],
   pedidos: [],
   eventos: [],
-  auth: JSON.parse(sessionStorage.getItem("pub-auth") || "null"),
+  auth: lerAuthInicial(),
   somLigado: true,
   loading: false,
   apiReady: false,
@@ -391,39 +428,6 @@ export const usePub = create<PubState>((set, get) => ({
       if (opsMutating > 0) return;
       /* fila do garçom = só concluido no backend → status UI "pronto" */
       const prontos = mapCozinhaPedidos(rows).map((p) => ({ ...p, status: "pronto" as const }));
-
-/* Outra aba entrou/saiu: o cookie de sessão é do navegador inteiro, então o
-   papel e o nome exibidos aqui podem ter mudado. Re-hidrata a identidade em vez
-   de manter um cabeçalho mentiroso, e avisa quando a sessão acabou. */
-if (typeof window !== "undefined") {
-  aoTrocarSessao(() => {
-    void (async () => {
-      try {
-        const out = await api.me();
-        const me = out?.staff;
-        if (me?.papel) {
-          const auth = {
-            role: me.papel as Role,
-            nome: me.nome || me.papel,
-            login: me.login || undefined,
-            deveTrocar: Boolean(me.deveTrocarSenha),
-          };
-          sessionStorage.setItem("pub-auth", JSON.stringify(auth));
-          usePub.setState({ auth, lastError: null });
-          return;
-        }
-        sessionStorage.removeItem("pub-auth");
-        usePub.setState({ auth: null });
-      } catch {
-        sessionStorage.removeItem("pub-auth");
-        usePub.setState({
-          auth: null,
-          lastError: "Sua sessão foi encerrada em outra aba. Entre novamente para continuar.",
-        });
-      }
-    })();
-  });
-}
       const prontoIds = new Set(prontos.map((p) => p.id));
       const prev = get().pedidos;
       const prevProntos = new Set(
@@ -483,17 +487,22 @@ if (typeof window !== "undefined") {
   },
 
   hydrateMe: async () => {
+    if (logoutPendente) {
+      await logoutPendente;
+    }
     try {
       const out = await api.me();
       const me = out?.staff;
       const papel = me?.papel;
       if (!me || !papel || !["admin", "cozinha", "bar", "caixa"].includes(papel)) {
         sessionStorage.removeItem("pub-auth");
+        marcarIndicioSessao(false);
         set({ auth: null, lastError: null });
         return "anonima";
       }
       const auth = { role: papel as Role, nome: me.nome || papel, login: me.login || undefined, deveTrocar: Boolean(me.deveTrocarSenha) };
       sessionStorage.setItem("pub-auth", JSON.stringify(auth));
+      marcarIndicioSessao(true);
       set({ auth, lastError: null });
       return "autenticada";
     } catch (error) {
@@ -501,6 +510,7 @@ if (typeof window !== "undefined") {
       // 5xx não prova logout: a fronteira da rota oferece nova tentativa.
       if (error instanceof ApiError && error.status === 401) {
         sessionStorage.removeItem("pub-auth");
+        marcarIndicioSessao(false);
         set({ auth: null, lastError: null });
         return "anonima";
       }
@@ -1097,6 +1107,7 @@ if (typeof window !== "undefined") {
       if (!r) return { ok: false, motivo: "credencial" };
       const auth = { role: r, nome: out.staff?.nome || r, login: out.staff?.login || usuario, deveTrocar: Boolean(out.staff?.deveTrocarSenha) };
       sessionStorage.setItem("pub-auth", JSON.stringify(auth));
+      marcarIndicioSessao(true);
       set({ auth, lastError: null });
       return { ok: true, role: r };
     } catch (e: any) {
@@ -1116,6 +1127,7 @@ if (typeof window !== "undefined") {
         deveTrocar: Boolean(out.staff?.deveTrocarSenha),
       };
       sessionStorage.setItem("pub-auth", JSON.stringify(auth));
+      marcarIndicioSessao(true);
       set({ auth, lastError: null });
       return { ok: true };
     } catch (e: any) {
@@ -1168,14 +1180,76 @@ if (typeof window !== "undefined") {
 
 
   logout: () => {
-    void api.logout().catch(() => null);
     sessionStorage.removeItem("pub-auth");
-    set({ auth: null });
+    marcarIndicioSessao(false);
+    set({ auth: null, lastError: null });
+    const p = api
+      .logout()
+      .then(() => undefined)
+      .catch(() => undefined)
+      .finally(() => {
+        if (logoutPendente === p) logoutPendente = null;
+      });
+    logoutPendente = p;
   },
   toggleSom: () => set({ somLigado: !get().somLigado }),
   limparEventos: () => set({ eventos: [] }),
   reportarErro: (mensagem) => set({ lastError: mensagem }),
 }));
+
+/* #300 — Sincronização de autenticação e sessão entre abas do navegador.
+   O cookie HttpOnly continua sendo a única credencial: aqui apenas re-hidratamos
+   o estado de apresentação via /api/me quando outra aba altera a sessão, quando
+   uma chamada staff retorna 401 (expiração/revogação) ou ao retomar foco.
+   Falha de rede ("indisponivel") NUNCA derruba o estado autenticado local. */
+if (typeof window !== "undefined") {
+  aoTrocarSessao(() => {
+    void (async () => {
+      const antes = usePub.getState().auth;
+      const resultado = await usePub.getState().hydrateMe();
+      if (resultado === "anonima" && antes) {
+        usePub.setState({
+          lastError: "Sua sessão foi encerrada em outra aba. Entre novamente para continuar.",
+        });
+      }
+    })();
+  });
+
+  aoExpirarSessao(() => {
+    const antes = usePub.getState().auth;
+    try {
+      sessionStorage.removeItem("pub-auth");
+    } catch {
+      /* ambiente restrito */
+    }
+    marcarIndicioSessao(false);
+    if (antes) {
+      usePub.setState({
+        auth: null,
+        lastError: "Sua sessão expirou ou foi encerrada. Entre novamente para continuar.",
+      });
+    } else {
+      usePub.setState({ auth: null });
+    }
+  });
+
+  if (typeof document !== "undefined") {
+    let ultimaChecagemFoco = 0;
+    const rotaUsaSessaoStaff = () => {
+      const h = (window.location.hash || "").replace(/^#\/?/, "").split(/[/?]/)[0];
+      if (["cozinha", "bar", "caixa", "admin", "novidades"].includes(h)) return true;
+      return h === "login" && temIndicioDeSessao();
+    };
+    const revalidarAoVoltar = () => {
+      if (document.visibilityState === "hidden" || !rotaUsaSessaoStaff()) return;
+      const agora = Date.now();
+      if (agora - ultimaChecagemFoco < 2500) return;
+      ultimaChecagemFoco = agora;
+      void usePub.getState().hydrateMe();
+    };
+    document.addEventListener("visibilitychange", revalidarAoVoltar);
+  }
+}
 
 /* ---------- seletores ---------- */
 export const totalSessao = (pedidos: Pedido[], sessaoId: number) =>

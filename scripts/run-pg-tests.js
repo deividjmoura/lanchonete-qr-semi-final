@@ -39,6 +39,7 @@ const suites = [
   'postgres-integration.test.cjs',
   'postgres-financial-integration.test.cjs',
   'postgres-dashboard.test.cjs',
+  'postgres-relatorio-longo.test.cjs',
   'postgres-waiter-integration.test.cjs',
   'postgres-remocao-garcom.test.cjs',
   'postgres-paginacao.test.cjs',

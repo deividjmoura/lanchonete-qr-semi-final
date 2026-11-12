@@ -1630,7 +1630,16 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/admin/relatorio' && req.method === 'GET') {
       try {
         const q = new URL(req.url, 'http://localhost').searchParams;
-        return json(res, 200, await relatorioVendas({ from: q.get('from'), to: q.get('to') }));
+        return json(
+          res,
+          200,
+          await relatorioVendas({
+            from: q.get('from'),
+            to: q.get('to'),
+            page: q.get('page'),
+            limit: q.get('limit'),
+          })
+        );
       } catch (e) {
         console.error('[api/admin/relatorio]', e && e.stack ? e.stack : e);
         const status = (e && e.status) || 500;

@@ -18,9 +18,11 @@ const path = require('node:path');
 
 const {
   FAIXAS_PADRAO,
+  minutosDesde,
   faixaOcupacao,
   normalizarFaixas,
   montarFluxo,
+  _internos: { mapearMesa },
 } = require('../db/mesas-panorama');
 
 const read = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
@@ -162,4 +164,81 @@ test('panorama devolve todas as mesas habilitadas, inclusive livres', () => {
   assert.match(fonte, /status: ocupada \? 'ocupada' : 'livre'/);
   assert.match(fonte, /pracaNome: linha\.praca_nome \|\| null/);
   assert.match(fonte, /LEFT JOIN mesa_pracas pr ON pr\.id = a\.praca_id/);
+});
+
+test('#303: sessão sem pedido válido fica Aguardando pedido e nunca vira atenção/crítica', () => {
+  const semPedido = mapearMesa(
+    {
+      id: 1,
+      numero: 4,
+      token: 'tk-4',
+      sessao_id: 77,
+      aberta_em: minutosAtras(180),
+      primeiro_pedido_em: null,
+      ultimo_pedido_em: null,
+    },
+    FAIXAS_PADRAO,
+    agora,
+  );
+  assert.equal(semPedido.status, 'ocupada');
+  assert.equal(semPedido.aguardandoPedido, true);
+  assert.equal(semPedido.tempo, null, 'idade da sessão sozinha não produz faixa');
+  assert.deepEqual(semPedido.tempoSessao, { minutos: 180 });
+  assert.equal(semPedido.ultimoPedidoEm, null);
+  assert.equal(semPedido.ultimoPedidoMinutos, null);
+});
+
+test('#303: relógio de atendimento parte do primeiro pedido válido; último pedido é separado', () => {
+  // Mesa aberta há 2h, primeiro pedido há 50 min (atenção, não crítica), último há 5 min.
+  const emAtendimento = mapearMesa(
+    {
+      id: 2,
+      numero: 8,
+      token: 'tk-8',
+      sessao_id: 88,
+      aberta_em: minutosAtras(120),
+      primeiro_pedido_em: minutosAtras(50),
+      ultimo_pedido_em: minutosAtras(5),
+    },
+    FAIXAS_PADRAO,
+    agora,
+  );
+  assert.equal(emAtendimento.aguardandoPedido, false);
+  assert.equal(emAtendimento.tempo.id, 'atencao');
+  assert.equal(emAtendimento.tempo.minutos, 50);
+  assert.deepEqual(emAtendimento.tempoSessao, { minutos: 120 });
+  assert.equal(emAtendimento.ultimoPedidoMinutos, 5);
+});
+
+test('#303: datas ausentes ou inválidas produzem estado neutro sem NaN ou duração negativa', () => {
+  assert.equal(minutosDesde(null, agora), null);
+  assert.equal(minutosDesde('invalida', agora), null);
+  assert.equal(minutosDesde(new Date(agora + 300000).toISOString(), agora), 0);
+
+  const invalida = mapearMesa(
+    {
+      id: 3,
+      numero: 9,
+      token: 'tk-9',
+      sessao_id: 99,
+      aberta_em: 'lixo',
+      primeiro_pedido_em: 'lixo',
+      ultimo_pedido_em: 'lixo',
+    },
+    FAIXAS_PADRAO,
+    agora,
+  );
+  assert.equal(invalida.abertaEm, null);
+  assert.equal(invalida.primeiroPedidoEm, null);
+  assert.equal(invalida.ultimoPedidoEm, null);
+  assert.equal(invalida.tempo, null);
+  assert.equal(invalida.tempoSessao, null);
+  assert.equal(invalida.ultimoPedidoMinutos, null);
+});
+
+test('#303: SQL de pedidos_sessao usa apenas pedidos.criado_em e exclui pedidos cancelados', () => {
+  assert.match(fonte, /pedidos_sessao AS[\s\S]*?MIN\(p\.criado_em\) AS primeiro_pedido_em/);
+  assert.match(fonte, /pedidos_sessao AS[\s\S]*?MAX\(p\.criado_em\) AS ultimo_pedido_em/);
+  assert.match(fonte, /pedidos_sessao AS[\s\S]*?COALESCE\(p\.status, 'recebido'\) <> 'cancelado'/);
+  assert.doesNotMatch(fonte, /MAX\(p\.editado_em\)/);
 });

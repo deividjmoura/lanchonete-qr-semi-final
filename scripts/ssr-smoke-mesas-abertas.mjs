@@ -43,6 +43,7 @@ const mesa = (over = {}) => ({
 });
 
 const critica = { id: 'critica', minutos: 96, atencaoMinutos: 45, criticoMinutos: 90 };
+const atencao = { id: 'atencao', minutos: 50, atencaoMinutos: 45, criticoMinutos: 90 };
 const recente = { id: 'recente', minutos: 8, atencaoMinutos: 45, criticoMinutos: 90 };
 
 const cache = path.join(raiz, 'node_modules', '.cache');
@@ -77,6 +78,35 @@ const html = {
     React.createElement(CartaoMesaAberta, {
       mesa: mesa({ numero: 13, clienteNome: null, garcomResponsavelNome: null, pago: 0, itensNaFila: 0 }),
       tempo: recente,
+      agora,
+    }),
+  ),
+  aguardando: renderToString(
+    React.createElement(CartaoMesaAberta, {
+      mesa: mesa({
+        numero: 4,
+        abertaEm: iso(120),
+        primeiroPedidoEm: null,
+        ultimoPedidoEm: null,
+        aguardandoPedido: true,
+        pedidosAtivos: 0,
+        itensNaFila: 0,
+      }),
+      tempo: null,
+      agora,
+    }),
+  ),
+  doisRelogios: renderToString(
+    React.createElement(CartaoMesaAberta, {
+      mesa: mesa({
+        numero: 8,
+        abertaEm: iso(120),
+        primeiroPedidoEm: iso(50),
+        ultimoPedidoEm: iso(5),
+        aguardandoPedido: false,
+      }),
+      tempo: atencao,
+      agora,
     }),
   ),
 };
@@ -124,6 +154,24 @@ checar('Cartão recente sem responsável', html.recente, [
   'Garçom a definir',
   '8 min',
   'Recente',
+]);
+checar('Cartão aguardando pedido (#303)', html.aguardando, [
+  'dash-mesa dash-mesa--aguardando',
+  'Aguardando pedido',
+  'há 2h',
+  'Último pedido',
+]);
+if (html.aguardando.includes('Crítica') || html.aguardando.includes('Atenção')) {
+  falhas += 1;
+  console.error('✗ Cartão aguardando pedido não deve exibir faixa de atenção/crítica');
+}
+checar('Cartão com dois relógios separados (#303)', html.doisRelogios, [
+  'dash-mesa dash-mesa--atencao',
+  '50 min',
+  'Atenção',
+  'há 2h',
+  'Último pedido',
+  'há 5 min',
 ]);
 
 if (falhas) {

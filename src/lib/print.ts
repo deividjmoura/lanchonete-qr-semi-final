@@ -409,7 +409,7 @@ export function imprimirRelatorioPdf(opts: {
   topProdutos?: any[];
 }) {
   const { from, to, resumo, contas, porDia = [], porGarcom = [], topProdutos = [] } = opts;
-  const fat = Number(resumo.faturamento ?? 0);
+  const fat = Number(resumo.faturamento ?? resumo.totalCobrado ?? 0);
   const qtd = Number(resumo.contasFechadas ?? contas.length);
   const ticket = Number(resumo.ticketMedio ?? (qtd ? fat / qtd : 0));
   // #154: composição do total cobrado (vendas − descontos + serviço).
@@ -627,7 +627,12 @@ export function imprimirRelatorioPdf(opts: {
       : ""
   }
 
-  <h2>Contas fechadas</h2>
+  <h2>Contas fechadas (${contas.length})</h2>
+  ${
+    contas.length < qtd
+      ? `<p class="muted"><b>Atenção:</b> listagem parcial (${contas.length} de ${qtd} contas fechadas do período).</p>`
+      : ""
+  }
   ${
     contasRows
       ? `<table>

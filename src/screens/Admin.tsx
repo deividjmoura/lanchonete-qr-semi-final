@@ -41,6 +41,7 @@ import {
   imprimirComprovanteConsumo,
   imprimirRelatorioPdf,
 } from "../lib/print";
+import { gerarCsvRelatorio } from "../lib/relatorioCsv";
 import type { ItemPedido, Pedido, Produto, TipoProduto } from "../lib/types";
 import { CATEGORIAS } from "../lib/data";
 import { usePub } from "../store/usePub";
@@ -1340,37 +1341,75 @@ function Relatorio() {
     void buscar(f, t);
   };
 
-  const baixarCSV = () => {
-    if (!contas.length) {
-      reportarErro("Sem contas fechadas neste período para exportar.");
-      return;
+  // #299: se o payload atual veio paginado (`paginacao.hasMore`), busca em
+  // lotes seguros todas as páginas restantes antes de exportar CSV/PDF.
+  const obterTodasAsContas = async (): Promise<any[]> => {
+    if (!data?.paginacao?.hasMore) return contas;
+    const tamanhoLote = Math.max(1, Number(data.paginacao.limit) || 500);
+    const acumuladas: any[] = [];
+    let pagina = 1;
+    let continuar = true;
+    while (continuar) {
+      const lote = await api.adminRelatorio(from, to, { page: pagina, limit: tamanhoLote });
+      const itens = Array.isArray(lote?.contas) ? lote.contas : [];
+      acumuladas.push(...itens);
+      continuar = Boolean(lote?.paginacao?.hasMore) && itens.length > 0;
+      pagina += 1;
     }
-    const header =
-      "id,mesa,cliente,garcomResponsavel,valor,desconto,taxaServico,valorCobrado,forma,fechadaEm";
-    const body = contas
-      .map((c: any) =>
-        [
-          c.id,
-          c.mesa,
-          c.cliente ?? "",
-          c.garcomResponsavel ?? "",
-          c.valor,
-          c.desconto,
-          c.taxaServico,
-          c.valorCobrado,
-          c.forma,
-          c.fechadaEm,
-        ]
-          .map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`)
-          .join(","),
-      )
-      .join("\n");
-    const blob = new Blob([[header, body].join("\n")], { type: "text/csv;charset=utf-8" });
+    return acumuladas;
+  };
+
+  const dispararDownloadCsv = (lista: any[]) => {
+    const csv = gerarCsvRelatorio(lista);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `relatorio-${from}_${to}.csv`;
     a.click();
     URL.revokeObjectURL(a.href);
+  };
+
+  const baixarCSV = () => {
+    if (!contas.length && !data?.paginacao?.total) {
+      reportarErro("Sem contas fechadas neste período para exportar.");
+      return;
+    }
+    if (!data?.paginacao?.hasMore) {
+      dispararDownloadCsv(contas);
+      return;
+    }
+    void obterTodasAsContas()
+      .then((lista) => dispararDownloadCsv(lista))
+      .catch((e: any) => reportarErro(e?.message || "Falha ao exportar CSV completo."));
+  };
+
+  const exportarPDF = () => {
+    if (!data) return;
+    if (!data?.paginacao?.hasMore) {
+      imprimirRelatorioPdf({
+        from,
+        to,
+        resumo,
+        contas,
+        porDia,
+        porGarcom,
+        topProdutos: top,
+      });
+      return;
+    }
+    void obterTodasAsContas()
+      .then((lista) =>
+        imprimirRelatorioPdf({
+          from,
+          to,
+          resumo,
+          contas: lista,
+          porDia,
+          porGarcom,
+          topProdutos: top,
+        }),
+      )
+      .catch((e: any) => reportarErro(e?.message || "Falha ao gerar PDF completo."));
   };
 
   return (
@@ -1441,17 +1480,7 @@ function Relatorio() {
           size="sm"
           variant="sage"
           disabled={!data}
-          onClick={() =>
-            imprimirRelatorioPdf({
-              from,
-              to,
-              resumo,
-              contas,
-              porDia,
-              porGarcom,
-              topProdutos: top,
-            })
-          }
+          onClick={exportarPDF}
         >
           <FileText size={15} /> PDF / Imprimir
         </Btn>

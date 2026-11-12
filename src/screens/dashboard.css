@@ -1044,6 +1044,7 @@
   box-shadow: var(--shadow-card);
 }
 
+.dash-mesa--aguardando { --situacao: var(--text-muted); }
 .dash-mesa--atencao { --situacao: var(--status-warning); }
 .dash-mesa--critica { --situacao: var(--status-danger); }
 
@@ -1114,6 +1115,12 @@
 }
 
 .dash-mesa__faixa > svg { color: var(--situacao); }
+
+.dash-mesa__faixa--aguardando {
+  border-color: var(--line-strong);
+  background: var(--surface-sunken);
+  color: var(--text);
+}
 
 .dash-mesa__rows {
   display: grid;

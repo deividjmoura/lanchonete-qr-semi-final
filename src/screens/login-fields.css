@@ -301,9 +301,10 @@
 .login-page[data-compact="true"] .login-footer-inner { flex-direction: row; gap: 8px; }
 .login-page[data-compact="true"] .login-footer-legal { justify-content: flex-start; gap: 0 8px; }
 /* Com o teclado aberto o rodapé guarda só o que é ação: os dois links legais
-   e os ícones. A linha de direitos reservados volta quando a altura volta —
-   é ela que, a 11px, empurraria o formulário para fora de telas de 320px. */
-.login-page[data-compact="true"] .login-footer-legal > span { display: none; }
+   e os ícones. Direitos reservados e histórico de versões voltam quando a altura
+   volta — a 11px, empurrariam o formulário para fora de telas de 320x420. */
+.login-page[data-compact="true"] .login-footer-legal > span,
+.login-page[data-compact="true"] .login-footer-legal > a[href="/novidades.html"] { display: none; }
 .login-page[data-compact="true"] .login-footer-text-link { font-size: 11px; line-height: 15px; }
 .login-page[data-compact="true"] .login-footer nav { flex-shrink: 0; gap: 0; }
 .login-page[data-compact="true"] .login-footer-link,

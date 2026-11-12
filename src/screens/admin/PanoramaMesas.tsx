@@ -5,13 +5,16 @@ import {
   FAIXAS_TEMPO,
   PERIODOS,
   ROTULO_PERIODO,
-  faixaOcupacao,
+  aguardandoPedidoDe,
   filtrarMesas,
   formatarDuracao,
   formatarHora,
+  minutosDesde,
   resumoPorPraca,
   resumirMesas,
   resumirVendas,
+  tempoClassificado,
+  tempoSessaoDe,
   type FiltroPraca,
   type FluxoProducao,
   type MesaPanorama,
@@ -259,9 +262,12 @@ export function CartaoMesa({
   onAbrir?: (numero: number) => void;
   acoes?: ReactNode;
 }) {
-  const tempo = mesa.abertaEm ? faixaOcupacao(mesa.abertaEm, agora, faixas) : null;
-  const faixa = tempo ? FAIXAS_TEMPO[tempo.id] : null;
   const ocupada = Boolean(mesa.sessaoId);
+  const tempo = ocupada ? tempoClassificado(mesa, agora, faixas) : null;
+  const faixa = tempo ? FAIXAS_TEMPO[tempo.id] : null;
+  const aguardando = aguardandoPedidoDe(mesa);
+  const sessao = ocupada ? tempoSessaoDe(mesa, agora) : null;
+  const minutosUltimo = ocupada ? minutosDesde(mesa.ultimoPedidoEm, agora) : null;
   const critica = tempo?.id === "critica";
 
   return (
@@ -269,7 +275,11 @@ export function CartaoMesa({
       data-ficha
       data-mesa-numero={mesa.numero}
       aria-label={`Mesa ${String(mesa.numero).padStart(2, "0")}: ${ocupada ? "ocupada" : "livre"}${
-        faixa ? `, ${faixa.rotulo.toLowerCase()}, ${formatarDuracao(tempo?.minutos)}` : ""
+        faixa
+          ? `, ${faixa.rotulo.toLowerCase()}, ${formatarDuracao(tempo?.minutos)}`
+          : aguardando
+            ? ", aguardando pedido"
+            : ""
       }`}
       role={onAbrir ? "button" : undefined}
       tabIndex={onAbrir ? 0 : undefined}
@@ -312,9 +322,11 @@ export function CartaoMesa({
           >
             <span className="flex items-center gap-1.5 font-mono text-xs font-bold">
               <Clock size={13} weight="bold" />
-              {formatarDuracao(tempo?.minutos)}
+              {faixa ? formatarDuracao(tempo?.minutos) : "—"}
             </span>
-            <span className="text-[11px] font-bold uppercase tracking-wider">{faixa?.rotulo || "Sem horário"}</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider">
+              {faixa?.rotulo || (aguardando ? "Aguardando pedido" : "Sem horário")}
+            </span>
           </div>
 
           <dl className="mt-2.5 space-y-1.5 text-[11px]">
@@ -331,11 +343,24 @@ export function CartaoMesa({
             <div className="flex items-baseline justify-between gap-2">
               <dt className="text-text-muted">Aberta</dt>
               <dd className="font-mono text-text">
-                {formatarHora(mesa.abertaEm)}
-                {mesa.pedidosAtivos > 0 && (
-                  <span className="ml-1.5 text-text-muted">
-                    · {mesa.pedidosAtivos} {mesa.pedidosAtivos === 1 ? "pedido" : "pedidos"}
-                  </span>
+                {sessao ? `há ${formatarDuracao(sessao.minutos)}` : formatarHora(mesa.abertaEm)}
+                {sessao && mesa.abertaEm ? (
+                  <span className="ml-1.5 text-text-muted">· {formatarHora(mesa.abertaEm)}</span>
+                ) : null}
+              </dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-2">
+              <dt className="text-text-muted">Último pedido</dt>
+              <dd className="font-mono text-text">
+                {aguardando ? (
+                  <span className="font-sans text-text-muted">Aguardando pedido</span>
+                ) : minutosUltimo !== null ? (
+                  <>
+                    {`há ${formatarDuracao(minutosUltimo)}`}
+                    <span className="ml-1.5 text-text-muted">· {formatarHora(mesa.ultimoPedidoEm)}</span>
+                  </>
+                ) : (
+                  <span className="font-sans text-text-muted">Horário indisponível</span>
                 )}
               </dd>
             </div>

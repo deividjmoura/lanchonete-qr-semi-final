@@ -152,16 +152,60 @@ test('panorama: 70 mesas, consumo × vendas, praças persistentes e tempos reais
       [sessao1]
     );
 
-    // Mesa 2 (atenção, 60 min) e mesa 3 (crítica, 100 min).
+    // Mesa 2 (atenção, primeiro pedido há 60 min) e mesa 3 (crítica, primeiro pedido há 100 min).
     for (const [numero, minutos] of [[2, 60], [3, 100]]) {
       const { rows } = await pool.query(
         `INSERT INTO mesa_sessoes (mesa_id, aberta_em)
-         SELECT id, now() - ($2::int * interval '1 minute') FROM mesas WHERE numero = $1
+         SELECT id, now() - (($2::int + 5) * interval '1 minute') FROM mesas WHERE numero = $1
          RETURNING id`,
         [numero, minutos]
       );
-      ids.sessoes.push(rows[0].id);
+      const sessId = rows[0].id;
+      ids.sessoes.push(sessId);
+      const ped = await pool.query(
+        `INSERT INTO pedidos (sessao_id, criado_em, status)
+         VALUES ($1, now() - ($2::int * interval '1 minute'), 'entregue')
+         RETURNING id`,
+        [sessId, minutos]
+      );
+      ids.pedidos.push(ped.rows[0].id);
     }
+
+    // #303 — Mesa 5: aberta há 120 min sem nenhum pedido => Aguardando pedido, sem faixa crítica.
+    const sessao5 = (await pool.query(
+      `INSERT INTO mesa_sessoes (mesa_id, aberta_em)
+       SELECT id, now() - interval '120 minutes' FROM mesas WHERE numero = 5 RETURNING id`
+    )).rows[0].id;
+    ids.sessoes.push(sessao5);
+
+    // #303 — Mesa 6: aberta há 120 min, primeiro pedido válido há 50 min (atenção),
+    // segundo pedido válido há 10 min, terceiro pedido totalmente cancelado há 2 min.
+    const sessao6 = (await pool.query(
+      `INSERT INTO mesa_sessoes (mesa_id, aberta_em)
+       SELECT id, now() - interval '120 minutes' FROM mesas WHERE numero = 6 RETURNING id`
+    )).rows[0].id;
+    ids.sessoes.push(sessao6);
+    for (const [minAtras, statusPed] of [[50, 'entregue'], [10, 'em_producao'], [2, 'cancelado']]) {
+      const ped = await pool.query(
+        `INSERT INTO pedidos (sessao_id, criado_em, status, editado_em)
+         VALUES ($1, now() - ($2::int * interval '1 minute'), $3, now() - interval '1 minute')
+         RETURNING id`,
+        [sessao6, minAtras, statusPed]
+      );
+      ids.pedidos.push(ped.rows[0].id);
+    }
+
+    // #303 — Mesa 7: aberta há 95 min com apenas pedido cancelado => continua Aguardando pedido.
+    const sessao7 = (await pool.query(
+      `INSERT INTO mesa_sessoes (mesa_id, aberta_em)
+       SELECT id, now() - interval '95 minutes' FROM mesas WHERE numero = 7 RETURNING id`
+    )).rows[0].id;
+    ids.sessoes.push(sessao7);
+    ids.pedidos.push((await pool.query(
+      `INSERT INTO pedidos (sessao_id, criado_em, status)
+       VALUES ($1, now() - interval '90 minutes', 'cancelado') RETURNING id`,
+      [sessao7]
+    )).rows[0].id);
 
     // Mesa 4: conta fechada (venda do período, não consumo em aberto).
     ids.sessoes.push((await pool.query(
@@ -173,8 +217,8 @@ test('panorama: 70 mesas, consumo × vendas, praças persistentes e tempos reais
     const panorama = await panoramaMesas({ periodo: 'hoje' });
     assert.equal(panorama.mesas.length, 70, 'uma entrada por mesa habilitada, inclusive livres');
     assert.deepEqual(panorama.config.faixas, { atencaoMinutos: 45, criticoMinutos: 90 });
-    assert.equal(panorama.mesas.filter((m) => m.status === 'ocupada').length, 3);
-    assert.equal(panorama.mesas.filter((m) => m.status === 'livre').length, 67);
+    assert.equal(panorama.mesas.filter((m) => m.status === 'ocupada').length, 6);
+    assert.equal(panorama.mesas.filter((m) => m.status === 'livre').length, 64);
 
     const mesa1 = panorama.mesas.find((m) => m.numero === 1);
     assert.equal(mesa1.pracaNome, 'Praia');
@@ -188,6 +232,29 @@ test('panorama: 70 mesas, consumo × vendas, praças persistentes e tempos reais
     assert.equal(panorama.mesas.find((m) => m.numero === 2).tempo.id, 'atencao');
     assert.equal(panorama.mesas.find((m) => m.numero === 3).tempo.id, 'critica');
     assert.equal(panorama.mesas.find((m) => m.numero === 4).status, 'livre', 'conta fechada não ocupa mesa');
+
+    // #303: validações de dois relógios, aguardando pedido e pedido cancelado.
+    const mesa5 = panorama.mesas.find((m) => m.numero === 5);
+    assert.equal(mesa5.status, 'ocupada');
+    assert.equal(mesa5.aguardandoPedido, true);
+    assert.equal(mesa5.tempo, null, 'sessão sem pedido nunca recebe faixa crítica');
+    assert.ok(mesa5.tempoSessao.minutos >= 119 && mesa5.tempoSessao.minutos <= 121);
+    assert.equal(mesa5.ultimoPedidoEm, null);
+
+    const mesa6 = panorama.mesas.find((m) => m.numero === 6);
+    assert.equal(mesa6.aguardandoPedido, false);
+    assert.equal(mesa6.tempo.id, 'atencao', 'classifica pelos 50 min do primeiro pedido válido, não pelas 2h da sessão');
+    assert.ok(mesa6.tempo.minutos >= 49 && mesa6.tempo.minutos <= 51);
+    assert.ok(mesa6.tempoSessao.minutos >= 119 && mesa6.tempoSessao.minutos <= 121);
+    assert.ok(
+      mesa6.ultimoPedidoMinutos >= 9 && mesa6.ultimoPedidoMinutos <= 11,
+      'ignora pedido cancelado mais recente (2 min) e editado_em (1 min), usando criado_em do último pedido válido (10 min)'
+    );
+
+    const mesa7 = panorama.mesas.find((m) => m.numero === 7);
+    assert.equal(mesa7.aguardandoPedido, true, 'pedido totalmente cancelado não inicia atendimento');
+    assert.equal(mesa7.tempo, null);
+    assert.equal(mesa7.ultimoPedidoEm, null);
 
     // Vendas do período: somente contas fechadas, valor cobrado.
     const vendaMesa4 = panorama.vendas.porMesa.find((v) => v.numero === 4);

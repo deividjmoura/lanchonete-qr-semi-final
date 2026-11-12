@@ -400,14 +400,14 @@ test('garçom: adiar é por versão e não volta a incomodar', async () => {
 
   contexto.dispensar();
   assert.equal(host.children[0].hidden, true, 'adiar precisa esconder o aviso');
-  assert.equal(armazenamento.get('garcom-atualizacao-adiada'), 'bbbbbbbbbbbbbbbb', 'só a versão é guardada');
+  assert.equal(armazenamento.get('garcom-atualizacao-adiada'), 'versao::bbbbbbbbbbbbbbbb', 'só o identificador da versão é guardado');
 
   // Nova consulta com a mesma versão: nada reaparece.
   await contexto.verificar;
   contexto._reiniciar();
   const segunda = carregarModuloDoPwa({
     respostas,
-    storage: { 'garcom-atualizacao-adiada': 'bbbbbbbbbbbbbbbb' },
+    storage: { 'garcom-atualizacao-adiada': 'versao::bbbbbbbbbbbbbbbb' },
   });
   await segunda.contexto.iniciarAvisoDeAtualizacao();
   await esperar();

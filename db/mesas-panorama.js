@@ -16,6 +16,15 @@
 // inferida a partir do status atual. Entregas diretas (concluído → entregue)
 // não têm retirada registrada e por isso aparecem como indisponíveis nessa
 // etapa, em vez de receber um tempo inventado.
+//
+// #303 — dois relógios separados por mesa ocupada:
+//  * `tempoSessao` = idade da sessão (desde `aberta_em`), só contexto;
+//  * `tempo` = tempo de atendimento, contado do PRIMEIRO pedido válido
+//    (`pedidos.status <> 'cancelado'`, por `criado_em`). Sessão aberta sem
+//    pedido válido fica em `aguardandoPedido` e NÃO recebe faixa de
+//    atenção/crítica — a idade da sessão sozinha nunca vira "crítica".
+//  * `ultimoPedidoEm` = `criado_em` do pedido válido mais recente da sessão
+//    (nunca `editado_em`, horário de item ou evento de entrega).
 
 const pool = require('./pool');
 const { ErroAdmin } = require('./admin');
@@ -40,16 +49,21 @@ function normalizarFaixas(origem = {}) {
   return { atencaoMinutos: atencaoValida, criticoMinutos: criticoValido };
 }
 
+function minutosDesde(instante, agora = Date.now()) {
+  const inicio = instante ? new Date(instante).getTime() : NaN;
+  if (!Number.isFinite(inicio)) return null;
+  const referencia = Number(agora);
+  if (!Number.isFinite(referencia)) return null;
+  return Math.max(0, Math.floor((referencia - inicio) / 60000));
+}
+
 /**
  * Faixa de ocupação da mesa. Função pura (testada em tests/mesas-panorama).
  * `abertaEm` ausente/inválida => sem faixa (mesa livre ou sessão sem horário).
  */
 function faixaOcupacao(abertaEm, agora = Date.now(), faixas = FAIXAS_PADRAO) {
-  const inicio = abertaEm ? new Date(abertaEm).getTime() : NaN;
-  if (!Number.isFinite(inicio)) return null;
-  const referencia = Number(agora);
-  if (!Number.isFinite(referencia)) return null;
-  const minutos = Math.max(0, Math.floor((referencia - inicio) / 60000));
+  const minutos = minutosDesde(abertaEm, agora);
+  if (minutos === null) return null;
   const { atencaoMinutos, criticoMinutos } = normalizarFaixas(faixas);
   const id = minutos < atencaoMinutos ? 'recente' : minutos < criticoMinutos ? 'atencao' : 'critica';
   return { id, minutos, atencaoMinutos, criticoMinutos };
@@ -214,6 +228,19 @@ const SQL_MESAS = `
      WHERE p.status NOT IN ('entregue', 'cancelado')
      GROUP BY p.sessao_id
   ),
+  -- #303: primeiro/último pedido VÁLIDO da sessão, por criação.
+  -- Pedido cancelado (todos os itens cancelados, ver db/itens.js
+  -- calcularStatusPedido) não conta como atividade: um pedido totalmente
+  -- cancelado não inicia o relógio de atendimento nem aparece como
+  -- "último pedido". Não existe status 'estornado' neste banco.
+  pedidos_sessao AS (
+    SELECT p.sessao_id,
+           MIN(p.criado_em) AS primeiro_pedido_em,
+           MAX(p.criado_em) AS ultimo_pedido_em
+      FROM pedidos p
+     WHERE COALESCE(p.status, 'recebido') <> 'cancelado'
+     GROUP BY p.sessao_id
+  ),
   itens_fila AS (
     SELECT p.sessao_id,
            COUNT(*) FILTER (WHERE ip.status IN ('recebido', 'em_producao'))::int AS na_fila,
@@ -227,6 +254,7 @@ const SQL_MESAS = `
          a.praca_id, pr.nome AS praca_nome, pr.ordem AS praca_ordem,
          s.id AS sessao_id, s.aberta_em, s.cliente_nome,
          s.garcom_responsavel_id, s.garcom_nome,
+         ps.primeiro_pedido_em, ps.ultimo_pedido_em,
          COALESCE(c.valor, 0)::float AS consumo,
          COALESCE(pg.valor, 0)::float AS pago,
          COALESCE(pa.total, 0)::int AS pedidos_ativos,
@@ -238,6 +266,7 @@ const SQL_MESAS = `
     FROM ativas a
     LEFT JOIN mesa_pracas pr ON pr.id = a.praca_id
     LEFT JOIN sessao s ON s.mesa_id = a.id
+    LEFT JOIN pedidos_sessao ps ON ps.sessao_id = s.id
     LEFT JOIN consumo c ON c.sessao_id = s.id
     LEFT JOIN pago pg ON pg.sessao_id = s.id
     LEFT JOIN pedidos_ativos pa ON pa.sessao_id = s.id
@@ -246,9 +275,17 @@ const SQL_MESAS = `
 
 function mapearMesa(linha, faixas, agora) {
   const abertaEm = iso(linha.aberta_em);
+  const primeiroPedidoEm = iso(linha.primeiro_pedido_em);
+  const ultimoPedidoEm = iso(linha.ultimo_pedido_em);
   const consumo = Number(linha.consumo || 0);
   const pago = Number(linha.pago || 0);
   const ocupada = Boolean(linha.sessao_id);
+  // #303: sem pedido válido, não há relógio de atendimento — a mesa fica
+  // "Aguardando pedido" e `tempo` é null (sem faixa). Datas inválidas já
+  // chegam como null via `iso`, então faixaOcupacao devolve null sem NaN.
+  const aguardandoPedido = ocupada && !primeiroPedidoEm;
+  const minutosSessao = ocupada ? minutosDesde(abertaEm, agora) : null;
+  const minutosUltimoPedido = ocupada ? minutosDesde(ultimoPedidoEm, agora) : null;
   return {
     id: Number(linha.id),
     numero: Number(linha.numero),
@@ -259,7 +296,14 @@ function mapearMesa(linha, faixas, agora) {
     pracaOrdem: linha.praca_ordem != null ? Number(linha.praca_ordem) : null,
     sessaoId: linha.sessao_id ? Number(linha.sessao_id) : null,
     abertaEm,
-    tempo: ocupada ? faixaOcupacao(abertaEm, agora, faixas) : null,
+    primeiroPedidoEm,
+    ultimoPedidoEm,
+    aguardandoPedido,
+    // Classificação de atendimento: conta do primeiro pedido válido.
+    tempo: ocupada ? faixaOcupacao(primeiroPedidoEm, agora, faixas) : null,
+    // Idade da sessão e tempo desde o último pedido: só contexto (sem faixa).
+    tempoSessao: minutosSessao !== null ? { minutos: minutosSessao } : null,
+    ultimoPedidoMinutos: minutosUltimoPedido,
     clienteNome: linha.cliente_nome || null,
     garcomResponsavelId: linha.garcom_responsavel_id != null ? Number(linha.garcom_responsavel_id) : null,
     garcomResponsavelNome: linha.garcom_nome || null,
@@ -516,6 +560,7 @@ module.exports = {
   ETAPAS_FLUXO,
   SETORES_FLUXO,
   normalizarFaixas,
+  minutosDesde,
   faixaOcupacao,
   montarFluxo,
   panoramaMesas,

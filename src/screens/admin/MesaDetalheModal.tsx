@@ -8,9 +8,12 @@ import {
   FAIXAS_PADRAO,
   FAIXAS_TEMPO,
   STATUS_ITEM,
-  faixaOcupacao,
+  aguardandoPedidoDe,
   formatarDuracao,
   formatarHora,
+  minutosDesde,
+  tempoClassificado,
+  tempoSessaoDe,
   type MesaDetalhe,
   type Praca,
 } from "../../lib/panorama";
@@ -87,8 +90,11 @@ export function MesaDetalheModal({ numero, pracas, garcons, agora, onClose, onAl
 
   const ocupada = Boolean(detalhe?.sessaoId);
   const faixas = detalhe?.faixas || FAIXAS_PADRAO;
-  const tempo = detalhe?.abertaEm ? faixaOcupacao(detalhe.abertaEm, agora, faixas) : null;
+  const tempo = ocupada && detalhe ? tempoClassificado(detalhe, agora, faixas) : null;
   const faixa = tempo ? FAIXAS_TEMPO[tempo.id] : null;
+  const aguardando = detalhe ? aguardandoPedidoDe(detalhe) : false;
+  const sessao = ocupada && detalhe ? tempoSessaoDe(detalhe, agora) : null;
+  const minutosUltimo = ocupada && detalhe ? minutosDesde(detalhe.ultimoPedidoEm, agora) : null;
 
   const salvarPraca = async () => {
     if (!numero) return;
@@ -171,11 +177,15 @@ export function MesaDetalheModal({ numero, pracas, garcons, agora, onClose, onAl
             <span className="rounded-xs border border-line bg-surface-sunken px-2 py-0.5 text-[11px] font-semibold text-text-muted">
               {detalhe?.pracaNome || "Sem praça"}
             </span>
-            {faixa && (
+            {faixa ? (
               <span className={cn("rounded-xs border px-2 py-0.5 font-mono text-[11px] font-bold", faixa.classe)}>
                 {formatarDuracao(tempo?.minutos)} · {faixa.rotulo}
               </span>
-            )}
+            ) : aguardando ? (
+              <span className="rounded-xs border border-line-strong bg-surface-sunken px-2 py-0.5 font-mono text-[11px] font-bold text-text">
+                Aguardando pedido
+              </span>
+            ) : null}
           </div>
         </header>
 
@@ -193,7 +203,24 @@ export function MesaDetalheModal({ numero, pracas, garcons, agora, onClose, onAl
               <div className="rounded-sm border border-line bg-surface-sunken p-3">
                 <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">Sessão</p>
                 <dl className="mt-1.5 space-y-1 text-xs">
-                  <Linha rotulo="Aberta" valor={formatarHora(detalhe.abertaEm)} />
+                  <Linha
+                    rotulo="Aberta"
+                    valor={
+                      sessao
+                        ? `há ${formatarDuracao(sessao.minutos)}${detalhe.abertaEm ? ` · ${formatarHora(detalhe.abertaEm)}` : ""}`
+                        : formatarHora(detalhe.abertaEm)
+                    }
+                  />
+                  <Linha
+                    rotulo="Último pedido"
+                    valor={
+                      aguardando
+                        ? "Aguardando pedido"
+                        : minutosUltimo !== null
+                          ? `há ${formatarDuracao(minutosUltimo)}${detalhe.ultimoPedidoEm ? ` · ${formatarHora(detalhe.ultimoPedidoEm)}` : ""}`
+                          : "—"
+                    }
+                  />
                   <Linha rotulo="Garçom" valor={detalhe.garcomResponsavelNome || "a definir"} />
                   <Linha rotulo="Cliente" valor={detalhe.clienteNome || "—"} />
                   <Linha
