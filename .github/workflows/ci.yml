@@ -64,6 +64,10 @@ jobs:
         if: ${{ hashFiles('tests/postgres-financial-integration.test.cjs') != '' }}
         run: node --test tests/postgres-financial-integration.test.cjs
 
+      - name: Complete long-period report integration on clean PostgreSQL (#299)
+        if: ${{ hashFiles('tests/postgres-relatorio-longo.test.cjs') != '' }}
+        run: node --test tests/postgres-relatorio-longo.test.cjs
+
       - name: Tables panorama integration on clean PostgreSQL
         if: ${{ hashFiles('tests/postgres-mesas-panorama.test.cjs') != '' }}
         run: node --test tests/postgres-mesas-panorama.test.cjs

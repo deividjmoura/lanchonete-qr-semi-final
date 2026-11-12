@@ -2,11 +2,15 @@
 // Timezone fixo: America/Sao_Paulo (Neon/Postgres costuma rodar em UTC).
 const pool = require('./pool');
 
-const TZ = process.env.APP_TIMEZONE || 'America/Sao_Paulo';
+function tzDashboard() {
+  const raw = String(process.env.APP_TIMEZONE || 'America/Sao_Paulo').trim();
+  if (/^[A-Za-z0-9_+\-\/]+$/.test(raw) && raw.length <= 64) return raw;
+  return 'America/Sao_Paulo';
+}
 
 /** Expressão SQL: data local do estabelecimento a partir de um timestamptz/timestamp. */
 function sqlDateLocal(col) {
-  return `(${col} AT TIME ZONE '${TZ}')::date`;
+  return `(${col} AT TIME ZONE '${tzDashboard()}')::date`;
 }
 
 /**
@@ -14,6 +18,7 @@ function sqlDateLocal(col) {
  * from/to em YYYY-MM-DD (opcional). Default: hoje no fuso do pub.
  */
 async function resumoDia(opts = {}) {
+  const TZ = tzDashboard();
   const from = opts.from || null;
   const to = opts.to || null;
 
@@ -228,6 +233,7 @@ async function resumoDia(opts = {}) {
 
 /** Top produtos do dia (público — só id, nome, qtd). */
 async function topProdutosHoje(limit = 6) {
+  const TZ = tzDashboard();
   const lim = Math.min(12, Math.max(1, Number(limit) || 6));
   const { rows } = await pool.query(
     `SELECT pr.id,

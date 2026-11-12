@@ -1,6 +1,9 @@
-// Relatório de vendas por período (dados para PDF / impressão).
+// Relatório de vendas por período (dados para tela, CSV e PDF / impressão).
 const pool = require('./pool');
 const { resumoDia } = require('./dashboard');
+
+const MAX_PAGE_LIMIT = 5000;
+const DEFAULT_PAGE_LIMIT = 500;
 
 /** Só permite nomes de fuso seguros (evita injection em literal SQL). */
 function tzSeguro() {
@@ -9,13 +12,41 @@ function tzSeguro() {
   return 'America/Sao_Paulo';
 }
 
+/** Valida formato YYYY-MM-DD e existência real no calendário (ex.: rejeita 2026-02-31). */
+function validarDataCalendario(valor) {
+  if (typeof valor !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(valor)) return false;
+  const [ano, mes, dia] = valor.split('-').map(Number);
+  if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return false;
+  const d = new Date(Date.UTC(ano, mes - 1, dia));
+  return (
+    d.getUTCFullYear() === ano &&
+    d.getUTCMonth() === mes - 1 &&
+    d.getUTCDate() === dia
+  );
+}
+
+/** Normaliza paginação opcional; sem page/limit devolve todas as contas do período. */
+function normalizarPaginacao({ page, limit } = {}) {
+  const temPage = page !== undefined && page !== null && page !== '';
+  const temLimit = limit !== undefined && limit !== null && limit !== '';
+  if (!temPage && !temLimit) {
+    return { paginado: false, page: 1, limit: null, offset: 0 };
+  }
+  const p = temPage ? Number(page) : 1;
+  const l = temLimit ? Number(limit) : DEFAULT_PAGE_LIMIT;
+  if (!Number.isInteger(p) || p < 1 || !Number.isInteger(l) || l < 1 || l > MAX_PAGE_LIMIT) {
+    const err = new Error(`Paginação inválida. Use page >= 1 e limit entre 1 e ${MAX_PAGE_LIMIT}`);
+    err.status = 400;
+    throw err;
+  }
+  return { paginado: true, page: p, limit: l, offset: (p - 1) * l };
+}
+
 /**
  * Intervalo [from 00:00, to+1 00:00) no fuso do pub, como timestamptz.
- * Funciona com colunas timestamp e timestamptz no Postgres/Neon.
+ * `to` é inclusivo até 23:59:59.999999 do dia civil em `tz`.
  */
 function sqlRangeParams(from, to, tz) {
-  // from 00:00 no fuso local → instante UTC
-  // to é inclusivo → upper bound = (to + 1 dia) 00:00 local
   return {
     textStart: `($1::timestamp AT TIME ZONE '${tz}')`,
     textEnd: `((($2::date + 1)::timestamp) AT TIME ZONE '${tz}')`,
@@ -23,16 +54,19 @@ function sqlRangeParams(from, to, tz) {
   };
 }
 
+const SQL_VALOR_BASE = `COALESCE(s.valor_total, COALESCE(s.valor_cobrado, 0) + COALESCE(s.desconto, 0) - COALESCE(s.taxa_servico, 0))`;
+const SQL_VALOR_COBRADO = `COALESCE(s.valor_cobrado, s.valor_total, 0)`;
+
 /**
- * @param {{ from: string, to: string }} opts  YYYY-MM-DD obrigatórios
+ * @param {{ from: string, to: string, page?: number|string|null, limit?: number|string|null }} opts
  */
-async function relatorioVendas({ from, to }) {
+async function relatorioVendas({ from, to, page, limit } = {}) {
   if (!from || !to) {
     const err = new Error('Informe from e to (YYYY-MM-DD)');
     err.status = 400;
     throw err;
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
+  if (!validarDataCalendario(from) || !validarDataCalendario(to)) {
     const err = new Error('Datas inválidas. Use YYYY-MM-DD');
     err.status = 400;
     throw err;
@@ -43,6 +77,7 @@ async function relatorioVendas({ from, to }) {
     throw err;
   }
 
+  const pag = normalizarPaginacao({ page, limit });
   const tz = tzSeguro();
   const range = sqlRangeParams(from, to, tz);
 
@@ -51,7 +86,6 @@ async function relatorioVendas({ from, to }) {
     resumo = await resumoDia({ from, to });
   } catch (e) {
     console.error('[relatorio] resumoDia falhou:', e.message || e);
-    // não derruba o relatório inteiro — devolve zeros
     resumo = {
       faturamento: 0,
       vendasBrutas: 0,
@@ -70,9 +104,9 @@ async function relatorioVendas({ from, to }) {
   const round2 = (n) => Number(Number(n || 0).toFixed(2));
   const mapPorDia = (rows) => rows.map((r) => ({
     dia: r.dia instanceof Date ? r.dia.toISOString().slice(0, 10) : String(r.dia).slice(0, 10),
-    contas: r.contas,
+    contas: Number(r.contas || 0),
     faturamento: round2(r.faturamento),
-    // #154: breakdown diário reconciliável com o resumo do período.
+    // #154/#299: breakdown diário reconciliável com resumo, contas e porGarcom.
     vendasBrutas: round2(r.vendas),
     servicoTotal: round2(r.servico),
     descontosTotal: round2(r.descontos),
@@ -82,16 +116,16 @@ async function relatorioVendas({ from, to }) {
   let porDia = [];
   try {
     const q = await pool.query(
-      `SELECT (fechada_em AT TIME ZONE '${tz}')::date AS dia,
+      `SELECT (s.fechada_em AT TIME ZONE '${tz}')::date AS dia,
               COUNT(*)::int AS contas,
-              COALESCE(SUM(COALESCE(valor_cobrado, valor_total)), 0)::float AS faturamento,
-              COALESCE(SUM(valor_total), 0)::float AS vendas,
-              COALESCE(SUM(taxa_servico), 0)::float AS servico,
-              COALESCE(SUM(desconto), 0)::float AS descontos
-       FROM mesa_sessoes
-       WHERE status = 'fechada'
-         AND fechada_em >= ${range.textStart}
-         AND fechada_em < ${range.textEnd}
+              COALESCE(SUM(${SQL_VALOR_COBRADO}), 0)::numeric(14,2) AS faturamento,
+              COALESCE(SUM(${SQL_VALOR_BASE}), 0)::numeric(14,2) AS vendas,
+              COALESCE(SUM(COALESCE(s.taxa_servico, 0)), 0)::numeric(14,2) AS servico,
+              COALESCE(SUM(COALESCE(s.desconto, 0)), 0)::numeric(14,2) AS descontos
+       FROM mesa_sessoes s
+       WHERE s.status = 'fechada'
+         AND s.fechada_em >= ${range.textStart}
+         AND s.fechada_em < ${range.textEnd}
        GROUP BY 1
        ORDER BY 1`,
       range.values
@@ -99,19 +133,18 @@ async function relatorioVendas({ from, to }) {
     porDia = mapPorDia(q.rows);
   } catch (e) {
     console.error('[relatorio] porDia falhou:', e.message || e);
-    // fallback sem timezone
     try {
       const q = await pool.query(
-        `SELECT fechada_em::date AS dia,
+        `SELECT s.fechada_em::date AS dia,
                 COUNT(*)::int AS contas,
-                COALESCE(SUM(COALESCE(valor_cobrado, valor_total)), 0)::float AS faturamento,
-                COALESCE(SUM(valor_total), 0)::float AS vendas,
-                COALESCE(SUM(taxa_servico), 0)::float AS servico,
-                COALESCE(SUM(desconto), 0)::float AS descontos
-         FROM mesa_sessoes
-         WHERE status = 'fechada'
-           AND fechada_em::date >= $1::date
-           AND fechada_em::date <= $2::date
+                COALESCE(SUM(${SQL_VALOR_COBRADO}), 0)::numeric(14,2) AS faturamento,
+                COALESCE(SUM(${SQL_VALOR_BASE}), 0)::numeric(14,2) AS vendas,
+                COALESCE(SUM(COALESCE(s.taxa_servico, 0)), 0)::numeric(14,2) AS servico,
+                COALESCE(SUM(COALESCE(s.desconto, 0)), 0)::numeric(14,2) AS descontos
+         FROM mesa_sessoes s
+         WHERE s.status = 'fechada'
+           AND s.fechada_em::date >= $1::date
+           AND s.fechada_em::date <= $2::date
          GROUP BY 1
          ORDER BY 1`,
         [from, to]
@@ -121,6 +154,70 @@ async function relatorioVendas({ from, to }) {
       console.error('[relatorio] porDia fallback falhou:', e2.message || e2);
     }
   }
+
+  // #154/#299: serviço por garçom responsável agregado no banco sobre TODAS as
+  // contas fechadas do período — nunca truncado mesmo quando `contas` usa paginação.
+  const mapPorGarcom = (rows) =>
+    rows
+      .map((r) => ({
+        garcomId: r.garcom_id != null ? Number(r.garcom_id) : null,
+        garcomNome: r.garcom_nome || 'Sem responsável atribuído',
+        contas: Number(r.contas || 0),
+        vendasBrutas: round2(r.vendas),
+        servicoTotal: round2(r.servico),
+        descontosTotal: round2(r.descontos),
+        totalCobrado: round2(r.cobrado),
+      }))
+      .sort((a, b) => b.servicoTotal - a.servicoTotal || b.totalCobrado - a.totalCobrado);
+
+  let porGarcom = null;
+  try {
+    const q = await pool.query(
+      `SELECT s.garcom_responsavel_id AS garcom_id,
+              g.nome AS garcom_nome,
+              COUNT(*)::int AS contas,
+              COALESCE(SUM(${SQL_VALOR_BASE}), 0)::numeric(14,2) AS vendas,
+              COALESCE(SUM(COALESCE(s.taxa_servico, 0)), 0)::numeric(14,2) AS servico,
+              COALESCE(SUM(COALESCE(s.desconto, 0)), 0)::numeric(14,2) AS descontos,
+              COALESCE(SUM(${SQL_VALOR_COBRADO}), 0)::numeric(14,2) AS cobrado
+       FROM mesa_sessoes s
+       LEFT JOIN garcons g ON g.id = s.garcom_responsavel_id
+       WHERE s.status = 'fechada'
+         AND s.fechada_em >= ${range.textStart}
+         AND s.fechada_em < ${range.textEnd}
+       GROUP BY s.garcom_responsavel_id, g.nome`,
+      range.values
+    );
+    porGarcom = mapPorGarcom(q.rows);
+  } catch (e) {
+    console.error('[relatorio] porGarcom falhou:', e.message || e);
+    try {
+      const q = await pool.query(
+        `SELECT s.garcom_responsavel_id AS garcom_id,
+                g.nome AS garcom_nome,
+                COUNT(*)::int AS contas,
+                COALESCE(SUM(${SQL_VALOR_BASE}), 0)::numeric(14,2) AS vendas,
+                COALESCE(SUM(COALESCE(s.taxa_servico, 0)), 0)::numeric(14,2) AS servico,
+                COALESCE(SUM(COALESCE(s.desconto, 0)), 0)::numeric(14,2) AS descontos,
+                COALESCE(SUM(${SQL_VALOR_COBRADO}), 0)::numeric(14,2) AS cobrado
+         FROM mesa_sessoes s
+         LEFT JOIN garcons g ON g.id = s.garcom_responsavel_id
+         WHERE s.status = 'fechada'
+           AND s.fechada_em::date >= $1::date
+           AND s.fechada_em::date <= $2::date
+         GROUP BY s.garcom_responsavel_id, g.nome`,
+        [from, to]
+      );
+      porGarcom = mapPorGarcom(q.rows);
+    } catch (e2) {
+      console.error('[relatorio] porGarcom fallback falhou:', e2.message || e2);
+    }
+  }
+
+  // #299: sem teto fixo silencioso — retorna todas as contas fechadas do período
+  // (ou a fatia determinística quando `page`/`limit` são solicitados explicitamente).
+  const sqlPaginacao = pag.paginado ? ' LIMIT $3 OFFSET $4' : '';
+  const valoresSessoes = pag.paginado ? [...range.values, pag.limit, pag.offset] : range.values;
 
   let sessoes = [];
   try {
@@ -136,9 +233,8 @@ async function relatorioVendas({ from, to }) {
        WHERE s.status = 'fechada'
          AND s.fechada_em >= ${range.textStart}
          AND s.fechada_em < ${range.textEnd}
-       ORDER BY s.fechada_em DESC
-       LIMIT 500`,
-      range.values
+       ORDER BY s.fechada_em DESC, s.id DESC${sqlPaginacao}`,
+      valoresSessoes
     );
     sessoes = q.rows;
   } catch (e) {
@@ -156,9 +252,8 @@ async function relatorioVendas({ from, to }) {
          WHERE s.status = 'fechada'
            AND s.fechada_em::date >= $1::date
            AND s.fechada_em::date <= $2::date
-         ORDER BY s.fechada_em DESC
-         LIMIT 500`,
-        [from, to]
+         ORDER BY s.fechada_em DESC, s.id DESC${sqlPaginacao}`,
+        valoresSessoes
       );
       sessoes = q.rows;
     } catch (e2) {
@@ -170,16 +265,24 @@ async function relatorioVendas({ from, to }) {
   }
 
   const contas = sessoes.map((s) => {
-    const base = Number(s.valor_total || 0);
-    const cobrado = s.valor_cobrado != null ? Number(s.valor_cobrado) : base;
+    const cobradoRaw =
+      s.valor_cobrado != null && s.valor_cobrado !== ''
+        ? Number(s.valor_cobrado)
+        : Number(s.valor_total || 0);
+    const descontoRaw = Number(s.desconto || 0);
+    const servicoRaw = Number(s.taxa_servico || 0);
+    const baseRaw =
+      s.valor_total != null && s.valor_total !== ''
+        ? Number(s.valor_total)
+        : round2(cobradoRaw + descontoRaw - servicoRaw);
     return {
       id: s.id,
       mesa: s.mesa,
       cliente: s.cliente_nome || null,
-      valor: round2(base),
-      desconto: round2(s.desconto),
-      taxaServico: round2(s.taxa_servico),
-      valorCobrado: round2(cobrado),
+      valor: round2(baseRaw),
+      desconto: round2(descontoRaw),
+      taxaServico: round2(servicoRaw),
+      valorCobrado: round2(cobradoRaw),
       forma: s.forma_pagamento || 'outro',
       fechadaEm: s.fechada_em,
       // #154: comissão/serviço atribuído ao responsável pela sessão.
@@ -188,47 +291,74 @@ async function relatorioVendas({ from, to }) {
     };
   });
 
-  // #154: serviço por garçom responsável pela sessão (decisão do dono).
-  // Contas sem responsável (legado/anteriores à atribuição) ficam num
-  // grupo próprio, sem inventar rateio entre garçons.
-  const porGarcomMap = new Map();
-  for (const conta of contas) {
-    const chave = conta.garcomResponsavelId || 'sem-responsavel';
-    if (!porGarcomMap.has(chave)) {
-      porGarcomMap.set(chave, {
-        garcomId: conta.garcomResponsavelId,
-        garcomNome: conta.garcomResponsavel || 'Sem responsável atribuído',
-        contas: 0,
-        vendasBrutas: 0,
-        servicoTotal: 0,
-        descontosTotal: 0,
-        totalCobrado: 0,
-      });
+  // Fallback em memória caso `porGarcom` SQL tenha falhado num mock parcial.
+  if (!porGarcom) {
+    const porGarcomMap = new Map();
+    for (const conta of contas) {
+      const chave = conta.garcomResponsavelId || 'sem-responsavel';
+      if (!porGarcomMap.has(chave)) {
+        porGarcomMap.set(chave, {
+          garcomId: conta.garcomResponsavelId,
+          garcomNome: conta.garcomResponsavel || 'Sem responsável atribuído',
+          contas: 0,
+          vendasBrutas: 0,
+          servicoTotal: 0,
+          descontosTotal: 0,
+          totalCobrado: 0,
+        });
+      }
+      const grupo = porGarcomMap.get(chave);
+      grupo.contas += 1;
+      grupo.vendasBrutas = round2(grupo.vendasBrutas + conta.valor);
+      grupo.servicoTotal = round2(grupo.servicoTotal + conta.taxaServico);
+      grupo.descontosTotal = round2(grupo.descontosTotal + conta.desconto);
+      grupo.totalCobrado = round2(grupo.totalCobrado + conta.valorCobrado);
     }
-    const grupo = porGarcomMap.get(chave);
-    grupo.contas += 1;
-    grupo.vendasBrutas = round2(grupo.vendasBrutas + conta.valor);
-    grupo.servicoTotal = round2(grupo.servicoTotal + conta.taxaServico);
-    grupo.descontosTotal = round2(grupo.descontosTotal + conta.desconto);
-    grupo.totalCobrado = round2(grupo.totalCobrado + conta.valorCobrado);
+    porGarcom = [...porGarcomMap.values()].sort(
+      (a, b) => b.servicoTotal - a.servicoTotal || b.totalCobrado - a.totalCobrado
+    );
   }
-  const porGarcom = [...porGarcomMap.values()].sort(
-    (a, b) => b.servicoTotal - a.servicoTotal || b.totalCobrado - a.totalCobrado
+
+  const totalContas = Number(
+    resumo.contasFechadas || porDia.reduce((acc, d) => acc + d.contas, 0) || contas.length
   );
+  const paginacao = pag.paginado
+    ? {
+        paginado: true,
+        page: pag.page,
+        limit: pag.limit,
+        total: totalContas,
+        totalPages: Math.max(1, Math.ceil(totalContas / pag.limit)),
+        hasMore: pag.offset + contas.length < totalContas,
+      }
+    : {
+        paginado: false,
+        page: 1,
+        limit: totalContas,
+        total: totalContas,
+        totalPages: 1,
+        hasMore: false,
+      };
+
+  const porFormaNormalizado = {};
+  for (const [k, v] of Object.entries(resumo.porFormaPagamento || {})) {
+    porFormaNormalizado[k] = round2(v);
+  }
 
   return {
     geradoEm: new Date().toISOString(),
     periodo: { from, to, timezone: tz },
+    paginacao,
     resumo: {
-      faturamento: resumo.faturamento,
+      faturamento: round2(resumo.faturamento),
       // #154: breakdown — vendas brutas − descontos + serviço = total.
       vendasBrutas: round2(resumo.vendasBrutas),
       servicoTotal: round2(resumo.servicoTotal),
       descontosTotal: round2(resumo.descontosTotal),
       totalCobrado: round2(resumo.totalCobrado ?? resumo.faturamento),
-      contasFechadas: resumo.contasFechadas,
-      ticketMedio: resumo.ticketMedio,
-      porFormaPagamento: resumo.porFormaPagamento || {},
+      contasFechadas: totalContas,
+      ticketMedio: round2(resumo.ticketMedio),
+      porFormaPagamento: porFormaNormalizado,
       pedidosTotal: resumo.pedidosTotal || 0,
       pedidosPorStatus: resumo.pedidosPorStatus || {},
       topProdutos: resumo.topProdutos || [],
@@ -239,4 +369,9 @@ async function relatorioVendas({ from, to }) {
   };
 }
 
-module.exports = { relatorioVendas };
+module.exports = {
+  relatorioVendas,
+  MAX_PAGE_LIMIT,
+  DEFAULT_PAGE_LIMIT,
+  _internos: { tzSeguro, validarDataCalendario, normalizarPaginacao, sqlRangeParams },
+};
