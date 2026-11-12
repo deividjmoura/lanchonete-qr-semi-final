@@ -34,7 +34,7 @@ async function movimentarEntrega(pedidoId,token,{itemIds=null,etapa='aceitar'}={
     if(sessao.status!=='aberta')throw new ErroGarcom(409,'A sessão desta entrega não está mais aberta');
     const candidatos=itens.filter(i=>ids?ids.includes(Number(i.id)):
       etapa==='entrega_direta'?['concluido','aceito','retirado'].includes(i.status):
-      etapa==='retirar'?(i.status==='concluido'||(i.status==='aceito'&&Number(i.aceito_por_id)===Number(garcom.id))):
+      etapa==='retirar'?['concluido','aceito'].includes(i.status):
       i.status===origem);
     if(ids&&candidatos.length!==ids.length)throw new ErroGarcom(404,'Um ou mais itens não pertencem a este pedido');
     if(!candidatos.length)throw new ErroGarcom(409,'Nenhum item disponível para esta etapa; atualize a fila');
