@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { statusReversao, reverterCardapio } = require('./db/cardapio-reversao');
 const http = require('http');
+const { obterVersaoBuild } = require('./lib/build-version');
 const fs = require('fs');
 const path = require('path');
 const { sanitizarAlvoRequisicao, sanitizarDetalheErro } = require('./db/log-sanitizer');
@@ -273,6 +274,19 @@ const server = http.createServer(async (req, res) => {
     // requisição, inclusive erros, para o atendimento reportar com precisão.
     reqId = requestIdDaRequisicao(req);
     res.setHeader('X-Request-Id', reqId);
+
+    // A versão é gerada pelo Vite e compartilhada com o bundle do navegador.
+    // Ambos leem o mesmo identificador para detectar deploys em abas antigas.
+    if (p === '/api/version' && req.method === 'GET') {
+      const version = obterVersaoBuild(path.join(ROOT, 'dist', 'build-version.json'));
+      if (!version) return json(res, 503, { error: 'Versão indisponível' }, {
+        'Cache-Control': 'no-store',
+      });
+      return json(res, 200, { version }, {
+        'Cache-Control': 'no-store, max-age=0',
+        'Pragma': 'no-cache',
+      });
+    }
 
     // Health check (#43): processo HTTP + conectividade do banco.
     //
