@@ -137,11 +137,9 @@ describe('1. Fluxo do Cliente — Sem Pagamento e com Recursos Essenciais', () =
     );
   });
 
-  test('Interface prepara indicação do garçom responsável quando existir', () => {
+  test('Interface do cliente não apresenta um garçom titular da mesa', () => {
     const mesaSrc = fs.readFileSync('src/screens/Mesa.tsx', 'utf8');
-    assert.match(mesaSrc, /garcomResponsavel/, 'Mesa.tsx calcula garcomResponsavel');
-    assert.match(mesaSrc, /ConciergeBell/, 'Mesa.tsx usa ícone de garçom');
-    assert.match(mesaSrc, /Garçom:/, 'Exibe o nome do garçom');
+    assert.doesNotMatch(mesaSrc, /garcomResponsavel|Garçom:/);
   });
 });
 
@@ -232,7 +230,7 @@ describe('3. Ciclo de Vida — Mesa aberta pelo cliente e assumida pelo garçom'
     };
 
     const res = mapSessaoFromMesaApi('token-mesa-3', { id: 3, numero: 3, token: 'token-mesa-3', nome: 'Mesa 03' }, payloadApi);
-    assert.equal(res.sessao.garcomNome, 'Carlos Garçom', 'Sessão adota garçom ativo da mesa');
+    assert.equal(res.sessao.garcomNome, undefined, 'Sessão não recebe titular');
     assert.equal(res.pedidos[0].garcomNome, undefined, 'Pedido 101 ainda não foi assumido');
     assert.equal(res.pedidos[1].garcomNome, 'Carlos Garçom', 'Pedido 102 registra Carlos Garçom');
   });
@@ -250,8 +248,8 @@ describe('3. Ciclo de Vida — Mesa aberta pelo cliente e assumida pelo garçom'
       const res = await entregarComoGarcom(10, '33333333-3333-4000-8000-333333333333');
       assert.equal(res.status, 'entregue');
       assert.equal(res.garcom.nome, 'Roberto Garçom');
-      assert.equal(estado.pedido.garcom_nome, 'Roberto Garçom');
-      assert.equal(Number(estado.pedido.garcom_id), 5);
+      assert.equal(estado.pedido.garcom_nome, undefined, 'entrega não atribui um garçom ao pedido inteiro');
+      assert.equal(estado.pedido.garcom_id, undefined, 'não cria titularidade no pedido');
       assert.equal(estado.itens[0].status, 'entregue');
       assert.equal(Number(estado.itens[0].entregue_por_id), 5, 'ator real da entrega fica no item');
       assert.equal(estado.sessao.valor_total, 32, 'espelho financeiro recomputado dos itens entregues');
