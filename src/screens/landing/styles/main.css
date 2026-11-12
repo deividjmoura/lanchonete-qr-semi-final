@@ -1711,3 +1711,101 @@
     }
   }
 }
+
+
+/* Movimento intencional da releitura: discreto, ligado à rolagem e sempre
+   subordinado à preferência de movimento reduzido do dispositivo. */
+.landing-root .site-header {
+  background: var(--surface);
+}
+
+.landing-root .botao {
+  transition:
+    transform 220ms cubic-bezier(.2,.75,.25,1),
+    box-shadow 220ms cubic-bezier(.2,.75,.25,1),
+    background-color var(--dur-fast) var(--ease-snap),
+    border-color var(--dur-fast) var(--ease-snap),
+    color var(--dur-fast) var(--ease-snap);
+}
+
+.landing-root .botao:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+}
+
+.landing-root .value-row,
+.landing-root .contato-formato,
+.landing-root .modulos__painel,
+.landing-root .moldura {
+  transition:
+    transform 240ms cubic-bezier(.2,.75,.25,1),
+    box-shadow 240ms cubic-bezier(.2,.75,.25,1),
+    border-color 240ms cubic-bezier(.2,.75,.25,1);
+}
+
+.landing-root .value-row:hover,
+.landing-root .contato-formato:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: var(--shadow-card);
+}
+
+@keyframes landing-scroll-reveal {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@supports (animation-timeline: view()) {
+  .landing-root .hero-art,
+  .landing-root .value-row__texto,
+  .landing-root .value-row__icone,
+  .landing-root .percurso__etapa,
+  .landing-root .publico__lista li,
+  .landing-root .contato-formato > * {
+    animation: landing-scroll-reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 24%;
+  }
+
+  .landing-root .value-row:nth-child(2) > *,
+  .landing-root .publico__lista li:nth-child(2),
+  .landing-root .contato-formato:nth-child(2) > * {
+    animation-range: entry 0% cover 30%;
+  }
+}
+
+@supports (animation-timeline: scroll(root block)) {
+  @media (min-width: 960px) {
+    .landing-root .hero-art__tela {
+      animation: landing-hero-parallax linear both;
+      animation-timeline: scroll(root block);
+      animation-range: 0 560px;
+    }
+  }
+}
+
+@keyframes landing-hero-parallax {
+  to { transform: translateY(-18px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-root *,
+  .landing-root *::before,
+  .landing-root *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .landing-root .hero-art,
+  .landing-root .value-row__texto,
+  .landing-root .value-row__icone,
+  .landing-root .percurso__etapa,
+  .landing-root .publico__lista li,
+  .landing-root .contato-formato > *,
+  .landing-root .hero-art__tela,
+  .landing-root .botao:hover {
+    animation: none !important;
+    transform: none !important;
+  }
+}

@@ -15,6 +15,7 @@ import "./landing/styles/main.css";
 
 /* Landing oficial do QR Admin, na identidade "Passe".
  *
+ * O cliente pode iniciar pedidos diretamente pelo QR fixo da mesa.
  * A página conta o percurso de um pedido: hero, o que se perde entre uma
  * estação e outra, a narrativa de rolagem com as seis estações e as capturas
  * reais do sistema, os módulos, para quem serve, princípios e contato. Segue

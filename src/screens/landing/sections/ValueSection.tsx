@@ -6,21 +6,21 @@ const valuePoints = [
     number: "01",
     title: "Pedidos sem contexto",
     description:
-      "Cada item tem setor, status e horário próprios: cozinha e bar trabalham sobre o mesmo pedido, sem recados paralelos.",
+      "Cada item tem setor, status e horário. Sem recados paralelos.",
     icon: "receipt",
   },
   {
     number: "02",
     title: "Mesas difíceis de ler",
     description:
-      "Mesa, sessão e comanda aparecem juntas no mapa do salão — do QR de entrada ao fechamento no caixa.",
+      "Mesa, sessão e comanda juntas. Do QR até o fechamento.",
     icon: "table",
   },
   {
     number: "03",
     title: "Fechamento espalhado",
     description:
-      "Caixa, pagamentos parciais e histórico de vendas ficam no mesmo lugar, com o registro de cada forma de pagamento.",
+      "Pagamentos, histórico e formas de pagamento no mesmo lugar.",
     icon: "wallet",
   },
 ];
@@ -35,8 +35,7 @@ export function ValueSection() {
           id="value-title"
         >
           <p>
-            Quando atendimento, cozinha e caixa trabalham com contextos diferentes, o pedido perde
-            continuidade. O QR Admin foi construído para manter esses pontos no mesmo percurso.
+            Quando atendimento, cozinha e caixa trabalham separados, o pedido perde continuidade.
           </p>
         </SectionIntro>
         <ol className="value-list" aria-label="Desafios da operação e resposta do produto">

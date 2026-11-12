@@ -354,7 +354,7 @@ try {
       link: li.querySelector("a")?.getAttribute("href"),
     })),
   );
-  assert(formatos.length === 3, "contato lista os três formatos de adesão");
+  assert(formatos.length === 2, "contato lista os dois formatos de adesão definidos no briefing");
   for (const formato of formatos) {
     assert(/sob consulta/i.test(formato.preco || ""), `${formato.titulo}: preço sob consulta (sem valor público)`);
     assert(
