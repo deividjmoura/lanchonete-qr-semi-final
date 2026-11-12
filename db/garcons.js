@@ -14,9 +14,9 @@ class ErroGarcom extends Error {
 async function listGarcons() {
   const { rows } = await pool.query(
     `SELECT g.id, g.nome, g.token, g.ativo, g.criado_em,
-            COUNT(p.id) FILTER (WHERE p.status = 'entregue')::int AS entregas
+            COUNT(ip.id) FILTER (WHERE ip.entregue_por_id = g.id AND ip.entregue_em IS NOT NULL)::int AS entregas
      FROM garcons g
-     LEFT JOIN pedidos p ON p.garcom_id = g.id
+     LEFT JOIN itens_pedido ip ON ip.entregue_por_id = g.id
      WHERE g.removido_em IS NULL
      GROUP BY g.id
      ORDER BY g.ativo DESC, g.nome ASC`
