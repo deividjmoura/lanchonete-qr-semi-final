@@ -8,6 +8,7 @@ import {
   Key,
   List,
   QrCode,
+  Question,
   SignOut,
   SpeakerHigh,
   SpeakerSlash,
@@ -265,7 +266,13 @@ export function OpsShell({
                   </IconBtn>
                 </span>
                 <span className="ops-toolbar-dock-item">
-                  <IconBtn label="Página inicial" onClick={() => ir("/")}><House size={20} /></IconBtn>
+                  {role === "admin" ? (
+                    <IconBtn label="Ajuda: guia do sistema" onClick={() => window.location.assign("/guia-sistema.html")}>
+                      <Question size={20} />
+                    </IconBtn>
+                  ) : (
+                    <IconBtn label="Página inicial" onClick={() => ir("/")}><House size={20} /></IconBtn>
+                  )}
                 </span>
                 {role && role !== "admin" && <span className="ops-toolbar-dock-item">
                   <IconBtn label="Alterar senha" onClick={() => setTrocando(true)}><Key size={20} /></IconBtn>

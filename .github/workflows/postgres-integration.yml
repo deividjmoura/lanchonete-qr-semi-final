@@ -188,6 +188,8 @@ jobs:
 
       - name: Build for E2E
         run: npm run build
+      - name: Admin guide remains public and preserves the staff session
+        run: node --test tests/postgres-admin-guide.test.cjs
       # Roda todos os E2E: offline, lote/cobrança, abas CSRF, redefinição de senha
       # pelo admin, importação de cardápio por CSV e sistema visual. O runner sobe
       # e encerra o `vite preview` necessário aos testes que usam API simulada
