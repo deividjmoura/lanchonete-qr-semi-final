@@ -123,14 +123,38 @@ test('checkbox e select alterados são detectados (select não tem defaultValue)
   });
   assert.equal(trabalho.formularioAlterado(domFalso({ campos: [checkbox] })), true);
 
+  const opcoes = (marcada) => [
+    { value: 'mesa-1', defaultSelected: false, selected: marcada === 'mesa-1' },
+    { value: 'mesa-3', defaultSelected: true, selected: marcada === 'mesa-3' },
+  ];
   const select = Object.assign(new HTMLSelectElement(), {
-    value: 'mesa-3',
-    options: [{ value: 'mesa-1', defaultSelected: false }, { value: 'mesa-3', defaultSelected: true }],
-    disabled: false,
+    value: 'mesa-3', size: 1, multiple: false, options: opcoes('mesa-3'), disabled: false,
   });
   assert.equal(trabalho.formularioAlterado(domFalso({ campos: [select] })), false, 'mesma opção inicial');
-  select.value = 'mesa-1';
+  select.value = 'mesa-1'; // só é trabalho se o valor DIFERIR do inicial
   assert.equal(trabalho.formularioAlterado(domFalso({ campos: [select] })), true, 'opção diferente da inicial');
+
+  // Sem `defaultSelected` no HTML, um select de tamanho 1 começa na 1ª opção.
+  const semMarcacao = Object.assign(new HTMLSelectElement(), {
+    value: 'a', size: 1, multiple: false, disabled: false,
+    options: [{ value: 'a', defaultSelected: false }, { value: 'b', defaultSelected: false }],
+  });
+  assert.equal(trabalho.formularioAlterado(domFalso({ campos: [semMarcacao] })), false);
+  semMarcacao.options[1].selected = true;
+  semMarcacao.value = 'b'; // no DOM real, marcar a opção também atualiza o value
+  assert.equal(trabalho.formularioAlterado(domFalso({ campos: [semMarcacao] })), true);
+
+  // Select múltiplo: compara o CONJUNTO marcado com o HTML (#308 já cobre isso).
+  const multiplo = Object.assign(new HTMLSelectElement(), {
+    value: 'x', size: 4, multiple: true, disabled: false,
+    options: [
+      { value: 'x', defaultSelected: true, selected: true },
+      { value: 'y', defaultSelected: false, selected: false },
+    ],
+  });
+  assert.equal(trabalho.formularioAlterado(domFalso({ campos: [multiplo] })), false);
+  multiplo.options[1].selected = true;
+  assert.equal(trabalho.formularioAlterado(domFalso({ campos: [multiplo] })), true, 'nova opção marcada conta');
 });
 
 test('componente do aviso usa confirmação modal, nunca confirm() nativo', () => {

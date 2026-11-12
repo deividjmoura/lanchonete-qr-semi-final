@@ -27,15 +27,30 @@ function valorInicial(campo: HTMLElement): string {
   if (campo instanceof HTMLInputElement && (campo.type === "checkbox" || campo.type === "radio")) {
     return String(campo.defaultChecked);
   }
-  // `select` não tem defaultValue; o valor inicial é o da opção marcada no HTML.
   if (campo instanceof HTMLSelectElement) {
-    const inicial = Array.from(campo.options).find((opcao) => opcao.defaultSelected);
-    return inicial ? inicial.value : "";
+    // `select` não tem defaultValue. Com `multiple`, o que importa é o conjunto
+    // marcado, comparado em `selectAlterado`; aqui devolvemos o valor da opção
+    // marcada no HTML (ou a primeira quando o HTML não marca nenhuma — é o que o
+    // navegador seleciona por padrão em um select de tamanho 1).
+    const opcoes = Array.from(campo.options);
+    const marcada = opcoes.find((opcao) => opcao.defaultSelected);
+    if (marcada) return marcada.value;
+    // Sem marcação no HTML, o navegador seleciona a primeira opção de um select
+    // de tamanho 1 — esse é o valor inicial, não o valor que está agora na tela.
+    return campo.size <= 1 && opcoes[0] ? String(opcoes[0].value ?? "") : "";
   }
   if (campo instanceof HTMLInputElement || campo instanceof HTMLTextAreaElement) {
     return campo.defaultValue;
   }
   return "";
+}
+
+/**
+ * `select` múltiplo não tem um "valor atual" único: compara-se o conjunto de
+ * opções marcadas agora com o marcado no HTML.
+ */
+function selectMultiploAlterado(campo: HTMLSelectElement): boolean {
+  return Array.from(campo.options).some((opcao) => opcao.selected !== opcao.defaultSelected);
 }
 
 function valorAtual(campo: HTMLElement): string {
@@ -50,6 +65,7 @@ export function formularioAlterado(raiz: ParentNode = document): boolean {
   const campos = Array.from(raiz.querySelectorAll<HTMLElement>(SELETOR_CAMPOS));
   return campos.some((campo) => {
     if ((campo as HTMLInputElement).disabled) return false;
+    if (campo instanceof HTMLSelectElement && campo.multiple) return selectMultiploAlterado(campo);
     return valorAtual(campo) !== valorInicial(campo);
   });
 }
