@@ -194,6 +194,11 @@ test('cliente SSE envia bearer no POST e usa apenas ticket temporário na URL', 
   let url; let options; let closed = false;
   const context = {
     exports: {}, URLSearchParams, setTimeout, clearTimeout,
+    // `api.ts` importa ./operacoes (contador do aviso de atualização, #301).
+    require: (pedido) => {
+      if (pedido === './operacoes') return { iniciarOperacao: () => () => {} };
+      throw new Error('módulo inesperado: ' + pedido);
+    },
     fetch: async (path, init) => {
       assert.equal(path, '/api/events/ticket');
       options = init;

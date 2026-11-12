@@ -29,6 +29,20 @@ function codigoJs() {
   }).outputText;
 }
 
+/**
+ * `src/lib/operacoes.ts`: módulo real que `api.ts` importa (#301). É transpilado
+ * uma vez e avaliado dentro do contexto da aba, para o contador de operações em
+ * andamento ser o mesmo que o aviso de atualização consulta.
+ */
+function codigoOperacoes() {
+  const ts_src = fs.readFileSync(OPERACOES_PATH, 'utf8');
+  return ts.transpileModule(ts_src, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+  }).outputText;
+}
+
+const OPERACOES_PATH = path.join(__dirname, '..', '..', 'src', 'lib', 'operacoes.ts');
+
 /** HMAC igual ao csrfTokenParaSessao() do servidor. */
 const csrfDe = (sessao) =>
   sessao ? crypto.createHmac('sha256', sessao).update('qradmin-csrf-v1').digest('hex') : null;
@@ -122,10 +136,15 @@ function hub() {
  */
 function carregar(serv, { BroadcastChannel } = {}) {
   const modulo = { exports: {} };
+  const operacoes = { exports: {} };
   const contexto = {
     module: modulo,
     exports: modulo.exports,
-    require,
+    require: (pedido) => {
+      if (pedido === './operacoes') return operacoes.exports;
+      return require(pedido);
+    },
+    operacoes,
     console,
     fetch: serv.fetch,
     BroadcastChannel,
@@ -136,7 +155,15 @@ function carregar(serv, { BroadcastChannel } = {}) {
     EventSource: undefined,
   };
   vm.createContext(contexto);
+  // Cada aba tem seu próprio contador (como no navegador); o teste que
+  // precisar observar o contador usa `modulo.operacoes`.
+  contexto.module = operacoes;
+  contexto.exports = operacoes.exports;
+  vm.runInContext(codigoOperacoes(), contexto, { filename: 'operacoes.ts' });
+  contexto.module = modulo;
+  contexto.exports = modulo.exports;
   vm.runInContext(codigoJs(), contexto, { filename: 'api.ts' });
+  modulo.exports.operacoes = operacoes.exports;
   return modulo.exports;
 }
 

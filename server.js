@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { statusReversao, reverterCardapio } = require('./db/cardapio-reversao');
 const http = require('http');
-const { obterVersaoBuild } = require('./lib/build-version');
+const { ARQUIVO_VERSAO: ARQUIVO_VERSAO_BUILD, obterVersaoBuild } = require('./lib/build-version');
 const fs = require('fs');
 const path = require('path');
 const { sanitizarAlvoRequisicao, sanitizarDetalheErro } = require('./db/log-sanitizer');
@@ -158,7 +158,10 @@ function erroAuthJson(e) {
 
 
 
-const { compressResponse, cacheControlForStaticAsset } = require('./server/http-response');
+const {
+  compressResponse,
+  cacheControlForArquivoDoShell,
+} = require('./server/http-response');
 const { requestIdDaRequisicao, linhaDeLog } = require('./server/request-context');
 const { applySecurityHeaders } = require('./server/security-headers');
 const { normalizarRelatoriosCsp, formatarMensagemCsp } = require('./server/csp-report');
@@ -275,16 +278,34 @@ const server = http.createServer(async (req, res) => {
     reqId = requestIdDaRequisicao(req);
     res.setHeader('X-Request-Id', reqId);
 
-    // A versão é gerada pelo Vite e compartilhada com o bundle do navegador.
-    // Ambos leem o mesmo identificador para detectar deploys em abas antigas.
+    // Versão publicada (#301): identificador do shell do SPA em execução.
+    //
+    // O arquivo é gravado pelo mesmo build que injeta __BUILD_VERSION__ no
+    // bundle, então a comparação do navegador é entre iguais. Endpoint público
+    // e sem dado sensível: só 16 caracteres hex derivados do CONTEÚDO do shell
+    // (não do SHA do commit, não de env, sem horário de deploy).
+    //
+    // `no-store` sempre: cache de CDN intermediário faria abas antigas nunca
+    // verem a versão nova. Resposta é pequena e o cliente consulta a cada 60s
+    // por aba visível.
     if (p === '/api/version' && req.method === 'GET') {
-      const version = obterVersaoBuild(path.join(ROOT, 'dist', 'build-version.json'));
-      if (!version) return json(res, 503, { error: 'Versão indisponível' }, {
-        'Cache-Control': 'no-store',
-      });
-      return json(res, 200, { version }, {
+      const version = obterVersaoBuild(path.join(ROOT, 'dist', ARQUIVO_VERSAO_BUILD));
+      if (!version) {
+        // Ausência do arquivo NÃO derruba nada: o cliente trata como falha
+        // silenciosa e segue trabalhando na versão que tem.
+        return json(res, 503, { error: 'Versão indisponível' }, {
+          'Cache-Control': 'no-store',
+        });
+      }
+      return json(res, 200, {
+        version,
+        // Versão do pacote é pública (package.json) e ajuda o suporte a
+        // identificar a instalação; não identifica usuário nem sessão.
+        app: 'qradmin',
+      }, {
         'Cache-Control': 'no-store, max-age=0',
         'Pragma': 'no-cache',
+        'Vary': 'Accept-Encoding',
       });
     }
 
@@ -1964,15 +1985,18 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    /* assets da SPA (se build multi-file no futuro) */
-    if (hasSpa && (p.startsWith('/assets/') || p === '/index.html')) {
+    /* assets da SPA e manifesto de versão (#301).
+       `build-version.json` é servido daqui para que o deploy nunca dependa de o
+       arquivo estar mapeado em outra rota; o cache do HTML/manifesto é
+       `no-store` para uma atualização não ficar presa em versão antiga. */
+    if (hasSpa && (p.startsWith('/assets/') || p === '/index.html' || p === '/build-version.json')) {
       const distRoot = path.resolve(ROOT, 'dist');
       const fp = path.resolve(distRoot, '.' + (p === '/index.html' ? '/index.html' : p));
       if (fp.startsWith(distRoot + path.sep) || fp === path.join(distRoot, 'index.html')) {
         try {
           const data = await fs.promises.readFile(fp);
           return send(res, 200, mime[path.extname(fp)] || 'application/octet-stream', data, {
-            'Cache-Control': cacheControlForStaticAsset(p),
+            'Cache-Control': cacheControlForArquivoDoShell(p),
           });
         } catch (_) {}
       }

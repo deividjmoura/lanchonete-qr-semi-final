@@ -65,6 +65,7 @@ function compressResponse({ requestHeaders = {}, status = 200, contentType = '',
   return { body: payload, headers: responseHeaders, encoding: null };
 }
 
+/** Assets com hash no nome (Vite) — imutáveis, podem ser cacheados por 1 ano. */
 function cacheControlForStaticAsset(urlPath) {
   const pathname = String(urlPath || '').split('?')[0];
   const basename = pathname.slice(pathname.lastIndexOf('/') + 1);
@@ -76,4 +77,28 @@ function cacheControlForStaticAsset(urlPath) {
   return 'no-store';
 }
 
-module.exports = { compressResponse, cacheControlForStaticAsset, MIN_COMPRESS_BYTES, BROTLI_QUALITY };
+/**
+ * Qualquer arquivo servido de `dist/` (#301).
+ *
+ * O shell (`index.html`) e o manifesto de versão PRECISAM ser revalidados: se
+ * um cache intermediário (CDN, proxy, atalho do navegador) devolver o
+ * `index.html` antigo depois de um deploy, a aba nova carrega o bundle velho e
+ * a tela fica presa na versão anterior sem o operador perceber. `no-store`
+ * fecha esse caminho e mantém o comportamento que o servidor já tinha para o
+ * HTML — a mudança aqui é deixar de depender do prefixo da URL (`/assets/` vs.
+ * `/`) e passar a olhar o que é o arquivo.
+ */
+function cacheControlForArquivoDoShell(urlPath) {
+  const pathname = String(urlPath || '').split('?')[0];
+  const basename = pathname.slice(pathname.lastIndexOf('/') + 1);
+  if (basename === 'index.html' || basename === 'build-version.json') return 'no-store';
+  return cacheControlForStaticAsset(pathname);
+}
+
+module.exports = {
+  compressResponse,
+  cacheControlForStaticAsset,
+  cacheControlForArquivoDoShell,
+  MIN_COMPRESS_BYTES,
+  BROTLI_QUALITY,
+};

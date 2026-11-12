@@ -1,3 +1,4 @@
+import { iniciarOperacao } from "./operacoes";
 import type { DashboardGeral, PeriodoDashboard } from "./dashboard";
 import type {
   MesaDetalhe,
@@ -100,7 +101,26 @@ export async function apiGet<T = unknown>(path: string): Promise<T> {
   return data as T;
 }
 
+/**
+ * Envolve `apiSend` para que o aviso de atualização (#301) saiba que existe
+ * escrita em voo: recarregar a página no meio de um POST/PATCH/PUT/DELETE faz
+ * o operador perder o retorno da operação, mesmo sem campo de formulário sujo.
+ * O contador é encerrado sempre, inclusive nos caminhos de erro.
+ */
 export async function apiSend<T = unknown>(
+  path: string,
+  method: string,
+  body?: unknown
+): Promise<T> {
+  const encerrarOperacao = iniciarOperacao();
+  try {
+    return await enviarComRetryDeCsrf<T>(path, method, body);
+  } finally {
+    encerrarOperacao();
+  }
+}
+
+async function enviarComRetryDeCsrf<T = unknown>(
   path: string,
   method: string,
   body?: unknown
