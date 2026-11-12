@@ -30,10 +30,8 @@ export function Hero() {
             Quando o salão acelera, <span className="grifo">a gestão</span> precisa acompanhar.
           </h1>
           <p className="hero__lead">
-            O QR Admin reúne cardápio por QR Code, filas de cozinha e bar, atendimento do garçom,
-            caixa e administração em um único percurso — para restaurantes, lanchonetes e outras
-            casas de alimentação. O cliente começa pelo QR Code fixo da sua mesa, sem instalar
-            aplicativo.
+            Cardápio por QR Code, filas de cozinha e bar, atendimento, caixa e administração no mesmo
+            percurso. O cliente começa pelo QR Code fixo da sua mesa, sem instalar aplicativo.
           </p>
           <div className="hero__acoes">
             <a

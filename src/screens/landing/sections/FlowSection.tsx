@@ -39,7 +39,7 @@ const etapas: {
     numero: "03",
     estacao: "Na produção",
     titulo: "Encaminhar",
-    texto: "Cada item segue para a fila da cozinha ou do bar, conforme o setor.",
+    texto: "Cada item vai direto para a fila correta — cozinha ou bar.",
     captura: "fila-cozinha",
     tela: "Fila da cozinha",
   },
@@ -47,7 +47,7 @@ const etapas: {
     numero: "04",
     estacao: "Na produção",
     titulo: "Preparar e entregar",
-    texto: "Os setores controlam item a item; o garçom é avisado quando fica pronto.",
+    texto: "O garçom vê o que está pronto e entrega na mesa certa.",
     captura: "entregas-garcom",
     tela: "Entregas do garçom",
   },
@@ -55,7 +55,7 @@ const etapas: {
     numero: "05",
     estacao: "No caixa",
     titulo: "Fechar",
-    texto: "O caixa divide a conta, registra pagamentos e gera o QR PIX.",
+    texto: "Conta, pagamentos parciais e formas de pagamento no mesmo lugar.",
     captura: "fechamento-caixa",
     tela: "Fechamento de contas",
   },
@@ -63,7 +63,7 @@ const etapas: {
     numero: "06",
     estacao: "Na gestão",
     titulo: "Acompanhar",
-    texto: "A administração consulta cardápio, estoque, equipe e indicadores.",
+    texto: "Cardápio, equipe, estoque e indicadores do período.",
     captura: "dashboard-admin",
     tela: "Painel do período",
   },
@@ -82,8 +82,7 @@ export function FlowSection() {
           id="flow-title"
         >
           <p>
-            Esta é a jornada que o QR Admin implementa hoje: o pedido nasce na mesa e atravessa
-            produção, entrega e caixa sem ser digitado de novo em nenhuma etapa.
+            O pedido nasce na mesa e atravessa produção, entrega e caixa sem ser digitado de novo.
           </p>
         </SectionIntro>
 

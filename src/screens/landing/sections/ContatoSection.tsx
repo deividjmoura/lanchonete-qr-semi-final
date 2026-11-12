@@ -14,22 +14,13 @@ const formatos = [
     number: "01",
     icon: "clock",
     titulo: "Assinatura mensal",
-    texto:
-      "Para quem quer começar sem investimento de implantação: mensalidade, acesso completo ao sistema e suporte no mesmo canal desta página.",
+    texto: "Mensalidade, acesso completo ao sistema e suporte para acompanhar a operação.",
   },
   {
     number: "02",
     icon: "layers",
     titulo: "Aquisição do sistema",
-    texto:
-      "Para operações que preferem licença própria: o QR Admin é entregue e configurado para a casa, com acompanhamento na entrada em produção.",
-  },
-  {
-    number: "03",
-    icon: "card",
-    titulo: "Venda exclusiva",
-    texto:
-      "Para grupos e redes que querem o sistema sob exclusividade em uma região. Escopo, prazo e condições são definidos na conversa.",
+    texto: "Licença própria, configuração e acompanhamento na entrada em produção.",
   },
 ];
 
@@ -44,9 +35,8 @@ export function ContatoSection() {
         <div className="contato__cabecalho">
           <SectionIntro eyebrow="Contate-nos" title="Como a sua casa passa a usar o QR Admin." id="contato-title">
             <p>
-              A adesão começa em uma conversa direta com quem responde pelo QR Admin. Escolha o
-              formato que faz sentido para a sua operação e fale com a gente pelo WhatsApp ou por
-              e-mail — sem formulário, sem cadastro intermediário.
+              A adesão começa em uma conversa direta. Escolha o formato que faz sentido para a sua
+              operação e fale com a gente pelo WhatsApp ou por e-mail.
             </p>
           </SectionIntro>
 
