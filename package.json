@@ -1,7 +1,7 @@
 {
   "name": "lanchonete-qr",
   "private": true,
-  "version": "3.2.0",
+  "version": "3.2.1",
   "description": "QR Admin — pedidos por QR Code para lanchonetes e pubs",
   "scripts": {
     "dev": "vite",
