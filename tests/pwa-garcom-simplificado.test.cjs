@@ -331,7 +331,7 @@ test('busca por número filtra a grade e aceita vírgula', () => {
   search.value = ' 12 ';
   ctx.renderTableGrid();
   assert.equal(cards(grid).length, 1);
-  assert.match(cards(grid)[0].textos().join(' '), /Mesa 12/);
+  assert.match(cards(grid)[0].textos().join(' ').replace(/\s+/g, ' '), /Mesa 12/);
   assert.match(message.textContent, /1 mesa encontrada/);
 
   search.value = '3, 27 ,5';
@@ -390,12 +390,12 @@ test('o card mostra praça, estado por extenso e responsável, sem depender da c
   const ocupada = cards(grid)[0];
   assert.equal(ocupada.dataset.situacao, 'em_atendimento');
   assert.match(parte(ocupada, 'table-tile-praca').textContent, /Praia/);
-  assert.match(parte(ocupada, 'table-tile-state').textContent, /Em atendimento/);
+  assert.match(parte(ocupada, 'table-tile-state').textos().join(' '), /Em atendimento/);
   assert.match(parte(ocupada, 'table-tile-resp').textContent, /Ana/);
 
   const livre = cards(grid)[1];
   assert.equal(livre.dataset.situacao, 'livre');
-  assert.match(parte(livre, 'table-tile-state').textContent, /^Livre$/);
+  assert.match(parte(livre, 'table-tile-state').textos().join(' ').trim(), /^Livre/);
 
   const semPraca = cards(grid)[3];
   assert.match(parte(semPraca, 'table-tile-praca').textContent, /Sem praça/);
@@ -406,8 +406,8 @@ test('sessão aberta sem pedido é "Aguardando pedido" e não conta tempo', () =
   ctx.renderTableGrid();
   const aguardando = cards(grid)[2];
   assert.equal(aguardando.dataset.situacao, 'aguardando_pedido');
-  assert.match(parte(aguardando, 'table-tile-state').textContent, /Aguardando pedido/);
-  assert.equal(parte(aguardando, 'table-tile-time').textContent, 'sem pedido');
+  assert.match(parte(aguardando, 'table-tile-state').textos().join(' '), /Aguardando pedido/);
+  assert.equal(parte(aguardando, 'table-tile-time').textContent, '', 'sem pedido não repete tempo no card');
   assert.equal(ctx.minutosDesdePrimeiroPedido(MESAS[2]), null);
 });
 
@@ -433,6 +433,36 @@ test('filtro por praça usa as praças existentes e pode ser combinado com a bus
   pracaSelect.value = 'p3';
   ctx.renderTableGrid();
   assert.equal(cards(grid).length, 0, 'busca e praça se combinam');
+});
+
+/* ------------------------------- barra do salão e densidade da grade (#306) */
+
+test('barra do salão cabe em uma linha: praça, lupa e novo pedido', () => {
+  const toolbar = html.slice(html.indexOf('id="salaoToolbar"'), html.indexOf('id="tableGrid"'));
+  for (const id of ['pracaFilter', 'toggleTableSearch', 'closeTableSearch', 'newOrderTables', 'tableSearch']) {
+    assert.match(toolbar, new RegExp('id="' + id + '"'), id + ' fica na barra do salão');
+  }
+  // A busca é um ícone que expande o campo: input e praça não empilham linhas.
+  assert.match(toolbar, /class="salao-search-wrap"/);
+  assert.match(html, /id="tableSearchHint"[^>]*class="[^"]*sr-only/, 'dica da busca só para leitor de tela');
+  // O botão grande "Novo pedido" do cabeçalho saiu: a ação já existe no detalhe da mesa.
+  const cabecalho = html.slice(html.indexOf('id="page-tables"'), html.indexOf('id="salaoToolbar"'));
+  assert.doesNotMatch(cabecalho, /id="newOrderTables"/, 'sem botão de novo pedido no cabeçalho');
+  assert.match(js, /\$\('#toggleTableSearch'\)\?\.addEventListener\('click'/);
+  assert.match(js, /\$\('#closeTableSearch'\)\?\.addEventListener\('click'/);
+});
+
+test('grade do salão é densa e responsiva, sem rolar horizontal', () => {
+  const grade = css.slice(css.indexOf('.table-grid {'), css.indexOf('.table-tile {'));
+  assert.match(grade, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/, 'duas colunas em aparelho muito estreito');
+  // Quatro plaquinhas por linha já no celular e mais colunas quando couber.
+  assert.match(grade, /@media \(min-width: 360px\) \{\s*\.table-grid \{ grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+  for (const colunas of [5, 6, 7]) {
+    assert.match(grade, new RegExp('repeat\\(\\s*' + colunas + ', minmax\\(0, 1fr\\)\\)'), colunas + ' colunas em telas maiores');
+  }
+  assert.match(css, /\.table-tile \{\s*min-height: 56px/, 'card compacto');
+  // Rodapé com as duas abas centralizadas (não colado à esquerda).
+  assert.match(css, /\.bottom-nav \{[^}]*justify-content: center/, 'navegação centralizada');
 });
 
 /* ------------------------------------------------------------- service worker */

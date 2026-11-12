@@ -135,8 +135,10 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
    estação quadrada sobre ele. */
 .bottom-nav {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 2px;
+  /* Duas abas centralizadas: a linha de passe não fica encostada à esquerda. */
+  grid-template-columns: repeat(2, minmax(0, 200px));
+  justify-content: center;
+  gap: 36px;
   padding: 0 6px 6px;
   background: var(--ink-band);
   border-top: 1px solid var(--ink-band-line);
@@ -750,32 +752,103 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 /* Grade do salão: até 4 colunas quando couber, caindo para 3/2/1 pela largura
    real do aparelho. As colunas são fixas por faixa (não auto-fill) para que o
    card nunca fique espremido nem gere rolagem horizontal (#305). */
+/* Grade densa do salão: o objetivo é ver o salão inteiro sem rolagem.
+   Duas colunas já no celular estreito e até seis em tablet/desktop — largura
+   suficiente para 56 mesas caberem na tela sem espremer o toque. */
 .table-grid {
   padding: 4px 0 12px;
   display: grid;
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
 }
 
-@media (min-width: 420px) {
-  .table-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@media (min-width: 640px) {
-  .table-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-
-@media (min-width: 900px) {
+/* Celular a partir de 360px: quatro plaquinhas por linha. Abaixo disso
+   (aparelhos muito estreitos) ficam duas, para o número não truncar. */
+@media (min-width: 360px) {
   .table-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
-.salao-filters {
-  display: grid;
-  gap: 10px;
+@media (min-width: 760px) {
+  .table-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
 
-@media (min-width: 560px) {
-  .salao-filters { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); align-items: end; }
+@media (min-width: 980px) {
+  .table-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1200px) {
+  .table-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+}
+
+/* Barra do salão em uma única linha: praça, lupa e novo pedido.
+   Ao abrir a busca, o campo ocupa o lugar da praça (as praças ficam ocultas
+   enquanto o garçom digita) — sem empilhar mais uma linha na tela. */
+.salao-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.salao-praca {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: block;
+}
+
+.salao-praca select {
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 10px;
+}
+
+.salao-search-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: none;
+  align-items: center;
+  gap: 6px;
+}
+
+.salao-toolbar.buscando .salao-search-wrap {
+  display: flex;
+}
+
+.salao-toolbar.buscando .salao-praca,
+.salao-toolbar.buscando .salao-search-toggle {
+  display: none;
+}
+
+.salao-search-wrap input {
+  width: 100%;
+  min-height: 44px;
+}
+
+.salao-icon-btn {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-raised);
+  color: var(--text);
+}
+
+.salao-icon-btn:hover {
+  background: var(--surface-hover);
+}
+
+.salao-new-order {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--brand-contrast);
+}
+
+.salao-new-order:hover {
+  background: color-mix(in srgb, var(--brand) 85%, var(--brand-contrast));
 }
 
 /* Legenda: o estado também é escrito no card; a cor é só reforço. */
@@ -811,8 +884,8 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 
 /* A mesa é uma plaquinha: faixa de tinta à esquerda, número em largura larga. */
 .table-tile {
-  min-height: 72px;
-  padding: 9px 10px;
+  min-height: 56px;
+  padding: 6px 8px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line-strong);
   border-left: 5px solid var(--plaque);
@@ -835,15 +908,95 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   font-family: var(--font-display);
   font-stretch: var(--wdth-title);
   font-variant-numeric: tabular-nums lining-nums;
-  font-size: 1.0625rem;
+  font-size: 0.9375rem;
   font-weight: 800;
   letter-spacing: -0.01em;
 }
 
 .table-tile small {
   color: var(--text-muted);
-  font-size: 0.74rem;
-  line-height: 1.25;
+  font-size: 0.6875rem;
+  line-height: 1.2;
+}
+
+/* Em telas estreitas o card fica só com o essencial: número, estado e tempo.
+   Praça e responsável continuam no detalhe da mesa (toque no card). */
+@media (max-width: 559px) {
+  .table-tile-praca,
+  .table-tile-resp {
+    display: none;
+  }
+}
+
+/* Quatro colunas no celular: plaquinha mínima, com o estado também sinalizado
+   por um ponto colorido (o texto do estado continua no title e na legenda). */
+@media (max-width: 759px) {
+  .table-tile {
+    min-height: 52px;
+    padding: 5px 6px;
+    gap: 2px;
+  }
+
+  .table-tile strong {
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+
+  /* Quatro colunas: o rótulo "Mesa" sai do card (o aria-label e o detalhe
+     continuam dizendo o número completo) e o estado usa a forma abreviada. */
+  .table-tile-num-prefix {
+    display: none;
+  }
+
+  .table-tile-state-long {
+    display: none;
+  }
+
+  .table-tile-top {
+    gap: 3px;
+  }
+
+  .table-tile-time {
+    font-size: 0.6875rem;
+    letter-spacing: -0.01em;
+  }
+
+  .table-tile-state {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.6875rem;
+    letter-spacing: -0.01em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .table-tile-state-short {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .table-tile-state::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    background: var(--surface-sunken);
+  }
+
+  .table-tile.state-aguardando .table-tile-state::before {
+    border-color: var(--status-info);
+    background: var(--status-info);
+  }
+
+  .table-tile.state-atendimento .table-tile-state::before {
+    border-color: var(--status-warning);
+    background: var(--status-warning);
+  }
 }
 
 .table-tile.taken {
@@ -875,6 +1028,10 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.table-tile-state-short {
+  display: none;
 }
 
 .table-tile-state {
@@ -912,7 +1069,7 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 }
 
 .table-tile.mine {
-  box-shadow: inset 0 0 0 2px var(--brand), var(--shadow-card);
+  box-shadow: inset 0 0 0 1px var(--brand), var(--shadow-card);
 }
 
 /* Fatos do detalhe da mesa: rótulo/valor em duas colunas. */
