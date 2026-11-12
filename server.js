@@ -90,7 +90,7 @@ const { golpePermitido } = require('./db/rateLimit');
 const oauthGoogle = require('./db/oauth-google');
 const { registrarEventoIndependente } = require('./db/auditoria');
 const { resolveClientIp, loginUserRateLimitKey } = require('./security/client-ip');
-const { ErroAtendimento, listarMesasGarcom, iniciarAtendimentoGarcom, assumirMesa, listarGarconsAtivos, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
+const { ErroAtendimento, listarMesasGarcom, iniciarAtendimentoGarcom, assumirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
 const { panoramaMesas, mesaDetalhe } = require('./db/mesas-panorama');
 const { normalizarChavePix, inspecionarChavePix } = require('./db/pix-normaliza');
 const { subscribe, broadcast, closeAccess } = require('./db/events');
@@ -792,10 +792,6 @@ const server = http.createServer(async (req, res) => {
         throw e;
       }
     }
-    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/garcons-ativos$/)) && req.method === 'GET') {
-      try { return json(res, 200, { garcons: await listarGarconsAtivos(m[1]) }); }
-      catch (e) { if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message }); throw e; }
-    }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/sessoes\/(\d+)\/resumo-pagamento$/)) && req.method === 'GET') {
       try { return json(res, 200, await resumoPagamentoSessao(m[1], m[2])); }
       catch (e) { if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message }); throw e; }
@@ -821,13 +817,6 @@ const server = http.createServer(async (req, res) => {
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas$/)) && req.method === 'GET') {
       try { return json(res, 200, await listarMesasGarcom(m[1])); }
       catch (e) { if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message }); throw e; }
-    }
-    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/deixar$/)) && req.method === 'POST') {
-      try {
-        const out=await deixarMesa(m[1],m[2],reqId);
-        broadcast('update',{type:'mesa_liberada',mesa:out.mesa});
-        return json(res,200,out);
-      }catch(e){if(e instanceof ErroAtendimento)return json(res,e.status,{error:e.message});throw e}
     }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/iniciar$/)) && req.method === 'POST') {
       try {
