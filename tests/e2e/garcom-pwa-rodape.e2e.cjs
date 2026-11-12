@@ -113,6 +113,14 @@ async function rodapeNasTelas(browser, viewport, scheme) {
     assert.ok(rotulo && rotulo.width <= 1, 'rótulo do indicador existe só para leitores de tela');
     assert.ok((await page.locator('#connection').getAttribute('title')).length > 3, 'conexão tem dica de título');
 
+    // A barra não oferece mais um atalho global de novo pedido: ele fica no detalhe da mesa.
+    assert.equal(await page.locator('#newOrderTables').count(), 0, 'atalho global de novo pedido removido');
+    // O salão mantém no mínimo quatro colunas em qualquer largura testada.
+    const colunasMesas = await page.locator('#tableGrid').evaluate((el) =>
+      getComputedStyle(el).gridTemplateColumns.split(' ').filter(Boolean).length,
+    );
+    assert.ok(colunasMesas >= 4, 'mínimo de quatro mesas por linha (' + colunasMesas + ')');
+
     // O salão aparece por padrão; a busca filtra e aceita vírgula.
     await page.locator('#tableGrid .table-tile').first().waitFor();
     assert.equal(await page.locator('#tableGrid .table-tile').count(), 3, 'todas as mesas do salão');
