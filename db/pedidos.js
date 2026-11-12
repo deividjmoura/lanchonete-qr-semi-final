@@ -351,18 +351,13 @@ async function criarPedido(token, body, atendimento = null, requestId = null) {
     // Pedido lançado por garçom: o servidor valida autoria dentro da mesma
     // transação, sob o lock da mesa, inclusive durante uma transferência.
     if (atendimento) {
-      const { rows: atribuidos } = await client.query(
-        'SELECT garcom_responsavel_id FROM mesa_sessoes WHERE id = $1 FOR UPDATE',
+      // Sessão aberta é compartilhada pela equipe. A autoria individual do pedido
+      // permanece registrada pelo contexto de atendimento e pelos eventos.
+      const { rows: sessoesAbertas } = await client.query(
+        "SELECT id FROM mesa_sessoes WHERE id = $1 AND status='aberta' FOR UPDATE",
         [sessaoId]
       );
-      // Um garçom pode lançar um pedido adicional para a mesa de outro
-      // responsável, mas nunca pode assumir a mesa implicitamente. Exigimos
-      // que exista um responsável no instante da transação; se a mesa foi
-      // liberada/fechada em paralelo, o pedido não cria sessão órfã.
-      if (!atribuidos[0]?.garcom_responsavel_id) {
-        throw new ErroPedido(409, 'A mesa precisa ter um atendimento aberto com garçom responsável');
-      }
-    }
+      if (!sessoesAbertas[0]) throw new ErroPedido(409, 'O atendimento desta mesa não está aberto');
 
     // Idempotência: a mesa está travada (getOuAbrirSessao) desde o início da
     // transação, então "verifica e insere" aqui é livre de corrida para esta
@@ -496,7 +491,6 @@ async function cancelarPedidoCliente(token,pedidoId,garcomResponsavelId=null,opc
     if(!mesa)throw new ErroPedido(404,'Mesa não encontrada');
     const ctx=await travarContextoPedido(client,id);
     if(!ctx||Number(ctx.sessao.mesa_id)!==Number(mesa.id)||ctx.sessao.status!=='aberta')throw new ErroPedido(404,'Pedido não encontrado nesta mesa');
-    if(garcomResponsavelId&&Number(ctx.sessao.garcom_responsavel_id)!==Number(garcomResponsavelId))throw new ErroPedido(403,'Mesa sob responsabilidade de outro garçom');
     if(ctx.itens.length&&ctx.itens.every(i=>i.status==='cancelado')) {
       await client.query('COMMIT');
       return {ok:true,id,cancelado:true,status:ctx.pedido.status,mesa:mesa.numero,idempotentReplay:true};
@@ -536,7 +530,6 @@ async function editarPedidoCliente(token, pedidoId, body, garcomResponsavelId = 
     const contexto=await travarContextoPedido(client,Number(pedidoId));
     if (!contexto||Number(contexto.sessao.mesa_id)!==Number(mesa.id)||contexto.sessao.status!=='aberta') throw new ErroPedido(404, 'Pedido não encontrado nesta mesa');
     const pedido=contexto.pedido;
-    if (garcomResponsavelId&&Number(contexto.sessao.garcom_responsavel_id)!==Number(garcomResponsavelId)) throw new ErroPedido(403,'Mesa sob responsabilidade de outro garçom');
     if (pedido.status !== 'recebido'||contexto.itens.some(i=>i.status!=='recebido')) {
       throw new ErroPedido(
         409,
