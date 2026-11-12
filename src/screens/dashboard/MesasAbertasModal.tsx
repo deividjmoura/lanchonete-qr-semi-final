@@ -8,7 +8,6 @@ import {
   MagnifyingGlass,
   Receipt,
   User,
-  Users,
   Wallet,
   WarningCircle,
   X,
@@ -36,7 +35,7 @@ import { cn } from "../../utils/cn";
  *
  * Aberto pelo card “Mesas ocupadas”: cobre o painel e repete a linguagem
  * visual do dashboard (mesmos tons, tipografia e grade), mas com o detalhe de
- * cada mesa — quem pediu, quem está atendendo, o que já foi entregue e o que
+ * cada mesa — quem pediu, quem registrou o pedido, o que já foi entregue e o que
  * está parado na produção.
  */
 
@@ -126,7 +125,6 @@ export function MesasAbertasModal({ open, onClose }: { open: boolean; onClose: (
         String(mesa.numero),
         String(mesa.numero).padStart(2, "0"),
         mesa.clienteNome || "",
-        mesa.garcomResponsavelNome || "",
         mesa.pracaNome || "",
       ]
         .map(normalizar)
@@ -381,12 +379,6 @@ export function CartaoMesaAberta({ mesa, tempo }: { mesa: MesaPanorama; tempo: T
             <User size={13} weight="bold" /> Quem pediu
           </dt>
           <dd>{mesa.clienteNome || "Cliente não identificado"}</dd>
-        </div>
-        <div className="dash-mesa__row">
-          <dt>
-            <Users size={13} weight="bold" /> Quem está levando
-          </dt>
-          <dd>{mesa.garcomResponsavelNome || "Garçom a definir"}</dd>
         </div>
         <div className="dash-mesa__row">
           <dt>
