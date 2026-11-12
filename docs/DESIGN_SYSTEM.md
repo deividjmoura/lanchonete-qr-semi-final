@@ -231,11 +231,11 @@ Nenhum emoji como ícone.
 - **Garçom (SPA e PWA):** mesas como fichas com faixa de 5px na cor da plaquinha, passos numerados em
   plaquinha, diálogos centrados com rolagem interna.
 - **Páginas estáticas** (`public/apresentacao.html`, `guia-sistema.html`, `politica-de-privacidade.html`,
-  `termos-de-servico.html`, `termos-de-uso.html`): HTML sem JavaScript de aplicação, vestido por uma
+  `termos-de-servico.html`, `termos-de-uso.html`, `novidades.html`): HTML estático vestido por uma
   única folha, `public/institucional.css`, que lê os mesmos tokens do produto
   (`/garcom-pwa/design-tokens.css`) e segue o tema escolhido (`/garcom-pwa/theme-init.js`). O `<body>`
   leva `pagina` mais uma variante: `pagina--apresentacao`, `pagina--guia` ou `pagina--documento`.
-  Nenhuma delas tem `<style>` ou `style=""` embutido.
+  Nenhuma delas tem `<style>` ou `style=""` embutido. `novidades.html` lê as notas públicas de `public/novidades.json` sem depender de autenticação.
 
 ---
 
