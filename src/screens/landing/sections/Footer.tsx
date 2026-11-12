@@ -10,15 +10,13 @@ const footerLinks = [
   { href: "#como-funciona", label: "Como funciona" },
   { href: "#funcionalidades", label: "Módulos" },
   { href: "#para-quem", label: "Para quem é" },
-  { href: "#contato", label: "Contato" },
+  { href: "#contato", label: "Contate-nos" },
 ];
 
-/* Páginas públicas já publicadas pelo produto; os guias continuam estáticos
-   e a apresentação mantém o conteúdo institucional existente. */
+/* Páginas institucionais já publicadas pelo produto. Elas continuam servidas
+   como arquivos estáticos em /guia-sistema.html e /apresentacao.html. */
 const institutionalLinks = [
   { href: "/guia-sistema.html", label: "Guia do sistema" },
-  { href: "/guia-sistema.html#acesso", label: "Acesso ao sistema" },
-  { href: "/guia-sistema.html#uso", label: "Como usar" },
   { href: "/apresentacao.html", label: "Apresentação institucional" },
   { href: "/politica-de-privacidade.html", label: "Política de privacidade" },
   { href: "/termos-de-servico.html", label: "Termos de serviço" },
@@ -52,8 +50,8 @@ export function Footer({ aoAbrirAcesso }: { aoAbrirAcesso: () => void }) {
           </div>
 
           <div className="site-footer__coluna">
-            <p className="site-footer__label">Guias e institucional</p>
-            <nav className="site-footer__nav" aria-label="Guias e páginas institucionais">
+            <p className="site-footer__label">Institucional</p>
+            <nav className="site-footer__nav" aria-label="Páginas institucionais">
               {institutionalLinks.map((link) => (
                 <a href={link.href} key={link.href}>
                   {link.label}
@@ -62,8 +60,11 @@ export function Footer({ aoAbrirAcesso }: { aoAbrirAcesso: () => void }) {
             </nav>
           </div>
 
+          {/* Contato ao lado do acesso: quem chega ao fim da página escolhe
+              entre falar com o responsável e entrar no sistema. O e-mail fica
+              em ícone, ao lado do WhatsApp. */}
           <div className="site-footer__contato">
-            <p className="site-footer__label">Contato</p>
+            <p className="site-footer__label">Contate-nos</p>
             <div className="site-footer__canais">
               <a
                 className="site-footer__contato-link"
@@ -88,14 +89,17 @@ export function Footer({ aoAbrirAcesso }: { aoAbrirAcesso: () => void }) {
               {EMAIL_USUARIO}@<wbr />
               {EMAIL_DOMINIO}
             </a>
+            <a className="site-footer__formatos" href="#contato" onClick={(event) => aoClicarInterno(event, "#contato")}>
+              Ver formatos de adesão
+            </a>
           </div>
 
           <div className="site-footer__access" id="acesso">
-            <p className="site-footer__label">Acesso da equipe</p>
+            <p className="site-footer__label">Acesso ao sistema</p>
             <AccessButton className="botao botao--sinal site-footer__access-link" onClick={aoAbrirAcesso}>
               Acessar QR Admin
             </AccessButton>
-            <span className="site-footer__access-hint">O acesso abre a autenticação real do sistema para a equipe cadastrada.</span>
+            <span className="site-footer__access-hint">Equipe, cozinha, bar e caixa entram pelo mesmo acesso.</span>
           </div>
         </div>
 

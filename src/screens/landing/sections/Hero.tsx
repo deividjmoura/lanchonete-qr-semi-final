@@ -1,8 +1,10 @@
 import type { MouseEvent } from "react";
+import { Captura } from "../components/Capturas";
 import { Icon } from "../components/Icon";
 import { useRolagemInterna } from "../useRolagemInterna";
 
-/* A mesma sequência organiza a narrativa de rolagem logo abaixo (FlowSection). */
+/* As seis estações por onde um pedido passa. A mesma sequência organiza a
+   narrativa de rolagem logo abaixo (FlowSection). */
 const estacoes = [
   { numero: "01", nome: "Mesa", detalhe: "QR Code fixo" },
   { numero: "02", nome: "Pedido", detalhe: "Cardápio digital" },
@@ -18,29 +20,8 @@ export function Hero() {
 
   return (
     <section className="hero" id="inicio" aria-labelledby="hero-title">
-      <div className="hero__media">
-        <picture className="hero__poster" aria-hidden="true">
-          <source
-            media="(max-width: 767px)"
-            srcSet="/assets/landing/hero-poster-mobile.webp"
-            type="image/webp"
-          />
-          <img
-            className="hero__poster-image"
-            src="/assets/landing/hero-poster-desktop.webp"
-            alt=""
-            width="1280"
-            height="720"
-            fetchPriority="high"
-            decoding="async"
-          />
-        </picture>
-        <div className="hero__scrim" aria-hidden="true" />
-        <p className="hero__media-caption">Cena ilustrativa</p>
-      </div>
-
-      <div className="hero__content page-shell">
-        <div className="hero__copy">
+      <div className="page-shell hero__grade">
+        <div className="hero__texto">
           <p className="estacao">
             <span className="estacao__no" aria-hidden="true" />
             Gestão para operações de alimentação
@@ -68,9 +49,25 @@ export function Hero() {
             </a>
           </div>
         </div>
+
+        <figure className="hero-art">
+          <div className="moldura hero-art__tela">
+            <div className="moldura__topo">
+              <span className="moldura__no" aria-hidden="true" />
+              <span className="moldura__nome">Gestão · painel do período</span>
+            </div>
+            <Captura chave="dashboard-admin" carregamento="eager" className="moldura__imagem" />
+          </div>
+          <div className="moldura moldura--celular hero-art__celular">
+            <Captura chave="entregas-garcom" carregamento="eager" className="moldura__imagem" />
+          </div>
+          <figcaption className="hero-art__legenda">
+            Capturas reais do sistema em ambiente de demonstração, com dados fictícios.
+          </figcaption>
+        </figure>
       </div>
 
-      <div className="hero__index page-shell">
+      <div className="page-shell">
         <ol className="hero__linha" aria-label="As seis estações do percurso de um pedido">
           {estacoes.map((estacao) => (
             <li className="hero__estacao" key={estacao.numero}>
