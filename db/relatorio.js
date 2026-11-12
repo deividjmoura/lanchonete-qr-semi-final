@@ -127,12 +127,9 @@ async function relatorioVendas({ from, to }) {
     const q = await pool.query(
       `SELECT s.id, s.valor_total, s.desconto, s.taxa_servico, s.valor_cobrado,
               s.forma_pagamento, s.fechada_em, s.cliente_nome,
-              s.garcom_responsavel_id,
-              g.nome AS garcom_nome,
               m.numero AS mesa
        FROM mesa_sessoes s
        JOIN mesas m ON m.id = s.mesa_id
-       LEFT JOIN garcons g ON g.id = s.garcom_responsavel_id
        WHERE s.status = 'fechada'
          AND s.fechada_em >= ${range.textStart}
          AND s.fechada_em < ${range.textEnd}
@@ -147,12 +144,9 @@ async function relatorioVendas({ from, to }) {
       const q = await pool.query(
         `SELECT s.id, s.valor_total, s.desconto, s.taxa_servico, s.valor_cobrado,
                 s.forma_pagamento, s.fechada_em, s.cliente_nome,
-                s.garcom_responsavel_id,
-                g.nome AS garcom_nome,
                 m.numero AS mesa
          FROM mesa_sessoes s
          JOIN mesas m ON m.id = s.mesa_id
-         LEFT JOIN garcons g ON g.id = s.garcom_responsavel_id
          WHERE s.status = 'fechada'
            AND s.fechada_em::date >= $1::date
            AND s.fechada_em::date <= $2::date
@@ -182,39 +176,12 @@ async function relatorioVendas({ from, to }) {
       valorCobrado: round2(cobrado),
       forma: s.forma_pagamento || 'outro',
       fechadaEm: s.fechada_em,
-      // #154: comissão/serviço atribuído ao responsável pela sessão.
-      garcomResponsavelId: s.garcom_responsavel_id || null,
-      garcomResponsavel: s.garcom_nome || null,
     };
   });
 
-  // #154: serviço por garçom responsável pela sessão (decisão do dono).
-  // Contas sem responsável (legado/anteriores à atribuição) ficam num
-  // grupo próprio, sem inventar rateio entre garçons.
-  const porGarcomMap = new Map();
-  for (const conta of contas) {
-    const chave = conta.garcomResponsavelId || 'sem-responsavel';
-    if (!porGarcomMap.has(chave)) {
-      porGarcomMap.set(chave, {
-        garcomId: conta.garcomResponsavelId,
-        garcomNome: conta.garcomResponsavel || 'Sem responsável atribuído',
-        contas: 0,
-        vendasBrutas: 0,
-        servicoTotal: 0,
-        descontosTotal: 0,
-        totalCobrado: 0,
-      });
-    }
-    const grupo = porGarcomMap.get(chave);
-    grupo.contas += 1;
-    grupo.vendasBrutas = round2(grupo.vendasBrutas + conta.valor);
-    grupo.servicoTotal = round2(grupo.servicoTotal + conta.taxaServico);
-    grupo.descontosTotal = round2(grupo.descontosTotal + conta.desconto);
-    grupo.totalCobrado = round2(grupo.totalCobrado + conta.valorCobrado);
-  }
-  const porGarcom = [...porGarcomMap.values()].sort(
-    (a, b) => b.servicoTotal - a.servicoTotal || b.totalCobrado - a.totalCobrado
-  );
+  // A comissão/serviço não é mais atribuída por mesa. Mantemos a chave vazia
+  // por compatibilidade de exportadores antigos; autoria operacional está em métricas de garçons.
+  const porGarcom = [];
 
   return {
     geradoEm: new Date().toISOString(),
