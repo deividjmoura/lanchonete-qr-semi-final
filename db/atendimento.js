@@ -115,7 +115,7 @@ async function iniciarAtendimentoGarcom(token, numeroBruto, body = {}, requestId
       contexto: { mesa: numero, sessaoId, origem: 'pwa_garcom', sessaoCriada: criada },
     });
     await client.query('COMMIT');
-    return { mesa: numero, sessaoId, garcom: { id: garcom.id, nome: garcom.nome }, iniciada: true, idempotentReplay: Number(anterior) === Number(garcom.id) };
+    return { mesa: numero, sessaoId, garcom: { id: garcom.id, nome: garcom.nome }, iniciada: true, idempotentReplay: !criada };
   } catch (e) {
     try { await client.query('ROLLBACK'); } catch (_) {}
     throw e;
