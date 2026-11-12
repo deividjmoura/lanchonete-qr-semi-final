@@ -77,3 +77,23 @@ A interface deverá ser simplificada para colaboração por equipe, sem remover 
 - Confirmar todas as rotas administrativas e de pagamento, além dos componentes de UI ainda não inspecionados.
 - Executar testes unitários, integração PostgreSQL, PWA/E2E e typecheck/build em ambiente de execução antes de afirmar aprovação.
 - Não fazer merge nem deploy. Nenhuma alteração foi feita em `main`.
+
+
+## Implementação em andamento — 12/11/2026
+
+- Backend de abertura/acesso à sessão: removida a gravação de titularidade ao iniciar atendimento; a sessão aberta passa a ser compartilhável. O token QR é retornado ao garçom autenticado/ativo, sem depender de titularidade.
+- Pedidos: a criação e a edição no fluxo de garçom não exigem mais que o usuário seja o titular da sessão.
+- Entregas: removida a atribuição automática da mesa durante aceite/retirada/entrega; cada transição continua chamando `gravarStatusItem` com o ator autenticado.
+- Colaboração por item: fila e validações de retirada/entrega permitem que outro garçom autorizado avance itens; a autoria de cada etapa continua gravada em `aceito_por_id`, `retirado_por_id` e `entregue_por_id`.
+- PWA: atualizado a partir da versão atual da `main` (incluindo as mudanças recentes do salão) e removidos os bloqueios visuais/operacionais que exigiam titular da mesa; cobrança e lista de sessões consideram qualquer atendimento aberto.
+- Gestão de garçons: desativação/remoção não é mais bloqueada apenas por mesa aberta atribuída; itens pendentes continuam protegidos.
+
+### Pendências antes da PR
+
+- Remover a ação e as rotas antigas de transferência de titularidade, inclusive na administração.
+- Revisar métricas/relatórios que ainda interpretam o responsável legado como responsável financeiro da sessão; manter os registros antigos apenas como histórico.
+- Atualizar os testes antigos de transferência/titularidade para os cenários colaborativos A abre, B lança, C retira/entrega e conferir autoria individual.
+- Atualizar contrato/documentação e executar a suíte automatizada, typecheck e build em ambiente de execução.
+- A branch ainda está 2 commits atrás da `main`; as mudanças mais recentes do PWA foram preservadas ao atualizar o arquivo a partir da versão atual da `main`, mas a reconciliação completa da base permanece pendente.
+
+Nenhum teste foi declarado como executado nesta etapa. Nenhuma alteração foi feita na `main`; sem merge ou deploy.
