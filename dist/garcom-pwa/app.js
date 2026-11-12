@@ -1,6 +1,10 @@
 import { openOfflineDb, OfflineStore, SyncEngine, probeBackend, uid } from './offline.js';
 import { iniciarAvisoDeAtualizacao, sinalizarShellAtualizado } from './atualizacao.js';
 
+// Versão desta cópia do aplicativo. Deve acompanhar package.json e novidades.json;
+// diferente do manifesto remoto, este valor pertence ao JavaScript em execução.
+const VERSAO_PWA_EM_EXECUCAO = '3.2.1';
+
 const $=s=>document.querySelector(s);
 const money=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(n)||0);
 let products=[],cart=new Map(),mesas=[],activeWaiters=[],currentWaiterId=null,liveOrders=[];
@@ -489,7 +493,7 @@ async function contarPedidosPendentes(){
 let pendentesCache=0;
 setInterval(()=>{void contarPedidosPendentes().then(n=>{pendentesCache=n;}).catch(()=>{})},10000);
 void contarPedidosPendentes().then(n=>{pendentesCache=n;}).catch(()=>{});
-iniciarAvisoDeAtualizacao({aoContarPendentes:()=>pendentesCache,shellAtualizado}).catch(e=>console.warn('[garcom-pwa] aviso de versão:',e.message));
+iniciarAvisoDeAtualizacao({aoContarPendentes:()=>pendentesCache,shellAtualizado,versaoLegivel:VERSAO_PWA_EM_EXECUCAO}).catch(e=>console.warn('[garcom-pwa] aviso de versão:',e.message));
 const installBtn=$('#installAppBtn');
 const isStandalone=()=>window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 function refreshInstallState(){

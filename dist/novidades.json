@@ -1,6 +1,17 @@
 {
   "notas": [
     {
+      "versao": "3.2.1",
+      "data": "2026-11-12",
+      "titulo": "Novidades e aviso de atualização sincronizados",
+      "resumo": "O painel e o aplicativo do garçom detectam a nova versão e mostram as notas publicadas mais recentes.",
+      "itens": [
+        "Mudanças no changelog também geram aviso de atualização nas duas superfícies.",
+        "Telas que já estavam abertas buscam as notas atuais, sem depender do arquivo antigo carregado no início.",
+        "O aplicativo do garçom compara a versão em execução com a versão publicada, mesmo quando o service worker não precisa trocar de cache."
+      ]
+    },
+    {
       "versao": "3.2.0",
       "data": "2026-11-12",
       "titulo": "O aviso de atualização voltou",

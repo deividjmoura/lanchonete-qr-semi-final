@@ -1,13 +1,16 @@
-import { useEffect, useState, type MouseEvent } from "react";
-import { motion, useReducedMotion } from "framer-motion";
 import { Captura, type CapturaChave } from "../components/Capturas";
 import { SectionIntro } from "../components/SectionIntro";
 import { usePercurso } from "../usePercurso";
-import { useRolagemInterna } from "../useRolagemInterna";
 
-/* O percurso de um pedido, estação por estação. A linha de passe conserva o
-   progresso medido por usePercurso; o observador sincroniza a navegação e a
-   captura ativa sem depender da frequência dos eventos de scroll. */
+/* O percurso de um pedido, estação por estação.
+ *
+ * É a narrativa de rolagem da página: à esquerda, a linha de passe com as seis
+ * estações; o traço aceso cresce com a rolagem (ver usePercurso). À direita,
+ * um palco fixo troca de cena conforme a estação que cruza o meio da tela,
+ * sempre com a captura real da tela correspondente.
+ *
+ * Em telas estreitas não há palco: cada estação mostra a própria captura logo
+ * abaixo do texto, e a linha continua acompanhando a rolagem. */
 const etapas: {
   numero: string;
   estacao: string;
@@ -67,57 +70,8 @@ const etapas: {
 ];
 
 export function FlowSection() {
-  const { trilho, ativa: ativaPorRolagem } = usePercurso<HTMLOListElement>();
-  const [ativaObservada, setAtivaObservada] = useState<number | null>(null);
-  const reduzirMovimento = useReducedMotion();
-  const rolar = useRolagemInterna();
-  const ativa = ativaObservada ?? ativaPorRolagem;
-  const atual = etapas[ativa] ?? etapas[0];
-
-  useEffect(() => {
-    const lista = trilho.current;
-    if (!lista || !("IntersectionObserver" in window)) return;
-
-    const alvos = [...lista.querySelectorAll<HTMLElement>("[data-etapa]")];
-    const intersectando = new Set<HTMLElement>();
-    let observador: IntersectionObserver | undefined;
-
-    const observar = () => {
-      observador?.disconnect();
-      intersectando.clear();
-      const margem = Math.round(window.innerHeight * 0.41);
-      observador = new IntersectionObserver(
-        (entradas) => {
-          for (const entrada of entradas) {
-            const alvo = entrada.target as HTMLElement;
-            if (entrada.isIntersecting) intersectando.add(alvo);
-            else intersectando.delete(alvo);
-          }
-
-          const maisProxima = [...intersectando].sort(
-            (a, b) =>
-              Math.abs(a.getBoundingClientRect().top - window.innerHeight * 0.5) -
-              Math.abs(b.getBoundingClientRect().top - window.innerHeight * 0.5),
-          )[0];
-          if (!maisProxima) return;
-
-          const indice = Number(maisProxima.dataset.indice);
-          if (Number.isInteger(indice)) setAtivaObservada(indice);
-        },
-        { rootMargin: `-${margem}px 0px -${margem}px 0px`, threshold: 0 },
-      );
-      alvos.forEach((alvo) => observador?.observe(alvo));
-    };
-
-    observar();
-    window.addEventListener("resize", observar);
-    return () => {
-      window.removeEventListener("resize", observar);
-      observador?.disconnect();
-    };
-  }, [trilho]);
-
-  const aoClicarNaEstacao = (event: MouseEvent<HTMLAnchorElement>, href: string) => rolar(event, href);
+  const { trilho, ativa } = usePercurso<HTMLOListElement>();
+  const atual = etapas[ativa];
 
   return (
     <section className="percurso" id="como-funciona" aria-labelledby="flow-title">
@@ -133,58 +87,27 @@ export function FlowSection() {
           </p>
         </SectionIntro>
 
-        <nav className="percurso__navegacao" aria-label="Navegação pelas estações do pedido">
-          <ol>
-            {etapas.map((etapa, indice) => {
-              const href = `#percurso-etapa-${etapa.numero}`;
-              return (
-                <li key={etapa.numero}>
-                  <a
-                    href={href}
-                    aria-label={`Ir para a estação ${etapa.numero}: ${etapa.titulo}`}
-                    aria-current={indice === ativa ? "step" : undefined}
-                    onClick={(event) => aoClicarNaEstacao(event, href)}
-                  >
-                    <span className="percurso__navegacao-numero">{etapa.numero}</span>
-                    <span className="percurso__navegacao-titulo">{etapa.titulo}</span>
-                  </a>
-                </li>
-              );
-            })}
-          </ol>
-        </nav>
-
         <div className="percurso__grade">
           <ol className="percurso__trilho" ref={trilho}>
             {etapas.map((etapa, indice) => (
-              <motion.li
+              <li
                 className="percurso__etapa"
                 key={etapa.numero}
-                id={`percurso-etapa-${etapa.numero}`}
                 data-etapa={etapa.numero}
-                data-indice={indice}
                 data-estado={indice < ativa ? "feita" : indice === ativa ? "ativa" : "adiante"}
-                aria-labelledby={`percurso-titulo-${etapa.numero}`}
-                initial={reduzirMovimento ? false : { opacity: 0, y: 22 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.12 }}
-                transition={{ duration: reduzirMovimento ? 0 : 0.38, ease: [0.2, 0, 0, 1] }}
               >
                 <span className="percurso__no" aria-hidden="true" />
                 <p className="percurso__estacao">
                   <span className="dado">{etapa.numero}</span>
                   {etapa.estacao}
                 </p>
-                <h3 id={`percurso-titulo-${etapa.numero}`}>{etapa.titulo}</h3>
+                <h3>{etapa.titulo}</h3>
                 <p className="percurso__texto">{etapa.texto}</p>
-                <figure
-                  className="percurso__figura"
-                  data-formato={etapa.captura === "entregas-garcom" ? "celular" : "tela"}
-                >
+                <figure className="percurso__figura" data-formato={etapa.captura === "entregas-garcom" ? "celular" : "tela"}>
                   <Captura chave={etapa.captura} className="percurso__figura-imagem" />
                   <figcaption>{etapa.tela}</figcaption>
                 </figure>
-              </motion.li>
+              </li>
             ))}
           </ol>
 
