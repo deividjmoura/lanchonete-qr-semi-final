@@ -1019,8 +1019,8 @@ async function getFilaGarcom(garcomId) {
     item.garcomAceitoNome=item.aceito_por_nome;item.garcomRetirouNome=item.retirado_por_nome;item.garcomEntregouNome=item.entregue_por_nome;
     item.prontoEm=item.pronto_em;item.aceitoEm=item.aceito_em;item.retiradoEm=item.retirado_em;item.entregueEm=item.entregue_em;
     item.podeAceitar=item.status==='concluido';
-    item.podeRetirar=item.status==='concluido'||(item.status==='aceito'&&Number(item.aceito_por_id)===id);
-    item.podeEntregar=item.status==='retirado'&&Number(item.retirado_por_id)===id;
+    item.podeRetirar=item.status==='concluido'||item.status==='aceito';
+    item.podeEntregar=item.status==='retirado';
     if(!byPedido.has(item.pedido_id))byPedido.set(item.pedido_id,[]);byPedido.get(item.pedido_id).push(item);
   }
   return pedidos.map(p=>{
