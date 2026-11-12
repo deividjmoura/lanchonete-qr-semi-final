@@ -13,21 +13,22 @@ test('PWA e backend têm rota explícita para iniciar mesa vazia',()=>{
  assert.match(backend,/async function iniciarAtendimentoGarcom/);
  assert.ok(server.includes('mesas\\/(\\d+)\\/iniciar'));
  assert.match(app,/base\+'\/iniciar'/);
- assert.match(backend,/INSERT INTO mesa_sessoes \(mesa_id, cliente_nome, garcom_responsavel_id\)/);
+ assert.match(backend,/INSERT INTO mesa_sessoes \(mesa_id, cliente_nome\)/);
+ assert.doesNotMatch(backend,/garcom_responsavel_id/);
 });
-test('início de mesa preserva exclusividade e não substitui responsável existente',()=>{
+test('início de mesa cria ou acessa sessão compartilhada sem atribuir titular',()=>{
  assert.match(backend,/FOR UPDATE/);
- assert.match(backend,/Mesa já está sob responsabilidade de outro garçom/);
- assert.match(backend,/mesa_atendimento_historico/);
+ assert.match(backend,/INSERT INTO mesa_sessoes \(mesa_id, cliente_nome\)/);
+ assert.doesNotMatch(backend,/garcom_responsavel_id/);
  assert.match(backend,/mesa_iniciada/);
+ assert.match(backend,/idempotentReplay: !criada/);
 });
-test('falha ao listar garçons não bloqueia o carregamento das mesas',()=>{
+test('carregamento do PWA não consulta lista de garçons para transferir mesa',()=>{
+ assert.doesNotMatch(app,/loadActiveWaiters|garcons-ativos|activeWaiters/);
  const start=app.indexOf('async function loadMesas()');
  const end=app.indexOf('function extrairProdutosCardapio',start);
  const block=app.slice(start,end);
- assert.match(block,/try\{await loadActiveWaiters\(\);\}/);
- assert.match(block,/catch\(e\)\{activeWaiters=\[\]/);
- assert.ok(block.indexOf('populateTables()')>block.indexOf('catch(e)'));
+ assert.match(block,/populateTables\(\)/);
 });
 test('sincronização inicia sessão quando mesa está vazia e mantém chave idempotente',()=>{
  const start=app.indexOf('async function sendOrderToServer(');
