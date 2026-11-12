@@ -248,8 +248,8 @@ describe('3. Ciclo de Vida — Mesa aberta pelo cliente e assumida pelo garçom'
       const res = await entregarComoGarcom(10, '33333333-3333-4000-8000-333333333333');
       assert.equal(res.status, 'entregue');
       assert.equal(res.garcom.nome, 'Roberto Garçom');
-      assert.equal(estado.pedido.garcom_nome, undefined, 'entrega não atribui um garçom ao pedido inteiro');
-      assert.equal(estado.pedido.garcom_id, undefined, 'não cria titularidade no pedido');
+      assert.equal(estado.pedido.garcom_nome, null, 'entrega não atribui um garçom ao pedido inteiro');
+      assert.equal(estado.pedido.garcom_id, null, 'não cria titularidade no pedido');
       assert.equal(estado.itens[0].status, 'entregue');
       assert.equal(Number(estado.itens[0].entregue_por_id), 5, 'ator real da entrega fica no item');
       assert.equal(estado.sessao.valor_total, 32, 'espelho financeiro recomputado dos itens entregues');
