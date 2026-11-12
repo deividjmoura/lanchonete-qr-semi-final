@@ -147,3 +147,49 @@ test('rótulos de faixa combinam texto e cor (não dependem de cor sozinha)', ()
   assert.equal(P.ROTULO_PERIODO.semana, 'nesta semana');
   assert.equal(P.ROTULO_PERIODO.mes, 'neste mês');
 });
+
+test('#303: sessão sem pedido fica em Aguardando pedido sem entrar em atenção/crítica', () => {
+  const semPedido = mesa({
+    numero: 5,
+    status: 'ocupada',
+    sessaoId: 50,
+    abertaEm: minutosAtras(130),
+    primeiroPedidoEm: null,
+    ultimoPedidoEm: null,
+    aguardandoPedido: true,
+    tempo: null,
+  });
+  assert.equal(P.aguardandoPedidoDe(semPedido), true);
+  assert.equal(P.tempoClassificado(semPedido, agora, faixas), null);
+  assert.deepEqual(P.tempoSessaoDe(semPedido, agora), { minutos: 130 });
+  assert.equal(P.minutosDesde(semPedido.ultimoPedidoEm, agora), null);
+});
+
+test('#303: mesa aberta há 2h com primeiro pedido há 50 min e último há 5 min separa os relógios', () => {
+  const ocupada = mesa({
+    numero: 6,
+    status: 'ocupada',
+    sessaoId: 60,
+    abertaEm: minutosAtras(120),
+    primeiroPedidoEm: minutosAtras(50),
+    ultimoPedidoEm: minutosAtras(5),
+    aguardandoPedido: false,
+  });
+  assert.equal(P.aguardandoPedidoDe(ocupada), false);
+  assert.deepEqual(P.tempoSessaoDe(ocupada, agora), { minutos: 120 });
+  assert.deepEqual(P.tempoClassificado(ocupada, agora, faixas), { id: 'atencao', minutos: 50 });
+  assert.equal(P.minutosDesde(ocupada.ultimoPedidoEm, agora), 5);
+
+  // Novo pedido chega e dados atualizam: último pedido passa a 1 min, abertura continua em 120 min.
+  const atualizada = { ...ocupada, ultimoPedidoEm: minutosAtras(1) };
+  assert.equal(P.minutosDesde(atualizada.ultimoPedidoEm, agora), 1);
+  assert.deepEqual(P.tempoSessaoDe(atualizada, agora), { minutos: 120 });
+});
+
+test('#303: datas ausentes ou inválidas retornam null sem NaN nem duração negativa', () => {
+  assert.equal(P.minutosDesde('', agora), null);
+  assert.equal(P.minutosDesde(null, agora), null);
+  assert.equal(P.minutosDesde('data-ruim', agora), null);
+  assert.equal(P.minutosDesde(new Date(agora + 60000).toISOString(), agora), 0);
+  assert.equal(P.tempoSessaoDe({ abertaEm: 'data-ruim' }, agora), null);
+});

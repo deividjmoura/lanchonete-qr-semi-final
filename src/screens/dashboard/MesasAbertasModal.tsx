@@ -20,9 +20,12 @@ import {
   FAIXAS_PADRAO,
   FAIXAS_TEMPO,
   STATUS_ITEM,
-  faixaOcupacao,
+  aguardandoPedidoDe,
   formatarDuracao,
   formatarHora,
+  minutosDesde,
+  tempoClassificado,
+  tempoSessaoDe,
   type MesaDetalhe,
   type MesaPanorama,
   type PanoramaMesas,
@@ -41,7 +44,7 @@ import { cn } from "../../utils/cn";
  */
 
 /** Situação da mesa calculada no cliente (igual à regra do backend). */
-type TempoMesa = NonNullable<ReturnType<typeof faixaOcupacao>>;
+type TempoMesa = NonNullable<ReturnType<typeof tempoClassificado>>;
 type Ordem = "tempo" | "numero" | "consumo";
 type Situacao = "todas" | "atencao" | "critica";
 
@@ -112,7 +115,12 @@ export function MesasAbertasModal({ open, onClose }: { open: boolean; onClose: (
     () =>
       todas
         .filter((mesa) => Boolean(mesa.sessaoId))
-        .map((mesa) => ({ mesa, tempo: faixaOcupacao(mesa.abertaEm, agora, faixas) })),
+        // #303: a faixa conta do primeiro pedido válido, não da abertura.
+        .map((mesa) => ({
+          mesa,
+          tempo: tempoClassificado(mesa, agora, faixas),
+          sessao: tempoSessaoDe(mesa, agora),
+        })),
     [todas, agora, faixas],
   );
 
@@ -136,7 +144,10 @@ export function MesasAbertasModal({ open, onClose }: { open: boolean; onClose: (
     ordenadas.sort((a, b) => {
       if (ordem === "numero") return a.mesa.numero - b.mesa.numero;
       if (ordem === "consumo") return b.mesa.saldo - a.mesa.saldo || a.mesa.numero - b.mesa.numero;
-      return (b.tempo?.minutos ?? 0) - (a.tempo?.minutos ?? 0) || a.mesa.numero - b.mesa.numero;
+      return (
+        (b.sessao?.minutos ?? b.tempo?.minutos ?? 0) - (a.sessao?.minutos ?? a.tempo?.minutos ?? 0) ||
+        a.mesa.numero - b.mesa.numero
+      );
     });
     return ordenadas;
   }, [comTempo, termo, ordem, situacao]);
@@ -299,7 +310,7 @@ export function MesasAbertasModal({ open, onClose }: { open: boolean; onClose: (
             <>
               <div className="dash-mesas__grid">
                 {pagina.itens.map(({ mesa, tempo }) => (
-                  <CartaoMesaAberta key={mesa.id} mesa={mesa} tempo={tempo} />
+                  <CartaoMesaAberta key={mesa.id} mesa={mesa} tempo={tempo} agora={agora} />
                 ))}
               </div>
               <ControlesPaginacao {...pagina} className="dash-mesas__pagination" />
@@ -335,14 +346,34 @@ function Indicador({
 }
 
 /** Cartão de uma mesa aberta. Exportado para o smoke de SSR (render sem dados). */
-export function CartaoMesaAberta({ mesa, tempo }: { mesa: MesaPanorama; tempo: TempoMesa | null }) {
+export function CartaoMesaAberta({
+  mesa,
+  tempo,
+  agora,
+}: {
+  mesa: MesaPanorama;
+  tempo: TempoMesa | null;
+  agora?: number;
+}) {
   const [aberto, setAberto] = useState(false);
   const [detalhe, setDetalhe] = useState<MesaDetalhe | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
+  const referencia = agora ?? Date.now();
   const faixa = tempo ? FAIXAS_TEMPO[tempo.id] : null;
-  const situacao = tempo?.id === "critica" ? "critica" : tempo?.id === "atencao" ? "atencao" : "recente";
+  // #303: sessão sem pedido válido fica em "Aguardando pedido", sem faixa de atenção/crítica.
+  const aguardando = aguardandoPedidoDe(mesa);
+  const situacao =
+    tempo?.id === "critica"
+      ? "critica"
+      : tempo?.id === "atencao"
+        ? "atencao"
+        : tempo?.id === "recente"
+          ? "recente"
+          : "aguardando";
+  const sessao = tempoSessaoDe(mesa, referencia);
+  const minutosUltimo = minutosDesde(mesa.ultimoPedidoEm, referencia);
 
   const alternar = () => {
     const proximo = !aberto;
@@ -366,10 +397,20 @@ export function CartaoMesaAberta({ mesa, tempo }: { mesa: MesaPanorama; tempo: T
         </div>
         <div className="dash-mesa__badges">
           <span className="dash-mesa__praca">{mesa.pracaNome || "Sem praça"}</span>
-          {faixa && (
+          {faixa ? (
             <span className={`dash-mesa__faixa dash-mesa__faixa--${situacao}`}>
               <Clock size={13} weight="bold" />
               {formatarDuracao(tempo?.minutos)} · {faixa.rotulo}
+            </span>
+          ) : aguardando ? (
+            <span className="dash-mesa__faixa dash-mesa__faixa--aguardando">
+              <Clock size={13} weight="bold" />
+              Aguardando pedido
+            </span>
+          ) : (
+            <span className="dash-mesa__faixa dash-mesa__faixa--aguardando">
+              <Clock size={13} weight="bold" />
+              Horário indisponível
             </span>
           )}
         </div>
@@ -388,13 +429,32 @@ export function CartaoMesaAberta({ mesa, tempo }: { mesa: MesaPanorama; tempo: T
           </dt>
           <dd>{mesa.garcomResponsavelNome || "Garçom a definir"}</dd>
         </div>
-        <div className="dash-mesa__row">
+        <div className="dash-mesa__row" data-tempo="abertura">
           <dt>
             <Clock size={13} weight="bold" /> Aberta
           </dt>
           <dd>
-            {formatarHora(mesa.abertaEm)}
-            <span className="dash-mesa__row-sub"> · {formatarDuracao(tempo?.minutos)} de permanência</span>
+            {sessao ? `há ${formatarDuracao(sessao.minutos)}` : "Horário indisponível"}
+            {sessao && mesa.abertaEm ? (
+              <span className="dash-mesa__row-sub"> · desde {formatarHora(mesa.abertaEm)}</span>
+            ) : null}
+          </dd>
+        </div>
+        <div className="dash-mesa__row" data-tempo="ultimo-pedido">
+          <dt>
+            <Receipt size={13} weight="bold" /> Último pedido
+          </dt>
+          <dd>
+            {aguardando ? (
+              <span className="dash-mesa__row-sub">Aguardando pedido</span>
+            ) : minutosUltimo !== null ? (
+              <>
+                {`há ${formatarDuracao(minutosUltimo)}`}
+                <span className="dash-mesa__row-sub"> · às {formatarHora(mesa.ultimoPedidoEm)}</span>
+              </>
+            ) : (
+              <span className="dash-mesa__row-sub">Horário indisponível</span>
+            )}
           </dd>
         </div>
         <div className="dash-mesa__row">

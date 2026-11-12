@@ -29,7 +29,17 @@ export type MesaPanorama = {
   pracaOrdem: number | null;
   sessaoId: number | null;
   abertaEm: string | null;
+  /** #303: primeiro/último pedido válido (status <> 'cancelado') por criação. */
+  primeiroPedidoEm?: string | null;
+  ultimoPedidoEm?: string | null;
+  /** #303: sessão aberta sem pedido válido — sem faixa de atenção/crítica. */
+  aguardandoPedido?: boolean;
+  /** Classificação de atendimento: conta do primeiro pedido válido. */
   tempo: TempoMesa | null;
+  /** Idade da sessão (desde a abertura): só contexto, nunca classifica. */
+  tempoSessao?: { minutos: number } | null;
+  /** Minutos desde o pedido válido mais recente, quando houver. */
+  ultimoPedidoMinutos?: number | null;
   clienteNome: string | null;
   garcomResponsavelId: number | null;
   garcomResponsavelNome: string | null;
@@ -193,6 +203,53 @@ export function faixaOcupacao(
   const id: FaixaTempoId =
     minutos < faixas.atencaoMinutos ? "recente" : minutos < faixas.criticoMinutos ? "atencao" : "critica";
   return { id, minutos };
+}
+
+/** Minutos inteiros desde um instante até `agora`; null se ausente/inválido. */
+export function minutosDesde(iso: string | null | undefined, agora: number): number | null {
+  if (!iso) return null;
+  const inicio = new Date(iso).getTime();
+  if (!Number.isFinite(inicio) || !Number.isFinite(Number(agora))) return null;
+  return Math.max(0, Math.floor((Number(agora) - inicio) / 60000));
+}
+
+/**
+ * #303 — indica se a sessão aberta ainda aguarda o primeiro pedido válido.
+ * Quando o servidor ainda não envia `primeiroPedidoEm` (payload antigo em
+ * transição de deploy ou fixture legada), retorna `false` para manter
+ * compatibilidade.
+ */
+export function aguardandoPedidoDe(
+  mesa: Pick<MesaPanorama, "sessaoId" | "primeiroPedidoEm" | "aguardandoPedido">,
+): boolean {
+  if (!mesa.sessaoId) return false;
+  if (typeof mesa.aguardandoPedido === "boolean") return mesa.aguardandoPedido;
+  return mesa.primeiroPedidoEm === null;
+}
+
+/**
+ * #303 — faixa de atendimento da mesa.
+ * Prefere o primeiro pedido válido; quando o campo ainda não veio do
+ * servidor (deploy em andamento, resposta antiga), cai para a abertura da
+ * sessão para não quebrar a tela. Campo presente e null = aguardando pedido.
+ */
+export function tempoClassificado(
+  mesa: Pick<MesaPanorama, "abertaEm" | "primeiroPedidoEm" | "aguardandoPedido">,
+  agora: number,
+  faixas: FaixasTempo,
+): { id: FaixaTempoId; minutos: number } | null {
+  if (mesa.aguardandoPedido) return null;
+  const origem = mesa.primeiroPedidoEm === undefined ? mesa.abertaEm : mesa.primeiroPedidoEm;
+  return faixaOcupacao(origem, agora, faixas);
+}
+
+/** #303 — idade da sessão (contexto). Nunca classifica atenção/crítica. */
+export function tempoSessaoDe(
+  mesa: Pick<MesaPanorama, "abertaEm">,
+  agora: number,
+): { minutos: number } | null {
+  const minutos = minutosDesde(mesa.abertaEm, agora);
+  return minutos === null ? null : { minutos };
 }
 
 /** "8 min", "1h05", "2h40" — compacto para caber em 70 cards. */
