@@ -87,6 +87,9 @@ export default function Login() {
             <a href="/politica-de-privacidade.html" className="login-footer-text-link">
               Política de privacidade
             </a>
+            <a href="/novidades.html" className="login-footer-text-link">
+              Novidades e versões
+            </a>
             <span className="text-xs text-text-muted">© {new Date().getFullYear()} QR Admin. Todos os direitos reservados.</span>
           </div>
           <nav aria-label="Contato e aparência" className="flex items-center gap-1">
