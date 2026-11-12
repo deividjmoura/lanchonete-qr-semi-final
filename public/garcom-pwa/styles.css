@@ -750,23 +750,21 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 /* Grade do salão: até 4 colunas quando couber, caindo para 3/2/1 pela largura
    real do aparelho. As colunas são fixas por faixa (não auto-fill) para que o
    card nunca fique espremido nem gere rolagem horizontal (#305). */
+/* Quatro mesas por linha no celular: cards compactos, mantendo número e estado.
+   Em telas maiores a grade ganha uma quinta coluna sem comprimir os rótulos. */
 .table-grid {
   padding: 4px 0 12px;
   display: grid;
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-  gap: 8px;
-}
-
-@media (min-width: 420px) {
-  .table-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
 }
 
 @media (min-width: 640px) {
-  .table-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .table-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 }
 
-@media (min-width: 900px) {
-  .table-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (min-width: 1100px) {
+  .table-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
 
 .salao-filters {
@@ -811,19 +809,22 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 
 /* A mesa é uma plaquinha: faixa de tinta à esquerda, número em largura larga. */
 .table-tile {
-  min-height: 72px;
-  padding: 9px 10px;
+  min-width: 0;
+  min-height: 66px;
+  padding: 7px 3px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line-strong);
-  border-left: 5px solid var(--plaque);
+  border-left: 3px solid var(--plaque);
   background: var(--surface-raised);
   box-shadow: var(--shadow-card);
   color: var(--text);
-  text-align: left;
+  text-align: center;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  overflow: hidden;
   transition: background-color var(--dur-fast) var(--ease-snap);
 }
 
@@ -832,10 +833,11 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 }
 
 .table-tile strong {
+  min-width: 0;
   font-family: var(--font-display);
   font-stretch: var(--wdth-title);
   font-variant-numeric: tabular-nums lining-nums;
-  font-size: 1.0625rem;
+  font-size: 1rem;
   font-weight: 800;
   letter-spacing: -0.01em;
 }
@@ -862,6 +864,7 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 
 /* Destaque discreto de tempo no próprio card, sem pintar o cartão inteiro. */
 .table-tile-time {
+  display: none;
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums lining-nums;
   font-size: 0.7rem;
@@ -871,14 +874,17 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 }
 
 .table-tile-praca,
-.table-tile-resp {
+.table-tile-resp { display: none;
+
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .table-tile-state {
-  font-size: 0.7rem;
+  max-width: 100%;
+  font-size: 0.58rem;
+  line-height: 1.1;
   font-stretch: 94%;
   font-weight: 700;
   letter-spacing: 0.03em;
