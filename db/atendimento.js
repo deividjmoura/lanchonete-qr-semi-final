@@ -365,27 +365,12 @@ async function metricasGarcons({ data } = {}) {
   const tz = process.env.APP_TIMEZONE || 'America/Sao_Paulo';
   const { rows } = await pool.query(`
     SELECT g.id, g.nome, g.ativo, (g.removido_em IS NOT NULL) AS removido,
-      (SELECT COUNT(DISTINCT p.sessao_id)::int FROM pedidos p
-        WHERE p.garcom_registrou_id=g.id
-          AND (p.criado_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date) AS atendimentos,
       (SELECT COALESCE(SUM(ip.quantidade * (ip.preco_unitario + COALESCE(
           (SELECT SUM(a.preco_unitario) FROM itens_pedido_adicionais a WHERE a.item_pedido_id=ip.id), 0
         ))), 0)::numeric(12,2)
          FROM itens_pedido ip JOIN pedidos p ON p.id=ip.pedido_id
         WHERE ip.entregue_por_id=g.id AND ip.entregue_em IS NOT NULL
           AND (ip.entregue_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date) AS vendas,
-      (SELECT CASE WHEN COUNT(DISTINCT p.sessao_id)=0 THEN 0
-          ELSE ROUND((
-            SELECT COALESCE(SUM(ip.quantidade * (ip.preco_unitario + COALESCE(
-              (SELECT SUM(a.preco_unitario) FROM itens_pedido_adicionais a WHERE a.item_pedido_id=ip.id), 0
-            ))), 0)
-              FROM itens_pedido ip JOIN pedidos p2 ON p2.id=ip.pedido_id
-             WHERE ip.entregue_por_id=g.id AND ip.entregue_em IS NOT NULL
-               AND (ip.entregue_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date
-          ) / COUNT(DISTINCT p.sessao_id), 2)
-         END
-         FROM pedidos p WHERE p.garcom_registrou_id=g.id
-           AND (p.criado_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date)::numeric(12,2) AS ticket_medio,
       (SELECT COUNT(DISTINCT p.id)::int FROM pedidos p
         WHERE p.garcom_registrou_id=g.id AND (p.criado_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date) AS pedidos_registrados,
       (SELECT COUNT(DISTINCT ip.pedido_id)::int FROM itens_pedido ip
@@ -426,10 +411,9 @@ async function metricasGarcons({ data } = {}) {
     criterio: 'pedidos registrados e itens efetivamente entregues por cada garçom no período e fuso selecionados; não há atribuição financeira por titularidade de mesa',
     garcons: rows.map(x => {
       const valorItensEntregues = Number(x.vendas || 0);
-      const contas = Number(x.atendimentos);
       return {
         id:x.id, nome:x.nome, ativo:x.ativo, removido:x.removido,
-        atendimentos:contas, pedidosRegistrados:x.pedidos_registrados,
+        pedidosRegistrados:x.pedidos_registrados,
         pedidosComEntregaRegistrada:x.pedidos_com_entrega_registrada,
         valorItensEntregues,
 
