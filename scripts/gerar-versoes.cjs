@@ -13,9 +13,9 @@
  *     copiadas de `public/novidades.json` (fonte única).
  *
  * A versão legível (`versao`) sai de `package.json` e é a mesma da nota mais
- * recente do changelog. O aviso de versão NÃO depende dela: ele compara o
- * identificador do shell. Uma nota esquecida pode deixar a lista de novidades
- * vazia, nunca impedir o garçom de ser avisado.
+ * recente do changelog. O app.js do garçom mantém essa versão embutida e o
+ * gerador valida a igualdade: uma aba antiga compara sua versão em execução
+ * com a versão publicada pela API, mesmo quando o service worker não muda.
  *
  * Roda em dois momentos:
  *   - `npm run build:versoes` (manual, depois de mexer em `public/garcom-pwa/`);
