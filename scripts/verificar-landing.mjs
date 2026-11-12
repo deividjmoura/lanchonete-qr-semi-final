@@ -297,7 +297,16 @@ try {
     [...document.querySelectorAll(".site-footer a")].map((a) => a.getAttribute("href")),
   );
   assert(linksInstitucionais.includes("/guia-sistema.html"), "footer liga para /guia-sistema.html");
+  assert(linksInstitucionais.includes("/guia-sistema.html#acesso"), "landing liga direto para o guia de acesso");
+  assert(linksInstitucionais.includes("/guia-sistema.html#uso"), "landing liga direto para o guia de uso");
   assert(linksInstitucionais.includes("/apresentacao.html"), "footer liga para /apresentacao.html");
+  const guiaHtml = await (await page.request.get(BASE + "/guia-sistema.html")).text();
+  assert(/<section id="acesso"/.test(guiaHtml), "guia contém a seção ancorada de acesso");
+  assert(/<section id="uso"/.test(guiaHtml), "guia contém a seção ancorada de uso");
+  assert(/segundo fator \(2FA\) é uma configuração de segurança por conta/i.test(guiaHtml), "guia identifica 2FA como configuração da conta");
+  assert(/aplicativo do banco/i.test(guiaHtml) && /PIX manual/i.test(guiaHtml), "guia mantém a conferência manual do PIX no banco");
+  assert(/avisos sonoros e por voz/i.test(guiaHtml) && /dispositivo/i.test(guiaHtml), "guia ressalva que avisos dependem do dispositivo");
+  assert(/preços/.test(guiaHtml) && /não é nota fiscal/i.test(guiaHtml), "guia preserva preços de produtos e ressalva fiscal");
 
   /* --- 5b. Contato: canais oficiais e ausência de oferta comercial -------- */
   const contato = page.locator("#contato");
