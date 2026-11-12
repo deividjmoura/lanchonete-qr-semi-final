@@ -437,9 +437,9 @@ test('filtro por praça usa as praças existentes e pode ser combinado com a bus
 
 /* ------------------------------- barra do salão e densidade da grade (#306) */
 
-test('barra do salão cabe em uma linha: praça, lupa e novo pedido', () => {
+test('barra do salão cabe em uma linha: praça e lupa', () => {
   const toolbar = html.slice(html.indexOf('id="salaoToolbar"'), html.indexOf('id="tableGrid"'));
-  for (const id of ['pracaFilter', 'toggleTableSearch', 'closeTableSearch', 'newOrderTables', 'tableSearch']) {
+  for (const id of ['pracaFilter', 'toggleTableSearch', 'closeTableSearch', 'tableSearch']) {
     assert.match(toolbar, new RegExp('id="' + id + '"'), id + ' fica na barra do salão');
   }
   // A busca é um ícone que expande o campo: input e praça não empilham linhas.
