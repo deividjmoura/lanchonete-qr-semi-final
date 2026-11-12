@@ -107,6 +107,11 @@ async function rodapeNasTelas(browser, viewport, scheme) {
     // O salão aparece por padrão; a busca filtra e aceita vírgula.
     await page.locator('#tableGrid .table-tile').first().waitFor();
     assert.equal(await page.locator('#tableGrid .table-tile').count(), 3, 'todas as mesas do salão');
+    if (viewport.width < 640) {
+      const colunas = await page.locator('#tableGrid').evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length);
+      assert.equal(colunas, 4, 'quatro mesas por linha no celular');
+    }
+    assert.equal(await page.locator('#newOrderTables').count(), 0, 'atalho redundante de novo pedido removido');
     for (const estado of ['Livre', 'Aguardando pedido', 'Em atendimento']) {
       assert.equal(await page.locator('#tableLegend').getByText(estado, { exact: true }).count(), 1, 'legenda ' + estado);
     }
