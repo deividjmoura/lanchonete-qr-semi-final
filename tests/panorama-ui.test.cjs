@@ -39,8 +39,6 @@ function mesa(over = {}) {
     abertaEm: null,
     tempo: null,
     clienteNome: null,
-    garcomResponsavelId: null,
-    garcomResponsavelNome: null,
     consumo: 0,
     pago: 0,
     saldo: 0,
