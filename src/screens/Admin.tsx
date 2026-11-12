@@ -1311,15 +1311,14 @@ function Relatorio() {
       return;
     }
     const header =
-      "id,mesa,cliente,garcomResponsavel,valor,desconto,taxaServico,valorCobrado,forma,fechadaEm";
+      "id,mesa,cliente,valor,desconto,taxaServico,valorCobrado,forma,fechadaEm";
     const body = contas
       .map((c: any) =>
         [
           c.id,
           c.mesa,
           c.cliente ?? "",
-          c.garcomResponsavel ?? "",
-          c.valor,
+            c.valor,
           c.desconto,
           c.taxaServico,
           c.valorCobrado,
