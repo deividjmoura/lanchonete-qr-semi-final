@@ -2,7 +2,6 @@ import { openOfflineDb, OfflineStore, SyncEngine, probeBackend, uid } from './of
 
 const $=s=>document.querySelector(s);
 const money=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(n)||0);
-let products=[],cart=new Map(),mesas=[],activeWaiters=[],currentWaiterId=null,liveOrders=[];
 const tables=[];
 const pwaUrl = new URL(location.href);
 const tokenFromUrl = pwaUrl.searchParams.get('token') || '';
@@ -61,19 +60,13 @@ async function getJson(url,opts={}){
  if(!res.ok){const err=new Error(data.error||'HTTP '+res.status);err.status=res.status;err.code=data.code;if(res.status===401&&url.includes('/api/garcom/')){waiterAuthInvalid=true;setConnection('auth');}throw err;}
  return data;
 }
-async function loadActiveWaiters(){
- const data=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/garcons-ativos');
- activeWaiters=Array.isArray(data.garcons)?data.garcons:[];
-}
 async function loadMesas(){
  if(!waiterToken)throw Error('Abra o link individual do garçom fornecido pelo administrador');
  const data=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/mesas');
  mesas=Array.isArray(data.mesas)?data.mesas:[];
  if(offlineStore)await offlineStore.setMeta('mesas',{garcom:data.garcom,mesas});
  tables.splice(0,tables.length,...mesas.map(x=>Number(x.numero)));
- currentWaiterId=Number(data.garcom.id);
  try{await loadActiveWaiters();}
- catch(e){activeWaiters=[];$('#tableMessage').textContent='Mesas carregadas. Lista de garçons indisponível no momento.';}
  populateTables();updateQr();renderPracaFilter();renderTableGrid();
  $('#identity').textContent='Garçom · '+data.garcom.nome;
  renderBillingSessions();
@@ -201,7 +194,6 @@ async function renderOrders(){
   const tot=document.createElement('span');tot.textContent=money(o.total);
   const mesaObj=mesas.find(m=>Number(m.numero)===Number(o.table));
   meta.append(hr,tot);
-  if(mesaObj?.garcomResponsavelNome){const resp=document.createElement('span');resp.textContent='Resp.: '+mesaObj.garcomResponsavelNome;meta.append(resp);}
   main.append(top,meta);
 
   const right=document.createElement('div');right.className='order-summary-right';
@@ -463,7 +455,6 @@ async function boot(){
   if(navigator.storage?.persist)void navigator.storage.persist().catch(()=>{});
  }catch(e){console.error('[garcom-pwa] armazenamento:',e);setConnection('storage');$('#identity').textContent='Armazenamento offline indisponível';}
  await Promise.allSettled([loadProducts(),loadMesas()]);
- if(!mesas.length&&offlineStore){try{const cached=await offlineStore.getMeta('mesas');if(cached?.mesas){mesas=cached.mesas;currentWaiterId=Number(cached.garcom?.id);tables.splice(0,tables.length,...mesas.map(m=>Number(m.numero)));populateTables();renderPracaFilter();renderTableGrid();$('#identity').textContent='Garçom · '+(cached.garcom?.nome||'')+' (local)';}}catch{}}
  if(waiterToken&&window.LQRRealtime){realtimeOff=window.LQRRealtime.connect(()=>{void refreshLiveData();void syncEngine?.flush();},{garcom:waiterToken,fallbackMs:20000,debounceMs:200}).close;}
 }
 void boot();
@@ -536,8 +527,6 @@ async function loadDeliveries(){
     const dt=new Date(rawTime);
     if(!Number.isNaN(dt.getTime())){const tEl=document.createElement('span');tEl.textContent=dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});metaLine.append(tEl);}
    }
-   const owner=document.createElement('span');owner.textContent='Resp.: '+(order.responsavelMesaNome||'a definir');
-   metaLine.append(owner);
    summaryMain.append(topLine,metaLine);
 
    const summaryRight=document.createElement('div');summaryRight.className='order-summary-right';
@@ -577,8 +566,6 @@ async function loadDeliveries(){
     const actor=item.garcomEntregouId?item.entregue_por_nome:item.garcomRetirouId?item.retirado_por_nome:item.garcomAceitoId?item.aceito_por_nome:null;
     if(actor){const who=document.createElement('small');who.className='muted';who.textContent='Garçom: '+actor;line.append(who);}
     let action=null,label='';
-    if(item.status==='concluido'||(item.status==='aceito'&&Number(item.garcomAceitoId)===Number(currentWaiterId))){action='retirar';label='Retirar item';}
-    else if(item.status==='retirado'&&Number(item.garcomRetirouId)===Number(currentWaiterId)){action='entregar';label='Confirmar entrega';}
     if(action){lotes[action].push(Number(item.id));const btn=document.createElement('button');btn.type='button';btn.className='secondary small';btn.textContent=label;btn.onclick=async()=>{btn.disabled=true;try{if(!await deliveryAction(order.id,action,[Number(item.id)]))btn.disabled=false;}catch(e){avisarEntrega(e.message||'Não foi possível atualizar a entrega.');btn.disabled=false;void loadDeliveries();}};line.append(btn);}
     else if(['aceito','retirado'].includes(item.status)){const locked=document.createElement('small');locked.className='muted';locked.textContent='Em andamento por outro garçom';line.append(locked);}
     list.append(line);
@@ -811,9 +798,6 @@ function renderTableGrid(){
   estadoCurto.textContent=situacao==='em_atendimento'?'Em at.':(situacao==='aguardando_pedido'?'Aguard.':'Livre');
   estado.append(estadoLongo,estadoCurto);
   estado.setAttribute('title',dados.rotulo);
-  const resp=document.createElement('small');resp.className='table-tile-resp';
-  resp.textContent=m.garcomResponsavelNome?'Resp.: '+m.garcomResponsavelNome:(situacao==='livre'?'Sem responsável':'Sem responsável definido');
-  card.append(linha,praca,estado,resp);
   card.onclick=()=>openTableDetails(m.numero);
   root.append(card);
  }
@@ -889,8 +873,6 @@ function openTableDetails(tableNumber){
    // registra o recebimento e a mesa só é liberada quando a conta é quitada.
    const charge=document.createElement('button');charge.type='button';charge.className='secondary';charge.textContent='Fechar conta';
    charge.onclick=()=>{$('#tableDetailsModal').close();openBillingForSession(m.sessaoId,m.numero);};root.append(charge);
-   const leave=document.createElement('button');leave.type='button';leave.className='secondary leave-table';leave.textContent='Deixar mesa';
-   leave.onclick=async()=>{leave.disabled=true;const ok=await leaveTable(m.numero);if(ok)$('#tableDetailsModal').close();else leave.disabled=false;};root.append(leave);
  }
  $('#tableDetailsModal').showModal();
 }
@@ -913,8 +895,6 @@ function renderBillingSessions(){
  if(!mine.length){
   const option=document.createElement('option');option.value='';option.textContent='Nenhuma mesa com atendimento aberto';select.append(option);
   $('#billingSummary').textContent='Abra um atendimento para registrar recebimentos.';
-  const idGarcom=Number(currentWaiterId);
-  const semIdentidade=currentWaiterId===null||currentWaiterId===undefined||currentWaiterId===''||!Number.isSafeInteger(idGarcom)||idGarcom<1;
   bloquearCobranca(semIdentidade
    ?'Não foi possível identificar seu cadastro de garçom. Reconecte-se e toque em “Atualizar saldo”.'
    :'Não há atendimento aberto disponível para registrar recebimentos.');
@@ -1081,54 +1061,6 @@ $('#copyPixPayload').addEventListener('click',async()=>{
 if(window.LQRPix){void LQRPix.loadConfig().then(()=>{updateBillingConfirmation();}).catch(()=>updateBillingConfirmation());}
 /* O próprio modal é a confirmação: nenhuma requisição sai antes do clique
    em "Confirmar transferência" e não existe uma segunda confirmação. */
-let transferTableNumber=null;
-function transferMessage(text){const feedback=$('#transferMessage');if(feedback)feedback.textContent=text;}
-function openTransferModal(mesaNumber){
- const mesa=mesas.find(m=>Number(m.numero)===Number(mesaNumber));
- if(!mesa)return;
- transferTableNumber=Number(mesa.numero);
- const dialog=$('#transferModal'),select=$('#transferWaiter'),confirmBtn=$('#confirmTransfer');
- const candidates=activeWaiters.filter(g=>Number(g.id)!==Number(currentWaiterId));
- if(select){
-  select.replaceChildren();
-  const placeholder=document.createElement('option');
-  placeholder.value='';placeholder.textContent=candidates.length?'Escolha o garçom de destino':'Nenhum outro garçom ativo';
-  select.append(placeholder);
-  for(const g of candidates){const option=document.createElement('option');option.value=String(g.id);option.textContent=g.nome;select.append(option);}
-  select.value='';select.disabled=!candidates.length;
- }
- const summary=$('#transferSummary');
- if(summary)summary.textContent='Mesa '+String(mesa.numero).padStart(2,'0')+(mesa.clienteNome?' — '+mesa.clienteNome:'')+'. Responsável atual: '+(mesa.garcomResponsavelNome||'você')+'.';
- if(confirmBtn)confirmBtn.disabled=!candidates.length;
- transferMessage(candidates.length?'':'Não há outro garçom ativo para receber esta mesa. Atualize as mesas e tente novamente.');
- if(dialog&&!dialog.open)dialog.showModal();
-}
-async function transferTable(table,targetId,targetName){
- const number=Number(table);
- if(!Number.isSafeInteger(targetId)||targetId<1){transferMessage('Escolha um garçom ativo para receber a mesa.');return false;}
- const confirmBtn=$('#confirmTransfer');
- if(confirmBtn)confirmBtn.disabled=true;
- transferMessage('Transferindo a mesa '+number+' para '+targetName+'…');
- try{
-   await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/mesas/'+number+'/transferir',{
-     method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({garcomDestinoId:targetId})
-   });
-   await loadMesas();await loadOrderStatuses();await loadDeliveries();
-   const done='Mesa '+number+' transferida para '+targetName+'.';
-   $('#tableMessage').textContent=done;
-   transferMessage(done);
-   const select=$('#transferWaiter');if(select)select.disabled=true;
-   setTimeout(()=>{const dialog=$('#transferModal');if(dialog?.open)dialog.close();},1200);
-   return true;
- }catch(e){
-   const message=e.message||'Não foi possível transferir a mesa.';
-   transferMessage(message);
-   if(e.status===403||e.status===409){try{await loadMesas();}catch{}}
-   return false;
- }finally{
-   if(confirmBtn)confirmBtn.disabled=false;
- }
-}
 function openEditDraft(o){
  editingServerId=null;editingDraftId=o.localId;cart.clear();
  for(const i of o.items){const p=products.find(x=>Number(x.id)===Number(i.productId));if(!p){alert('Produto '+i.name+' indisponível no cardápio salvo. Atualize antes de editar.');editingDraftId=null;return}cart.set(String(p.id),{product:p,qty:Number(i.qty)||1,additions:i.additions||[],removals:i.removals||[],note:i.note||''});}
@@ -1179,8 +1111,6 @@ function buildLiveOrderCard(root,o){
  const tStr=shortTime(o.criadoEm||o.criado_em);
  if(tStr){const tEl=document.createElement('span');tEl.textContent=tStr;meta.append(tEl);}
  const mesaObj=mesas.find(m=>Number(m.numero)===Number(o.mesa));
- const respNome=o.responsavelMesaNome||mesaObj?.garcomResponsavelNome;
- if(respNome){const rEl=document.createElement('span');rEl.textContent='Resp.: '+respNome;meta.append(rEl);}
  main.append(top,meta);
 
  const right=document.createElement('div');right.className='order-summary-right';
@@ -1336,31 +1266,10 @@ function openOrdersModal(table){
  $('#ordersModal').showModal();
  void loadOrderStatuses();
 }
-async function leaveTable(table){
- if(!navigator.onLine){alert('Para deixar a mesa, conecte-se à internet.');return false}
- if(!await window.confirmarQR('Deixar a mesa '+table+'?', 'Você deixará de ser responsável pelo atendimento. A conta do cliente continuará aberta.',{confirmText:'Deixar mesa'}))return false;
- try{
-   await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/mesas/'+table+'/deixar',{method:'POST'});
-   await loadMesas();await loadOrderStatuses();
-   $('#tableMessage').textContent='Você deixou a mesa '+table+'. A conta continua aberta.';
-   return true;
- }catch(e){alert(e.message||'Não foi possível deixar a mesa.');return false}
-}
 $('#closeOrdersModal').addEventListener('click',()=>$('#ordersModal').close());
 $('#ordersModal').addEventListener('close',()=>{selectedOrdersTable=null});
 $('#helpBtn')?.addEventListener('click',()=>{const dialog=$('#helpModal');if(dialog&&!dialog.open)dialog.showModal();});
 $('#closeHelp')?.addEventListener('click',()=>$('#helpModal').close());
-$('#closeTransfer')?.addEventListener('click',()=>$('#transferModal').close());
-$('#cancelTransfer')?.addEventListener('click',()=>{transferMessage('Transferência cancelada. Nenhuma alteração foi enviada ao servidor.');setTimeout(()=>{const dialog=$('#transferModal');if(dialog?.open)dialog.close();},900);});
-$('#confirmTransfer')?.addEventListener('click',()=>{
- const select=$('#transferWaiter');
- const targetId=Number(select?.value);
- const targetName=select?.options[select.selectedIndex]?.textContent||'';
- if(!Number.isSafeInteger(targetId)||targetId<1){transferMessage('Escolha um garçom ativo para receber a mesa.');return;}
- void transferTable(transferTableNumber,Number(targetId),targetName);
-});
-$('#transferModal')?.addEventListener('close',()=>{transferTableNumber=null;transferMessage('');});
-
 for (const modal of document.querySelectorAll('dialog.sheet')) {
   modal.addEventListener('click', event => {
     if (event.target !== modal) return;
