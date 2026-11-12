@@ -989,7 +989,7 @@ async function listarPedidosPorStatus(statuses,setor=null) {
 async function getFilaCozinha(){return listarPedidosPorStatus(['recebido','em_producao'],'cozinha');}
 async function getFilaBar(){return listarPedidosPorStatus(['recebido','em_producao'],'bar');}
 
-/** Fila compartilhada: nunca esconde itens prontos por causa do dono da mesa,
+/** Fila compartilhada: nunca esconde itens prontos por causa de titularidade legada,
  * da origem do pedido ou de uma retirada anterior de outro funcionário. */
 async function getFilaGarcom(garcomId) {
   const id=Number(garcomId);
