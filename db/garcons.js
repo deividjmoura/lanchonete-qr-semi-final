@@ -24,27 +24,8 @@ async function listGarcons() {
   return rows;
 }
 
-// O lock exclusivo do cadastro serializa remoção/desativação com as ações que
-// atribuem mesas ou entregas: elas mantêm FOR SHARE no garçom até o commit.
-// Não travar mesas aqui evita inverter a ordem dos locks de transferência.
-async function verificarResponsabilidades(client, gid, verbo) {
-  const { rows: pendentes } = await client.query(
-    `SELECT COUNT(*)::int AS total
-       FROM itens_pedido ip
-       JOIN pedidos p ON p.id=ip.pedido_id
-       JOIN mesa_sessoes s ON s.id=p.sessao_id
-      WHERE s.status='aberta'
-        AND ((ip.status='aceito' AND ip.aceito_por_id=$1)
-          OR (ip.status='retirado' AND ip.retirado_por_id=$1))`, [gid]
-  );
-  const motivos = [];
-  if (pendentes[0].total) {
-    motivos.push(`há ${pendentes[0].total} item(ns) aceito(s) ou retirado(s). Conclua as entregas ou libere os aceites não retirados`);
-  }
-  if (motivos.length) {
-    throw new ErroGarcom(409, `Não é possível ${verbo}: ${motivos.join('; ')}. Se necessário, reative o garçom para concluir as entregas.`);
-  }
-}
+// Desativar/remover o cadastro não bloqueia a equipe: itens em aberto continuam
+// disponíveis aos demais garçons ativos. A autoria histórica por item permanece.
 
 async function alterarCadastroGarcom(id, { ativo, remover = false, ator = null, requestId = null }) {
   const gid = numeroInteiroPositivo(id, 'id do garçom');
@@ -64,9 +45,6 @@ async function alterarCadastroGarcom(id, { ativo, remover = false, ator = null, 
     );
     const garcom = rows[0];
     if (!garcom || garcom.removido_em) throw new ErroGarcom(404, 'Garçom não encontrado ou já removido');
-    if (remover || (!ativo && garcom.ativo)) {
-      await verificarResponsabilidades(client, gid, remover ? 'remover' : 'desativar');
-    }
     let atualizado;
     if (remover) {
       // Trocar o token invalida o link antigo definitivamente; nenhuma FK muda.
