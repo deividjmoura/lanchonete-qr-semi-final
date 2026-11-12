@@ -181,8 +181,6 @@ export function mapMesas(rows: any[]): Mesa[] {
     numero: Number(m.numero),
     token: String(m.token),
     nome: `Mesa ${String(m.numero).padStart(2, "0")}`,
-    garcomResponsavelId: m.garcomResponsavelId ?? m.garcom_responsavel_id ?? null,
-    garcomResponsavelNome: m.garcomResponsavelNome ?? m.garcom_responsavel_nome ?? null,
     sessaoId: m.sessaoId ?? m.sessao_id ?? null,
   }));
 }
