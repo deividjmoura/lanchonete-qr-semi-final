@@ -51,7 +51,7 @@ async function listarMesasGarcom(token) {
     id: r.id, numero: r.numero,
     // O token QR é uma credencial bearer. Um garçom só recebe o token das
     // mesas sob sua responsabilidade atual, não de todas as mesas do salão.
-    token: Number(r.garcom_responsavel_id) === Number(garcom.id) ? r.token : null,
+    token: r.token,
     sessaoId: r.sessao_id, clienteNome: r.cliente_nome,
     garcomResponsavelId: r.garcom_responsavel_id,
     garcomResponsavelNome: r.garcom_responsavel_nome,
@@ -99,34 +99,24 @@ async function iniciarAtendimentoGarcom(token, numeroBruto, body = {}, requestId
     let criada = false;
     if (sessoes[0]) {
       const sessao = sessoes[0];
-      anterior = sessao.garcom_responsavel_id;
-      if (anterior && Number(anterior) !== Number(garcom.id)) {
-        throw new ErroAtendimento(409, 'Mesa já está sob responsabilidade de outro garçom. Peça ao responsável para transferir.');
-      }
       sessaoId = sessao.id;
       await client.query(
-        'UPDATE mesa_sessoes SET garcom_responsavel_id=$2, cliente_nome=COALESCE($3, cliente_nome) WHERE id=$1',
-        [sessaoId, garcom.id, clienteNome]);
+        'UPDATE mesa_sessoes SET cliente_nome=COALESCE($2, cliente_nome) WHERE id=$1',
+        [sessaoId, clienteNome]);
     } else {
       const { rows: novas } = await client.query(
-        'INSERT INTO mesa_sessoes (mesa_id, cliente_nome, garcom_responsavel_id) VALUES ($1,$2,$3) RETURNING id',
-        [mesa.id, clienteNome, garcom.id]);
+        'INSERT INTO mesa_sessoes (mesa_id, cliente_nome) VALUES ($1,$2) RETURNING id',
+        [mesa.id, clienteNome]);
       sessaoId = novas[0].id;
       criada = true;
     }
     await client.query("UPDATE mesas SET status='ocupada' WHERE id=$1 AND status <> 'ocupada'", [mesa.id]);
-    if (Number(anterior) !== Number(garcom.id)) {
-      await client.query(
-        `INSERT INTO mesa_atendimento_historico
-          (sessao_id,garcom_anterior_id,garcom_novo_id,alterado_por_id)
-         VALUES ($1,$2,$3,$4)`, [sessaoId, anterior, garcom.id, garcom.id]);
-      await registrarEvento(client, {
-        atorTipo: 'garcom', atorId: Number(garcom.id), atorNome: garcom.nome,
-        acao: criada ? 'mesa_iniciada' : 'mesa_assumida',
-        alvoTipo: 'mesa_sessao', alvoId: sessaoId, resultado: 'sucesso', requestId,
-        contexto: { mesa: numero, sessaoId, origem: 'pwa_garcom', sessaoCriada: criada },
-      });
-    }
+    await registrarEvento(client, {
+      atorTipo: 'garcom', atorId: Number(garcom.id), atorNome: garcom.nome,
+      acao: criada ? 'atendimento_iniciado' : 'atendimento_acessado',
+      alvoTipo: 'mesa_sessao', alvoId: sessaoId, resultado: 'sucesso', requestId,
+      contexto: { mesa: numero, sessaoId, origem: 'pwa_garcom', sessaoCriada: criada },
+    });
     await client.query('COMMIT');
     return { mesa: numero, sessaoId, garcom: { id: garcom.id, nome: garcom.nome }, iniciada: true, idempotentReplay: Number(anterior) === Number(garcom.id) };
   } catch (e) {
@@ -186,28 +176,15 @@ async function assumirMesa(token, numeroBruto, body = {}, requestId = null) {
     }
 
     const sessaoId = sessao.id;
-    const anterior = sessao.garcom_responsavel_id;
-    // Iniciar atendimento nunca é uma transferência implícita. Só o responsável
-    // atual pode transferir, usando o endpoint explícito e auditado.
-    if (anterior && Number(anterior) !== Number(garcom.id)) {
-      throw new ErroAtendimento(409, 'Mesa já está sob responsabilidade de outro garçom. Peça ao responsável para transferir.');
-    }
-    await client.query(`
-      UPDATE mesa_sessoes SET garcom_responsavel_id=$2,
-        cliente_nome=COALESCE($3, cliente_nome)
-      WHERE id=$1`, [sessaoId, garcom.id, clienteNome]);
-    if (Number(anterior) !== Number(garcom.id)) {
-      await client.query(`
-        INSERT INTO mesa_atendimento_historico
-          (sessao_id,garcom_anterior_id,garcom_novo_id,alterado_por_id)
-        VALUES ($1,$2,$3,$4)`, [sessaoId, anterior, garcom.id, garcom.id]);
-      await registrarEvento(client, {
-        atorTipo: 'garcom', atorId: Number(garcom.id), atorNome: garcom.nome,
-        acao: 'mesa_assumida', alvoTipo: 'mesa_sessao', alvoId: sessaoId,
-        resultado: 'sucesso', requestId,
-        contexto: { mesa: numero, sessaoId, pedidoClienteId: Number(pedidosCliente[0].id) },
-      });
-    }
+    await client.query(
+      'UPDATE mesa_sessoes SET cliente_nome=COALESCE($2, cliente_nome) WHERE id=$1',
+      [sessaoId, clienteNome]);
+    await registrarEvento(client, {
+      atorTipo: 'garcom', atorId: Number(garcom.id), atorNome: garcom.nome,
+      acao: 'pedido_qr_assumido', alvoTipo: 'mesa_sessao', alvoId: sessaoId,
+      resultado: 'sucesso', requestId,
+      contexto: { mesa: numero, sessaoId, pedidoClienteId: Number(pedidosCliente[0].id) },
+    });
     await client.query('COMMIT');
     return { mesa: numero, mesaToken: mesa.token, sessaoId,
       garcom: { id: garcom.id, nome: garcom.nome }, transferida: false };
@@ -327,9 +304,7 @@ async function resumoPagamentoSessao(token, sessaoIdBruto) {
     const sessao = rows[0];
     if (!sessao) throw new ErroAtendimento(404, 'Sessão não encontrada');
     if (sessao.status !== 'aberta') throw new ErroAtendimento(409, 'Sessão já está fechada');
-    if (Number(sessao.garcom_responsavel_id) !== Number(garcom.id)) {
-      throw new ErroAtendimento(403, 'Somente o garçom responsável atual pode consultar a cobrança desta mesa');
-    }
+
 
     const valorTotal = await totalEntregueDaSessao(client, sessaoId);
     const valorPago = await totalPagoDaSessao(client, sessaoId);
@@ -371,15 +346,15 @@ async function deixarMesa(token, numeroBruto, requestId = null) {
     await client.query('BEGIN');
     const {rows:mesas}=await client.query('SELECT id FROM mesas WHERE numero=$1 FOR UPDATE',[numero]);
     if(!mesas.length)throw new ErroAtendimento(404,'Mesa não encontrada');
-    const {rows:sessoes}=await client.query("SELECT id,garcom_responsavel_id FROM mesa_sessoes WHERE mesa_id=$1 AND status='aberta' FOR UPDATE",[mesas[0].id]);
-    if(!sessoes.length||sessoes[0].garcom_responsavel_id!==garcom.id)throw new ErroAtendimento(409,'Esta mesa não está atribuída a você');
+    const {rows:sessoes}=await client.query("SELECT id FROM mesa_sessoes WHERE mesa_id=$1 AND status='aberta' FOR UPDATE",[mesas[0].id]);
+    if(!sessoes.length)throw new ErroAtendimento(409,'Não há atendimento aberto nesta mesa');
     // Não deixar pedidos em preparo ou prontos sem responsável.
     const {rows:pendentes}=await client.query(`
       SELECT COUNT(*)::int AS total FROM pedidos p
       JOIN itens_pedido ip ON ip.pedido_id=p.id
       WHERE p.sessao_id=$1 AND COALESCE(ip.status,'recebido') NOT IN ('entregue','cancelado')`,[sessoes[0].id]);
     if(pendentes[0].total>0)throw new ErroAtendimento(409,'Existem itens ainda não entregues. Entregue-os ou transfira a mesa para outro garçom antes de deixá-la.');
-    await client.query('UPDATE mesa_sessoes SET garcom_responsavel_id=NULL WHERE id=$1',[sessoes[0].id]);
+
     await registrarEvento(client, {
       atorTipo: 'garcom', atorId: Number(garcom.id), atorNome: garcom.nome,
       acao: 'mesa_liberada', alvoTipo: 'mesa_sessao', alvoId: sessoes[0].id,
@@ -403,7 +378,7 @@ async function criarPedidoGarcom(token, numeroBruto, body, requestId=null) {
   // assumir/transferir é uma ação separada e nunca deve ocorrer implicitamente.
   const { rows: atribuidas } = await pool.query(
     `SELECT s.id FROM mesa_sessoes s JOIN mesas m ON m.id=s.mesa_id
-      WHERE m.numero=$1 AND s.status='aberta' AND s.garcom_responsavel_id IS NOT NULL`,
+      WHERE m.numero=$1 AND s.status='aberta'`,
     [numero]
   );
   // Replay tardio: o celular pode reenviar um pedido já gravado depois de a
@@ -414,7 +389,7 @@ async function criarPedidoGarcom(token, numeroBruto, body, requestId=null) {
   // ainda é recusado lá dentro (a sessão criada é desfeita no rollback).
   const temChave = Boolean(body && typeof body === 'object' && (body.idempotencyKey || body.idempotency_key));
   if (!atribuidas[0] && !temChave) {
-    throw new ErroAtendimento(409, 'A mesa precisa ter um atendimento aberto com garçom responsável');
+    throw new ErroAtendimento(409, 'A mesa precisa ter um atendimento aberto');
   }
   const { criarPedido } = require('./pedidos');
   return criarPedido(mesas[0].token, body, {
@@ -443,7 +418,6 @@ async function listarPedidosAtivosMesa(token, numeroBruto) {
       LEFT JOIN itens_pedido ip ON ip.pedido_id=p.id
       LEFT JOIN produtos pr ON pr.id=ip.produto_id
      WHERE m.numero=$1
-       AND s.garcom_responsavel_id IS NOT NULL
        AND p.status NOT IN ('entregue','cancelado')
      GROUP BY p.id
      ORDER BY p.criado_em DESC
@@ -477,15 +451,13 @@ async function listarAtendimentosGarcom(token) {
     LEFT JOIN itens_pedido ip ON ip.pedido_id=p.id LEFT JOIN produtos pr ON pr.id=ip.produto_id
     LEFT JOIN garcons ga ON ga.id=ip.aceito_por_id LEFT JOIN garcons gret ON gret.id=ip.retirado_por_id
     LEFT JOIN garcons ge ON ge.id=ip.entregue_por_id
-    WHERE s.status='aberta' AND (s.garcom_responsavel_id=$1 OR EXISTS (
-      SELECT 1 FROM itens_pedido mine WHERE mine.pedido_id=p.id AND (mine.aceito_por_id=$1 OR mine.retirado_por_id=$1)
-    ))
+    WHERE s.status='aberta'
     GROUP BY p.id,m.numero,s.id,gr.nome ORDER BY p.criado_em DESC LIMIT 250`,[garcom.id]);
   return rows.map(x=>({id:x.id,mesa:x.mesa,sessaoId:x.sessao_id,status:x.status,
     garcomResponsavelId:x.garcom_responsavel_id,garcomResponsavelNome:x.garcom_responsavel_nome,
     pedidoPaiId:x.pedido_pai_id||null,criadoEm:x.criado_em,editadoEm:x.editado_em,clienteNome:x.cliente_nome,
     note:x.observacao_geral,itens:x.itens,
-    podeEditar:Number(x.garcom_responsavel_id)===Number(garcom.id)&&x.status==='recebido'&&x.itens.every(i=>i.status==='recebido')}));
+    podeEditar:x.status==='recebido'&&x.itens.every(i=>i.status==='recebido')}));
 }
 
 async function editarPedidoGarcom(token,pedidoId,body,requestId=null){
