@@ -93,8 +93,8 @@ Garantias implementadas e cobertas por teste:
 - **Envio interrompido.** Registro deixado em `sync` por queda do app volta para
   `offline` no boot, com a mesma chave — o replay é seguro.
 - **Conflito nunca é descartado.** 4xx preserva o pedido, o conteúdo original e o
-  motivo. **Revisar conflito** permite reenviar o original ou, no caso de mesa
-  com outro responsável, confirmar o envio como colaborador.
+  motivo. **Revisar conflito** permite reenviar o original; a sessão aberta é
+  compartilhada e não gera conflito por ter sido iniciada por outro garçom.
 - **Isolamento por garçom.** A fila é filtrada pelo token dono; trocar de link no
   mesmo aparelho não mistura nem expõe pedidos de outro garçom.
 - **Exportar pendências** gera JSON sem o token, para recuperação assistida.
@@ -122,7 +122,7 @@ O rodapé tem exatamente **duas abas**: **Mesas** e **Entregas**. As antigas aba
 |---|---|
 | Pedidos do aparelho (rascunhos offline, fila de sincronização, conflitos, exportar JSON) | atalho **Pedidos do aparelho**, no topo da aba Mesas; a página abre com **← Voltar para mesas** |
 | Ver pedidos de uma mesa | detalhe da mesa → **Ver pedidos** |
-| Novo pedido / acrescentar itens | aba Mesas (botão do topo) e detalhe da mesa → **Novo pedido** |
+| Novo pedido / acrescentar itens | detalhe da mesa → **Novo pedido** |
 | Recebimento parcial e sua idempotência | detalhe da mesa → **Fechar conta**, que abre a página de cobrança (também com **← Voltar para mesas**) |
 | Fechamento total da comanda e liberação da mesa | **Caixa** — o fluxo financeiro continua sendo o do servidor (`db/caixa.js`); a PWA não fecha conta por conta própria |
 
@@ -132,18 +132,18 @@ O rodapé tem exatamente **duas abas**: **Mesas** e **Entregas**. As antigas aba
   número (aceita vírgula) e por nome do cliente apenas **filtra** a grade, assim
   como o seletor de **praça** — que é populado a partir das mesmas praças
   cadastradas pelo admin (`mesa_pracas`), sem um segundo cadastro.
-- Cada card mostra número, praça, **estado escrito por extenso** e responsável.
+- Cada card mostra número, praça e **estado escrito por extenso**.
   A legenda acima da grade repete os estados, portanto a cor nunca é o único
   sinal. As cores usam as superfícies de status do design system (informativo
   para "Aguardando pedido", atenção para "Em atendimento"), com destaque sutil.
-- A grade usa 1, 2, 3 ou 4 colunas conforme a largura real do aparelho, sem
+- A grade usa quatro colunas no celular e pode usar cinco em telas largas, sem
   rolagem horizontal.
 
 ### Estados e tempo de atendimento
 
 - **Livre** — mesa sem sessão aberta.
 - **Aguardando pedido** — sessão aberta sem nenhum pedido válido (pedido
-  cancelado não conta). O vínculo com o garçom responsável é preservado.
+  cancelado não conta). A sessão permanece compartilhada pela equipe.
 - **Em atendimento** — existe pelo menos um pedido válido na sessão.
 
 O tempo exibido é contado **a partir do primeiro pedido válido**
@@ -235,7 +235,7 @@ desabilitar:
 | --- | --- |
 | Nenhum item entregue | aponta a aba Entregas para confirmar as entregas |
 | Conta já quitada | informa os valores e que o fechamento é no Caixa |
-| Mesa de outro responsável | pede transferência ou uso do Caixa |
+| Sessão aberta por outro garçom | não bloqueia: qualquer garçom ativo pode continuar o atendimento |
 | Sem conexão | explica que o saldo precisa do servidor |
 | Tentativa pendente de outra mesa | manda resolver a pendência primeiro |
 | Perfil do garçom não carregado | pede reconexão |
