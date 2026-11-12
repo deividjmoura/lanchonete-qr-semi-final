@@ -402,10 +402,8 @@ export const api = {
 
   metricasGarcons: (from?: string, to?: string) =>
     apiGet<{ periodo: { from: string; to: string; timezone: string }; criterio: string; garcons: Array<{
-      id: number; nome: string; ativo: boolean; removido: boolean; atendimentos: number;
-      vendas: number; vendasBrutas: number; taxaServico: number; descontos: number; totalCobrado: number;
-      ticketMedio: number; pedidosRegistrados: number; pedidosComEntregaRegistrada: number;
-      mesasAssumidas: number; transferenciasRecebidas: number; transferenciasRealizadas: number;
+      id: number; nome: string; ativo: boolean; removido: boolean;
+      pedidosRegistrados: number; pedidosComEntregaRegistrada: number; valorItensEntregues: number;
       itensAssumidos: number; itensRetirados: number; itensEntregues: number;
       outrosEventos: Array<{ acao: string; quantidade: number }>;
     }> }>(
