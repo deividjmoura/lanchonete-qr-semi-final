@@ -874,8 +874,8 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 }
 
 .table-tile-praca,
-.table-tile-resp { display: none;
-
+.table-tile-resp {
+  display: none;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
