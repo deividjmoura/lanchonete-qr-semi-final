@@ -1,4 +1,5 @@
 import { openOfflineDb, OfflineStore, SyncEngine, probeBackend, uid } from './offline.js';
+import { iniciarAvisoDeAtualizacao, sinalizarShellAtualizado } from './atualizacao.js';
 
 const $=s=>document.querySelector(s);
 const money=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(n)||0);
@@ -448,7 +449,17 @@ $('#showQr')?.addEventListener('click',()=>openQr(Number($('#tableSelect').value
 $('#exportPending')?.addEventListener('click',exportPending);
 $('#copyQr').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('#qrUrl').value);$('#copyQr').textContent='Endereço copiado';setTimeout(()=>$('#copyQr').textContent='Copiar endereço',1500)}catch{$('#qrUrl').select();document.execCommand('copy')}});
 let swReg=null;
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(r=>{swReg=r;}).catch(e=>console.warn('[garcom-pwa] Service Worker indisponível:',e.message));
+let shellAtualizado=false;
+if('serviceWorker'in navigator){
+ navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(r=>{swReg=r;}).catch(e=>console.warn('[garcom-pwa] Service Worker indisponível:',e.message));
+ /* O service worker novo assumiu o controle, mas esta página continua rodando
+    o JavaScript antigo. É exatamente o "atualizou e nada mudou" que o garçom
+    relatava: agora isso vira o aviso de nova versão (#301). */
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{
+   shellAtualizado=true;
+   try{sinalizarShellAtualizado();}catch(e){console.warn('[garcom-pwa] aviso de versão:',e.message);}
+ });
+}
 window.addEventListener('online',()=>{void swReg?.update().catch(()=>{});void syncEngine?.flush();void refreshLiveData();});
 window.addEventListener('offline',()=>setConnection('offline'));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){void swReg?.update().catch(()=>{});void syncEngine?.flush();void refreshLiveData();}});
@@ -470,6 +481,15 @@ async function boot(){
  if(waiterToken&&window.LQRRealtime){realtimeOff=window.LQRRealtime.connect(()=>{void refreshLiveData();void syncEngine?.flush();},{garcom:waiterToken,fallbackMs:20000,debounceMs:200}).close;}
 }
 void boot();
+/* Aviso de versão: independente do boot e do token. Se falhar, o atendimento
+   segue igual — a função nunca lança para fora. */
+async function contarPedidosPendentes(){
+ try{const lista=await allOrders();return lista.filter(o=>o.status!=='confirmed').length}catch{return 0}
+}
+let pendentesCache=0;
+setInterval(()=>{void contarPedidosPendentes().then(n=>{pendentesCache=n;}).catch(()=>{})},10000);
+void contarPedidosPendentes().then(n=>{pendentesCache=n;}).catch(()=>{});
+iniciarAvisoDeAtualizacao({aoContarPendentes:()=>pendentesCache,shellAtualizado}).catch(e=>console.warn('[garcom-pwa] aviso de versão:',e.message));
 const installBtn=$('#installAppBtn');
 const isStandalone=()=>window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 function refreshInstallState(){

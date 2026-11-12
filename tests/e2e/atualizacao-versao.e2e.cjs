@@ -118,6 +118,11 @@ async function main() {
     const aviso = page.locator(SELETOR_AVISO);
     await aviso.waitFor({ timeout: 15_000 });
     assert.match(await aviso.innerText(), /Nova versão disponível/);
+    /* O bloco de novidades só aparece quando há nota POSTERIOR à versão que a
+       aba executa (`package.json` do build). Um deploy sem bump de versão — que
+       é o caso de um ajuste pequeno — mostra o banner sem lista, e isso é
+       correto: melhor não anunciar novidade que não foi registrada. A tela
+       `#/novidades` (passo 7) é quem sempre mostra o histórico. */
     assert.equal(await aviso.getByRole('button', { name: 'Atualizar agora' }).count(), 1);
     assert.equal(await aviso.getByRole('button', { name: 'Continuar por enquanto' }).count(), 1);
 
@@ -170,7 +175,21 @@ async function main() {
     assert.equal(await outraAba.locator(SELETOR_AVISO).count(), 0, 'adiar em uma aba precisa dispensar nas outras');
     await outraAba.close();
 
-    console.log('✓ #301: aviso de nova versão validado em Chromium real (bundle do dist/)');
+    // 7) A tela de novidades (#/novidades) lista o changelog e é acessível a
+    // qualquer pessoa logada, sem sair do fluxo de trabalho.
+    // A navegação pelo rodapé só existe quando há novidade registrada; ir direto
+    // pela rota garante que a TELA é validada em qualquer deploy.
+    await page.evaluate(() => { location.hash = '#/novidades'; });
+    await page.waitForFunction(() => location.hash === '#/novidades', null, { timeout: 15_000 });
+    await page.getByRole('heading', { name: 'O que mudou' }).waitFor({ timeout: 20_000 });
+    const textoNovidades = await page.locator('main').innerText();
+    assert.match(textoNovidades, /Como funciona o aviso de atualização/);
+    assert.match(textoNovidades, /v\d+\.\d+\.\d+/, 'as notas mostram a versão legível');
+    // O changelog publicado é lido de public/novidades.json: a entrega que
+    // corrigiu o aviso precisa estar registrada para o operador.
+    assert.match(textoNovidades, /aviso de atualiza/i, 'sem changelog, o operador não sabe o que mudou');
+
+    console.log('✓ #301: aviso de nova versão e changelog validados em Chromium real (bundle do dist/)');
   } finally {
     await browser.close();
   }

@@ -4,7 +4,9 @@
  * Nenhuma rotina apaga pedidos pendentes; replay usa a mesma chave e payload.
  */
 export const DB_NAME = 'garcom-pwa-v1';
-export const DB_VERSION = 2;
+/* v2 → v3 (#301): só nasce a store `meta` de versão do shell. A store de
+   pedidos e a de leases não são tocadas — a fila offline continua intacta. */
+export const DB_VERSION = 3;
 export const ORDER_STORE = 'orders';
 export const META_STORE = 'meta';
 export const LEASE_STORE = 'leases';
