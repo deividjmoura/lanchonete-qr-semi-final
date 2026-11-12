@@ -8,7 +8,7 @@
 - Base inicial: `main` no commit `9c64d00aa535dcb830573e852a5b0e828f2d3631`
 - A branch foi criada sem alterar `main`.
 
-## Achados confirmados no código da main
+## Achados da auditoria inicial (antes da implementação)
 
 ### 1. Backend de atendimento — `db/atendimento.js`
 
@@ -61,7 +61,7 @@ A interface deverá ser simplificada para colaboração por equipe, sem remover 
 - `tests/garcom-responsavel-mesa.test.cjs` valida comportamento antigo de transferência e atribuição automática; deverá ser refeito para validar colaboração.
 - Outros testes relevantes identificados: `tests/garcom-operacao-integrada.test.cjs`, `tests/garcom-situacoes.test.cjs`, `tests/postgres-garcom-servico.test.cjs`, `tests/postgres-waiter-integration.test.cjs`, `tests/postgres-entregas-progressivas.test.cjs`, `tests/pwa-garcom-operacao.test.cjs` e testes de dashboard/mesas.
 
-## Direção de implementação
+## Direção definida para a implementação
 
 1. Remover titularidade como pré-requisito para abrir/usar sessão, lançar e editar pedidos, consultar cobrança e executar operações autorizadas.
 2. Manter autenticação de cada garçom e autorização por função/ação.
@@ -104,3 +104,27 @@ Nenhum teste foi declarado como executado nesta etapa. Nenhuma alteração foi f
 - Removido o botão redundante **Novo pedido** do cabeçalho da tela Mesas, junto com seu listener. A criação de pedido continua pelo detalhe da mesa, evitando duas entradas para a mesma ação.
 - Grade do salão alterada para **quatro mesas por linha em telas de celular**, com cartões compactos e número/estado preservados; em telas largas, a grade pode usar cinco colunas.
 - Teste E2E atualizado para verificar quatro colunas em viewports móveis e a ausência do atalho removido. A suíte ainda precisa ser executada.
+
+
+## Estado atualizado da implementação — 12/11/2026
+
+### Concluído na branch
+
+- Abertura/acesso à sessão sem gravar garçom titular; sessões abertas podem ser acessadas por qualquer garçom ativo.
+- Token QR da mesa disponível a todos os garçons autenticados e ativos.
+- Removidos os métodos e endpoints operacionais de transferência e liberação de mesa.
+- PWA atualizado: sem botão/modal de transferência ou “Deixar mesa”, sem rótulo de responsável fixo e sem consulta de lista de garçons para transferir.
+- Comanda do cliente e modal de mesas ocupadas não exibem um único garçom como responsável pela mesa.
+- Criação/edição de pedido, fila, retirada, entrega e cobrança não dependem de titularidade da sessão.
+- Entrega não atualiza mais um garçom titular no pedido inteiro; cada etapa permanece registrada nos campos de autoria do item.
+- Desativação/remoção de garçom não é bloqueada por mesa aberta ou item pendente; outro garçom ativo pode continuar o atendimento. Os IDs históricos permanecem preservados.
+- Indicadores administrativos foram ajustados para mostrar pedidos registrados, pedidos com entrega, itens aceitos/retirados/entregues e valor dos itens entregues. Taxa e descontos da conta não são rateados por titularidade.
+- Atualizados contrato, guia do PWA, modal do dashboard e testes relacionados. Cache do Service Worker avançou para `garcom-pwa-shell-v45`.
+
+### Validação ainda pendente
+
+- Executar a suíte Node, os testes de integração PostgreSQL, typecheck e build. O clone local não foi possível nesta sessão porque o ambiente não conseguiu resolver `github.com`; portanto, nenhum teste foi declarado como executado.
+- Revisar os resultados da CI em uma PR antes de considerar a entrega pronta.
+- Verificar eventuais usos remanescentes de campos legados fora do fluxo operacional. Colunas e registros antigos não foram removidos nem migrados destrutivamente.
+
+A branch continua isolada. Não houve alteração na `main`, merge ou deploy.
