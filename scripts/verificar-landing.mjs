@@ -67,7 +67,10 @@ const esperarTexto = async (alvo, texto, timeout = 6000) => {
 };
 
 try {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const context = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    reducedMotion: "no-preference",
+  });
   const page = await context.newPage();
   const erros = [];
   page.on("pageerror", (e) => erros.push(e.message));
@@ -118,37 +121,104 @@ try {
     "a landing inteira usa uma única família tipográfica (" + familias.join(", ") + ")",
   );
 
-  /* --- 2. Capturas reais carregadas --------------------------------------- */
-  const capturas = await page.evaluate(() =>
-    [...document.querySelectorAll(".hero-art img")].map((img) => ({
-      src: img.getAttribute("src"),
-      completa: img.complete,
-      largura: img.naturalWidth,
-      alt: img.getAttribute("alt"),
-    })),
-  );
-  assert(capturas.length === 2, "hero mostra duas capturas reais do sistema (painel e garçom)");
+  /* --- 2. Hero estático: poster real, crops aprovados e sem vídeo ----------- */
+  const heroMedia = await page.evaluate(() => {
+    const img = document.querySelector(".hero__poster-image");
+    const sourceMobile = document.querySelector(".hero__poster source");
+    return {
+      poster: img?.getAttribute("src"),
+      atual: img?.currentSrc,
+      posterCarregado: Boolean(img?.complete && img?.naturalWidth > 0),
+      posterLargura: img?.naturalWidth,
+      posterAltura: img?.naturalHeight,
+      posterAlt: img?.getAttribute("alt"),
+      posterMobile: sourceMobile?.getAttribute("srcset"),
+      posterMobileMedia: sourceMobile?.getAttribute("media"),
+      videos: document.querySelectorAll(".hero video").length,
+      legenda: document.querySelector(".hero__media-caption")?.textContent.trim(),
+    };
+  });
+  assert(heroMedia.poster === "/assets/landing/hero-poster-desktop.webp", "hero usa o poster desktop do crop aprovado");
   assert(
-    capturas.every((c) => (c.alt || "").length > 20),
-    "capturas do hero têm texto alternativo descritivo",
+    heroMedia.posterCarregado && heroMedia.posterLargura === 1280 && heroMedia.posterAltura === 720,
+    "poster desktop real carrega no crop 1280 × 720",
   );
-  for (const c of capturas) {
-    assert(c.completa && c.largura > 0, "captura carregada: " + c.src);
+  assert(heroMedia.posterAlt === "", "poster decorativo não repete o texto do hero");
+  assert(
+    heroMedia.posterMobile === "/assets/landing/hero-poster-mobile.webp" &&
+      heroMedia.posterMobileMedia === "(max-width: 767px)",
+    "hero troca para o poster quadrado aprovado em telas pequenas",
+  );
+  assert(heroMedia.videos === 0, "hero é estática e não baixa fontes de vídeo");
+  assert(heroMedia.legenda === "Cena ilustrativa", "hero identifica a imagem como ilustrativa");
+  const recursosHero = await page.evaluate(async () =>
+    Promise.all(
+      [
+        "/assets/landing/hero-poster-desktop.webp",
+        "/assets/landing/hero-poster-mobile.webp",
+      ].map(async (url) => {
+        const resposta = await fetch(url, { method: "HEAD" });
+        return {
+          url,
+          status: resposta.status,
+          type: resposta.headers.get("content-type"),
+          bytes: Number(resposta.headers.get("content-length") || 0),
+        };
+      }),
+    ),
+  );
+  for (const recurso of recursosHero) {
+    assert(
+      recurso.status === 200 && recurso.type === "image/webp" && recurso.bytes > 0 && recurso.bytes < 100_000,
+      "poster do hero é WebP com menos de 100 kB: " + recurso.url,
+    );
   }
+  const paginaMovimentoReduzido = await context.newPage();
+  await paginaMovimentoReduzido.emulateMedia({ reducedMotion: "reduce" });
+  await paginaMovimentoReduzido.goto(BASE + "/", { waitUntil: "networkidle" });
+  const posterMovimentoReduzido = await paginaMovimentoReduzido.evaluate(() => ({
+    media: matchMedia("(prefers-reduced-motion: reduce)").matches,
+    poster: document.querySelector(".hero__poster-image")?.currentSrc,
+    video: document.querySelectorAll(".hero video").length,
+  }));
   assert(
-    capturas.every((c) => /^\/assets\/apresentacao\/.+\.webp$/.test(c.src || "")),
-    "capturas vêm de /assets/apresentacao",
+    posterMovimentoReduzido.media && posterMovimentoReduzido.video === 0 &&
+      posterMovimentoReduzido.poster.endsWith("hero-poster-desktop.webp"),
+    "prefers-reduced-motion mantém o hero estático sem vídeo",
   );
 
   /* --- 3. Responsividade -------------------------------------------------- */
   for (const largura of [1440, 768, 390, 320]) {
     await page.setViewportSize({ width: largura, height: 900 });
-    await page.waitForTimeout(140);
-    const m = await page.evaluate(() => ({
-      scroll: document.documentElement.scrollWidth,
-      inner: window.innerWidth,
-    }));
+    const nomePoster = largura <= 767 ? "hero-poster-mobile.webp" : "hero-poster-desktop.webp";
+    await page.waitForFunction(
+      (nome) => {
+        const img = document.querySelector(".hero__poster-image");
+        return img?.complete && img.currentSrc.endsWith(nome);
+      },
+      nomePoster,
+    );
+    const m = await page.evaluate(() => {
+      const img = document.querySelector(".hero__poster-image");
+      const media = document.querySelector(".hero__media").getBoundingClientRect();
+      return {
+        scroll: document.documentElement.scrollWidth,
+        inner: window.innerWidth,
+        poster: img?.currentSrc || "",
+        posterLargura: img?.naturalWidth,
+        posterAltura: img?.naturalHeight,
+        mediaLargura: media.width,
+        mediaAltura: media.height,
+      };
+    });
     assert(m.scroll <= m.inner + 1, `${largura}px sem overflow horizontal (${m.scroll}/${m.inner})`);
+    assert(m.poster.endsWith(nomePoster), `${largura}px escolhe a imagem do crop correspondente`);
+    if (largura <= 767) {
+      assert(
+        m.posterLargura === 540 && m.posterAltura === 540 && Math.abs(m.mediaLargura - m.mediaAltura) < 1,
+        `${largura}px exibe o crop mobile quadrado sem recorte adicional`,
+      );
+    }
     if (screenshots) {
       fs.mkdirSync(OUT, { recursive: true });
       await page.screenshot({ path: path.join(OUT, `landing-${largura}.png`), fullPage: true });
@@ -286,6 +356,41 @@ try {
       `${rotulo} rola até ${alvo} (topo=${Math.round(estado.topo)}, scroll=${Math.round(estado.rolado)})`,
     );
     assert(estado.hash === "" && estado.path === "/", `${rotulo} não troca a rota do SPA`);
+    if (rotulo === "Módulos") {
+      const grade = await page.evaluate(() => {
+        const cartoes = [...document.querySelectorAll(".modulos__cartao")];
+        return {
+          quantidade: cartoes.length,
+          tabs: document.querySelectorAll('#funcionalidades [role="tablist"], #funcionalidades [role="tab"]').length,
+          cartoes: cartoes.map((cartao) => {
+            const imagem = cartao.querySelector(".modulos__captura-imagem");
+            return {
+              titulo: cartao.querySelector("h3")?.textContent?.trim(),
+              visivel: getComputedStyle(cartao).display !== "none",
+              src: imagem?.getAttribute("src"),
+              alt: imagem?.getAttribute("alt"),
+              recursos: cartao.querySelectorAll(".modulos__lista li").length,
+            };
+          }),
+          nota: document.querySelector(".modulos__nota")?.textContent?.toLowerCase(),
+        };
+      });
+      assert(grade.quantidade === 4, "grade mantém os quatro módulos visíveis");
+      assert(grade.tabs === 0, "módulos não usam abas nem conteúdo oculto por seleção");
+      assert(
+        grade.cartoes.every((cartao) => cartao.visivel && (cartao.titulo || "").length > 4 && cartao.recursos === 3),
+        "cada cartão mostra título e três recursos sem interação",
+      );
+      assert(
+        grade.cartoes.every((cartao) => /^\/assets\/apresentacao\/.+\.webp$/.test(cartao.src || "") && (cartao.alt || "").length > 20),
+        "cada módulo mostra uma captura real com texto alternativo descritivo",
+      );
+      assert(
+        grade.nota?.includes("manual") && grade.nota.includes("aplicativo bancário") &&
+          grade.nota.includes("dependem do navegador") && grade.nota.includes("dispositivo"),
+        "módulos preservam ressalvas sobre conferência de PIX e avisos por voz",
+      );
+    }
   }
 
   /* --- 5. Páginas institucionais continuam acessíveis --------------------- */
