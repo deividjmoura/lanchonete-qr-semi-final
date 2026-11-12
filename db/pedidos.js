@@ -481,7 +481,7 @@ async function criarPedido(token, body, atendimento = null, requestId = null) {
  * auditoria. Repetir a chamada é replay idempotente: devolve o mesmo resultado
  * sem restaurar estoque de novo nem gravar evento duplicado.
  */
-async function cancelarPedidoCliente(token,pedidoId,garcomResponsavelId=null,opcoes={}) {
+async function cancelarPedidoCliente(token,pedidoId,garcomId=null,opcoes={}) {
   const id=Number(pedidoId);
   if(!Number.isSafeInteger(id)||id<1)throw new ErroPedido(400,'Pedido inválido');
   const client=await pool.connect();
@@ -497,7 +497,7 @@ async function cancelarPedidoCliente(token,pedidoId,garcomResponsavelId=null,opc
     }
     if(ctx.itens.some(i=>i.status!=='recebido'))throw new ErroPedido(409,'Só é possível cancelar o pedido inteiro antes do preparo; solicite cancelamento por item à equipe');
     const motivo=String(opcoes.motivo||'Cancelado antes do preparo').trim().slice(0,300);
-    const ator=garcomResponsavelId?{tipo:'garcom',id:Number(garcomResponsavelId)}:{tipo:'cliente_mesa',id:Number(mesa.id)};
+    const ator=garcomId?{tipo:'garcom',id:Number(garcomId)}:{tipo:'cliente_mesa',id:Number(mesa.id)};
     const restaurou=await restaurarEstoqueDoPedido(client,id);
     for(const item of ctx.itens)await gravarStatusItem(client,item,'cancelado',ator,opcoes.requestId||null,motivo);
     const pedido=await sincronizarStatusPedido(client,id);
@@ -510,7 +510,7 @@ async function cancelarPedidoCliente(token,pedidoId,garcomResponsavelId=null,opc
 }
 
 /** Cliente edita itens do pedido só enquanto status = recebido. Marca editado_em. */
-async function editarPedidoCliente(token, pedidoId, body, garcomResponsavelId = null, requestId = null) {
+async function editarPedidoCliente(token, pedidoId, body, garcomId = null, requestId = null) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new ErroPedido(400, 'Dados do pedido inválidos');
   }
@@ -573,7 +573,7 @@ async function editarPedidoCliente(token, pedidoId, body, garcomResponsavelId = 
 
     const { itensGravados, total, mudouDisponibilidade } = await gravarItensPedido(
       client, pedido.id, itensInput,
-      garcomResponsavelId?{tipo:'garcom',id:garcomResponsavelId}:{tipo:'cliente_mesa',id:mesa.id},requestId
+      garcomId?{tipo:'garcom',id:garcomId}:{tipo:'cliente_mesa',id:mesa.id},requestId
     );
 
     const { rows: updated } = await client.query(
@@ -586,10 +586,10 @@ async function editarPedidoCliente(token, pedidoId, body, garcomResponsavelId = 
     );
 
     let atorNomeEdicao = null;
-    if (garcomResponsavelId) {
+    if (garcomId) {
       const { rows: atores } = await client.query(
         'SELECT id, nome, ativo FROM garcons WHERE id=$1 FOR SHARE',
-        [garcomResponsavelId]
+        [garcomId]
       );
       if (!atores[0]?.ativo) throw new ErroPedido(401, 'Link do garçom inválido ou desativado');
       atorNomeEdicao = atores[0].nome || null;
@@ -598,8 +598,8 @@ async function editarPedidoCliente(token, pedidoId, body, garcomResponsavelId = 
     // item_status abaixo preservam cada linha, mas não substituem a ação
     // explícita de edição (totais/quantidades antes e depois).
     await registrarEvento(client, {
-      atorTipo: garcomResponsavelId ? 'garcom' : 'cliente_mesa',
-      atorId: garcomResponsavelId ? Number(garcomResponsavelId) : Number(mesa.id),
+      atorTipo: garcomId ? 'garcom' : 'cliente_mesa',
+      atorId: garcomId ? Number(garcomId) : Number(mesa.id),
       atorNome: atorNomeEdicao,
       acao: 'pedido_editado',
       alvoTipo: 'pedido',
@@ -609,7 +609,7 @@ async function editarPedidoCliente(token, pedidoId, body, garcomResponsavelId = 
       contexto: {
         sessaoId: Number(pedido.sessao_id),
         mesa: mesa.numero,
-        origem: garcomResponsavelId ? 'pwa_garcom' : 'qr_cliente',
+        origem: garcomId ? 'pwa_garcom' : 'qr_cliente',
         totalAnterior,
         totalNovo: total,
         itensAnteriores: quantidadeAnterior,
