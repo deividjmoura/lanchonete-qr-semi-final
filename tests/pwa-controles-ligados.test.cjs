@@ -60,7 +60,8 @@ test('navegação inferior chama switchTab para cada aba', () => {
 });
 
 test('abrir pedido e fechar folhas modais estão ligados', () => {
-  assert.match(app, /\$\('#newOrderTables'\)\?\.addEventListener\('click',\s*\(\)\s*=>\s*openOrder\(\)\)/);
+  assert.doesNotMatch(app, /\$\('#newOrderTables'\)/, 'atalho global removido da aba Mesas');
+  assert.match(app, /openOrder\(m\.numero\)/, 'novo pedido continua acessível no detalhe da mesa');
   assert.match(app, /\$\('#newOrderOrders'\)\?\.addEventListener\('click',\s*\(\)\s*=>\s*openOrder\(\)\)/);
   assert.match(app, /\$\('#closeOrder'\)\?\.addEventListener\('click',\s*\(\)\s*=>\s*\$\('#orderModal'\)\.close\(\)\)/);
   assert.match(app, /\$\('#closeQr'\)\?\.addEventListener\('click',\s*\(\)\s*=>\s*\$\('#qrModal'\)\.close\(\)\)/);
