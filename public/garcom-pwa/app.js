@@ -66,7 +66,6 @@ async function loadMesas(){
  mesas=Array.isArray(data.mesas)?data.mesas:[];
  if(offlineStore)await offlineStore.setMeta('mesas',{garcom:data.garcom,mesas});
  tables.splice(0,tables.length,...mesas.map(x=>Number(x.numero)));
- try{await loadActiveWaiters();}
  populateTables();updateQr();renderPracaFilter();renderTableGrid();
  $('#identity').textContent='Garçom · '+data.garcom.nome;
  renderBillingSessions();
