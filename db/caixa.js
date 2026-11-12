@@ -331,7 +331,7 @@ async function lerSessoesAbertas(client) {
 }
 
 /** Registra pagamento parcial (divisão de conta). A quitação simples pode fechar a sessão. */
-async function registrarPagamento(sessaoIdBruto, body, operadorNome = null, garcomResponsavelId = null, opcoes = {}) {
+async function registrarPagamento(sessaoIdBruto, body, operadorNome = null, garcomId = null, opcoes = {}) {
   const sessaoId = validarSessaoId(sessaoIdBruto);
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new ErroCaixa(400, 'Dados de pagamento inválidos');
@@ -363,19 +363,15 @@ async function registrarPagamento(sessaoIdBruto, body, operadorNome = null, garc
     await client.query('BEGIN');
     const sessao = await travarSessao(client, sessaoId);
 
-    // Pagamento feito pela PWA do garçom: a autorização é repetida sob os
-    // mesmos locks da sessão, não apenas no GET de resumo ou antes da transação.
-    // Assim uma transferência concorrente serializa com o pagamento.
-    if (garcomResponsavelId !== null && garcomResponsavelId !== undefined) {
+    // Qualquer garçom ativo pode registrar recebimento de uma sessão aberta.
+    // A autoria do pagamento é preservada em sessao_pagamentos/auditoria; mesa não tem titular. 
+    if (garcomId !== null && garcomId !== undefined) {
       const { rows: garconsAtivos } = await client.query(
         'SELECT id, ativo FROM garcons WHERE id = $1 FOR SHARE',
-        [garcomResponsavelId]
+        [garcomId]
       );
       if (!garconsAtivos[0] || !garconsAtivos[0].ativo) {
         throw new ErroCaixa(401, 'Link do garçom inválido ou desativado');
-      }
-      if (Number(sessao.garcom_responsavel_id) !== Number(garcomResponsavelId)) {
-        throw new ErroCaixa(403, 'Somente o garçom responsável atual pode registrar recebimentos desta mesa');
       }
     }
 
@@ -482,7 +478,7 @@ async function registrarPagamento(sessaoIdBruto, body, operadorNome = null, garc
       }
     }
     const atorTipoPagamento = opcoes.atorTipo || (
-      garcomResponsavelId !== null && garcomResponsavelId !== undefined
+      garcomId !== null && garcomId !== undefined
         ? 'garcom'
         : operadorNome ? 'staff' : 'sistema'
     );
