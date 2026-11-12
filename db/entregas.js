@@ -42,40 +42,15 @@ async function movimentarEntrega(pedidoId,token,{itemIds=null,etapa='aceitar'}={
       if(etapa==='aceitar'&&item.status!=='concluido')throw new ErroGarcom(409,'Outro garçom já assumiu estes itens ou eles não estão prontos');
       if(etapa==='retirar') {
         if(!['concluido','aceito'].includes(item.status))throw new ErroGarcom(409,'O item precisa estar pronto para retirada');
-        if(item.status==='aceito'&&Number(item.aceito_por_id)!==Number(garcom.id))throw new ErroGarcom(403,'Estes itens foram aceitos por outro garçom');
       }
       if(etapa==='entregar') {
         if(item.status!=='retirado')throw new ErroGarcom(409,'Retire os itens antes de confirmar a entrega');
-        if(Number(item.retirado_por_id)!==Number(garcom.id))throw new ErroGarcom(403,'Estes itens foram retirados por outro garçom');
       }
       if(etapa==='entrega_direta') {
         if(!['concluido','aceito','retirado'].includes(item.status))throw new ErroGarcom(409,'O item não está pronto para entrega');
-        const dono=item.status==='retirado'?item.retirado_por_id:item.aceito_por_id;
-        if(dono&&Number(dono)!==Number(garcom.id))throw new ErroGarcom(403,'Outro garçom está responsável por esta retirada');
       }
     }
-    // A mesa e a retirada são responsabilidades diferentes. Somente a primeira
-    // atribuição preenche o responsável; colaboração nunca transfere a mesa.
-    let atribuida=false;
-    let responsavelId=sessao.garcom_responsavel_id;
-    let responsavelNome=null;
-    if(!responsavelId) {
-      const {rows}=await client.query(
-        `UPDATE mesa_sessoes SET garcom_responsavel_id=$2 WHERE id=$1 AND garcom_responsavel_id IS NULL RETURNING id`,
-        [sessao.id,garcom.id]);
-      if(rows[0]) {
-        atribuida=true;responsavelId=garcom.id;responsavelNome=garcom.nome;
-        await client.query(`INSERT INTO mesa_atendimento_historico
-          (sessao_id,garcom_anterior_id,garcom_novo_id,alterado_por_id) VALUES ($1,NULL,$2,$2)`,[sessao.id,garcom.id]);
-        await registrarEvento(client,{atorTipo:'garcom',atorId:garcom.id,atorNome:garcom.nome,
-          acao:'mesa_assumida',alvoTipo:'mesa_sessao',alvoId:sessao.id,requestId,
-          contexto:{pedidoId:pid,origem:etapa==='retirar'?'retirada_itens':'aceite_itens',sessaoId:sessao.id}});
-      }
-    }
-    if(!atribuida) {
-      const {rows}=await client.query('SELECT g.id,g.nome FROM garcons g JOIN mesa_sessoes s ON s.garcom_responsavel_id=g.id WHERE s.id=$1',[sessao.id]);
-      responsavelId=rows[0]?.id||null;responsavelNome=rows[0]?.nome||null;
-    }
+    // A mesa não tem titular. A autoria individual de cada etapa é gravada abaixo.
     const ator={tipo:'garcom',id:garcom.id,nome:garcom.nome};
     for(const item of candidatos) {
       if(etapa==='retirar'&&item.status==='concluido') {
@@ -104,12 +79,11 @@ async function movimentarEntrega(pedidoId,token,{itemIds=null,etapa='aceitar'}={
       alvoTipo:'pedido',alvoId:pid,requestId,contexto:{itemIds:candidatos.map(i=>i.id).join(','),
         quantidadeItens:candidatos.length,
         ...(destino==='entregue'?{quantidadeItensEntregues:candidatos.length}:{}),
-        sessaoId:pedido.sessao_id,valorEntregue,responsavelMesaId:responsavelId,responsabilidadeAtribuida:atribuida}});
+        sessaoId:pedido.sessao_id,valorEntregue}});
     await client.query('COMMIT');
     return {id:pid,assumido:destino==='aceito',status:atualizado.status,itensEntregues:destino==='entregue'?candidatos.map(i=>i.id):[],
       itensAfetados:candidatos.map(i=>i.id),valorEntregue,parcial:atualizado.status!=='entregue',garcom,
-      responsavelMesa:{id:responsavelId,nome:responsavelNome},responsabilidadeAtribuida:atribuida,
-      aviso:atribuida?'Você assumiu a mesa.':responsavelId===garcom.id?'Você é o responsável pela mesa.':`Mesa sob responsabilidade de ${responsavelNome||'outro garçom'}; sua retirada foi registrada sem transferir a mesa.`};
+      aviso:'Etapa registrada em seu nome; o atendimento é compartilhado pela equipe.'};
   } catch(e) {await client.query('ROLLBACK').catch(()=>{});throw e;} finally {client.release();}
 }
 
