@@ -40,12 +40,12 @@ test('o modal cobre o painel e usa o mesmo vocabulário visual do dashboard', ()
   assert.doesNotMatch(css, /var\(--stage-/, 'os tokens de "palco" saíram com a identidade anterior');
 });
 
-test('só entram no modal as mesas com sessão aberta, com quem pediu e quem leva', () => {
+test('só entram no modal as mesas com sessão aberta e sem titular fixo', () => {
   assert.match(modal, /filter\(\(mesa\) => Boolean\(mesa\.sessaoId\)\)/);
   assert.match(modal, /Quem pediu/);
   assert.match(modal, /mesa\.clienteNome/);
-  assert.match(modal, /Quem está levando/);
-  assert.match(modal, /mesa\.garcomResponsavelNome/);
+  assert.doesNotMatch(modal, /Quem está levando|garcomResponsavelNome/);
+  assert.match(modal, /lançado por/);
   // Tempo, produção e dinheiro aparecem no cartão antes de qualquer clique.
   assert.match(modal, /formatarDuracao/);
   assert.match(modal, /itensNaFila/);
