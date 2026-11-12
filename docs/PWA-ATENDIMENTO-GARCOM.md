@@ -16,37 +16,30 @@
 
 O Service Worker **nunca** intercepta `/api/`. Nenhuma resposta de API é
 cacheada: o servidor é a única fonte de verdade. O cache do shell é versionado
-(`garcom-pwa-shell-v44` no código atual); qualquer mudança no shell exige subir essa versão, ou
+(`garcom-pwa-shell-v45` no código atual); qualquer mudança no shell exige subir essa versão, ou
 o aparelho continua executando JavaScript antigo.
 
-## Fila compartilhada de prontos e retirada sem aceite separado
+## Fila compartilhada de prontos e atendimento em equipe
 
 A aba **Entregas** consulta a fila compartilhada de pedidos em sessões abertas.
-Um pedido passa a aparecer para todos os garçons ativos quando pelo menos um
-dos seus itens chega a `concluido`, `aceito` ou `retirado`. A consulta não
-filtra pelo responsável da mesa nem pela origem do pedido. Os outros itens do
-mesmo pedido continuam visíveis para dar contexto, mas só os itens prontos ou
-já assumidos pelo próprio garçom oferecem ação.
+Um pedido aparece para todos os garçons ativos quando pelo menos um dos itens
+chega a `concluido`, `aceito` ou `retirado`. A consulta não filtra por
+titularidade de mesa nem pela origem do pedido.
 
-O fluxo normal da PWA tem **duas ações visíveis**, sem botão extra de aceite:
+Qualquer garçom ativo pode avançar um item disponível respeitando seu estado:
+- **Retirar item**: se estiver `concluido`, o servidor registra aceite implícito
+  e retirada na mesma transação (`concluido → aceito → retirado`). Se já estiver
+  `aceito`, outro garçom também pode retirá-lo.
+- **Confirmar entrega**: qualquer garçom ativo pode confirmar um item `retirado`.
+  O valor só entra na conta depois que a entrega é registrada.
 
-1. **Retirar item** — ao clicar em um item `concluido`, o servidor registra o
-   aceite implícito e a retirada na mesma transação e sob o mesmo lock:
-   `concluido → aceito → retirado`. O primeiro garçom que fizer isso assume
-   aquele item. Se o pedido ainda não tiver garçom, ele passa a ser associado
-   a esse garçom; se a mesa ainda não tiver responsável, o mesmo garçom passa
-   a ser o responsável principal da mesa. Uma retirada colaborativa não transfere
-   uma mesa que já tenha responsável. Se outro garçom já aceitou o item, a
-   retirada é recusada; não há tomada concorrente.
-2. **Confirmar entrega** — somente o garçom que retirou o item pode confirmar
-   que ele chegou ao cliente. Só então o valor entra na conta.
+Cada etapa mantém o ator real em `aceito_por_id`, `retirado_por_id` e
+`entregue_por_id`, com horário e histórico. Esses campos são trilha de auditoria,
+não bloqueios para a continuidade do trabalho por outro integrante da equipe.
+Não existe um garçom titular do pedido ou da mesa.
 
-A rota explícita `assumir-entrega` continua disponível no contrato da API, mas
-não é uma etapa separada na interface normal da PWA. O botão **Retirar item**
-já expressa a intenção de assumir e retirar, sem confirmação intermediária.
-
-O **Histórico de movimentação** mostra a trilha real de atores e horários por
-item, incluindo o motivo `Aceite implícito na retirada`.
+O **Histórico de movimentação** mostra a trilha de atores e horários por item,
+incluindo o motivo `Aceite implícito na retirada`.
 
 Cada item libera assim que seu setor conclui: se o bar termina antes da cozinha,
 a bebida aparece na hora e pode ser retirada enquanto o prato ainda é produzido.
@@ -156,7 +149,7 @@ O rodapé tem exatamente **duas abas**: **Mesas** e **Entregas**. As antigas aba
 O tempo exibido é contado **a partir do primeiro pedido válido**
 (`primeiroPedidoEm`), nunca da abertura da sessão: uma mesa aberta que ainda não
 pediu não parece estar esperando atendimento. Depois que todos os itens são
-entregues a mesa **continua ocupada e vinculada ao responsável**; ela só volta a
+entregues a mesa **continua ocupada e disponível à equipe**; ela só volta a
 **Livre** quando o pagamento integral é confirmado pelo fluxo oficial do Caixa
 (`registrarPagamento` fecha a sessão e libera a mesa na mesma transação). A PWA
 não marca mesa livre localmente.
@@ -168,27 +161,26 @@ selecionada. Ele **não** é um fechamento financeiro paralelo: registra um
 recebimento pela rota existente (`POST /api/garcom/:token/sessoes/:id/pagamentos`,
 com `incluirServico` e chave idempotente) e o servidor só quita e libera a mesa
 quando o valor devido está pago e não há pedidos pendentes nem avisos PIX em
-aberto. "Deixar mesa" continua separado: só devolve a responsabilidade do
-garçom (exige que todos os itens estejam entregues ou cancelados) e mantém a
-conta do cliente aberta.
+aberto. A equipe continua atendendo a sessão compartilhada até o fechamento integral da conta.
 
 ## Mesas e pedidos
 
-1. `GET /api/garcom/:token/mesas` traz mesas habilitadas, sessão e responsável.
-   O token QR da mesa só vem preenchido para mesas sob responsabilidade do
-   garçom autenticado. A mesma rota responde também, apenas como leitura, os
-   campos usados pelos cards do salão: `pracaId`, `pracaNome`, `pracaOrdem`,
-   `primeiroPedidoEm`, `pedidosValidos` e a `situacao` derivada
-   (`livre` / `aguardando_pedido` / `em_atendimento`). Nenhuma transição,
-   lock ou regra de autorização depende desses campos.
-2. **Iniciar atendimento** (`POST .../iniciar`) cria ou reutiliza sessão e atribui
-   o responsável sob lock. Mesa de outro garçom → 409.
-3. **Assumir** (`POST .../assumir`) é o caminho da mesa que já tem pedido QR.
+1. `GET /api/garcom/:token/mesas` traz as mesas habilitadas, sessão e praça.
+   Todos os garçons autenticados e ativos recebem os tokens QR das mesas. A
+   sessão aberta não possui titular operacional.
+2. **Iniciar atendimento** (`POST .../iniciar`) cria ou reutiliza a sessão sob
+   lock. Se outro garçom já iniciou, a sessão é compartilhada e pode ser acessada
+   normalmente; não há conflito por titularidade.
+3. **Assumir** (`POST .../assumir`) é o caminho para registrar o primeiro
+   atendimento de um pedido QR do cliente. Isso não atribui a mesa a quem clicou.
 4. O pedido vai por `POST .../pedidos` com `idempotencyKey` e `clientCreatedAt`.
-   O servidor revalida tudo e calcula o preço oficial.
+   O servidor revalida tudo e calcula o preço oficial. O autor do lançamento
+   fica registrado no pedido.
 5. Sem rede, o garçom ainda monta o pedido, gera o QR da mesa a partir de dados
    em cache e edita rascunhos **que nunca foram enviados** (`attempts = 0`).
    Rascunho já transmitido não é editável: isso criaria divergência com o servidor.
+6. Não existem ações de **Transferir mesa** ou **Deixar mesa**. A mesa continua
+   disponível à equipe até o fechamento financeiro normal da conta.
 
 ## Notificações
 
