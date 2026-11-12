@@ -1013,7 +1013,7 @@ function Garcons() {
           {g.token}
         </p>
         <p className="font-mono text-[11px] text-text-subtle mt-0.5">
-          {g.entregas ?? 0} entrega{(g.entregas ?? 0) === 1 ? "" : "s"}
+          {g.entregas ?? 0} item{(g.entregas ?? 0) === 1 ? "" : "s"} entregue{(g.entregas ?? 0) === 1 ? "" : "s"}
           {!g.ativo && " · inativo"}
         </p>
       </div>
