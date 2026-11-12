@@ -854,6 +854,8 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   background: var(--status-warning-surface);
 }
 
+.table-tile-num-prefix { display: none; }
+
 .table-tile-top {
   display: flex;
   align-items: baseline;
