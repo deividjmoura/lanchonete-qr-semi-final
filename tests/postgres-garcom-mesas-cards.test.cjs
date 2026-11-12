@@ -98,12 +98,11 @@ test('mesas do garçom expõem praça, situação e primeiro pedido sem alterar 
 
     // Contrato antigo continua igual.
     for (const m of [mesaA, mesaB, mesaC]) {
-      assert.ok('token' in m && 'sessaoId' in m && 'garcomResponsavelId' in m && 'pedidoClienteQr' in m);
+      assert.ok('token' in m && 'sessaoId' in m && 'pedidoClienteQr' in m);
+      assert.equal('garcomResponsavelId' in m, false, 'API não expõe titular da mesa');
     }
-    assert.ok(mesaA.token, 'mesa sob minha responsabilidade recebe o token QR');
-    assert.equal(Number(mesaA.garcomResponsavelId), Number(criadas.garcom.id));
-    assert.equal(mesaB.token, null, 'mesa de outro garçom não entrega o token');
-    assert.equal(Number(mesaB.garcomResponsavelId), Number(criadas.garcomOutro.id));
+    assert.ok(mesaA.token, 'mesa com sessão aberta recebe token QR');
+    assert.ok(mesaB.token, 'sessão de outro garçom também é acessível à equipe');
     assert.equal(mesaC.sessaoId, null);
 
     // Mesa A: sessão aberta sem pedido => "Aguardando pedido", sem tempo.
