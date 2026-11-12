@@ -1,8 +1,10 @@
+import { useEffect, useState } from "react";
 import { ArrowClockwise, CheckCircle, Sparkle } from "@phosphor-icons/react";
 import { OpsShell } from "../components/OpsShell";
 import { Btn } from "../components/ui";
 import { ir } from "../router";
 import {
+  carregarNotasDeVersao,
   formatarDataDaNota,
   notasDeVersao,
   notasDepoisDe,
@@ -24,7 +26,17 @@ import {
  */
 export default function Novidades() {
   const versaoEmExecucao = VERSAO_DO_APP;
-  const todas = notasDeVersao();
+  const [todas, setTodas] = useState(notasDeVersao());
+
+  useEffect(() => {
+    let ativo = true;
+    void carregarNotasDeVersao().then((notas) => {
+      if (ativo) setTodas(notas);
+    });
+    return () => {
+      ativo = false;
+    };
+  }, []);
   const novas = new Set(notasDepoisDe(versaoEmExecucao, todas).map((nota) => nota.versao));
 
   return (

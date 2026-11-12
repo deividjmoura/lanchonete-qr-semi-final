@@ -13,9 +13,9 @@
  *     copiadas de `public/novidades.json` (fonte única).
  *
  * A versão legível (`versao`) sai de `package.json` e é a mesma da nota mais
- * recente do changelog. O aviso de versão NÃO depende dela: ele compara o
- * identificador do shell. Uma nota esquecida pode deixar a lista de novidades
- * vazia, nunca impedir o garçom de ser avisado.
+ * recente do changelog. O app.js do garçom mantém essa versão embutida e o
+ * gerador valida a igualdade: uma aba antiga compara sua versão em execução
+ * com a versão publicada pela API, mesmo quando o service worker não muda.
  *
  * Roda em dois momentos:
  *   - `npm run build:versoes` (manual, depois de mexer em `public/garcom-pwa/`);
@@ -90,6 +90,14 @@ function validarNovidades() {
   if (!notas.length) problemas.push('public/novidades.json está vazio: registre ao menos uma nota');
 
   const doPacote = versaoLegivel(RAIZ);
+  const appPwa = fs.readFileSync(path.join(DIR_PUBLIC, 'app.js'), 'utf8');
+  const versaoEmbutida = /const VERSAO_PWA_EM_EXECUCAO = ['"]([^'"]+)['"]/.exec(appPwa)?.[1] || null;
+  if (doPacote && versaoEmbutida !== doPacote) {
+    problemas.push(
+      `public/garcom-pwa/app.js está em ${versaoEmbutida || 'sem versão'} e package.json está em ${doPacote}: ` +
+        'atualize VERSAO_PWA_EM_EXECUCAO para que o garçom detecte a próxima publicação',
+    );
+  }
   const vistos = new Set();
   let anterior = null;
   notas.forEach((nota, indice) => {

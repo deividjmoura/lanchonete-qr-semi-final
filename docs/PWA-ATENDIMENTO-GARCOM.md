@@ -16,7 +16,7 @@
 
 O Service Worker **nunca** intercepta `/api/`. Nenhuma resposta de API é
 cacheada: o servidor é a única fonte de verdade. O cache do shell é versionado
-(`garcom-pwa-shell-v46` no código atual); qualquer mudança no shell exige subir essa versão, ou
+(`garcom-pwa-shell-v47` no código atual); qualquer mudança no shell exige subir essa versão, ou
 o aparelho continua executando JavaScript antigo.
 
 ## Fila compartilhada de prontos e retirada sem aceite separado
@@ -118,7 +118,7 @@ cozinha** — a tela mostra isso explicitamente.
 - Um rascunho de pedido pode conter mesa, nome do cliente, itens/produtos, quantidades, adicionais, remoções, observações, chave de idempotência, horários, estado de sincronização e o identificador do garçom usado para isolar a fila.
 - O `localStorage` mantém o token individual do garçom (`waiter-token`), preferências de tema/notificações, identificadores de avisos já exibidos e uma tentativa de pagamento pendente (sessão, mesa, valor, forma e chave idempotente).
 - Não há prazo automático de expurgo implementado para a store local de pedidos. Limpar os dados do site, remover o perfil do navegador ou desinstalar o PWA pode apagar dados ainda não sincronizados; o armazenamento persistente é apenas uma solicitação ao navegador, não uma garantia de backup.
-- O Service Worker usa o cache `garcom-pwa-shell-v46` apenas para arquivos do shell. Ele não intercepta nem armazena respostas de `/api/`.
+- O Service Worker usa o cache `garcom-pwa-shell-v47` apenas para arquivos do shell. Ele não intercepta nem armazena respostas de `/api/`.
 
 ## Navegação principal: Mesas e Entregas (#305)
 

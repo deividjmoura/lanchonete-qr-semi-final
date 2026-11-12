@@ -296,6 +296,21 @@ try {
   );
   assert(linksInstitucionais.includes("/guia-sistema.html"), "footer liga para /guia-sistema.html");
   assert(linksInstitucionais.includes("/apresentacao.html"), "footer liga para /apresentacao.html");
+  const guiaHtml = await (await page.request.get(BASE + "/guia-sistema.html")).text();
+  assert(/<section id="acesso"/.test(guiaHtml), "guia preserva a seção ancorada de acesso");
+  assert(/<section id="uso"/.test(guiaHtml), "guia preserva a seção ancorada de uso");
+  assert(
+    /segundo fator \(2FA\) é uma configuração de segurança por conta/i.test(guiaHtml),
+    "guia mantém a descrição contextual de 2FA",
+  );
+  assert(
+    /aplicativo do banco/i.test(guiaHtml) && /PIX manual/i.test(guiaHtml),
+    "guia mantém a conferência manual do PIX no banco",
+  );
+  assert(
+    /avisos sonoros e por voz/i.test(guiaHtml) && /dispositivo/i.test(guiaHtml),
+    "guia mantém a ressalva sobre avisos dependentes do dispositivo",
+  );
 
   /* --- 5b. Contate-nos: canais reais e formatos de adesão ----------------- */
   const contato = page.locator("#contato");

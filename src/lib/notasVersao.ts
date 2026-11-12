@@ -39,6 +39,38 @@ type ArquivoDeNotas = { notas?: NotaDeVersao[] };
 
 export const NOTAS_DE_VERSAO: NotaDeVersao[] = (notasPublicadas as ArquivoDeNotas).notas ?? [];
 
+/**
+ * Busca as notas da publicação atual. Uma aba antiga mantém o JavaScript antigo
+ * em memória; por isso não pode depender apenas do JSON embutido no bundle.
+ * O fallback local mantém a tela útil se a rede estiver indisponível.
+ */
+export async function carregarNotasDeVersao(): Promise<NotaDeVersao[]> {
+  try {
+    const resposta = await fetch('/novidades.json', {
+      method: 'GET',
+      cache: 'no-store',
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    });
+    if (!resposta.ok) return NOTAS_DE_VERSAO;
+    const dados = (await resposta.json()) as ArquivoDeNotas;
+    if (!Array.isArray(dados.notas)) return NOTAS_DE_VERSAO;
+    return dados.notas.filter(
+      (nota): nota is NotaDeVersao =>
+        Boolean(
+          nota &&
+          typeof nota.versao === 'string' &&
+          typeof nota.data === 'string' &&
+          typeof nota.titulo === 'string' &&
+          typeof nota.resumo === 'string' &&
+          (nota.itens === undefined || Array.isArray(nota.itens)),
+        ),
+    );
+  } catch {
+    return NOTAS_DE_VERSAO;
+  }
+}
+
 /** Versão legível embutida neste build (`__APP_VERSION__`, de package.json). */
 export const VERSAO_DO_APP: string = __APP_VERSION__;
 

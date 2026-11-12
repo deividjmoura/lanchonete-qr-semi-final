@@ -45,7 +45,7 @@ function arvoreTemporaria() {
   escrever('src/main.tsx', 'export const a = 1;\n');
   escrever('package.json', JSON.stringify({ version: '1.0.0' }));
   escrever('public/garcom-pwa/app.js', 'console.log(1);\n');
-  escrever('public/garcom-pwa/sw.js', "const CACHE='garcom-pwa-shell-v46';\n");
+  escrever('public/garcom-pwa/sw.js', "const CACHE='garcom-pwa-shell-v47';\n");
   escrever('public/novidades.json', JSON.stringify({ notas: [] }));
   return { dir, escrever };
 }
@@ -128,6 +128,11 @@ test('manifesto publicado carrega as duas superfícies e a versão legível', ()
 test('manifests do PWA estão em dia com o repositório', () => {
   // `--check` falha se `versao.json`/`novidades.json` estiverem velhos.
   assert.equal(gerarVersoes.main(['--check']), 0, 'rode `npm run build:versoes` e commite');
+  assert.match(
+    ler('scripts/gerar-versoes.cjs'),
+    /VERSAO_PWA_EM_EXECUCAO/,
+    'o build precisa validar que o garçom está na mesma versão legível do pacote',
+  );
 
   const versao = JSON.parse(ler('public/garcom-pwa/versao.json'));
   assert.equal(versao.pwa, buildVersion.calcularVersaoDoPwa(RAIZ));
@@ -168,6 +173,8 @@ test('notas de versão existem, em ordem e casadas com o pacote', () => {
 test('painel: o aviso lista o que mudou e a tela de novidades existe', () => {
   const aviso = ler('src/components/AvisoAtualizacao.tsx');
   assert.match(aviso, /notasDepoisDe\(/, 'o aviso precisa filtrar as notas da versão em execução');
+  assert.match(aviso, /carregarNotasDeVersao/, 'o aviso precisa buscar o changelog publicado, não só o JSON antigo do bundle');
+  assert.match(ler('src/screens/Novidades.tsx'), /carregarNotasDeVersao/, 'a tela completa também precisa buscar as notas atuais');
   assert.match(aviso, /O que mudou desde esta tela/);
   assert.match(aviso, /#\/novidades/, 'o aviso precisa levar à lista completa');
   assert.match(aviso, /criarVigiaDeVersao/, 'a sincronização entre abas continua valendo');
@@ -188,6 +195,10 @@ test('PWA do garçom: aviso ligado, com as mesmas regras do painel', () => {
   const modulo = ler('public/garcom-pwa/atualizacao.js');
   // Compara com o identificador do PWA publicado — o campo certo do endpoint.
   assert.match(modulo, /dados\.pwa/, 'o garçom compara o identificador dele, não o do painel');
+  assert.match(modulo, /dados\.versao/, 'o garçom também compara a versão legível embutida no JS');
+  assert.match(modulo, /compararVersoes\(publicada\.versao, versaoLegivelLocal\)/);
+  assert.match(app, /VERSAO_PWA_EM_EXECUCAO = '\d+\.\d+\.\d+'/);
+  assert.match(app, /versaoLegivel:VERSAO_PWA_EM_EXECUCAO/);
   assert.match(modulo, /'\/api\/version'/);
   // Nunca recarrega sozinho: reload só depois de confirmação explícita.
   const antesDoReload = modulo.slice(0, modulo.indexOf('window.location.reload()'));
@@ -206,7 +217,7 @@ test('PWA do garçom: aviso ligado, com as mesmas regras do painel', () => {
 test('service worker sobe de versão junto com o shell alterado', () => {
   const sw = ler('public/garcom-pwa/sw.js');
   const versao = Number(/const CACHE='garcom-pwa-shell-v(\d+)'/.exec(sw)[1]);
-  assert.ok(versao >= 46, `o shell mudou nesta entrega: cache atual é v${versao}`);
+  assert.ok(versao >= 47, `o shell mudou nesta entrega: cache atual é v${versao}`);
   // Documentos vivos precisam citar a mesma versão (teste dedicado existe, mas o
   // aviso de versão é o motivo desta mudança — deixamos a checagem aqui também).
   for (const doc of ['docs/PWA-ATENDIMENTO-GARCOM.md', 'docs/engineering/data-policy-proposal.md']) {
@@ -343,6 +354,19 @@ test('garçom: aviso aparece quando o identificador publicado difere', async () 
   assert.doesNotMatch(texto, /já conhecida/, 'nota da própria versão não é novidade');
 });
 
+test('garçom: detecta nova versão legível mesmo quando o hash PWA não mudou', async () => {
+  const { contexto, host } = carregarModuloDoPwa({
+    respostas: {
+      'versao.json': { pwa: 'aaaaaaaaaaaaaaaa', versao: '3.2.0' },
+      'novidades.json': { notas: [{ versao: '3.3.0', data: '2026-11-13', titulo: 'Nova entrega', resumo: 'Mudanças' }] },
+      '/api/version': { version: 'ffffffffffffffff', pwa: 'aaaaaaaaaaaaaaaa', versao: '3.3.0' },
+    },
+  });
+  await contexto.iniciarAvisoDeAtualizacao({ versaoLegivel: '3.2.0' });
+  await esperar();
+  assert.equal(host.children[0].hidden, false, 'a versão publicada mais nova precisa avisar mesmo com hash igual');
+});
+
 test('garçom: mesma versão, falha de rede e 404 não mostram nada', async () => {
   for (const cenario of ['mesma', 'erro']) {
     const { contexto, host } = carregarModuloDoPwa({
@@ -376,14 +400,14 @@ test('garçom: adiar é por versão e não volta a incomodar', async () => {
 
   contexto.dispensar();
   assert.equal(host.children[0].hidden, true, 'adiar precisa esconder o aviso');
-  assert.equal(armazenamento.get('garcom-atualizacao-adiada'), 'bbbbbbbbbbbbbbbb', 'só a versão é guardada');
+  assert.equal(armazenamento.get('garcom-atualizacao-adiada'), 'versao::bbbbbbbbbbbbbbbb', 'só o identificador da versão é guardado');
 
   // Nova consulta com a mesma versão: nada reaparece.
   await contexto.verificar;
   contexto._reiniciar();
   const segunda = carregarModuloDoPwa({
     respostas,
-    storage: { 'garcom-atualizacao-adiada': 'bbbbbbbbbbbbbbbb' },
+    storage: { 'garcom-atualizacao-adiada': 'versao::bbbbbbbbbbbbbbbb' },
   });
   await segunda.contexto.iniciarAvisoDeAtualizacao();
   await esperar();

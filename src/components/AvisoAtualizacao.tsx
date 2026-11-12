@@ -4,6 +4,8 @@ import { confirmarAcao } from "../lib/confirmacao";
 import { criarVigiaDeVersao, type EstadoAtualizacao } from "../lib/atualizacao";
 import { estadoDoTrabalho } from "../lib/trabalhoPendente";
 import {
+  carregarNotasDeVersao,
+  notasDeVersao,
   notasDepoisDe,
   resumoDeNovidades,
   VERSAO_DO_APP,
@@ -125,9 +127,20 @@ export function AvisoAtualizacao() {
   const [estado, setEstado] = useState<EstadoAtualizacao>("ocioso");
   const [atualizando, setAtualizando] = useState(false);
   const [expandido, setExpandido] = useState(false);
+  const [notasPublicadas, setNotasPublicadas] = useState<NotaDeVersao[]>(notasDeVersao());
   const vigia = useRef<ReturnType<typeof criarVigiaDeVersao> | null>(null);
 
-  const novidades = notasDepoisDe(VERSAO_DO_APP);
+  const novidades = notasDepoisDe(VERSAO_DO_APP, notasPublicadas);
+
+  useEffect(() => {
+    let ativo = true;
+    void carregarNotasDeVersao().then((notas) => {
+      if (ativo) setNotasPublicadas(notas);
+    });
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   useEffect(() => {
     const instancia = criarVigiaDeVersao({

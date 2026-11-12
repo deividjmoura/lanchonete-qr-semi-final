@@ -1,4 +1,4 @@
-import { ArrowsClockwise, MapPin, MapTrifold, SquaresFour, WarningCircle } from "@phosphor-icons/react";
+import { ArrowsClockwise, MapPin, MapTrifold, SquaresFour, WarningCircle, Plus } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
 import { Btn } from "../../components/ui";
 import { api, connectEvents } from "../../lib/api";
@@ -33,6 +33,9 @@ export default function MesasAdmin() {
   const [erro, setErro] = useState<string | null>(null);
   const [mesaAberta, setMesaAberta] = useState<number | null>(null);
   const [pracasAberto, setPracasAberto] = useState(false);
+  const [configMesas, setConfigMesas] = useState<{ quantidade: number; limite: number } | null>(null);
+  const [quantidadeMesas, setQuantidadeMesas] = useState("20");
+  const [ativandoMesas, setAtivandoMesas] = useState(false);
   const agora = useAgora(15000);
 
   const carregar = useCallback(async (periodoAtual: PeriodoPanorama, silencioso = false) => {
@@ -56,6 +59,43 @@ export default function MesasAdmin() {
   useEffect(() => {
     void carregar(periodo);
   }, [carregar, periodo]);
+
+  useEffect(() => {
+    let vivo = true;
+    api.adminMesasConfig().then((config) => {
+      if (!vivo) return;
+      setConfigMesas(config);
+      setQuantidadeMesas(String(config.quantidade));
+    }).catch((e) => {
+      if (vivo) setErro(e instanceof Error ? e.message : "Não foi possível carregar a configuração de mesas.");
+    });
+    return () => { vivo = false; };
+  }, []);
+
+  const provisionarMesas = useCallback(async () => {
+    const quantidade = Number(quantidadeMesas);
+    const limite = configMesas?.limite ?? 70;
+    if (!Number.isSafeInteger(quantidade) || quantidade < 1 || quantidade > limite) {
+      setErro(`Informe uma quantidade inteira entre 1 e ${limite}.`);
+      return;
+    }
+    if (configMesas && quantidade < configMesas.quantidade) {
+      setErro("Não é permitido reduzir a quantidade de mesas por esta operação.");
+      return;
+    }
+    setAtivandoMesas(true);
+    setErro(null);
+    try {
+      const resultado = await api.ativarMesas(quantidade);
+      setConfigMesas((atual) => ({ quantidade: resultado.quantidade, limite: atual?.limite ?? 70 }));
+      await hydrateMesas();
+      await carregar(periodo, true);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível provisionar as mesas.");
+    } finally {
+      setAtivandoMesas(false);
+    }
+  }, [quantidadeMesas, configMesas, hydrateMesas, carregar, periodo]);
 
   useEffect(() => {
     let vivo = true;
@@ -95,6 +135,34 @@ export default function MesasAdmin() {
 
   return (
     <section className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-line bg-surface-raised p-3.5 sm:p-4">
+        <div className="min-w-0">
+          <h3 className="text-sm font-bold text-text">Configuração de mesas</h3>
+          <p className="mt-0.5 text-xs text-text-muted">
+            {dados?.mesas.length ?? 0} mesa(s) provisionada(s) · {configMesas?.quantidade ?? "—"} habilitada(s).
+            Criar mesas não apaga nem altera registros existentes.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="block text-[11px] font-semibold text-text-muted">
+            Quantidade (máx. {configMesas?.limite ?? 70})
+            <input
+              type="number"
+              min={configMesas?.quantidade ?? 1}
+              max={configMesas?.limite ?? 70}
+              step={1}
+              value={quantidadeMesas}
+              onChange={(event) => setQuantidadeMesas(event.target.value)}
+              className="mt-1 block h-9 w-24 rounded-sm border border-line-strong bg-surface-sunken px-2 font-mono text-sm text-text"
+              aria-label="Quantidade de mesas a habilitar"
+            />
+          </label>
+          <Btn size="sm" onClick={() => void provisionarMesas()} disabled={ativandoMesas}>
+            <Plus size={15} weight="bold" /> {ativandoMesas ? "Criando…" : "Criar / habilitar"}
+          </Btn>
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div
           role="group"
