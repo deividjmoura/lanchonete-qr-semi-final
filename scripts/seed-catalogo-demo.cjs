@@ -51,6 +51,12 @@ async function main() {
   if (!validos.length) throw new Error('Nenhum item possui foto válida; nada foi gravado.');
 
   const client = await pool.connect();
+  const identidade = await client.query('SELECT current_database() AS banco, current_schema() AS esquema');
+  const antes = await client.query('SELECT COUNT(*)::int AS total FROM produtos WHERE arquivado = FALSE');
+  console.log(`Banco de destino confirmado: ${identidade.rows[0].banco} / ${identidade.rows[0].esquema}.`);
+  console.log(`Catálogo de referência: ${catalogo.length} itens; com foto válida: ${validos.length}; sem foto: ${ausentes.length}.`);
+  console.log(`Produtos não arquivados antes da carga: ${antes.rows[0].total}.`);
+
   let inseridos = 0;
   let existentes = 0;
   let adicionaisInseridos = 0;
@@ -118,8 +124,10 @@ async function main() {
     }
 
     await client.query('COMMIT');
-    console.log('Carga de catálogo demo concluída.');
+    const depois = await client.query('SELECT COUNT(*)::int AS total FROM produtos WHERE arquivado = FALSE');
+    console.log('Carga de catálogo demo concluída e transação confirmada.');
     console.log(`Produtos inseridos: ${inseridos}; já existentes e preservados: ${existentes}; sem foto: ${ausentes.length}.`);
+    console.log(`Produtos não arquivados depois da carga: ${depois.rows[0].total}.`);
     console.log(`Adicionais inseridos: ${adicionaisInseridos}; ingredientes removíveis: ${removiveisInseridos}.`);
     console.log('Nenhum registro existente foi atualizado ou removido.');
   } catch (error) {
