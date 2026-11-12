@@ -1,5 +1,4 @@
-import { Copy, MapPin, Receipt, UserSwitch, WarningCircle } from "@phosphor-icons/react";
-import { confirmarAcao } from "../../lib/confirmacao";
+import { Copy, MapPin, Receipt, WarningCircle } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import { Badge, Btn, Modal } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -27,26 +26,21 @@ const STATUS_PEDIDO: Record<string, { rotulo: string; classe: string }> = {
   cancelado: { rotulo: "Cancelado", classe: "border-status-danger-border bg-status-danger-surface text-status-danger-ink" },
 };
 
-type Garcom = { id: number; nome: string };
-
 type Props = {
   numero: number | null;
   pracas: Praca[];
-  garcons: Garcom[];
   agora: number;
   onClose: () => void;
   onAlterado: () => void;
   onErro: (mensagem: string | null) => void;
 };
 
-export function MesaDetalheModal({ numero, pracas, garcons, agora, onClose, onAlterado, onErro }: Props) {
+export function MesaDetalheModal({ numero, pracas, agora, onClose, onAlterado, onErro }: Props) {
   const [detalhe, setDetalhe] = useState<MesaDetalhe | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [pracaSelecionada, setPracaSelecionada] = useState<number | null>(null);
   const [salvandoPraca, setSalvandoPraca] = useState(false);
-  const [destino, setDestino] = useState("");
-  const [transferindo, setTransferindo] = useState(false);
   const [copiado, setCopiado] = useState(false);
   const [liberando, setLiberando] = useState(false);
   const fecharSessao = usePub((s) => s.fecharSessao);
@@ -64,13 +58,11 @@ export function MesaDetalheModal({ numero, pracas, garcons, agora, onClose, onAl
     if (numero == null) {
       setDetalhe(null);
       setErro(null);
-      setDestino("");
       return;
     }
     let vivo = true;
     setCarregando(true);
     setErro(null);
-    setDestino("");
     setCopiado(false);
     setLiberando(false);
     carregar(numero)
@@ -103,31 +95,6 @@ export function MesaDetalheModal({ numero, pracas, garcons, agora, onClose, onAl
       setErro(e instanceof Error ? e.message : "Falha ao salvar a praça");
     } finally {
       setSalvandoPraca(false);
-    }
-  };
-
-  const transferir = async () => {
-    if (!numero || !detalhe) return;
-    const destinoId = Number(destino);
-    if (!destinoId) return;
-    const nome = garcons.find((g) => g.id === destinoId)?.nome || "garçom";
-    const confirmado = await confirmarAcao({
-      titulo: `Transferir a mesa ${numero}?`,
-      mensagem: `A responsabilidade da mesa será transferida para ${nome}. As retiradas já assumidas continuam com seus garçons.`,
-      confirmar: "Transferir mesa",
-    });
-    if (!confirmado) return;
-    setTransferindo(true);
-    setErro(null);
-    try {
-      await api.transferirMesaAdmin(numero, destinoId);
-      await carregar(numero);
-      setDestino("");
-      onAlterado();
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : "Falha ao transferir mesa");
-    } finally {
-      setTransferindo(false);
     }
   };
 
@@ -194,7 +161,7 @@ export function MesaDetalheModal({ numero, pracas, garcons, agora, onClose, onAl
                 <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">Sessão</p>
                 <dl className="mt-1.5 space-y-1 text-xs">
                   <Linha rotulo="Aberta" valor={formatarHora(detalhe.abertaEm)} />
-                  <Linha rotulo="Garçom" valor={detalhe.garcomResponsavelNome || "a definir"} />
+                  <Linha rotulo="Atendimento" valor="Compartilhado pela equipe" />
                   <Linha rotulo="Cliente" valor={detalhe.clienteNome || "—"} />
                   <Linha
                     rotulo="Pedidos ativos"
@@ -251,45 +218,6 @@ export function MesaDetalheModal({ numero, pracas, garcons, agora, onClose, onAl
                 Os nomes das praças ficam no banco e podem ser alterados no panorama.
               </p>
             </section>
-
-            {ocupada && (
-              <section className="rounded-sm border border-line bg-surface-sunken p-3">
-                <p className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-text-muted">
-                  <UserSwitch size={13} weight="bold" /> Transferir responsabilidade
-                </p>
-                <div className="mt-2 flex flex-wrap items-end gap-2">
-                  <label className="min-w-0 flex-1 text-[11px] text-text-muted">
-                    Novo garçom responsável
-                    <select
-                      aria-label={`Transferir mesa ${numero} para garçom`}
-                      value={destino}
-                      onChange={(e) => setDestino(e.target.value)}
-                      className="mt-1 h-10 w-full rounded-sm border border-line-strong bg-surface-raised px-2.5 text-xs text-text"
-                    >
-                      <option value="">Selecione…</option>
-                      {garcons
-                        .filter((g) => g.id !== detalhe.garcomResponsavelId)
-                        .map((g) => (
-                          <option key={g.id} value={g.id}>
-                            {g.nome}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                  <Btn
-                    size="sm"
-                    variant="outline"
-                    disabled={transferindo || !destino}
-                    onClick={() => void transferir()}
-                  >
-                    {transferindo ? "Transferindo…" : "Transferir"}
-                  </Btn>
-                </div>
-                <p className="mt-1.5 text-[11px] text-text-subtle">
-                  Retiradas já assumidas continuam com seus garçons.
-                </p>
-              </section>
-            )}
 
             <section>
               <p className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-text-muted">
