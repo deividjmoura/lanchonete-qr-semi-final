@@ -12,8 +12,8 @@ assert.strictEqual(databaseUrl.pathname, '/qradmin_test', 'Banco de teste obriga
 assert.strictEqual(process.env.NODE_ENV, 'test', 'NODE_ENV=test obrigatório');
 
 const pool = require('../db/pool');
-const { listGarcons, criarGarcom, setGarcomAtivo, removerGarcom, getGarcomPorToken, assumirEntregaComoGarcom } = require('../db/garcons');
-const { iniciarAtendimentoGarcom, transferirMesaAdmin, metricasGarcons } = require('../db/atendimento');
+const { listGarcons, criarGarcom, setGarcomAtivo, removerGarcom, getGarcomPorToken, assumirEntregaComoGarcom, retirarComoGarcom, entregarComoGarcom } = require('../db/garcons');
+const { iniciarAtendimentoGarcom, metricasGarcons } = require('../db/atendimento');
 const { relatorioVendas } = require('../db/relatorio');
 
 const uid = () => randomUUID().slice(0, 8);
@@ -134,15 +134,11 @@ test('remover difere de desativar, invalida o link, audita e preserva autoria e 
     await pool.query("INSERT INTO mesa_atendimento_historico(sessao_id,garcom_novo_id,alterado_em) VALUES($1,$2,'2026-10-30 12:00:00+00')", [sessao.id, g.id]);
 
     const antes = (await metricasGarcons({ data: '2026-10-30' })).garcons.find((x) => x.id === g.id);
-    assert.equal(antes.vendas, 110);
-    assert.equal(antes.atendimentos, 1);
-    assert.equal(antes.ticketMedio, 110);
+    assert.equal(antes.valorItensEntregues, 100);
     assert.equal(antes.pedidosRegistrados, 1);
-    assert.equal(antes.mesasAssumidas, 1);
     assert.equal(antes.itensAssumidos, 1);
     assert.equal(antes.itensRetirados, 1);
     assert.equal(antes.itensEntregues, 1);
-    assert.deepEqual([antes.vendasBrutas, antes.taxaServico, antes.descontos, antes.totalCobrado], [100, 10, 0, 110]);
 
     const mesaPeriodo = await f.novaMesa();
     const sessaoPeriodo = await f.novaSessao(mesaPeriodo, { responsavel: g.id, fechada: true });
@@ -160,15 +156,15 @@ test('remover difere de desativar, invalida o link, audita e preserva autoria e 
     assert.deepEqual(periodo.outrosEventos, [{ acao: 'pedido_editado', quantidade: 1 }],
       'eventos de auditoria adicionais aparecem sem duplicar ações já medidas');
     assert.deepEqual(
-      [periodo.atendimentos, periodo.vendasBrutas, periodo.taxaServico, periodo.descontos, periodo.totalCobrado, periodo.ticketMedio],
-      [2, 300, 30, 15, 315, 157.5],
-      'período soma contas fechadas, serviço e descontos sem duplicar receita'
+      [periodo.valorItensEntregues, periodo.pedidosRegistrados],
+      [100, 1],
+      'o indicador individual usa autoria dos itens e pedidos, sem ratear a conta da mesa'
     );
     const relatorioAntes = await relatorioVendas({ from: '2026-10-30', to: '2026-10-30' });
     const contaAntes = relatorioAntes.contas.find((conta) => conta.id === sessao.id);
-    const servicoAntes = relatorioAntes.porGarcom.find((linha) => linha.garcomId === g.id);
-    assert.deepEqual([contaAntes.garcomResponsavelId, contaAntes.garcomResponsavel, contaAntes.taxaServico], [g.id, g.nome, 10]);
-    assert.deepEqual([servicoAntes.contas, servicoAntes.vendasBrutas, servicoAntes.servicoTotal, servicoAntes.totalCobrado], [1, 100, 10, 110]);
+    assert.equal(contaAntes.taxaServico, 10);
+    assert.equal(contaAntes.garcomResponsavelId, undefined, 'relatório não expõe titular da mesa');
+    assert.deepEqual(relatorioAntes.porGarcom, [], 'não há rateio de serviço por titularidade');
     await assert.rejects(() => removerGarcom(g.id, caixa, f.request('negado')), (e) => e.status === 403);
     const desativar = f.request('desativar');
     await setGarcomAtivo(g.id, false, admin, desativar);
@@ -192,14 +188,12 @@ test('remover difere de desativar, invalida o link, audita e preserva autoria e 
 
     const depois = (await metricasGarcons({ data: '2026-10-30' })).garcons.find((x) => x.id === g.id);
     assert.equal(depois.removido, true);
-    assert.deepEqual([depois.atendimentos, depois.vendas, depois.ticketMedio], [1, 110, 110]);
+    assert.equal(depois.valorItensEntregues, 100, 'histórico de entrega continua após remoção do cadastro');
     assert.equal((await metricasGarcons({ data: '2026-10-29' })).garcons.some((x) => x.id === g.id), false,
       'removidos sem vendas na data não poluem o desempenho');
     const relatorioDepois = await relatorioVendas({ from: '2026-10-30', to: '2026-10-30' });
     assert.deepEqual(relatorioDepois.contas.find((conta) => conta.id === sessao.id), contaAntes,
       'conta e responsável permanecem idênticos no relatório integrado');
-    assert.deepEqual(relatorioDepois.porGarcom.find((linha) => linha.garcomId === g.id), servicoAntes,
-      'vendas e taxa de serviço por garçom continuam atribuídas');
     const historico = (await pool.query(
       `SELECT s.garcom_responsavel_id,p.garcom_id,p.garcom_registrou_id,p.garcom_entregou_id,ip.entregue_por_id
        FROM mesa_sessoes s JOIN pedidos p ON p.sessao_id=s.id JOIN itens_pedido ip ON ip.pedido_id=p.id
@@ -213,95 +207,56 @@ test('remover difere de desativar, invalida o link, audita e preserva autoria e 
   } finally { await f.limpar(); }
 });
 
-test('mesa aberta e item aceito ou retirado bloqueiam remoção e desativação', async () => {
+test('mesa aberta e item pendente não bloqueiam remoção; outro garçom continua a entrega', async () => {
   const f = await fixture();
   try {
     const admin = await f.novoStaff('admin');
-    const g = await f.novoGarcom('Responsável');
-    const outro = await f.novoGarcom('Destino');
+    const g = await f.novoGarcom('Quem iniciou');
+    const outro = await f.novoGarcom('Equipe');
     const mesa = await f.novaMesa();
     const sessao = await f.novaSessao(mesa, { responsavel: g.id });
-    for (const operacao of [() => removerGarcom(g.id, admin), () => setGarcomAtivo(g.id, false, admin)]) {
-      await assert.rejects(operacao, (e) => e.status === 409 && e.message.includes(String(mesa.numero)) && /transfira ou encerre/i.test(e.message));
-    }
-    assert.equal((await getGarcomPorToken(g.token)).ativo, true);
-    await transferirMesaAdmin(admin, mesa.numero, outro.id, f.request('transferir'));
     const pedido = await f.novoPedido(sessao, g, 'concluido');
     const item = await f.novoItem(pedido, g, 'aceito');
-    for (const operacao of [() => removerGarcom(g.id, admin), () => setGarcomAtivo(g.id, false, admin)]) {
-      await assert.rejects(operacao, (e) => e.status === 409 && /item\(ns\) aceito/i.test(e.message));
-    }
-    await pool.query("UPDATE itens_pedido SET status='retirado',retirado_por_id=$2 WHERE id=$1", [item.id, g.id]);
-    await assert.rejects(() => removerGarcom(g.id, admin), (e) => e.status === 409 && /retirado/i.test(e.message));
-    await pool.query("UPDATE itens_pedido SET status='entregue',entregue_por_id=$2 WHERE id=$1", [item.id, g.id]);
-    await removerGarcom(g.id, admin, f.request('remover-entregue'));
+
+    await removerGarcom(g.id, admin, f.request('remover-com-item-pendente'));
+    assert.equal((await getGarcomPorToken(g.token)), null, 'link antigo é revogado');
     assert.equal((await listGarcons()).some((x) => x.id === g.id), false);
-    assert.equal((await pool.query('SELECT entregue_por_id FROM itens_pedido WHERE id=$1', [item.id])).rows[0].entregue_por_id, g.id);
+
+    await retirarComoGarcom(pedido.id, outro.token, f.request('retirar-equipe'), [item.id]);
+    await entregarComoGarcom(pedido.id, outro.token, [item.id], f.request('entregar-equipe'), 'entregar');
+    const autoria = (await pool.query(
+      'SELECT aceito_por_id,retirado_por_id,entregue_por_id,status FROM itens_pedido WHERE id=$1',
+      [item.id]
+    )).rows[0];
+    assert.deepEqual(
+      [Number(autoria.aceito_por_id), Number(autoria.retirado_por_id), Number(autoria.entregue_por_id), autoria.status],
+      [g.id, outro.id, outro.id, 'entregue'],
+      'cada etapa mantém o autor real, mesmo com o cadastro anterior removido'
+    );
   } finally { await f.limpar(); }
 });
 
-test('remoção concorrente com nova atribuição não cria mesa órfã', async () => {
+test('remoção concorrente com início de atendimento não cria titularidade de mesa', async () => {
   for (let i = 0; i < 6; i++) {
     const f = await fixture();
     try {
       const admin = await f.novoStaff('admin');
       const g = await f.novoGarcom('Concorrência');
       const mesa = await f.novaMesa();
-      const resultados = await Promise.allSettled([
+      const [remocao, inicio] = await Promise.allSettled([
         removerGarcom(g.id, admin, f.request('corrida-remover')),
         iniciarAtendimentoGarcom(g.token, mesa.numero, {}, f.request('corrida-iniciar')),
       ]);
-      const [remocao, inicio] = resultados;
-      if (inicio.status === 'fulfilled') f.ids.sessoes.push(inicio.value.sessaoId);
-      assert.equal(resultados.filter((r) => r.status === 'fulfilled').length, 1, 'apenas uma ação pode confirmar');
-      if (remocao.status === 'fulfilled') assert.equal(inicio.reason.status, 401);
-      else assert.equal(remocao.reason.status, 409);
-      const state = (await pool.query(
-        `SELECT g.ativo,g.removido_em,COUNT(s.id)::int AS abertas FROM garcons g
-         LEFT JOIN mesa_sessoes s ON s.garcom_responsavel_id=g.id AND s.status='aberta'
-         WHERE g.id=$1 GROUP BY g.id`, [g.id]
-      )).rows[0];
-      assert.ok(!(state.removido_em && state.abertas), 'cadastro removido nunca fica responsável por mesa aberta');
-      if (state.abertas) assert.equal(state.ativo, true);
+      assert.equal(remocao.status, 'fulfilled', 'remoção não depende de mesa vazia');
+      if (inicio.status === 'fulfilled') {
+        f.ids.sessoes.push(inicio.value.sessaoId);
+        assert.equal(inicio.value.iniciada, true);
+        const sessao = (await pool.query('SELECT status,garcom_responsavel_id FROM mesa_sessoes WHERE id=$1', [inicio.value.sessaoId])).rows[0];
+        assert.equal(sessao.status, 'aberta');
+        assert.equal(sessao.garcom_responsavel_id, null, 'sessão criada sem titular');
+      } else {
+        assert.equal(inicio.reason.status, 401, 'se remoção vencer a corrida, link não pode iniciar sessão');
+      }
     } finally { await f.limpar(); }
-  }
-});
-
-test('remoção concorrente com aceite ou transferência não deixa responsabilidades em cadastro removido', async () => {
-  for (const tipo of ['aceite', 'transferencia']) {
-    for (let i = 0; i < 3; i++) {
-      const f = await fixture();
-      try {
-        const admin = await f.novoStaff('admin');
-        const g = await f.novoGarcom('Concorrente');
-        const outro = await f.novoGarcom('Atual');
-        const mesa = await f.novaMesa();
-        const sessao = await f.novaSessao(mesa, { responsavel: outro.id });
-        let item = null;
-        let operacao;
-        if (tipo === 'aceite') {
-          const pedido = await f.novoPedido(sessao, outro, 'concluido');
-          item = await f.novoItem(pedido, outro, 'concluido');
-          operacao = () => assumirEntregaComoGarcom(pedido.id, g.token, f.request('corrida-aceite'), [item.id]);
-        } else {
-          operacao = () => transferirMesaAdmin(admin, mesa.numero, g.id, f.request('corrida-transferencia'));
-        }
-        const [remocao, outra] = await Promise.allSettled([
-          removerGarcom(g.id, admin, f.request('corrida-remover')), operacao(),
-        ]);
-        assert.equal([remocao, outra].filter((r) => r.status === 'fulfilled').length, 1, `${tipo}: só uma ação confirma`);
-        if (outra.status === 'fulfilled') assert.equal(remocao.reason.status, 409);
-        else assert.ok([401, 409].includes(outra.reason.status), `${tipo}: rejeição clara`);
-        const state = (await pool.query(
-          `SELECT g.ativo,g.removido_em,
-            EXISTS(SELECT 1 FROM mesa_sessoes WHERE status='aberta' AND garcom_responsavel_id=g.id) AS mesa_pendente,
-            EXISTS(SELECT 1 FROM itens_pedido ip JOIN pedidos p ON p.id=ip.pedido_id
-                   JOIN mesa_sessoes s ON s.id=p.sessao_id AND s.status='aberta'
-                   WHERE ip.status='aceito' AND ip.aceito_por_id=g.id) AS aceite_pendente
-           FROM garcons g WHERE g.id=$1`, [g.id]
-        )).rows[0];
-        assert.ok(!(state.removido_em && (state.mesa_pendente || state.aceite_pendente)), `${tipo}: sem responsabilidade órfã`);
-      } finally { await f.limpar(); }
-    }
   }
 });
