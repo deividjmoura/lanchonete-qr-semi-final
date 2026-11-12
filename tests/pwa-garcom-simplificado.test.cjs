@@ -446,17 +446,17 @@ test('barra do salão cabe em uma linha: praça, lupa e novo pedido', () => {
   assert.match(toolbar, /class="salao-search-wrap"/);
   assert.match(html, /id="tableSearchHint"[^>]*class="[^"]*sr-only/, 'dica da busca só para leitor de tela');
   // O botão grande "Novo pedido" do cabeçalho saiu: a ação já existe no detalhe da mesa.
-  const cabecalho = html.slice(html.indexOf('id="page-tables"'), html.indexOf('id="salaoToolbar"'));
-  assert.doesNotMatch(cabecalho, /id="newOrderTables"/, 'sem botão de novo pedido no cabeçalho');
+  assert.doesNotMatch(html, /id="newOrderTables"/, 'sem botão de novo pedido na barra do salão');
+  assert.doesNotMatch(js, /\$\('#newOrderTables'\)/, 'sem listener órfão do botão removido');
+  assert.match(js, /newOrder\.textContent='Novo pedido'/, 'novo pedido continua disponível no detalhe da mesa');
   assert.match(js, /\$\('#toggleTableSearch'\)\?\.addEventListener\('click'/);
   assert.match(js, /\$\('#closeTableSearch'\)\?\.addEventListener\('click'/);
 });
 
 test('grade do salão é densa e responsiva, sem rolar horizontal', () => {
   const grade = css.slice(css.indexOf('.table-grid {'), css.indexOf('.table-tile {'));
-  assert.match(grade, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/, 'duas colunas em aparelho muito estreito');
-  // Quatro plaquinhas por linha já no celular e mais colunas quando couber.
-  assert.match(grade, /@media \(min-width: 360px\) \{\s*\.table-grid \{ grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(grade, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/, 'mínimo de quatro colunas inclusive em celular estreito');
+  assert.doesNotMatch(grade, /repeat\(\s*[123]\s*,/, 'nunca reduz para menos de quatro colunas');
   for (const colunas of [5, 6, 7]) {
     assert.match(grade, new RegExp('repeat\\(\\s*' + colunas + ', minmax\\(0, 1fr\\)\\)'), colunas + ' colunas em telas maiores');
   }
