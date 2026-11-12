@@ -1278,7 +1278,6 @@ function Relatorio() {
   const top = Array.isArray(resumo.topProdutos) ? resumo.topProdutos : [];
   // Apenas a renderização é limitada; CSV/PDF continuam usando o relatório recebido inteiro.
   const diasVisiveis = useLimiteLocal(porDia, 10, data);
-  const garconsVisiveis = useLimiteLocal(porGarcom, 10, data);
   const topVisiveis = useLimiteLocal(top, 5, data);
   const contasVisiveis = useLimiteLocal(contas, 10, data);
   const faturamento = Number(resumo.faturamento ?? 0);
@@ -1545,50 +1544,6 @@ function Relatorio() {
             </tbody>
           </table>
           <ControlesPaginacao {...diasVisiveis} />
-        </section>
-      )}
-
-      {porGarcom.length > 0 && (
-        <section aria-label="Serviço por garçom" className="rounded-md border border-line bg-surface-raised p-5 overflow-x-auto">
-          <h3 className="font-display text-xl font-bold tracking-tight text-text mb-1">
-            Serviço por garçom responsável
-          </h3>
-          <p className="text-xs text-text-muted mb-3">
-            Comissão atribuída ao garçom responsável por cada sessão fechada no período.
-          </p>
-          <table role="table" className="admin-data-table w-full text-left text-sm">
-            <thead className="font-mono text-[11px] uppercase tracking-wider text-text-muted border-b border-line">
-              <tr>
-                <th className="py-2 pr-3">Garçom</th>
-                <th className="py-2 pr-3">Contas</th>
-                <th className="py-2 pr-3">Vendas</th>
-                <th className="py-2 pr-3">Serviço (comissão)</th>
-                <th className="py-2 pr-3">Descontos</th>
-                <th className="py-2">Total cobrado</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {garconsVisiveis.itens.map((g: any) => (
-                <tr key={String(g.garcomId ?? "sem-responsavel")}>
-                  <td data-label="Garçom" className="py-2.5 pr-3 text-text">{g.garcomNome || "—"}</td>
-                  <td data-label="Contas" className="py-2.5 pr-3 font-mono text-xs text-text-muted">{g.contas}</td>
-                  <td data-label="Vendas" className="py-2.5 pr-3 font-mono text-xs text-text">
-                    {BRL(Number(g.vendasBrutas ?? 0))}
-                  </td>
-                  <td data-label="Serviço (comissão)" className="py-2.5 pr-3 font-mono text-xs font-bold text-brand-ink">
-                    {BRL(Number(g.servicoTotal ?? 0))}
-                  </td>
-                  <td data-label="Descontos" className="py-2.5 pr-3 font-mono text-xs text-status-danger-ink">
-                    − {BRL(Number(g.descontosTotal ?? 0))}
-                  </td>
-                  <td data-label="Total cobrado" className="py-2.5 font-mono text-xs font-bold text-status-success-ink">
-                    {BRL(Number(g.totalCobrado ?? 0))}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <ControlesPaginacao {...garconsVisiveis} />
         </section>
       )}
 
