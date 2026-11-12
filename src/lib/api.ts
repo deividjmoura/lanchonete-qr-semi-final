@@ -319,8 +319,6 @@ export const api = {
   cancelarItem: (itemId: number, motivo: string, escopo: "admin" | "caixa" = "admin") =>
     apiSend(`/api/${escopo}/itens/${itemId}/cancelar`, "POST", { motivo }),
   historicoPedido: (pedidoId: number) => apiGet<any>(`/api/admin/pedidos/${pedidoId}/historico`),
-  transferirMesaAdmin: (numero: number, garcomDestinoId: number) =>
-    apiSend(`/api/admin/mesas/${numero}/transferir`, "POST", { garcomDestinoId }),
 
   cozinhaPedidos: () => apiGet<any[]>("/api/cozinha/pedidos"),
   barPedidos: () => apiGet<any[]>("/api/bar/pedidos"),
