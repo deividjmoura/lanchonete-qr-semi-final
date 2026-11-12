@@ -100,7 +100,13 @@ async function consultarVersaoPublicada() {
     });
     if (!res.ok) return null;
     const dados = await res.json();
-    return typeof dados.pwa === 'string' && /^[a-f0-9]{16}$/.test(dados.pwa) ? dados.pwa : null;
+    if (typeof dados.pwa !== 'string' || !/^[a-f0-9]{16}$/.test(dados.pwa)) return null;
+    return {
+      pwa: dados.pwa,
+      versao: typeof dados.versao === 'string' && /^\d+\.\d+\.\d+$/.test(dados.versao)
+        ? dados.versao
+        : null,
+    };
   } catch (_) {
     return null;
   }
@@ -256,7 +262,20 @@ async function verificar() {
   if (emVoo || !versaoLocal || document.visibilityState === 'hidden') return;
   emVoo = true;
   try {
-    detectar(await consultarVersaoPublicada());
+    const publicada = await consultarVersaoPublicada();
+    if (!publicada) return;
+
+    // A versão legível pertence ao JS em execução (app.js), não ao manifesto
+    // baixado da rede. Assim uma aba antiga detecta um deploy mesmo quando o
+    // service worker ainda não precisou trocar de cache.
+    const versaoNova =
+      publicada.versao &&
+      versaoLegivelLocal &&
+      compararVersoes(publicada.versao, versaoLegivelLocal) > 0;
+    const hashNovo = publicada.pwa !== versaoLocal;
+    if (!versaoNova && !hashNovo) return;
+
+    detectar('versao:' + (publicada.versao || '') + ':' + publicada.pwa);
   } finally {
     emVoo = false;
   }
@@ -283,6 +302,17 @@ async function atualizarAgora() {
      atual do cache, e no boot seguinte `versao.json` é lido de novo para gravar
      a versão de referência do aparelho. */
   window.location.reload();
+}
+
+/** Compara versões semver simples (x.y.z). */
+function compararVersoes(a, b) {
+  const pa = String(a || '').split('.').map((n) => parseInt(n, 10) || 0);
+  const pb = String(b || '').split('.').map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i += 1) {
+    const diferenca = (pa[i] || 0) - (pb[i] || 0);
+    if (diferenca !== 0) return diferenca < 0 ? -1 : 1;
+  }
+  return 0;
 }
 
 /** Notas publicadas depois da versão legível deste shell. */
