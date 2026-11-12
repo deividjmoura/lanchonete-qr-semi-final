@@ -128,11 +128,10 @@ async function removerEmailGoogleStaff(idBruto, ator, requestId = null) {
 async function listMesas() {
   const { rows } = await pool.query(
     `SELECT m.id, m.numero, m.token, m.status, m.praca_id, pr.nome AS praca_nome,
-            s.id AS sessao_id, s.valor_total, s.aberta_em, s.cliente_nome, s.garcom_responsavel_id, g.nome AS garcom_responsavel_nome
+            s.id AS sessao_id, s.valor_total, s.aberta_em, s.cliente_nome
      FROM mesas m
      LEFT JOIN mesa_pracas pr ON pr.id = m.praca_id
      LEFT JOIN mesa_sessoes s ON s.mesa_id = m.id AND s.status = 'aberta'
-     LEFT JOIN garcons g ON g.id=s.garcom_responsavel_id
      ORDER BY m.numero`
   );
   return rows.map((r) => ({
@@ -145,8 +144,6 @@ async function listMesas() {
     valorTotal: r.valor_total != null ? Number(r.valor_total) : null,
     abertaEm: r.aberta_em || null,
     clienteNome: r.cliente_nome || null,
-    garcomResponsavelId: r.garcom_responsavel_id || null,
-    garcomResponsavelNome: r.garcom_responsavel_nome || null,
     pracaId: r.praca_id != null ? Number(r.praca_id) : null,
     pracaNome: r.praca_nome || null,
   }));
