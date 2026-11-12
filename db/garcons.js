@@ -28,11 +28,6 @@ async function listGarcons() {
 // atribuem mesas ou entregas: elas mantêm FOR SHARE no garçom até o commit.
 // Não travar mesas aqui evita inverter a ordem dos locks de transferência.
 async function verificarResponsabilidades(client, gid, verbo) {
-  const { rows: mesas } = await client.query(
-    `SELECT m.numero FROM mesa_sessoes s JOIN mesas m ON m.id=s.mesa_id
-     WHERE s.status='aberta' AND s.garcom_responsavel_id=$1
-     ORDER BY m.numero LIMIT 10`, [gid]
-  );
   const { rows: pendentes } = await client.query(
     `SELECT COUNT(*)::int AS total
        FROM itens_pedido ip
@@ -43,9 +38,6 @@ async function verificarResponsabilidades(client, gid, verbo) {
           OR (ip.status='retirado' AND ip.retirado_por_id=$1))`, [gid]
   );
   const motivos = [];
-  if (mesas.length) {
-    motivos.push(`há atendimento aberto nas mesas ${mesas.map((m) => m.numero).join(', ')}. Transfira ou encerre esses atendimentos`);
-  }
   if (pendentes[0].total) {
     motivos.push(`há ${pendentes[0].total} item(ns) aceito(s) ou retirado(s). Conclua as entregas ou libere os aceites não retirados`);
   }
