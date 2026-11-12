@@ -6,17 +6,12 @@
  * até fechar a aba, e o service worker só trocava o cache por conta própria.
  * O painel avisava; o salão, não.
  *
- * Como a versão é descoberta (duas fontes, porque uma só não basta):
- *
- *  1. **`versao.json` do shell** — gerado junto com o aplicativo
- *     (`npm run build:versoes`) com o identificador de `public/garcom-pwa/`.
- *     O service worker o serve do CACHE, como o resto do shell: assim o valor
- *     corresponde ao JavaScript que está de fato rodando, e não ao que acabou
- *     de chegar pela rede. É esse valor que se compara com `GET /api/version`
- *     (campo `pwa`).
- *  2. **Troca de service worker** (`controllerchange`) — quando o navegador
- *     baixa o shell novo e o SW novo assume, a página em memória ainda é a
- *     antiga. Nesse caso o aviso aparece mesmo sem diferença de hash.
+ * A versão legível do JavaScript em execução vem embutida em app.js
+ * (`VERSAO_PWA_EM_EXECUCAO`) e é comparada com o campo `versao` de
+ * `GET /api/version`. Assim, uma publicação nova é detectada mesmo quando o
+ * service worker não precisa trocar de cache. O hash `pwa` continua sendo
+ * comparado como proteção adicional; `controllerchange` também avisa quando
+ * o SW novo assume enquanto a página antiga continua em memória.
  *
  * Regras (as mesmas do aviso do painel):
  *
