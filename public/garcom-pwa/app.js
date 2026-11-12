@@ -1,4 +1,5 @@
 import { openOfflineDb, OfflineStore, SyncEngine, probeBackend, uid } from './offline.js';
+import { iniciarAvisoDeAtualizacao, sinalizarShellAtualizado } from './atualizacao.js';
 
 const $=s=>document.querySelector(s);
 const money=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(n)||0);
@@ -415,6 +416,21 @@ $('#newOrderTables')?.addEventListener('click',()=>openOrder());
 $('#newOrderOrders')?.addEventListener('click',()=>openOrder());
 $('#tableSearch')?.addEventListener('input',renderTableGrid);
 $('#pracaFilter')?.addEventListener('change',renderTableGrid);
+/* A busca vive na mesma linha da praça e nasce recolhida: a lupa abre o campo
+   (ocultando as praças) e o × fecha, limpando o termo para o salão voltar
+   inteiro. Nada disso altera dados: é só filtro de tela. */
+function alternarBuscaMesas(abrir){
+ const barra=$('#salaoToolbar');
+ const campo=$('#tableSearch');
+ const lupa=$('#toggleTableSearch');
+ const expandir=abrir??!barra?.classList.contains('buscando');
+ barra?.classList.toggle('buscando',expandir);
+ lupa?.setAttribute('aria-expanded',expandir?'true':'false');
+ if(!expandir&&campo?.value){campo.value='';renderTableGrid();}
+ if(expandir)campo?.focus();
+}
+$('#toggleTableSearch')?.addEventListener('click',()=>alternarBuscaMesas(true));
+$('#closeTableSearch')?.addEventListener('click',()=>alternarBuscaMesas(false));
 $('#refreshTables')?.addEventListener('click',async()=>{
  const btn=$('#refreshTables');btn.disabled=true;
  try{await loadMesas();$('#tableMessage').textContent='Mesas atualizadas.';}
@@ -433,7 +449,17 @@ $('#showQr')?.addEventListener('click',()=>openQr(Number($('#tableSelect').value
 $('#exportPending')?.addEventListener('click',exportPending);
 $('#copyQr').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('#qrUrl').value);$('#copyQr').textContent='Endereço copiado';setTimeout(()=>$('#copyQr').textContent='Copiar endereço',1500)}catch{$('#qrUrl').select();document.execCommand('copy')}});
 let swReg=null;
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(r=>{swReg=r;}).catch(e=>console.warn('[garcom-pwa] Service Worker indisponível:',e.message));
+let shellAtualizado=false;
+if('serviceWorker'in navigator){
+ navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(r=>{swReg=r;}).catch(e=>console.warn('[garcom-pwa] Service Worker indisponível:',e.message));
+ /* O service worker novo assumiu o controle, mas esta página continua rodando
+    o JavaScript antigo. É exatamente o "atualizou e nada mudou" que o garçom
+    relatava: agora isso vira o aviso de nova versão (#301). */
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{
+   shellAtualizado=true;
+   try{sinalizarShellAtualizado();}catch(e){console.warn('[garcom-pwa] aviso de versão:',e.message);}
+ });
+}
 window.addEventListener('online',()=>{void swReg?.update().catch(()=>{});void syncEngine?.flush();void refreshLiveData();});
 window.addEventListener('offline',()=>setConnection('offline'));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){void swReg?.update().catch(()=>{});void syncEngine?.flush();void refreshLiveData();}});
@@ -455,6 +481,15 @@ async function boot(){
  if(waiterToken&&window.LQRRealtime){realtimeOff=window.LQRRealtime.connect(()=>{void refreshLiveData();void syncEngine?.flush();},{garcom:waiterToken,fallbackMs:20000,debounceMs:200}).close;}
 }
 void boot();
+/* Aviso de versão: independente do boot e do token. Se falhar, o atendimento
+   segue igual — a função nunca lança para fora. */
+async function contarPedidosPendentes(){
+ try{const lista=await allOrders();return lista.filter(o=>o.status!=='confirmed').length}catch{return 0}
+}
+let pendentesCache=0;
+setInterval(()=>{void contarPedidosPendentes().then(n=>{pendentesCache=n;}).catch(()=>{})},10000);
+void contarPedidosPendentes().then(n=>{pendentesCache=n;}).catch(()=>{});
+iniciarAvisoDeAtualizacao({aoContarPendentes:()=>pendentesCache,shellAtualizado}).catch(e=>console.warn('[garcom-pwa] aviso de versão:',e.message));
 const installBtn=$('#installAppBtn');
 const isStandalone=()=>window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 function refreshInstallState(){
@@ -775,17 +810,30 @@ function renderTableGrid(){
   card.dataset.numero=String(m.numero);
   card.dataset.situacao=situacao;
   const linha=document.createElement('span');linha.className='table-tile-top';
-  const title=document.createElement('strong');title.textContent='Mesa '+String(m.numero).padStart(2,'0');
+  const title=document.createElement('strong');title.className='table-tile-num';
+  // "Mesa" é rótulo; no card de quatro colunas só o número aparece, e o nome
+  // acessível do botão continua dizendo "Mesa 07".
+  const prefixo=document.createElement('span');prefixo.className='table-tile-num-prefix';prefixo.textContent='Mesa ';
+  const numero=document.createElement('span');numero.textContent=String(m.numero).padStart(2,'0');
+  title.append(prefixo,numero);
+  card.setAttribute('aria-label','Mesa '+m.numero+' · '+dados.rotulo+(m.pracaNome?' · '+m.pracaNome:''));
   const prazo=document.createElement('span');prazo.className='table-tile-time';
   const tempo=tempoAtendimentoTexto(minutos);
-  prazo.textContent=situacao==='em_atendimento'&&tempo?tempo:(situacao==='aguardando_pedido'?'sem pedido':'');
-  if(prazo.textContent)prazo.title=situacao==='em_atendimento'&&tempo?'Tempo desde o primeiro pedido desta mesa':'Sessão aberta ainda sem pedido';
+  // "sem pedido" já aparece no estado; repetir aqui só roubava largura do card.
+  prazo.textContent=situacao==='em_atendimento'&&tempo?tempo:'';
+  if(prazo.textContent)prazo.title='Tempo desde o primeiro pedido desta mesa';
   linha.append(title,prazo);
   const praca=document.createElement('small');praca.className='table-tile-praca';
   praca.textContent=m.pracaNome||'Sem praça';
   // O estado é escrito por extenso: a cor nunca é o único sinal.
   const estado=document.createElement('small');estado.className='table-tile-state';
-  estado.textContent=dados.rotulo;
+  // Rótulo completo e abreviado coexistem: o CSS escolhe qual mostrar conforme
+  // a largura, então a cor nunca é o único sinal de estado.
+  const estadoLongo=document.createElement('span');estadoLongo.className='table-tile-state-long';estadoLongo.textContent=dados.rotulo;
+  const estadoCurto=document.createElement('span');estadoCurto.className='table-tile-state-short';
+  estadoCurto.textContent=situacao==='em_atendimento'?'Em at.':(situacao==='aguardando_pedido'?'Aguard.':'Livre');
+  estado.append(estadoLongo,estadoCurto);
+  estado.setAttribute('title',dados.rotulo);
   const resp=document.createElement('small');resp.className='table-tile-resp';
   resp.textContent=m.garcomResponsavelNome?'Resp.: '+m.garcomResponsavelNome:(situacao==='livre'?'Sem responsável':'Sem responsável definido');
   card.append(linha,praca,estado,resp);

@@ -48,7 +48,8 @@ test('servidor usa a política nova e serve o manifesto de versão', () => {
   assert.match(server, /p === '\/build-version\.json'/);
   const bloco = server.slice(server.indexOf("p === '/api/version'"), server.indexOf("p === '/api/version'") + 1400);
   assert.match(bloco, /no-store/, 'o endpoint de versão não pode ser cacheado por CDN/navegador');
-  assert.match(bloco, /obterVersaoBuild\(path\.join\(ROOT, 'dist', ARQUIVO_VERSAO_BUILD\)\)/);
+  // O manifesto é lido uma vez e serve AS DUAS superfícies (SPA e PWA do garçom).
+  assert.match(bloco, /obterVersoesPublicadas\(path\.join\(ROOT, 'dist', ARQUIVO_VERSAO_BUILD\)\)/);
   // Nada sensível na resposta.
   assert.doesNotMatch(bloco, /process\.env/);
   assert.doesNotMatch(bloco, /SESSION|SECRET|TOKEN|PASSWORD|DATABASE_URL/i);

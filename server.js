@@ -1,7 +1,12 @@
 require('dotenv').config();
 const { statusReversao, reverterCardapio } = require('./db/cardapio-reversao');
 const http = require('http');
-const { ARQUIVO_VERSAO: ARQUIVO_VERSAO_BUILD, obterVersaoBuild } = require('./lib/build-version');
+const {
+  ARQUIVO_VERSAO: ARQUIVO_VERSAO_BUILD,
+  calcularVersaoDoPwa,
+  calcularVersaoDoShell,
+  obterVersoesPublicadas,
+} = require('./lib/build-version');
 const fs = require('fs');
 const path = require('path');
 const { sanitizarAlvoRequisicao, sanitizarDetalheErro } = require('./db/log-sanitizer');
@@ -289,18 +294,32 @@ const server = http.createServer(async (req, res) => {
     // verem a versão nova. Resposta é pequena e o cliente consulta a cada 60s
     // por aba visível.
     if (p === '/api/version' && req.method === 'GET') {
-      const version = obterVersaoBuild(path.join(ROOT, 'dist', ARQUIVO_VERSAO_BUILD));
-      if (!version) {
+      const registro = obterVersoesPublicadas(path.join(ROOT, 'dist', ARQUIVO_VERSAO_BUILD));
+      if (!registro) {
         // Ausência do arquivo NÃO derruba nada: o cliente trata como falha
         // silenciosa e segue trabalhando na versão que tem.
         return json(res, 503, { error: 'Versão indisponível' }, {
           'Cache-Control': 'no-store',
         });
       }
+
+      /* Duas superfícies, dois identificadores (#301):
+         - `version`: SPA React (painel, login, cardápio);
+         - `pwa`: aplicativo do garçom em /garcom-pwa/.
+         Cada cliente compara só a superfície que executa. O manifesto é a
+         fonte; se ele vier de um build antigo (sem `pwa`), recalculamos do
+         disco para não devolver `null` — mas só quando o arquivo do PWA
+         realmente existe, senão um deploy parcial mentiria uma versão. */
+      const pwaDoDisco = fs.existsSync(path.join(ROOT, 'public', 'garcom-pwa', 'sw.js'))
+        ? calcularVersaoDoPwa(ROOT)
+        : null;
+      const pwa = registro.pwa || pwaDoDisco;
       return json(res, 200, {
-        version,
-        // Versão do pacote é pública (package.json) e ajuda o suporte a
+        version: registro.version || calcularVersaoDoShell(ROOT),
+        ...(pwa ? { pwa } : {}),
+        // Versão legível (package.json) é pública e ajuda o suporte a
         // identificar a instalação; não identifica usuário nem sessão.
+        ...(registro.versao ? { versao: registro.versao } : {}),
         app: 'qradmin',
       }, {
         'Cache-Control': 'no-store, max-age=0',

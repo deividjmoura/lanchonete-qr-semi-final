@@ -1,11 +1,13 @@
 {
   "name": "lanchonete-qr",
   "private": true,
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "QR Admin — pedidos por QR Code para lanchonetes e pubs",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/gerar-versoes.cjs",
+    "build:versoes": "node scripts/gerar-versoes.cjs",
+    "versoes:check": "node scripts/gerar-versoes.cjs --check",
     "build:check": "npm run typecheck && vite build",
     "preview": "vite preview",
     "server": "node server.js",

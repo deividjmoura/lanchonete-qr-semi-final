@@ -43,6 +43,19 @@ test('publica o identificador do build que está no dist/', async () => {
   assert.equal(corpo.version, manifesto().version, 'o servidor e o bundle precisam do MESMO valor');
 });
 
+test('publica o identificador do aplicativo do garçom junto do painel', async () => {
+  const corpo = JSON.parse((await servidor.request('GET', '/api/version')).texto);
+  assert.match(corpo.pwa, /^[a-f0-9]{16}$/, 'o garçom precisa comparar a própria superfície');
+  // O manifesto do PWA é gerado do mesmo conteúdo que o servidor calcula.
+  const pwa = JSON.parse(fs.readFileSync(path.join(RAIZ, 'public', 'garcom-pwa', 'versao.json'), 'utf8'));
+  assert.equal(corpo.pwa, pwa.pwa, 'versao.json e /api/version divergiram');
+  assert.equal(corpo.versao, pwa.versao, 'a versão legível é a mesma nos dois lados');
+  // O servidor também serve o manifest do shell do garçom (é o que o PWA lê).
+  const manifest = await servidor.request('GET', '/garcom-pwa/versao.json');
+  assert.equal(manifest.status, 200);
+  assert.equal(JSON.parse(manifest.texto).pwa, corpo.pwa);
+});
+
 test('versão não é cacheável e não exige sessão', async () => {
   const resposta = await servidor.request('GET', '/api/version');
   const cache = String(resposta.headers['cache-control'] || '');
@@ -58,8 +71,10 @@ test('resposta do endpoint não expõe dado sensível', async () => {
   for (const proibido of ['secret', 'senha', 'password', 'token', 'database_url', 'commit', 'authorization']) {
     assert.ok(!texto.includes(proibido), `resposta não pode conter "${proibido}"`);
   }
-  // Só os campos combinados: uma versão curta e o nome do app.
-  assert.deepEqual(Object.keys(JSON.parse(corpo)).sort(), ['app', 'version']);
+  /* Só os campos combinados: os identificadores das duas superfícies (SPA e
+     PWA do garçom), a versão legível e o nome do app. Nada além disso — nem
+     commit, nem horário de deploy, nem dado de instalação. */
+  assert.deepEqual(Object.keys(JSON.parse(corpo)).sort(), ['app', 'pwa', 'versao', 'version']);
 });
 
 test('manifesto é servido com no-store e o shell também (sem cache preso)', async () => {

@@ -11,6 +11,7 @@ import Bar from "./screens/Bar";
 import Garcom from "./screens/Garcom";
 import Caixa from "./screens/Caixa";
 import Admin from "./screens/Admin";
+import Novidades from "./screens/Novidades";
 import { RotaStaff } from "./components/RotaStaff";
 import { IdentidadeContexto } from "./lib/identidade";
 import { AvisoAtualizacao } from "./components/AvisoAtualizacao";
@@ -36,7 +37,7 @@ export default function App() {
     <ConfirmacaoGlobal>
       <>
       <Toasts />
-      {["cozinha", "bar", "garcom", "caixa", "admin"].includes(rota.path) && <AvisoAtualizacao />}
+      {["cozinha", "bar", "garcom", "caixa", "admin", "novidades"].includes(rota.path) && <AvisoAtualizacao />}
       {/* Rota raiz e a landing comercial oficial. O acesso da equipe continua em
           #/login (mesma tela de antes) e pelo modal de cada CTA. */}
       {rota.path === "home" && <Landing />}
@@ -47,7 +48,8 @@ export default function App() {
       {rota.path === "garcom" && <Garcom key={rota.params.token} token={rota.params.token || ""} />}
       {rota.path === "caixa" && <RotaStaff recurso="caixa"><Caixa /></RotaStaff>}
       {rota.path === "admin" && <RotaStaff recurso="admin"><Admin secao={rota.params.secao} /></RotaStaff>}
-      {!["home", "login", "mesa", "cozinha", "bar", "garcom", "caixa", "admin"].includes(rota.path) && <Landing />}
+      {rota.path === "novidades" && <RotaStaff recurso="staff"><Novidades /></RotaStaff>}
+      {!["home", "login", "mesa", "cozinha", "bar", "garcom", "caixa", "admin", "novidades"].includes(rota.path) && <Landing />}
       </>
     </ConfirmacaoGlobal>
     </IdentidadeContexto.Provider>

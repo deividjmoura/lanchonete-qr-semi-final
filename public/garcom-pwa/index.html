@@ -20,7 +20,7 @@ body{margin:0;background:var(--surface);color:var(--text);padding-bottom:calc(76
 .page.active{display:block!important}
 .quick-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 button{cursor:pointer;font:inherit}
-.bottom-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px;padding:0 6px 6px}
+.bottom-nav{display:grid;grid-template-columns:repeat(2,minmax(0,200px));justify-content:center;gap:36px;padding:0 6px 6px}
 .sheet:not([open]){display:none}
 .sheet{border:1px solid var(--line-strong);padding:0;background:var(--surface);color:var(--text)}
 dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!important;width:min(calc(100vw - 32px),520px)!important;max-width:520px!important;height:fit-content!important;max-height:min(82dvh,690px)!important;border-radius:var(--radius-lg)!important;display:flex!important;flex-direction:column;overflow:hidden}
@@ -36,6 +36,8 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
 
 
 <div id="notificationFeedback" role="status" aria-live="polite" hidden class="notification-feedback"></div>
+
+<div id="updateNoticeHost"></div>
 
 <div id="readyToast" role="status" aria-live="polite" hidden class="ready-toast">
   <div class="ready-toast-copy">
@@ -60,10 +62,6 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
       <div>
         <h2>Mesas</h2>
       </div>
-      <button class="primary small" id="newOrderTables" type="button">
-        <svg class="pwa-icon-sm" aria-hidden="true"><use href="./icons.svg#plus-bold"></use></svg>
-        <span>Novo pedido</span>
-      </button>
     </div>
 
     <div hidden aria-hidden="true">
@@ -83,15 +81,27 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
         </div>
       </div>
       <div class="ledger-body-pad salao-search">
-        <div class="salao-filters">
-          <label class="field">Buscar mesa ou cliente
-            <input id="tableSearch" type="search" inputmode="numeric" autocomplete="off" placeholder="Ex.: 3, 12, 27 ou o cliente" aria-describedby="tableSearchHint">
-          </label>
-          <label class="field">Praça
+        <!-- Uma linha só: praça + lupa + novo pedido. A busca fica recolhida e,
+             ao abrir, ocupa o lugar da praça na mesma linha (#305/#306). -->
+        <div id="salaoToolbar" class="salao-toolbar">
+          <label class="salao-praca">
+            <span class="sr-only">Praça</span>
             <select id="pracaFilter" aria-label="Filtrar mesas por praça"></select>
           </label>
+          <div id="tableSearchWrap" class="salao-search-wrap">
+            <input id="tableSearch" type="search" inputmode="numeric" autocomplete="off" placeholder="Mesa ou cliente" aria-label="Buscar mesa ou cliente" aria-describedby="tableSearchHint">
+            <button id="closeTableSearch" class="salao-icon-btn salao-search-close" type="button" aria-label="Fechar busca">
+              <svg class="pwa-icon-sm" aria-hidden="true"><use href="./icons.svg#x-bold"></use></svg>
+            </button>
+          </div>
+          <button id="toggleTableSearch" class="salao-icon-btn salao-search-toggle" type="button" aria-label="Buscar mesa ou cliente" aria-expanded="false" aria-controls="tableSearchWrap">
+            <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#magnifying-glass-regular"></use></svg>
+          </button>
+          <button id="newOrderTables" class="salao-icon-btn salao-new-order" type="button" aria-label="Novo pedido">
+            <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#plus-bold"></use></svg>
+          </button>
         </div>
-        <p id="tableSearchHint" class="muted small-copy">Digite um ou mais números de mesa separados por vírgula, ou o nome do cliente de uma mesa com atendimento aberto. A busca apenas filtra a grade.</p>
+        <p id="tableSearchHint" class="muted small-copy sr-only">Digite um ou mais números de mesa separados por vírgula, ou o nome do cliente de uma mesa com atendimento aberto. A busca apenas filtra a grade.</p>
         <p id="tableSearchMessage" class="muted small-copy" aria-live="polite"></p>
         <ul id="tableLegend" class="table-legend" aria-label="Legenda dos estados das mesas">
           <li><span class="legend-dot legend-livre" aria-hidden="true"></span>Livre</li>

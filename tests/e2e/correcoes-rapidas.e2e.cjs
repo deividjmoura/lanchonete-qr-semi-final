@@ -208,8 +208,13 @@ async function notificationFlows(browser) {
   assert.equal(await page.locator('#tableGrid').isVisible(), true, 'salão visível sem busca');
   assert.equal(await page.locator('#tableGrid .table-tile').count(), 1, 'mesa do salão sem busca');
   assert.equal(await page.locator('#tableLegend li').count(), 3, 'legenda dos estados visível');
+  // A busca nasce recolhida atrás da lupa (#305/#306).
+  assert.equal(await page.locator('#tableSearch').isVisible(), false, 'busca recolhida por padrão');
+  await page.locator('#toggleTableSearch').click();
+  assert.equal(await page.locator('#tableSearch').isVisible(), true, 'lupa abre a busca');
   await page.locator('#tableSearch').fill('1');
-  await page.locator('#tableSearch').fill('');
+  await page.locator('#closeTableSearch').click();
+  assert.equal(await page.locator('#tableGrid .table-tile').count(), 1, 'salão volta inteiro ao fechar a busca');
   await page.locator('#tableGrid .table-tile').first().waitFor();
   assert.equal(await page.locator('#notificationConsent[open]').count(), 0, 'primeira visita não bloqueia o atendimento');
   assert.equal(await page.evaluate(() => window.__permissionCalls), 0, 'nunca solicita permissão automaticamente');

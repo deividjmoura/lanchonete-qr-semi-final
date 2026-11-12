@@ -518,6 +518,7 @@ async function main() {
           await page.locator("#backFromOrders").click();
           assert.equal(await page.locator(".page.active").getAttribute("data-page"), "tables");
           // As ações de uma mesa ficam no modal do salão; a lista duplicada foi removida.
+          await page.locator("#toggleTableSearch").click();
           await page.locator("#tableSearch").fill("Marina");
           await page.locator("#tableGrid .table-tile").first().click();
           await page.locator("#tableDetailsModal[open]").waitFor();

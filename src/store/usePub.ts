@@ -1237,7 +1237,7 @@ if (typeof window !== "undefined") {
     let ultimaChecagemFoco = 0;
     const rotaUsaSessaoStaff = () => {
       const h = (window.location.hash || "").replace(/^#\/?/, "").split(/[/?]/)[0];
-      if (["cozinha", "bar", "caixa", "admin"].includes(h)) return true;
+      if (["cozinha", "bar", "caixa", "admin", "novidades"].includes(h)) return true;
       return h === "login" && temIndicioDeSessao();
     };
     const revalidarAoVoltar = () => {
