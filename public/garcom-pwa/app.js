@@ -3,7 +3,7 @@ import { iniciarAvisoDeAtualizacao, sinalizarShellAtualizado } from './atualizac
 
 // Versão desta cópia do aplicativo. Deve acompanhar package.json e novidades.json;
 // diferente do manifesto remoto, este valor pertence ao JavaScript em execução.
-const VERSAO_PWA_EM_EXECUCAO = '3.2.0';
+const VERSAO_PWA_EM_EXECUCAO = '3.2.1';
 
 const $=s=>document.querySelector(s);
 const money=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(n)||0);
