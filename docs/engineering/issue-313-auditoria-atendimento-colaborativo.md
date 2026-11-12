@@ -97,3 +97,10 @@ A interface deverá ser simplificada para colaboração por equipe, sem remover 
 - A branch ainda está 2 commits atrás da `main`; as mudanças mais recentes do PWA foram preservadas ao atualizar o arquivo a partir da versão atual da `main`, mas a reconciliação completa da base permanece pendente.
 
 Nenhum teste foi declarado como executado nesta etapa. Nenhuma alteração foi feita na `main`; sem merge ou deploy.
+
+
+## Ajustes adicionais do PWA — 12/11/2026
+
+- Removido o botão redundante **Novo pedido** do cabeçalho da tela Mesas, junto com seu listener. A criação de pedido continua pelo detalhe da mesa, evitando duas entradas para a mesma ação.
+- Grade do salão alterada para **quatro mesas por linha em telas de celular**, com cartões compactos e número/estado preservados; em telas largas, a grade pode usar cinco colunas.
+- Teste E2E atualizado para verificar quatro colunas em viewports móveis e a ausência do atalho removido. A suíte ainda precisa ser executada.
