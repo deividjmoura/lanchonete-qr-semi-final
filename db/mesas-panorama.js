@@ -177,10 +177,8 @@ const SQL_MESAS = `
        AND ($1::int IS NULL OR m.numero = $1::int)
   ),
   sessao AS (
-    SELECT s.id, s.mesa_id, s.aberta_em, s.cliente_nome, s.garcom_responsavel_id,
-           g.nome AS garcom_nome
+    SELECT s.id, s.mesa_id, s.aberta_em, s.cliente_nome
       FROM mesa_sessoes s
-      LEFT JOIN garcons g ON g.id = s.garcom_responsavel_id
      WHERE s.status = 'aberta'
   ),
   consumo AS (
@@ -226,7 +224,6 @@ const SQL_MESAS = `
   SELECT a.numero, a.id, a.token, a.status AS mesa_status,
          a.praca_id, pr.nome AS praca_nome, pr.ordem AS praca_ordem,
          s.id AS sessao_id, s.aberta_em, s.cliente_nome,
-         s.garcom_responsavel_id, s.garcom_nome,
          COALESCE(c.valor, 0)::float AS consumo,
          COALESCE(pg.valor, 0)::float AS pago,
          COALESCE(pa.total, 0)::int AS pedidos_ativos,
@@ -261,8 +258,6 @@ function mapearMesa(linha, faixas, agora) {
     abertaEm,
     tempo: ocupada ? faixaOcupacao(abertaEm, agora, faixas) : null,
     clienteNome: linha.cliente_nome || null,
-    garcomResponsavelId: linha.garcom_responsavel_id != null ? Number(linha.garcom_responsavel_id) : null,
-    garcomResponsavelNome: linha.garcom_nome || null,
     consumo: Number(consumo.toFixed(2)),
     pago: Number(pago.toFixed(2)),
     saldo: Number(Math.max(0, consumo - pago).toFixed(2)),
