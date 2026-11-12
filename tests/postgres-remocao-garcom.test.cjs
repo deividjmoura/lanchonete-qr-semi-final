@@ -12,7 +12,7 @@ assert.strictEqual(databaseUrl.pathname, '/qradmin_test', 'Banco de teste obriga
 assert.strictEqual(process.env.NODE_ENV, 'test', 'NODE_ENV=test obrigatório');
 
 const pool = require('../db/pool');
-const { listGarcons, criarGarcom, setGarcomAtivo, removerGarcom, getGarcomPorToken, assumirEntregaComoGarcom, retirarComoGarcom, entregarComoGarcom } = require('../db/garcons');
+const { listGarcons, criarGarcom, setGarcomAtivo, removerGarcom, getGarcomPorToken, retirarComoGarcom, entregarComoGarcom } = require('../db/garcons');
 const { iniciarAtendimentoGarcom, metricasGarcons } = require('../db/atendimento');
 const { relatorioVendas } = require('../db/relatorio');
 
