@@ -867,10 +867,8 @@ function Garcons() {
   const [dataMetricas, setDataMetricas] = useState(() => dataLocal());
   const [dataMetricasAte, setDataMetricasAte] = useState(() => dataLocal());
   const [metricas, setMetricas] = useState<Array<{
-    id: number; nome: string; removido: boolean; atendimentos: number; vendas: number;
-    vendasBrutas: number; taxaServico: number; descontos: number; totalCobrado: number; ticketMedio: number;
-    pedidosRegistrados: number; pedidosComEntregaRegistrada: number; mesasAssumidas: number;
-    transferenciasRecebidas: number; transferenciasRealizadas: number;
+    id: number; nome: string; removido: boolean;
+    pedidosRegistrados: number; pedidosComEntregaRegistrada: number; valorItensEntregues: number;
     itensAssumidos: number; itensRetirados: number; itensEntregues: number;
     outrosEventos: Array<{ acao: string; quantidade: number }>;
   }>>([]);
@@ -991,23 +989,15 @@ function Garcons() {
   const totaisMetricas = metricas.reduce((total, g) => ({
     pedidosRegistrados: total.pedidosRegistrados + g.pedidosRegistrados,
     pedidosComEntregaRegistrada: total.pedidosComEntregaRegistrada + g.pedidosComEntregaRegistrada,
-    mesasAssumidas: total.mesasAssumidas + g.mesasAssumidas,
     itensAssumidos: total.itensAssumidos + g.itensAssumidos,
     itensRetirados: total.itensRetirados + g.itensRetirados,
     itensEntregues: total.itensEntregues + g.itensEntregues,
+    valorItensEntregues: total.valorItensEntregues + g.valorItensEntregues,
     outrosEventos: total.outrosEventos + g.outrosEventos.reduce((soma, evento) => soma + evento.quantidade, 0),
-    transferenciasRecebidas: total.transferenciasRecebidas + g.transferenciasRecebidas,
-    transferenciasRealizadas: total.transferenciasRealizadas + g.transferenciasRealizadas,
-    atendimentos: total.atendimentos + g.atendimentos,
-    vendasBrutas: total.vendasBrutas + g.vendasBrutas,
-    taxaServico: total.taxaServico + g.taxaServico,
-    descontos: total.descontos + g.descontos,
-    totalCobrado: total.totalCobrado + g.totalCobrado,
   }), {
-    pedidosRegistrados: 0, pedidosComEntregaRegistrada: 0, mesasAssumidas: 0,
-    itensAssumidos: 0, itensRetirados: 0, itensEntregues: 0, outrosEventos: 0,
-    transferenciasRecebidas: 0, transferenciasRealizadas: 0, atendimentos: 0,
-    vendasBrutas: 0, taxaServico: 0, descontos: 0, totalCobrado: 0,
+    pedidosRegistrados: 0, pedidosComEntregaRegistrada: 0,
+    itensAssumidos: 0, itensRetirados: 0, itensEntregues: 0,
+    valorItensEntregues: 0, outrosEventos: 0,
   });
   const renderGarcom = (g: GarcomRow) => (
     <li
@@ -1116,25 +1106,17 @@ function Garcons() {
           </p>
         )}
         <div className="overflow-x-auto">
-          <table role="table" className="admin-data-table w-full min-w-[1450px] text-sm text-left">
+          <table role="table" className="admin-data-table w-full min-w-[900px] text-sm text-left">
             <thead className="border-b border-line font-mono text-[11px] uppercase tracking-wider text-text-muted">
               <tr>
                 <th className="py-2.5 pr-3">Garçom</th>
                 <th className="py-2.5 px-2 text-right">Pedidos registrados</th>
-                <th className="py-2.5 px-2 text-right">Pedidos entregues</th>
-                <th className="py-2.5 px-2 text-right">Mesas assumidas</th>
-                <th className="py-2.5 px-2 text-right">Itens assumidos</th>
-                <th className="py-2.5 px-2 text-right">Retirados</th>
-                <th className="py-2.5 px-2 text-right">Entregues</th>
-                <th className="py-2.5 px-2 text-right">Transferências recebidas</th>
-                <th className="py-2.5 px-2 text-right">Transferências feitas</th>
-                <th className="py-2.5 px-2 text-right">Contas</th>
-                <th className="py-2.5 px-2 text-right">Ticket médio</th>
-                <th className="py-2.5 px-2 text-right">Vendas brutas</th>
-                <th className="py-2.5 px-2 text-right">Taxa de serviço</th>
-                <th className="py-2.5 px-2 text-right">Descontos</th>
-                <th className="py-2.5 px-2 text-right">Eventos adicionais</th>
-                <th className="py-2.5 pl-2 text-right">Total cobrado</th>
+                <th className="py-2.5 px-2 text-right">Pedidos com entrega</th>
+                <th className="py-2.5 px-2 text-right">Itens aceitos</th>
+                <th className="py-2.5 px-2 text-right">Itens retirados</th>
+                <th className="py-2.5 px-2 text-right">Itens entregues</th>
+                <th className="py-2.5 px-2 text-right">Valor dos itens entregues</th>
+                <th className="py-2.5 pl-2 text-right">Eventos adicionais</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -1144,49 +1126,33 @@ function Garcons() {
                     {g.nome}{g.removido && <span className="ml-1 text-xs font-normal text-text-muted">(removido)</span>}
                   </td>
                   <td data-label="Pedidos registrados" className="py-3 px-2 text-right font-mono">{g.pedidosRegistrados}</td>
-                  <td data-label="Pedidos entregues" className="py-3 px-2 text-right font-mono">{g.pedidosComEntregaRegistrada}</td>
-                  <td data-label="Mesas assumidas" className="py-3 px-2 text-right font-mono">{g.mesasAssumidas}</td>
-                  <td data-label="Itens assumidos" className="py-3 px-2 text-right font-mono">{g.itensAssumidos}</td>
-                  <td data-label="Retirados" className="py-3 px-2 text-right font-mono">{g.itensRetirados}</td>
-                  <td data-label="Entregues" className="py-3 px-2 text-right font-mono">{g.itensEntregues}</td>
-                  <td data-label="Transferências recebidas" className="py-3 px-2 text-right font-mono">{g.transferenciasRecebidas}</td>
-                  <td data-label="Transferências feitas" className="py-3 px-2 text-right font-mono">{g.transferenciasRealizadas}</td>
-                  <td data-label="Contas" className="py-3 px-2 text-right font-mono">{g.atendimentos}</td>
-                  <td data-label="Ticket médio" className="py-3 px-2 text-right font-mono">{BRL(g.ticketMedio)}</td>
-                  <td data-label="Vendas brutas" className="py-3 px-2 text-right font-mono">{BRL(g.vendasBrutas)}</td>
-                  <td data-label="Taxa de serviço" className="py-3 px-2 text-right font-mono">{BRL(g.taxaServico)}</td>
-                  <td data-label="Descontos" className="py-3 px-2 text-right font-mono text-status-danger-ink">− {BRL(g.descontos)}</td>
-                  <td data-label="Eventos adicionais" className="py-3 px-2 text-right text-xs text-text-muted">
+                  <td data-label="Pedidos com entrega" className="py-3 px-2 text-right font-mono">{g.pedidosComEntregaRegistrada}</td>
+                  <td data-label="Itens aceitos" className="py-3 px-2 text-right font-mono">{g.itensAssumidos}</td>
+                  <td data-label="Itens retirados" className="py-3 px-2 text-right font-mono">{g.itensRetirados}</td>
+                  <td data-label="Itens entregues" className="py-3 px-2 text-right font-mono">{g.itensEntregues}</td>
+                  <td data-label="Valor dos itens entregues" className="py-3 px-2 text-right font-mono">{BRL(g.valorItensEntregues)}</td>
+                  <td data-label="Eventos adicionais" className="py-3 pl-2 text-right text-xs text-text-muted">
                     {g.outrosEventos.length
                       ? g.outrosEventos.map((evento) => `${evento.acao}: ${evento.quantidade}`).join(" · ")
                       : "—"}
                   </td>
-                  <td data-label="Total cobrado" className="py-3 pl-2 text-right font-mono font-bold text-brand-ink">{BRL(g.totalCobrado)}</td>
                 </tr>
               ))}
               {metricas.length > 0 && (
                 <tr className="border-t-2 border-line-strong bg-surface-sunken font-semibold">
                   <td data-label="Garçom" className="py-3 pr-3 text-text">Total do período</td>
                   <td data-label="Pedidos registrados" className="py-3 px-2 text-right font-mono">{totaisMetricas.pedidosRegistrados}</td>
-                  <td data-label="Pedidos entregues" className="py-3 px-2 text-right font-mono">{totaisMetricas.pedidosComEntregaRegistrada}</td>
-                  <td data-label="Mesas assumidas" className="py-3 px-2 text-right font-mono">{totaisMetricas.mesasAssumidas}</td>
-                  <td data-label="Itens assumidos" className="py-3 px-2 text-right font-mono">{totaisMetricas.itensAssumidos}</td>
-                  <td data-label="Retirados" className="py-3 px-2 text-right font-mono">{totaisMetricas.itensRetirados}</td>
-                  <td data-label="Entregues" className="py-3 px-2 text-right font-mono">{totaisMetricas.itensEntregues}</td>
-                  <td data-label="Transferências recebidas" className="py-3 px-2 text-right font-mono">{totaisMetricas.transferenciasRecebidas}</td>
-                  <td data-label="Transferências feitas" className="py-3 px-2 text-right font-mono">{totaisMetricas.transferenciasRealizadas}</td>
-                  <td data-label="Contas" className="py-3 px-2 text-right font-mono">{totaisMetricas.atendimentos}</td>
-                  <td data-label="Ticket médio" className="py-3 px-2 text-right font-mono">{BRL(totaisMetricas.atendimentos ? totaisMetricas.totalCobrado / totaisMetricas.atendimentos : 0)}</td>
-                  <td data-label="Vendas brutas" className="py-3 px-2 text-right font-mono">{BRL(totaisMetricas.vendasBrutas)}</td>
-                  <td data-label="Taxa de serviço" className="py-3 px-2 text-right font-mono">{BRL(totaisMetricas.taxaServico)}</td>
-                  <td data-label="Descontos" className="py-3 px-2 text-right font-mono text-status-danger-ink">− {BRL(totaisMetricas.descontos)}</td>
-                  <td data-label="Eventos adicionais" className="py-3 px-2 text-right font-mono">{totaisMetricas.outrosEventos}</td>
-                  <td data-label="Total cobrado" className="py-3 pl-2 text-right font-mono font-bold text-brand-ink">{BRL(totaisMetricas.totalCobrado)}</td>
+                  <td data-label="Pedidos com entrega" className="py-3 px-2 text-right font-mono">{totaisMetricas.pedidosComEntregaRegistrada}</td>
+                  <td data-label="Itens aceitos" className="py-3 px-2 text-right font-mono">{totaisMetricas.itensAssumidos}</td>
+                  <td data-label="Itens retirados" className="py-3 px-2 text-right font-mono">{totaisMetricas.itensRetirados}</td>
+                  <td data-label="Itens entregues" className="py-3 px-2 text-right font-mono">{totaisMetricas.itensEntregues}</td>
+                  <td data-label="Valor dos itens entregues" className="py-3 px-2 text-right font-mono">{BRL(totaisMetricas.valorItensEntregues)}</td>
+                  <td data-label="Eventos adicionais" className="py-3 pl-2 text-right font-mono">{totaisMetricas.outrosEventos}</td>
                 </tr>
               )}
               {!metricas.length && (
                 <tr>
-                  <td colSpan={16} className="py-6 text-center text-xs text-text-muted">
+                  <td colSpan={8} className="py-6 text-center text-xs text-text-muted">
                     Nenhuma atividade registrada neste período.
                   </td>
                 </tr>
