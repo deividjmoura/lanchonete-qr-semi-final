@@ -168,6 +168,8 @@ test('notas de versão existem, em ordem e casadas com o pacote', () => {
 test('painel: o aviso lista o que mudou e a tela de novidades existe', () => {
   const aviso = ler('src/components/AvisoAtualizacao.tsx');
   assert.match(aviso, /notasDepoisDe\(/, 'o aviso precisa filtrar as notas da versão em execução');
+  assert.match(aviso, /carregarNotasDeVersao/, 'o aviso precisa buscar o changelog publicado, não só o JSON antigo do bundle');
+  assert.match(ler('src/screens/Novidades.tsx'), /carregarNotasDeVersao/, 'a tela completa também precisa buscar as notas atuais');
   assert.match(aviso, /O que mudou desde esta tela/);
   assert.match(aviso, /#\/novidades/, 'o aviso precisa levar à lista completa');
   assert.match(aviso, /criarVigiaDeVersao/, 'a sincronização entre abas continua valendo');
