@@ -1161,7 +1161,7 @@ function Garcons() {
           </table>
         </div>
         <p className="mt-3 text-[11px] text-text-muted">
-          O período usa o fuso horário configurado no servidor. Eventos sem autoria/horário não são inferidos. A coluna de eventos adicionais lista auditorias atribuídas diretamente ao garçom e não repete operações já contadas nas demais colunas. Vendas, taxa e descontos vêm das contas fechadas sob responsabilidade do garçom.
+          O período usa o fuso horário configurado no servidor. Pedidos registrados e etapas de cada item são atribuídos ao funcionário que realmente executou a ação. O valor exibido corresponde aos itens entregues por cada garçom; taxa de serviço e descontos permanecem no relatório financeiro geral, sem rateio por mesa.
         </p>
       </section>
 
