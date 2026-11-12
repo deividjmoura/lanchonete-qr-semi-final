@@ -19,8 +19,8 @@ Existem **duas superfícies** no navegador, e cada uma tem o seu identificador:
 
 | Campo | Superfície | O que entra no hash | Quem compara |
 | --- | --- | --- | --- |
-| `version` | SPA React: painel, login, cardápio do cliente | `src/**/*.{ts,tsx,css}` + `index.html` | `AvisoAtualizacao` (bundle do painel) |
-| `pwa` | aplicativo do garçom (`/garcom-pwa/`) | tudo em `public/garcom-pwa/`, menos os manifests gerados | `public/garcom-pwa/atualizacao.js` |
+| `version` | SPA React: painel, login, cardápio do cliente | `src/**/*.{ts,tsx,css}` + `index.html` + `public/novidades.json` | `AvisoAtualizacao` (bundle do painel) |
+| `pwa` | aplicativo do garçom (`/garcom-pwa/`) | tudo em `public/garcom-pwa/`, menos os manifests gerados, + `public/novidades.json` | `public/garcom-pwa/atualizacao.js` |
 | `versao` | versão legível (`package.json`) | texto, não hash | notas de versão, suporte |
 
 Cada cliente compara **só** a superfície que executa. Se as duas dividissem um
@@ -35,20 +35,21 @@ inverso). Fórmula única em `lib/build-version.js`:
 | Navegador (painel) | compara `__BUILD_VERSION__` com `version` |
 | Navegador (garçom) | compara `versao.json` do shell (que o **service worker serve do cache**) com `pwa` |
 
-Os manifests gerados (`public/garcom-pwa/versao.json` e `novidades.json`) ficam
-**fora** do hash: são saída do cálculo, não entrada. Sem essa exclusão o hash
-mudaria ao gravar a si próprio (referência circular).
+Os manifests gerados (`public/garcom-pwa/versao.json` e
+`public/garcom-pwa/novidades.json`) ficam **fora** do hash: são saída do cálculo,
+não entrada. A fonte `public/novidades.json` entra nos dois hashes porque uma
+mudança nas notas precisa gerar aviso nas duas superfícies. Sem excluir as
+cópias geradas, o hash mudaria ao gravar a si próprio (referência circular).
 
 Por que hash de conteúdo e não `RAILWAY_GIT_COMMIT_SHA`/`Date.now()`:
 
-- **o `dist/` é versionado e servido como está** — o deploy não recompila o
-  front. Um identificador que dependa do ambiente (SHA do commit, relógio,
-  `process.pid`) divergiria do bundle commitado, e o aviso apareceria para
-  sempre (ou nunca). Hash de conteúdo é reproduzível em qualquer máquina;
+- o identificador é calculado a partir do conteúdo real do shell, sem depender
+  de SHA do commit, relógio ou ambiente. O build de produção gera o `dist/` e
+  grava nele o mesmo manifesto que o servidor publica;
 - deploy que muda **só servidor/migrations/db** não tem arquivo novo para o
   navegador buscar → não avisa. O aviso significa "existe JS novo";
-- qualquer mudança em `src/`, `index.html` ou `public/garcom-pwa/` muda o valor
-  daquela superfície.
+- qualquer mudança em `src/`, `index.html`, `public/novidades.json` ou nos
+  arquivos do `public/garcom-pwa/` muda o valor da superfície correspondente.
 
 > **Regressão corrigida em 11/2026.** Até então o hash cobria apenas `src/` +
 > `index.html`, e o PWA do garçom não consultava `/api/version`. Resultado: um
@@ -71,16 +72,12 @@ que grava `versao.json`, copia `novidades.json` e sincroniza `dist/garcom-pwa/`.
 `caixa`, `admin`, `novidades`).
 
 No aplicativo do garçom a lógica equivalente vive em
-`public/garcom-pwa/atualizacao.js`, ligada em `app.js`. Ele usa as mesmas regras
-abaixo, com duas diferenças de mecânica:
-
-- a versão local vem de `versao.json` **servido pelo service worker** (cache),
-  não da rede: se viesse da rede, o arquivo seria regravado a cada deploy e o
-  valor "local" viraria o publicado, escondendo o aviso;
-- o evento `controllerchange` (service worker novo assumiu o controle) também
-  abre o aviso, porque nesse instante a página ainda executa o JavaScript antigo
-  mesmo com `versao.json` já atualizado no cache. Depois da primeira recarga, o
-  aparelho adota a versão nova como referência.
+`public/garcom-pwa/atualizacao.js`, ligada em `app.js`. A versão legível
+(`VERSAO_PWA_EM_EXECUCAO`) fica embutida no JavaScript em execução e é validada
+contra `package.json`; o cliente compara esse valor com `versao` em
+`/api/version`. Isso detecta a próxima versão mesmo quando o service worker não
+precisaria trocar de cache. O evento `controllerchange` também abre o aviso para
+clientes que já estavam com o aplicativo aberto durante a atualização inicial desta correção.
 
 - primeira consulta ao montar, depois a cada **60 s**;
 - nova consulta ao voltar à aba (`visibilitychange`/`focus`);
@@ -101,13 +98,15 @@ dentro do aviso.
 
 ### Changelog (`public/novidades.json`)
 
-Fonte única das novidades, lida pelo painel (`src/lib/notasVersao.ts`, via
-bundler) e copiada para o PWA por `scripts/gerar-versoes.cjs`. Regras:
+Fonte única das novidades. O painel busca `/novidades.json` com `no-store` (o
+JSON embutido no bundle é apenas fallback); o PWA busca a cópia sincronizada em
+`/garcom-pwa/novidades.json`. Assim, uma aba antiga consegue mostrar as notas
+publicadas depois que foi aberta. Regras:
 
 - só entra o que o operador percebe na tela; refatoração, dependência e
   infraestrutura ficam de fora;
-- `versao` é a versão legível de `package.json` — **não** o hash (o hash muda a
-  cada arquivo salvo e não ordena nada, além de não poder citar a si mesmo);
+- `versao` é a versão legível de `package.json` — **não** o hash. O PWA também
+  mantém essa versão no `app.js`; o gerador valida que ela bate com o pacote;
 - a entrada mais nova fica no topo e precisa bater com a versão do pacote;
   `npm run versoes:check` (e o teste) reprovam quando divergem;
 - texto público, igual em toda instalação: sem dado de cliente, pedido ou
@@ -161,11 +160,10 @@ Limites conscientes (não são bugs):
 - `/assets/<nome>-<hash>.js|css`: `public, max-age=31536000, immutable`
   (o nome muda a cada build, então não há risco de servir JS velho e a
   performance não regride);
-- o **service worker do PWA do garçom** (`public/garcom-pwa/sw.js`) continua
-  exatamente como estava: `garcom-pwa-shell-v43`, escopo `/garcom-pwa/`,
-  network-first e `/api/` descartado antes de qualquer `cache.put`. A versão do
-  cache **não** foi alterada nesta issue: revisar precache é outro trabalho e
-  exige testar clientes já instalados;
+- o **service worker do PWA do garçom** (`public/garcom-pwa/sw.js`) usa
+  `garcom-pwa-shell-v47`, escopo `/garcom-pwa/`, network-first e `/api/`
+  descartado antes de qualquer `cache.put`. O precache inclui `versao.json` e
+  `novidades.json`; o cache anterior é substituído sem tocar no IndexedDB;
 - o shell do Admin **não** registra service worker;
 - a atualização **não limpa** IndexedDB, `localStorage`, fila offline,
   rascunhos ou credenciais. O único uso de `localStorage` é a marca de
