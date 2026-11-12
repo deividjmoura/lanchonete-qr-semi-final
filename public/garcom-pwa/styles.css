@@ -749,9 +749,8 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 }
 
 /* ------------------------------------------------------------------- mesas -- */
-/* Grade do salão: até 4 colunas quando couber, caindo para 3/2/1 pela largura
-   real do aparelho. As colunas são fixas por faixa (não auto-fill) para que o
-   card nunca fique espremido nem gere rolagem horizontal (#305). */
+/* Grade do salão: mínimo de quatro colunas em qualquer largura.
+   As colunas são fixas por faixa para manter o tamanho previsível das plaquinhas. */
 /* Grade densa do salão: quatro mesas por linha inclusive em celulares
    compactos; amplia progressivamente em telas maiores. */
 .table-grid {
