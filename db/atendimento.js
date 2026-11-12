@@ -395,8 +395,10 @@ async function metricasGarcons({ data } = {}) {
          ) ev) AS outros_eventos
     FROM garcons g
     WHERE g.removido_em IS NULL
-       OR EXISTS (SELECT 1 FROM pedidos p WHERE p.garcom_registrou_id=g.id)
-       OR EXISTS (SELECT 1 FROM itens_pedido ip WHERE ip.entregue_por_id=g.id)
+       OR EXISTS (SELECT 1 FROM pedidos p WHERE p.garcom_registrou_id=g.id
+         AND (p.criado_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date)
+       OR EXISTS (SELECT 1 FROM itens_pedido ip WHERE ip.entregue_por_id=g.id AND ip.entregue_em IS NOT NULL
+         AND (ip.entregue_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date)
     GROUP BY g.id, g.nome, g.ativo, g.removido_em
     ORDER BY vendas DESC, pedidos_registrados DESC, g.nome ASC
   `, [from, to, tz]);
