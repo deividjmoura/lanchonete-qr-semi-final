@@ -378,11 +378,18 @@ async function ativarMesas(quantidade, ator = null, requestId = null) {
     const atual = Number(rows[0].quantidade);
     if (quantidade < atual) throw new ErroAdmin(400, 'Não é permitido desativar mesas por esta operação');
     if (quantidade > 70) throw new ErroAdmin(400, 'Limite de 70 mesas');
-    // Seed já provisiona até NUM_MESAS; garantir que há registros antes de habilitar.
-    const { rows: existentes } = await client.query('SELECT COUNT(*)::int AS total FROM mesas WHERE numero BETWEEN 1 AND $1', [quantidade]);
-    if (existentes[0].total < quantidade) {
-      throw new ErroAdmin(409, 'Mesas ainda não provisionadas. Configure NUM_MESAS=70 e execute o seed.');
-    }
+    // Provisiona de forma idempotente as mesas que ainda não existem.
+    // O token é gerado pelo DEFAULT da tabela; registros e sessões existentes
+    // permanecem intactos. A trava em configuracao_mesas serializa ampliações.
+    await client.query(
+      `INSERT INTO mesas (numero)
+       SELECT serie.numero
+         FROM generate_series(1, $1::int) AS serie(numero)
+        WHERE NOT EXISTS (
+          SELECT 1 FROM mesas m WHERE m.numero = serie.numero
+        )`,
+      [quantidade]
+    );
     if (quantidade > atual) {
       await client.query('UPDATE configuracao_mesas SET quantidade = $1 WHERE id = 1', [quantidade]);
       const { registrarEvento } = require('./auditoria');
