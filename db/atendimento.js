@@ -391,13 +391,6 @@ async function metricasGarcons({ data } = {}) {
       (SELECT COUNT(DISTINCT ip.pedido_id)::int FROM itens_pedido ip
         WHERE ip.entregue_por_id=g.id AND ip.entregue_em IS NOT NULL
           AND (ip.entregue_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date) AS pedidos_com_entrega_registrada,
-      (SELECT COUNT(DISTINCT h.sessao_id)::int FROM mesa_atendimento_historico h
-        WHERE h.garcom_novo_id=g.id AND (h.alterado_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date) AS mesas_assumidas,
-      (SELECT COUNT(*)::int FROM mesa_atendimento_historico h
-        WHERE h.garcom_novo_id=g.id AND h.garcom_anterior_id IS NOT NULL
-          AND (h.alterado_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date) AS transferencias_recebidas,
-      (SELECT COUNT(*)::int FROM mesa_atendimento_historico h
-        WHERE h.garcom_anterior_id=g.id AND (h.alterado_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date) AS transferencias_realizadas,
       (SELECT COUNT(*)::int FROM itens_pedido ip
         WHERE ip.aceito_por_id=g.id AND ip.aceito_em IS NOT NULL
           AND (ip.aceito_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date) AS itens_assumidos,
@@ -418,11 +411,10 @@ async function metricasGarcons({ data } = {}) {
             GROUP BY ae.acao
          ) ev) AS outros_eventos
     FROM garcons g
-    LEFT JOIN mesa_sessoes s
-      ON s.garcom_responsavel_id=g.id AND s.status='fechada'
-     AND (s.fechada_em AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date
+    WHERE g.removido_em IS NULL
+       OR EXISTS (SELECT 1 FROM pedidos p WHERE p.garcom_registrou_id=g.id)
+       OR EXISTS (SELECT 1 FROM itens_pedido ip WHERE ip.entregue_por_id=g.id)
     GROUP BY g.id, g.nome, g.ativo, g.removido_em
-    HAVING g.removido_em IS NULL OR COUNT(s.id) > 0
     ORDER BY vendas DESC, pedidos_registrados DESC, g.nome ASC
   `, [from, to, tz]);
 
@@ -433,21 +425,14 @@ async function metricasGarcons({ data } = {}) {
     periodo: { from, to, timezone: tz },
     criterio: 'pedidos registrados e itens efetivamente entregues por cada garçom no período e fuso selecionados; não há atribuição financeira por titularidade de mesa',
     garcons: rows.map(x => {
-      const totalCobrado = Number(x.vendas || 0);
+      const valorItensEntregues = Number(x.vendas || 0);
       const contas = Number(x.atendimentos);
       return {
         id:x.id, nome:x.nome, ativo:x.ativo, removido:x.removido,
-        atendimentos:contas, vendas:totalCobrado,
-        vendasBrutas:Number(financeiro.vendasBrutas ?? x.vendas),
-        taxaServico:Number(financeiro.servicoTotal ?? 0),
-        descontos:Number(financeiro.descontosTotal ?? 0),
-        totalCobrado,
-        ticketMedio:contas ? Number((totalCobrado / contas).toFixed(2)) : 0,
-        pedidosRegistrados:x.pedidos_registrados,
+        atendimentos:contas, pedidosRegistrados:x.pedidos_registrados,
         pedidosComEntregaRegistrada:x.pedidos_com_entrega_registrada,
-        mesasAssumidas:x.mesas_assumidas,
-        transferenciasRecebidas:x.transferencias_recebidas,
-        transferenciasRealizadas:x.transferencias_realizadas,
+        valorItensEntregues,
+
         itensAssumidos:x.itens_assumidos,
         itensRetirados:x.itens_retirados,
         itensEntregues:x.itens_entregues,
