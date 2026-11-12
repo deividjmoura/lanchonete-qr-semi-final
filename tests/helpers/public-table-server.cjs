@@ -36,7 +36,7 @@ const { fork } = require('node:child_process');
 const RAIZ = path.join(__dirname, '..', '..');
 
 /** Só os diretórios/arquivos que o `server.js` precisa para servir a API. */
-const DIRETORIOS = ['db', 'security', 'server'];
+const DIRETORIOS = ['db', 'lib', 'security', 'server'];
 const ARQUIVOS = ['server.js', 'package.json'];
 
 const PRONTO_TIMEOUT_MS = 60_000;

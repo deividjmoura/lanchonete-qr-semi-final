@@ -23,16 +23,36 @@ async function consultarVersao(): Promise<string | null> {
   }
 }
 
+type CampoFormulario = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+
+function campoFoiAlterado(campo: CampoFormulario): boolean {
+  if (campo instanceof HTMLInputElement && (campo.type === "checkbox" || campo.type === "radio")) {
+    return campo.checked !== campo.defaultChecked;
+  }
+  if (campo instanceof HTMLSelectElement) {
+    const opcoes = Array.from(campo.options);
+    if (campo.multiple) {
+      return opcoes.some((opcao) => opcao.selected !== opcao.defaultSelected);
+    }
+
+    // Selects não têm defaultValue. Usa a opção marcada no HTML; sem marcação,
+    // o navegador seleciona a primeira opção em um select de tamanho padrão.
+    const indiceMarcado = opcoes.findIndex((opcao) => opcao.defaultSelected);
+    const indicePadrao = indiceMarcado >= 0
+      ? indiceMarcado
+      : campo.size <= 1 && opcoes.length > 0
+        ? 0
+        : -1;
+    return campo.selectedIndex !== indicePadrao;
+  }
+  return campo.value !== campo.defaultValue;
+}
+
 function existeTrabalhoNaoSalvo(): boolean {
-  const campos = Array.from(document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+  const campos = Array.from(document.querySelectorAll<CampoFormulario>(
     "input:not([type=hidden]):not([type=submit]):not([type=button]), textarea, select"
   ));
-  const formularioAlterado = campos.some((campo) => {
-    if (campo instanceof HTMLInputElement && (campo.type === "checkbox" || campo.type === "radio")) {
-      return campo.checked !== campo.defaultChecked;
-    }
-    return campo.value !== campo.defaultValue;
-  });
+  const formularioAlterado = campos.some(campoFoiAlterado);
   const operacaoSinalizadaComoAtiva = Boolean(document.querySelector(
     '[aria-busy="true"], [data-operation-pending="true"], form[data-submitting="true"]'
   ));
