@@ -128,6 +128,11 @@ test('manifesto publicado carrega as duas superfícies e a versão legível', ()
 test('manifests do PWA estão em dia com o repositório', () => {
   // `--check` falha se `versao.json`/`novidades.json` estiverem velhos.
   assert.equal(gerarVersoes.main(['--check']), 0, 'rode `npm run build:versoes` e commite');
+  assert.match(
+    ler('scripts/gerar-versoes.cjs'),
+    /VERSAO_PWA_EM_EXECUCAO/,
+    'o build precisa validar que o garçom está na mesma versão legível do pacote',
+  );
 
   const versao = JSON.parse(ler('public/garcom-pwa/versao.json'));
   assert.equal(versao.pwa, buildVersion.calcularVersaoDoPwa(RAIZ));
