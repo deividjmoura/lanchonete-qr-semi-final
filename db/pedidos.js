@@ -996,7 +996,7 @@ async function getFilaGarcom(garcomId) {
   if(!Number.isSafeInteger(id)||id<1)throw new TypeError('É obrigatório informar um garçom válido para consultar a fila');
   const {rows:pedidos}=await pool.query(
     `SELECT DISTINCT p.id,p.status,p.criado_em,p.observacao_geral,p.cliente_nome,p.garcom_nome,
-            p.garcom_id,p.origem_pedido,p.editado_em,m.numero AS mesa,s.id AS sessao_id,
+            p.garcom_id,p.origem_pedido,p.editado_em,m.numero AS mesa,s.id AS sessao_id
      FROM pedidos p JOIN mesa_sessoes s ON s.id=p.sessao_id JOIN mesas m ON m.id=s.mesa_id
      WHERE s.status='aberta' AND EXISTS (
        SELECT 1 FROM itens_pedido ip WHERE ip.pedido_id=p.id AND ip.status IN ('concluido','aceito','retirado')
@@ -1023,7 +1023,7 @@ async function getFilaGarcom(garcomId) {
   }
   return pedidos.map(p=>{
     const lista=byPedido.get(p.id)||[];
-      status:'concluido',editadoEm:p.editado_em||null,itens:lista,
+    return {...p,sessaoId:p.sessao_id,status:'concluido',editadoEm:p.editado_em||null,itens:lista,
       itensProntos:lista.filter(i=>i.status==='concluido').length,
       itensPendentesProducao:lista.filter(i=>['recebido','em_producao'].includes(i.status)).length};
   });
