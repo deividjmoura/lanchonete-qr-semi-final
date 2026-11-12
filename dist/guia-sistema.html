@@ -28,6 +28,8 @@
       </button>
       <nav id="sideNav" aria-label="Seções do guia">
         <a href="#aviso" aria-current="true">Sobre este guia</a>
+        <a href="#acesso">Acesso ao sistema</a>
+        <a href="#uso">Como usar</a>
         <a href="#fluxo">Fluxo completo</a>
         <a href="#cliente">Cliente</a>
         <a href="#cozinha">Cozinha</a>
@@ -56,6 +58,45 @@
             não registra pagamento e não consulta informações privadas. É só leitura e explicação.
           </div>
         </header>
+        <section id="acesso" aria-labelledby="acesso-h">
+          <h2 id="acesso-h">Acesso ao sistema</h2>
+          <p>
+            Este guia é somente leitura e não autentica. Para entrar no QR Admin, volte à página inicial
+            e acione o botão de acesso no cabeçalho ou no rodapé. O botão abre o fluxo real
+            de autenticação da equipe, restrito a funcionários cadastrados.
+          </p>
+          <div class="panel">
+            <h3>Como entrar</h3>
+            <ol class="feature-list">
+              <li><span class="i">01</span><span>Na página inicial, selecione o botão de acesso.</span></li>
+              <li><span class="i">02</span><span>Escolha seu setor e siga a forma de autenticação disponível para a sua conta.</span></li>
+              <li><span class="i">03</span><span>Se o segundo fator estiver ativado na conta, informe o código solicitado para concluir o acesso.</span></li>
+            </ol>
+          </div>
+          <p class="muted">
+            O segundo fator (2FA) é uma configuração de segurança por conta, não uma etapa automática para todas as pessoas.
+            Quando ativado, o acesso solicita um código do aplicativo autenticador ou um código de recuperação.
+          </p>
+          <p><a class="btn btn-ghost" href="/">Voltar à página inicial</a></p>
+        </section>
+        <section id="uso" aria-labelledby="uso-h">
+          <h2 id="uso-h">Como usar o QR Admin</h2>
+          <p>
+            O fluxo abaixo aponta para as instruções de cada área. Escolha o papel ou a etapa que você precisa consultar;
+            a página continua sendo demonstrativa e não executa operações.
+          </p>
+          <div class="panel">
+            <h3>Encontre as instruções por etapa</h3>
+            <ul class="feature-list">
+              <li><span class="i">01</span><a class="btn btn-ghost" href="#cliente">Cliente · QR, cardápio e pedido</a></li>
+              <li><span class="i">02</span><a class="btn btn-ghost" href="#cozinha">Cozinha · fila e preparo por item</a></li>
+              <li><span class="i">03</span><a class="btn btn-ghost" href="#bar">Bar · fila independente</a></li>
+              <li><span class="i">04</span><a class="btn btn-ghost" href="#garcom">Garçom · aceite, retirada e entrega</a></li>
+              <li><span class="i">05</span><a class="btn btn-ghost" href="#caixa">Caixa · pagamentos e fechamento</a></li>
+              <li><span class="i">06</span><a class="btn btn-ghost" href="#admin">Administração · cardápio, equipe e painel</a></li>
+            </ul>
+          </div>
+        </section>
         <section id="fluxo" aria-labelledby="fluxo-h">
           <h2 id="fluxo-h">Fluxo completo</h2>
           <p>
@@ -202,7 +243,7 @@
               <li><span class="i">03</span><span><strong>Importação CSV</strong> — prévia e validação antes de aplicar</span></li>
               <li><span class="i">04</span><span><strong>Mesas e praças</strong> — mapa, panorama, geração e download de QR Codes</span></li>
               <li><span class="i">05</span><span><strong>Garçons</strong> — links individuais e métricas</span></li>
-              <li><span class="i">06</span><span><strong>Contas e permissões</strong> — staff por função (admin, cozinha, bar, caixa, garçom)</span></li>
+              <li><span class="i">06</span><span><strong>Contas e permissões</strong> — equipe por função (admin, cozinha, bar, caixa, garçom); segundo fator configurável por conta quando disponível</span></li>
             </ul>
           </div>
           <div class="frame">
@@ -230,7 +271,11 @@
           </details>
           <details class="rule">
             <summary>PIX manual</summary>
-            <p>Sem confirmação bancária automática. A equipe valida o recebimento e registra no sistema.</p>
+            <p>Sem confirmação bancária automática. A equipe valida o recebimento no aplicativo do banco e registra no sistema.</p>
+          </details>
+          <details class="rule">
+            <summary>Avisos sonoros e por voz</summary>
+            <p>Dependem dos recursos do navegador e do dispositivo, das permissões e da configuração de áudio. A tela operacional também permite silenciar os avisos.</p>
           </details>
           <details class="rule">
             <summary>Um estabelecimento por instalação</summary>
@@ -247,6 +292,8 @@
         <footer class="footer-guide">
           <p>QR Admin · Guia de funções · Página estática e independente</p>
           <p>
+            <a href="#acesso">Acesso ao sistema</a>
+            <a href="#uso">Como usar</a>
             <a href="/apresentacao.html">Apresentação</a>
             <a href="https://qradmin.up.railway.app/">Acessar o sistema</a>
             <a href="https://wa.me/5547996162721">WhatsApp · Deivid Moura</a>
@@ -274,7 +321,7 @@
           link.setAttribute("aria-current", "true");
         });
       });
-      var sections = ["aviso", "fluxo", "cliente", "cozinha", "bar", "garcom", "caixa", "admin", "regras", "apresentacao"];
+      var sections = ["aviso", "acesso", "uso", "fluxo", "cliente", "cozinha", "bar", "garcom", "caixa", "admin", "regras", "apresentacao"];
       function onScroll() {
         var y = window.scrollY + 120;
         var current = sections[0];
