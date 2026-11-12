@@ -287,10 +287,8 @@
     margin: 0 auto;
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-pill);
-    background: color-mix(in srgb, var(--surface-raised) 94%, transparent);
+    background: var(--surface-raised);
     box-shadow: var(--shadow-card);
-    -webkit-backdrop-filter: blur(18px);
-    backdrop-filter: blur(18px);
   }
 
   .site-header__inner {
@@ -1053,10 +1051,8 @@
     padding: 6px;
     border: 1px solid var(--ink-band-line);
     border-radius: var(--radius-pill);
-    background: color-mix(in srgb, var(--ink-band) 94%, transparent);
+    background: var(--ink-band);
     box-shadow: var(--shadow-card);
-    -webkit-backdrop-filter: blur(14px);
-    backdrop-filter: blur(14px);
   }
 
   .percurso__navegacao ol {
