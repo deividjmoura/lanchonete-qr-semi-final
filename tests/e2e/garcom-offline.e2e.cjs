@@ -219,9 +219,18 @@ async function main() {
     assert.equal(await page.locator('#notificationConsent[open]').count(), 0);
     ok('primeiro acesso não bloqueia o atendimento com um modal de avisos');
 
-    // ---- 1) Pedido criado sem rede -------------------------------------
+    // ---- 1) Inicia o atendimento e cria pedido sem rede -----------------
+    // O fluxo atual inicia a sessão pela ficha da mesa; o novo pedido fica
+    // disponível no detalhe depois que o garçom assume a mesa.
+    await page.fill('#tableSearch', String(ids.numero));
+    await page.locator('#tableGrid .table-tile').first().click();
+    await page.locator('#tableDetailsModal[open]').waitFor();
+    await page.getByRole('button', { name: 'Iniciar atendimento', exact: true }).click();
+    await page.locator('#tableDetailsModal:not([open])').waitFor();
     await context.setOffline(true);
-    await page.click('#newOrderTables');
+    await page.locator('#tableGrid .table-tile').first().click();
+    await page.locator('#tableDetailsModal[open]').waitFor();
+    await page.getByRole('button', { name: 'Novo pedido', exact: true }).click();
     await page.selectOption('#modalTable', String(ids.numero));
     await page.fill('#modalCustomer', 'Cliente sem sinal');
     await page.fill('#search', 'Lanche E2E ' + sufixo);
