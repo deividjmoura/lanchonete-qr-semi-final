@@ -90,7 +90,7 @@ const { golpePermitido } = require('./db/rateLimit');
 const oauthGoogle = require('./db/oauth-google');
 const { registrarEventoIndependente } = require('./db/auditoria');
 const { resolveClientIp, loginUserRateLimitKey } = require('./security/client-ip');
-const { ErroAtendimento, transferirMesaAdmin, listarMesasGarcom, iniciarAtendimentoGarcom, assumirMesa, listarGarconsAtivos, transferirMesa, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
+const { ErroAtendimento, listarMesasGarcom, iniciarAtendimentoGarcom, assumirMesa, listarGarconsAtivos, listarPedidosProntosGarcom, resumoPagamentoSessao, deixarMesa, criarPedidoGarcom, listarPedidosAtivosMesa, listarAtendimentosGarcom, editarPedidoGarcom, metricasGarcons } = require('./db/atendimento');
 const { panoramaMesas, mesaDetalhe } = require('./db/mesas-panorama');
 const { normalizarChavePix, inspecionarChavePix } = require('./db/pix-normaliza');
 const { subscribe, broadcast, closeAccess } = require('./db/events');
@@ -796,21 +796,6 @@ const server = http.createServer(async (req, res) => {
       try { return json(res, 200, { garcons: await listarGarconsAtivos(m[1]) }); }
       catch (e) { if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message }); throw e; }
     }
-    if ((m = p.match(/^\/api\/garcom\/([^/]+)\/mesas\/(\d+)\/transferir$/)) && req.method === 'POST') {
-      try {
-        const payload = await body(req);
-        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-          return json(res, 400, { error: 'Corpo de transferência inválido' });
-        }
-        const out = await transferirMesa(m[1], m[2], payload.garcomDestinoId, reqId);
-        broadcast('update', { type: 'mesa_transferida', mesa: out.mesa, de: out.de.id, para: out.para.id });
-        return json(res, 200, out);
-      } catch (e) {
-        if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message });
-        if (e && (e.status === 400 || e.status === 413)) return json(res, e.status, { error: e.message });
-        throw e;
-      }
-    }
     if ((m = p.match(/^\/api\/garcom\/([^/]+)\/sessoes\/(\d+)\/resumo-pagamento$/)) && req.method === 'GET') {
       try { return json(res, 200, await resumoPagamentoSessao(m[1], m[2])); }
       catch (e) { if (e instanceof ErroAtendimento) return json(res, e.status, { error: e.message }); throw e; }
@@ -1339,15 +1324,6 @@ const server = http.createServer(async (req, res) => {
         if (e instanceof ErroAuth) return json(res, e.status, erroAuthJson(e));
         throw e;
       }
-    }
-    if ((m=p.match(/^\/api\/admin\/mesas\/(\d+)\/transferir$/)) && req.method==='POST') {
-      try {
-        const payload=await body(req);
-        const staff=await getStaffDaRequisicao(req);
-        const out=await transferirMesaAdmin(staff,Number(m[1]),payload?.garcomDestinoId,reqId);
-        broadcast('update',{type:'mesa_transferida',mesa:out.mesa,para:out.garcomResponsavelId});
-        return json(res,200,out);
-      } catch(e) { if(e instanceof ErroAtendimento)return json(res,e.status,{error:e.message}); throw e; }
     }
     if ((m=p.match(/^\/api\/admin\/pedidos\/(\d+)\/historico$/)) && req.method==='GET') {
       return json(res,200,{pedidoId:Number(m[1]),itens:await listarHistoricoPedido(pool,Number(m[1]))});
