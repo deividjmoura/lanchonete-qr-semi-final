@@ -752,20 +752,13 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 /* Grade do salão: até 4 colunas quando couber, caindo para 3/2/1 pela largura
    real do aparelho. As colunas são fixas por faixa (não auto-fill) para que o
    card nunca fique espremido nem gere rolagem horizontal (#305). */
-/* Grade densa do salão: o objetivo é ver o salão inteiro sem rolagem.
-   Duas colunas já no celular estreito e até seis em tablet/desktop — largura
-   suficiente para 56 mesas caberem na tela sem espremer o toque. */
+/* Grade densa do salão: quatro mesas por linha inclusive em celulares
+   compactos; amplia progressivamente em telas maiores. */
 .table-grid {
   padding: 4px 0 12px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
-}
-
-/* Celular a partir de 360px: quatro plaquinhas por linha. Abaixo disso
-   (aparelhos muito estreitos) ficam duas, para o número não truncar. */
-@media (min-width: 360px) {
-  .table-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 @media (min-width: 760px) {
@@ -780,7 +773,7 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
   .table-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
 }
 
-/* Barra do salão em uma única linha: praça, lupa e novo pedido.
+/* Barra do salão em uma única linha: praça e lupa.
    Ao abrir a busca, o campo ocupa o lugar da praça (as praças ficam ocultas
    enquanto o garçom digita) — sem empilhar mais uma linha na tela. */
 .salao-toolbar {
@@ -839,16 +832,6 @@ html:not([data-theme="escuro"]) .theme-icon-dark {
 
 .salao-icon-btn:hover {
   background: var(--surface-hover);
-}
-
-.salao-new-order {
-  border-color: var(--brand);
-  background: var(--brand);
-  color: var(--brand-contrast);
-}
-
-.salao-new-order:hover {
-  background: color-mix(in srgb, var(--brand) 85%, var(--brand-contrast));
 }
 
 /* Legenda: o estado também é escrito no card; a cor é só reforço. */
