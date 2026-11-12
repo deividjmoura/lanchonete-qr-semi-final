@@ -182,7 +182,6 @@ export default function MesasAdmin() {
       <MesaDetalheModal
         numero={mesaAberta}
         pracas={dados?.pracas || []}
-        garcons={garcons}
         agora={agora}
         onClose={() => setMesaAberta(null)}
         onAlterado={atualizarTudo}
