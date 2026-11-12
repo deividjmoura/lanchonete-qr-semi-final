@@ -2,7 +2,6 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowsLeftRight,
   BeerStein,
-  CallBell as ConciergeBell,
   CaretRight,
   Check,
   Clock,
@@ -269,12 +268,6 @@ export default function Mesa({ token }: { token: string }) {
   const totalCart = cart.reduce((a, c) => a + totalItem(c), 0);
   const qtdCart = cart.reduce((a, c) => a + c.qtd, 0);
 
-  const garcomResponsavel = useMemo(() => {
-    if (sessao?.garcomNome) return sessao.garcomNome;
-    const pedComGarcom = pedidosMesa.find((p) => p.garcomNome);
-    return pedComGarcom?.garcomNome || null;
-  }, [sessao, pedidosMesa]);
-
   const categorias = useMemo(() => {
     const ordered = [...categoriasStore].sort((a, b) => a.ordem - b.ordem).map((c) => c.nome);
     const presentes = new Set(produtos.filter((p) => p.ativo).map((p) => p.categoria));
@@ -522,15 +515,6 @@ export default function Mesa({ token }: { token: string }) {
         <Badge tone="neutral">{pedidosMesa.length} ped.</Badge>
       </div>
 
-      {garcomResponsavel && (
-        <div className="mt-3 flex items-center gap-2 rounded-sm bg-status-info-surface border border-status-info-border px-3 py-2 text-xs text-status-info-ink">
-          <ConciergeBell size={15} weight="fill" className="shrink-0" />
-          <span>
-            Garçom: <strong className="font-semibold">{garcomResponsavel}</strong>
-          </span>
-        </div>
-      )}
-
       {pedidosMesa.length === 0 ? (
         <div className="flex-1 grid place-items-center py-12 text-center">
           <div>
@@ -552,12 +536,6 @@ export default function Mesa({ token }: { token: string }) {
                       <span className="font-mono text-brand-ink font-bold">#{p.id}</span>
                       {p.clienteNome ? ` · ${p.clienteNome}` : ""}
                     </p>
-                    {p.garcomNome && (
-                      <p className="font-mono text-[11px] text-text-muted flex items-center gap-1 mt-0.5">
-                        <ConciergeBell size={12} />
-                        <span>Garçom: {p.garcomNome}</span>
-                      </p>
-                    )}
                   </div>
                   <Badge
                     key={p.status}
@@ -722,12 +700,6 @@ export default function Mesa({ token }: { token: string }) {
         <div className="mx-auto max-w-6xl px-3.5 sm:px-6 h-14 flex items-center gap-2 min-w-0">
           <Logo size="sm" />
           <Badge tone="brand">{mesa.nome}</Badge>
-          {garcomResponsavel && (
-            <Badge tone="sky" className="hidden xs:inline-flex items-center gap-1">
-              <ConciergeBell size={12} weight="fill" />
-              <span>{garcomResponsavel}</span>
-            </Badge>
-          )}
           <div className="flex-1" />
           <ThemeToggle />
           <button
@@ -777,12 +749,6 @@ export default function Mesa({ token }: { token: string }) {
                     Cardápio da casa
                   </h1>
                 </div>
-                {garcomResponsavel && (
-                  <span className="inline-flex items-center gap-1.5 font-mono text-xs text-text-muted">
-                    <ConciergeBell size={14} className="text-brand-ink" />
-                    Garçom: <strong className="text-text">{garcomResponsavel}</strong>
-                  </span>
-                )}
               </div>
             </div>
 
