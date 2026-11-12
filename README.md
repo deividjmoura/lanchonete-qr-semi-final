@@ -341,6 +341,7 @@ O CNPJ e o nome empresarial são reproduzidos conforme o certificado cadastral. 
 
 - **Sistema:** [qradmin.up.railway.app](https://qradmin.up.railway.app/)
 - **Guia visual:** [Explorar as áreas e funcionalidades](https://qradmin.up.railway.app/guia-sistema.html)
+- **Novidades e versões:** [Histórico de alterações](https://qradmin.up.railway.app/novidades.html)
 - **Privacidade:** [Política de Privacidade](https://qradmin.up.railway.app/politica-de-privacidade.html)
 - **Condições de uso:** [Termos de Serviço](https://qradmin.up.railway.app/termos-de-servico.html)
 
