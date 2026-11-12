@@ -49,12 +49,11 @@ async function listarMesasGarcom(token) {
      ORDER BY m.numero`);
   return { garcom: { id: garcom.id, nome: garcom.nome }, mesas: rows.map(r => ({
     id: r.id, numero: r.numero,
-    // O token QR é uma credencial bearer. Um garçom só recebe o token das
-    // mesas sob sua responsabilidade atual, não de todas as mesas do salão.
+    // Token QR disponível aos garçons autenticados e ativos.
     token: r.token,
     sessaoId: r.sessao_id, clienteNome: r.cliente_nome,
-    garcomResponsavelId: r.garcom_responsavel_id,
-    garcomResponsavelNome: r.garcom_responsavel_nome,
+    garcomResponsavelId: null,
+    garcomResponsavelNome: null,
     pedidoClienteQr: r.pedido_cliente_qr === true,
     // Praça: nome vem do cadastro (mesa_pracas); null = "Sem praça".
     pracaId: r.praca_id != null ? Number(r.praca_id) : null,
@@ -95,11 +94,9 @@ async function iniciarAtendimentoGarcom(token, numeroBruto, body = {}, requestId
         WHERE mesa_id=$1 AND status='aberta'
         ORDER BY id DESC LIMIT 1 FOR UPDATE`, [mesa.id]);
     let sessaoId;
-    let anterior = null;
     let criada = false;
     if (sessoes[0]) {
-      const sessao = sessoes[0];
-      sessaoId = sessao.id;
+      sessaoId = sessoes[0].id;
       await client.query(
         'UPDATE mesa_sessoes SET cliente_nome=COALESCE($2, cliente_nome) WHERE id=$1',
         [sessaoId, clienteNome]);
@@ -468,8 +465,8 @@ async function editarPedidoGarcom(token,pedidoId,body,requestId=null){
     SELECT m.token FROM pedidos p
     JOIN mesa_sessoes s ON s.id=p.sessao_id
     JOIN mesas m ON m.id=s.mesa_id
-    WHERE p.id=$1 AND s.status='aberta' AND s.garcom_responsavel_id=$2`,[id,garcom.id]);
-  if(!rows[0])throw new ErroAtendimento(403,'Pedido não pertence às suas mesas em atendimento');
+    WHERE p.id=$1 AND s.status='aberta'`,[id]);
+   if(!rows[0])throw new ErroAtendimento(404,'Pedido não encontrado em atendimento aberto');
   const {editarPedidoCliente}=require('./pedidos');
   return editarPedidoCliente(rows[0].token,id,body,garcom.id,requestId);
 }
