@@ -58,22 +58,13 @@ Cada etapa grava ator e horário próprios no item: `preparado_por_staff_id`,
 `pedidos.garcom_entregou_id` registra **a última** entrega do pedido e não
 substitui a autoria por item.
 
-## Responsabilidade da mesa ≠ retirada do item
+## Atendimento colaborativo sem titularidade de mesa
 
-- O **primeiro** garçom que aceita um item de uma sessão sem responsável torna-se
-  o responsável principal, no servidor, dentro da transação
-  (`UPDATE ... WHERE garcom_responsavel_id IS NULL`), com histórico e auditoria.
-- Garçons **ajudantes** podem aceitar/retirar/entregar outros itens da mesma mesa
-  sem alterar o responsável. A resposta informa `responsabilidadeAtribuida:false`
-  e o nome do titular.
-- Só quem aceitou pode retirar; só quem retirou pode entregar. Terceiro recebe
-  **403**.
-- Transferência é sempre explícita:
-  - `POST /api/garcom/:token/mesas/:numero/transferir` — apenas o titular atual;
-  - `POST /api/admin/mesas/:numero/transferir` — administrativo, exige staff
-    admin, grava `alterado_por_staff_id`.
-- `POST .../deixar` libera a responsabilidade, recusando (409) se houver item
-  não entregue/não cancelado. O fechamento da comanda continua no Caixa.
+- A sessão/mesa não pertence a um garçom específico. Qualquer garçom ativo e autenticado pode acessar o atendimento, lançar ou editar pedidos, consultar o saldo e registrar recebimentos.
+- Não existe transferência nem ação de “deixar mesa”. O atendimento permanece disponível à equipe até o encerramento normal da conta.
+- As etapas de cada item podem ser executadas por diferentes integrantes autorizados da equipe, respeitando o estado atual do item e as permissões da operação.
+- Cada etapa mantém autoria e horário próprios em `aceito_por_id`, `retirado_por_id`, `entregue_por_id` e nas tabelas de histórico/auditoria. A autoria do pedido permanece em `pedidos.garcom_registrou_id`.
+- Os campos legados de titularidade e o histórico de transferências não são apagados nesta entrega; deixam de controlar o fluxo operacional e permanecem apenas para compatibilidade/auditoria histórica.
 
 ## Rotas de entrega por item
 
@@ -92,10 +83,7 @@ Todas exigem token de garçom ativo e sessão aberta.
 No fluxo normal da PWA, **Retirar item** é a primeira ação visível para um
 item pronto. Ao receber `POST /retirar` para item em `concluido`, o servidor
 grava aceite implícito (`concluido → aceito`) e retirada (`aceito → retirado`)
-na mesma transação. O primeiro garçom que retirar assume o item e preenche `pedidos.garcom_id`
-se o pedido ainda não tiver garçom. Se a sessão ainda não tiver responsável,
-também assume a mesa; uma retirada colaborativa não transfere uma mesa já
-atribuída. Não há botão extra de aceite
+na mesma transação. O funcionário que executar cada etapa fica registrado no respectivo campo de autoria do item. A retirada não atribui titularidade à mesa. Não há botão extra de aceite
 na PWA. A rota `/assumir-entrega` permanece disponível para consumidores
 explícitos da API, mas não é chamada pela interface normal.
 
@@ -140,7 +128,7 @@ Semântica e erros:
   `idempotentReplay:true`; estoque não baixa de novo.
 - Mesma chave + conteúdo diferente → **409** (`payload_hash` SHA-256 do comando
   canônico). O original é preservado; nada é sobrescrito.
-- Pedido novo (chave nova) em mesa sem sessão atribuída → **409**.
+- Pedido novo (chave nova) em mesa sem sessão aberta → **409**.
 - `clientCreatedAt` inválido → **400**. O horário local é preservado em
   `pedidos.cliente_criado_em`, distinto de `criado_em` (recepção no servidor).
 - **Nunca** confirmar localmente antes do HTTP de sucesso com `id` do servidor.
