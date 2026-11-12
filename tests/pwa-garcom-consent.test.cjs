@@ -70,9 +70,12 @@ test('instalação oferece prompt nativo quando disponível e instruções manua
 
 test('navegação não reintroduz a aba Início e service worker não intercepta API', () => {
   assert.doesNotMatch(html, /data-tab="home"|data-page="home"/);
-  for (const tab of ['tables', 'orders', 'deliveries', 'billing']) {
+  // #305: duas abas no rodapé e as páginas continuam existindo no shell.
+  for (const tab of ['tables', 'deliveries']) {
     assert.match(html, new RegExp('data-tab="' + tab + '"'));
-    assert.match(html, new RegExp('data-page="' + tab + '"'));
+  }
+  for (const page of ['tables', 'orders', 'deliveries', 'billing']) {
+    assert.match(html, new RegExp('data-page="' + page + '"'));
   }
   assert.match(sw, /url\.pathname\.startsWith\('\/api\/'\)/);
 });

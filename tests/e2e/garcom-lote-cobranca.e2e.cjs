@@ -189,8 +189,14 @@ async function main() {
     }, 'entrega em lote');
     ok('lote de entrega concluiu os 3 itens e gravou quem entregou');
 
-    /* ---- 3) cobrança: botão funciona com saldo ------------------------ */
-    await page.click('[data-tab="billing"]');
+    /* ---- 3) fechar conta: botão funciona com saldo -------------------- */
+    // #305: "Cobrança" virou a página secundária "Fechar conta", sem aba no
+    // rodapé. A entrada é o detalhe da mesa do responsável.
+    await page.click('[data-tab="tables"]');
+    await page.locator(`#tableGrid .table-tile[data-numero="${ids.numero}"]`).click();
+    await page.locator('#tableDetailsModal[open]').waitFor();
+    await page.getByRole('button', { name: 'Fechar conta', exact: true }).click();
+    await page.waitForFunction(() => document.querySelector('.page.active')?.dataset.page === 'billing');
     await page.click('#refreshBilling');
     await page.waitForFunction(
       () => document.querySelector('#registerPayment')?.disabled === false,

@@ -16,7 +16,7 @@
 
 O Service Worker **nunca** intercepta `/api/`. Nenhuma resposta de API é
 cacheada: o servidor é a única fonte de verdade. O cache do shell é versionado
-(`garcom-pwa-shell-v43` no código consultado em 10/11/2026); qualquer mudança no shell exige subir essa versão, ou
+(`garcom-pwa-shell-v44` no código atual); qualquer mudança no shell exige subir essa versão, ou
 o aparelho continua executando JavaScript antigo.
 
 ## Fila compartilhada de prontos e retirada sem aceite separado
@@ -118,13 +118,69 @@ cozinha** — a tela mostra isso explicitamente.
 - Um rascunho de pedido pode conter mesa, nome do cliente, itens/produtos, quantidades, adicionais, remoções, observações, chave de idempotência, horários, estado de sincronização e o identificador do garçom usado para isolar a fila.
 - O `localStorage` mantém o token individual do garçom (`waiter-token`), preferências de tema/notificações, identificadores de avisos já exibidos e uma tentativa de pagamento pendente (sessão, mesa, valor, forma e chave idempotente).
 - Não há prazo automático de expurgo implementado para a store local de pedidos. Limpar os dados do site, remover o perfil do navegador ou desinstalar o PWA pode apagar dados ainda não sincronizados; o armazenamento persistente é apenas uma solicitação ao navegador, não uma garantia de backup.
-- O Service Worker usa o cache `garcom-pwa-shell-v43` apenas para arquivos do shell. Ele não intercepta nem armazena respostas de `/api/`.
+- O Service Worker usa o cache `garcom-pwa-shell-v44` apenas para arquivos do shell. Ele não intercepta nem armazena respostas de `/api/`.
+
+## Navegação principal: Mesas e Entregas (#305)
+
+O rodapé tem exatamente **duas abas**: **Mesas** e **Entregas**. As antigas abas
+**Pedidos** e **Cobrança** saíram da navegação, mas nenhuma função foi removida:
+
+| Função | Onde fica acessível agora |
+|---|---|
+| Pedidos do aparelho (rascunhos offline, fila de sincronização, conflitos, exportar JSON) | atalho **Pedidos do aparelho**, no topo da aba Mesas; a página abre com **← Voltar para mesas** |
+| Ver pedidos de uma mesa | detalhe da mesa → **Ver pedidos** |
+| Novo pedido / acrescentar itens | aba Mesas (botão do topo) e detalhe da mesa → **Novo pedido** |
+| Recebimento parcial e sua idempotência | detalhe da mesa → **Fechar conta**, que abre a página de cobrança (também com **← Voltar para mesas**) |
+| Fechamento total da comanda e liberação da mesa | **Caixa** — o fluxo financeiro continua sendo o do servidor (`db/caixa.js`); a PWA não fecha conta por conta própria |
+
+### Cards do salão
+
+- Todas as mesas habilitadas aparecem por padrão, sem exigir busca. A busca por
+  número (aceita vírgula) e por nome do cliente apenas **filtra** a grade, assim
+  como o seletor de **praça** — que é populado a partir das mesmas praças
+  cadastradas pelo admin (`mesa_pracas`), sem um segundo cadastro.
+- Cada card mostra número, praça, **estado escrito por extenso** e responsável.
+  A legenda acima da grade repete os estados, portanto a cor nunca é o único
+  sinal. As cores usam as superfícies de status do design system (informativo
+  para "Aguardando pedido", atenção para "Em atendimento"), com destaque sutil.
+- A grade usa 1, 2, 3 ou 4 colunas conforme a largura real do aparelho, sem
+  rolagem horizontal.
+
+### Estados e tempo de atendimento
+
+- **Livre** — mesa sem sessão aberta.
+- **Aguardando pedido** — sessão aberta sem nenhum pedido válido (pedido
+  cancelado não conta). O vínculo com o garçom responsável é preservado.
+- **Em atendimento** — existe pelo menos um pedido válido na sessão.
+
+O tempo exibido é contado **a partir do primeiro pedido válido**
+(`primeiroPedidoEm`), nunca da abertura da sessão: uma mesa aberta que ainda não
+pediu não parece estar esperando atendimento. Depois que todos os itens são
+entregues a mesa **continua ocupada e vinculada ao responsável**; ela só volta a
+**Livre** quando o pagamento integral é confirmado pelo fluxo oficial do Caixa
+(`registrarPagamento` fecha a sessão e libera a mesa na mesma transação). A PWA
+não marca mesa livre localmente.
+
+### Ação "Fechar conta"
+
+O botão do detalhe da mesa abre a página de cobrança com a sessão já
+selecionada. Ele **não** é um fechamento financeiro paralelo: registra um
+recebimento pela rota existente (`POST /api/garcom/:token/sessoes/:id/pagamentos`,
+com `incluirServico` e chave idempotente) e o servidor só quita e libera a mesa
+quando o valor devido está pago e não há pedidos pendentes nem avisos PIX em
+aberto. "Deixar mesa" continua separado: só devolve a responsabilidade do
+garçom (exige que todos os itens estejam entregues ou cancelados) e mantém a
+conta do cliente aberta.
 
 ## Mesas e pedidos
 
 1. `GET /api/garcom/:token/mesas` traz mesas habilitadas, sessão e responsável.
    O token QR da mesa só vem preenchido para mesas sob responsabilidade do
-   garçom autenticado.
+   garçom autenticado. A mesma rota responde também, apenas como leitura, os
+   campos usados pelos cards do salão: `pracaId`, `pracaNome`, `pracaOrdem`,
+   `primeiroPedidoEm`, `pedidosValidos` e a `situacao` derivada
+   (`livre` / `aguardando_pedido` / `em_atendimento`). Nenhuma transição,
+   lock ou regra de autorização depende desses campos.
 2. **Iniciar atendimento** (`POST .../iniciar`) cria ou reutiliza sessão e atribui
    o responsável sob lock. Mesa de outro garçom → 409.
 3. **Assumir** (`POST .../assumir`) é o caminho da mesa que já tem pedido QR.
@@ -150,7 +206,12 @@ Service Worker tem handlers de `push`, mas não há subscrição `PushManager`,
 chaves VAPID, tabela de subscrições nem serviço de envio no backend. A própria
 tela de consentimento informa isso. Não prometer esse comportamento.
 
-## Cobrança e PIX
+## Cobrança e PIX ("Fechar conta")
+
+A página de cobrança deixou de ser uma aba do rodapé (#305): ela é aberta pelo
+botão **Fechar conta** do detalhe da mesa, com a sessão já selecionada, e tem
+**← Voltar para mesas**. Todas as funções continuam iguais — consulta de saldo,
+recebimento parcial, PIX e chave idempotente.
 
 O garçom consulta saldo e registra recebimento apenas de sessão sob sua
 responsabilidade, sempre online. O PIX gera QR/copia-e-cola com o valor

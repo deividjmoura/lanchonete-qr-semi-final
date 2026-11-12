@@ -83,8 +83,13 @@ async function rodapeNasTelas(browser, viewport, scheme) {
       // Alvo de toque: nada abaixo de 40px de altura no rodapé.
       assert.ok(box.height >= 40 - 1, seletor + ' mantém alvo de toque de 40px');
     }
-    for (const tab of ['tables', 'orders', 'deliveries', 'billing']) {
+    // #305: o rodapé tem exatamente Mesas e Entregas.
+    assert.equal(await page.locator('.bottom-nav [data-tab]').count(), 2, 'duas abas no rodapé');
+    for (const tab of ['tables', 'deliveries']) {
       assert.ok(await page.locator('[data-tab="' + tab + '"]').boundingBox(), 'aba ' + tab + ' no rodapé');
+    }
+    for (const tab of ['orders', 'billing']) {
+      assert.equal(await page.locator('[data-tab="' + tab + '"]').count(), 0, 'aba ' + tab + ' saiu do rodapé');
     }
 
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
@@ -99,11 +104,16 @@ async function rodapeNasTelas(browser, viewport, scheme) {
     assert.ok(rotulo && rotulo.width <= 1, 'rótulo do indicador existe só para leitores de tela');
     assert.ok((await page.locator('#connection').getAttribute('title')).length > 3, 'conexão tem dica de título');
 
-    // Salão completo só depois da busca, aceitando vírgula.
-    assert.equal(await page.locator('#tableGrid').isVisible(), false, 'salão oculto sem busca');
-    await page.locator('#tableSearch').fill('1, 2');
+    // O salão aparece por padrão; a busca filtra e aceita vírgula.
     await page.locator('#tableGrid .table-tile').first().waitFor();
+    assert.equal(await page.locator('#tableGrid .table-tile').count(), 3, 'todas as mesas do salão');
+    for (const estado of ['Livre', 'Aguardando pedido', 'Em atendimento']) {
+      assert.equal(await page.locator('#tableLegend').getByText(estado, { exact: true }).count(), 1, 'legenda ' + estado);
+    }
+    await page.locator('#tableSearch').fill('1, 2');
+    await page.waitForFunction(() => document.querySelectorAll('#tableGrid .table-tile').length === 2);
     assert.equal(await page.locator('#tableGrid .table-tile').count(), 2, 'dois números = duas mesas');
+    await page.locator('#tableSearch').fill('');
 
     // Não existe uma segunda lista de mesas: o salão é a única entrada.
     assert.equal(await page.locator('#myTables').count(), 0, 'lista duplicada removida');
@@ -114,7 +124,7 @@ async function rodapeNasTelas(browser, viewport, scheme) {
     await page.locator('#tableGrid .table-tile').first().click();
     let detalhe = page.locator('#tableDetailsModal');
     await detalhe.waitFor({ state: 'visible' });
-    for (const label of ['Ver pedidos', 'Cobrar', 'Transferir mesa', 'Deixar mesa']) {
+    for (const label of ['Ver pedidos', 'Fechar conta', 'Transferir mesa', 'Deixar mesa']) {
       assert.equal(await detalhe.getByRole('button', { name: label, exact: true }).count(), 1, label + ' no modal do responsável');
     }
     await page.locator('#closeTableDetails').click();
