@@ -62,8 +62,6 @@ async function movimentarEntrega(pedidoId,token,{itemIds=null,etapa='aceitar'}={
         await gravarStatusItem(client,item,destino,ator,requestId);
       }
     }
-    await client.query(`UPDATE pedidos SET garcom_id=COALESCE(garcom_id,$2),garcom_nome=COALESCE(garcom_nome,$3),
-      claimed_at=COALESCE(claimed_at,now()) WHERE id=$1`,[pid,garcom.id,garcom.nome]);
     let valorEntregue=0;
     if(destino==='entregue') {
       const {rows}=await client.query(`SELECT COALESCE(SUM(ip.quantidade*(ip.preco_unitario+COALESCE(
@@ -71,7 +69,6 @@ async function movimentarEntrega(pedidoId,token,{itemIds=null,etapa='aceitar'}={
         FROM itens_pedido ip WHERE ip.id=ANY($1::int[])`,[candidatos.map(i=>i.id)]);
       valorEntregue=Number(rows[0].total.toFixed(2));
       await sincronizarValorTotalSessao(client,pedido.sessao_id);
-      await client.query('UPDATE pedidos SET garcom_entregou_id=$2 WHERE id=$1',[pid,garcom.id]);
     }
     const atualizado=await sincronizarStatusPedido(client,pid);
     const acao=destino==='aceito'?'entrega_assumida':destino==='retirado'?'itens_retirados':'itens_entregues';
