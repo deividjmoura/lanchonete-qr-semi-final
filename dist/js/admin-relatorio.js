@@ -35,11 +35,27 @@ async function gerarRelatorioPdf() {
       .map((p) => '<tr><td>' + esc(p.nome) + '</td><td style="text-align:right">' + p.quantidade + '×</td><td style="text-align:right">' + brl(p.receita) + '</td></tr>')
       .join('') || '<tr><td colspan="3">—</td></tr>';
     const dias = (data.porDia || [])
-      .map((d) => '<tr><td>' + esc(d.dia) + '</td><td style="text-align:right">' + d.contas + '</td><td style="text-align:right">' + brl(d.faturamento) + '</td></tr>')
+      .map((d) => '<tr><td>' + esc(d.dia) + '</td><td style="text-align:right">' + d.contas + '</td><td style="text-align:right">' + brl(d.totalCobrado != null ? d.totalCobrado : d.faturamento) + '</td></tr>')
       .join('') || '<tr><td colspan="3">—</td></tr>';
-    const contas = (data.contas || []).slice(0, 200)
-      .map((c) => '<tr><td>' + esc(String(c.mesa)) + '</td><td>' + esc(c.cliente || '—') + '</td><td>' + esc(FORMAS_REL[c.forma] || c.forma) + '</td><td style="text-align:right">' + brl(c.valor) + '</td></tr>')
+    let listaContas = Array.isArray(data.contas) ? data.contas.slice() : [];
+    if (data.paginacao && data.paginacao.hasMore) {
+      const loteTam = Number(data.paginacao.limit) || 500;
+      listaContas = [];
+      for (let pg = 1, seguir = true; seguir; pg += 1) {
+        const rp = await fetch('/api/admin/relatorio?from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to) + '&page=' + pg + '&limit=' + loteTam);
+        const dp = await rp.json();
+        if (!rp.ok) break;
+        const itens = Array.isArray(dp.contas) ? dp.contas : [];
+        listaContas = listaContas.concat(itens);
+        seguir = Boolean(dp.paginacao && dp.paginacao.hasMore) && itens.length > 0;
+      }
+    }
+    const contas = listaContas
+      .map((c) => '<tr><td>' + esc(String(c.mesa)) + '</td><td>' + esc(c.cliente || '—') + '</td><td>' + esc(FORMAS_REL[c.forma] || c.forma) + '</td><td style="text-align:right">' + brl(c.valorCobrado != null ? c.valorCobrado : c.valor) + '</td></tr>')
       .join('') || '<tr><td colspan="4">—</td></tr>';
+    const avisoParcial = (rs.contasFechadas || 0) > listaContas.length
+      ? '<p class="muted">As contas detalhadas exibem ' + listaContas.length + ' de ' + rs.contasFechadas + ' contas do período.</p>'
+      : '';
     const w = window.open('', '_blank');
     if (!w) return toast('Permita pop-ups para o relatório');
     w.document.write('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório ' + from + ' a ' + to + '</title>' +
@@ -57,10 +73,11 @@ async function gerarRelatorioPdf() {
       '<div>Contas fechadas<b>' + (rs.contasFechadas || 0) + '</b></div>' +
       '<div>Ticket médio<b>' + brl(rs.ticketMedio) + '</b></div>' +
       '<div>Pedidos<b>' + (rs.pedidosTotal || 0) + '</b></div></div>' +
+      avisoParcial +
       '<h2>Por forma de pagamento</h2><table><thead><tr><th>Forma</th><th style="text-align:right">Total</th></tr></thead><tbody>' + formas + '</tbody></table>' +
       '<h2>Top produtos</h2><table><thead><tr><th>Produto</th><th style="text-align:right">Qtd</th><th style="text-align:right">Receita</th></tr></thead><tbody>' + top + '</tbody></table>' +
       '<h2>Por dia</h2><table><thead><tr><th>Dia</th><th style="text-align:right">Contas</th><th style="text-align:right">Faturamento</th></tr></thead><tbody>' + dias + '</tbody></table>' +
-      '<h2>Contas fechadas (até 200)</h2><table><thead><tr><th>Mesa</th><th>Cliente</th><th>Pagamento</th><th style="text-align:right">Valor</th></tr></thead><tbody>' + contas + '</tbody></table>' +
+      '<h2>Contas fechadas</h2><table><thead><tr><th>Mesa</th><th>Cliente</th><th>Pagamento</th><th style="text-align:right">Valor</th></tr></thead><tbody>' + contas + '</tbody></table>' +
       '<p class="muted" style="margin-top:32px">QR Admin</p></body></html>');
     w.document.close();
   } catch (e) {

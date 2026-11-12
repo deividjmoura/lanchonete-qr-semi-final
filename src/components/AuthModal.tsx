@@ -2,8 +2,9 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useFluxoAcesso, FormularioAcesso } from "./AuthFlow";
+import { useFluxoAcesso, FormularioAcesso, destinoDoPapel } from "./AuthFlow";
 import { ir } from "../router";
+import { temIndicioDeSessao, usePub } from "../store/usePub";
 import "../screens/login-fields.css";
 import "./AuthModal.css";
 
@@ -25,10 +26,31 @@ function PainelAcesso({ aoFechar }: { aoFechar: () => void }) {
   const painelRef = useRef<HTMLDivElement | null>(null);
   const tituloId = useId();
 
-  const aoEntrar = useCallback(() => {
-    aoFechar();
-    ir("/admin");
-  }, [aoFechar]);
+  const hydrateMe = usePub((s) => s.hydrateMe);
+
+  const aoEntrar = useCallback(
+    (role: string) => {
+      aoFechar();
+      ir(destinoDoPapel(role));
+    },
+    [aoFechar],
+  );
+
+  useEffect(() => {
+    if (!temIndicioDeSessao()) return;
+    let ativo = true;
+    void hydrateMe().then((resultado) => {
+      if (!ativo || resultado !== "autenticada") return;
+      const role = usePub.getState().auth?.role;
+      if (role) {
+        aoFechar();
+        ir(destinoDoPapel(role));
+      }
+    });
+    return () => {
+      ativo = false;
+    };
+  }, [hydrateMe, aoFechar]);
 
   const fluxo = useFluxoAcesso(aoEntrar);
 

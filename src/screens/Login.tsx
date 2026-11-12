@@ -1,12 +1,53 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { EnvelopeSimple, WhatsappLogo } from "@phosphor-icons/react";
-import { useEffect, useRef } from "react";
-import { FormularioAcesso, useFluxoAcesso } from "../components/AuthFlow";
+import { useEffect, useRef, useState } from "react";
+import { FormularioAcesso, destinoDoPapel, useFluxoAcesso } from "../components/AuthFlow";
 import { EMAIL_URL, WHATSAPP_URL } from "./landing/contato";
 import { ThemeToggle } from "../components/ui";
+import { ir } from "../router";
+import { temIndicioDeSessao, usePub } from "../store/usePub";
 import "./login-fields.css";
 
 export default function Login() {
+  const auth = usePub((s) => s.auth);
+  const hydrateMe = usePub((s) => s.hydrateMe);
+  const [verificado, setVerificado] = useState(false);
+
+  // #300: ao abrir uma nova aba em #/login (ou receber login em outra aba),
+  // consulta /api/me quando há indício de sessão ativa neste navegador — sem
+  // disparar 401 desnecessário em visitas anônimas nem quando ?trocar=1 / ?google_error.
+  useEffect(() => {
+    const query = window.location.hash.split("?")[1] || "";
+    const params = new URLSearchParams(query);
+    if (params.get("google_error") || params.get("trocar") === "1") {
+      return;
+    }
+    if (!temIndicioDeSessao()) {
+      setVerificado(true);
+      return;
+    }
+    let ativo = true;
+    void hydrateMe().then((resultado) => {
+      if (!ativo) return;
+      setVerificado(true);
+      if (resultado === "autenticada") {
+        const atual = usePub.getState().auth;
+        if (atual?.role) ir(destinoDoPapel(atual.role));
+      }
+    });
+    return () => {
+      ativo = false;
+    };
+  }, [hydrateMe]);
+
+  useEffect(() => {
+    if (!verificado || !auth?.role) return;
+    const query = window.location.hash.split("?")[1] || "";
+    const params = new URLSearchParams(query);
+    if (params.get("google_error") || params.get("trocar") === "1") return;
+    ir(destinoDoPapel(auth.role));
+  }, [verificado, auth]);
+
   const paginaRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const pagina = paginaRef.current;

@@ -35,6 +35,7 @@ const CSRF_CHANNEL = "qradmin-sessao";
 type AvisoSessao = { tipo: "csrf-invalidado" };
 let canalSessao: BroadcastChannel | null = null;
 const ouvintesSessao = new Set<() => void>();
+const ouvintesExpiracao = new Set<() => void>();
 
 function canalDaSessao(): BroadcastChannel | null {
   if (typeof BroadcastChannel === "undefined") return null;
@@ -42,8 +43,8 @@ function canalDaSessao(): BroadcastChannel | null {
     canalSessao = new BroadcastChannel(CSRF_CHANNEL);
     canalSessao.onmessage = (ev: MessageEvent<AvisoSessao>) => {
       if (ev?.data?.tipo !== "csrf-invalidado") return;
-      // Não buscamos o token aqui: cada aba resolve no próximo envio, evitando
-      // uma rajada de /api/me em todas as abas abertas.
+      // Não buscamos o token aqui: cada aba resolve no próximo envio ou via
+      // listener de sessão, evitando rajadas desnecessárias.
       csrfToken = null;
       ouvintesSessao.forEach((fn) => { try { fn(); } catch { /* UI não pode quebrar o cliente HTTP */ } });
     };
@@ -51,24 +52,62 @@ function canalDaSessao(): BroadcastChannel | null {
   return canalSessao;
 }
 
-/** Registra callback chamado quando outra aba troca a sessão. Retorna o cancelamento. */
+/** Registra callback chamado quando outra aba troca/encerra a sessão. Retorna o cancelamento. */
 export function aoTrocarSessao(fn: () => void): () => void {
   canalDaSessao();
   ouvintesSessao.add(fn);
   return () => { ouvintesSessao.delete(fn); };
 }
 
+/** Registra callback chamado quando uma rota staff recebe 401 (sessão expirada/revogada). */
+export function aoExpirarSessao(fn: () => void): () => void {
+  ouvintesExpiracao.add(fn);
+  return () => { ouvintesExpiracao.delete(fn); };
+}
+
 function avisarTrocaDeSessao() {
   try { canalDaSessao()?.postMessage({ tipo: "csrf-invalidado" } satisfies AvisoSessao); } catch { /* aba anônima/sem suporte */ }
+}
+
+function notificarSessaoExpirada() {
+  const tinhaToken = csrfToken !== null;
+  csrfToken = null;
+  ouvintesExpiracao.forEach((fn) => { try { fn(); } catch { /* UI não pode quebrar o cliente HTTP */ } });
+  if (tinhaToken) avisarTrocaDeSessao();
+}
+
+function notificarRevalidacaoLocal() {
+  ouvintesSessao.forEach((fn) => { try { fn(); } catch { /* UI não pode quebrar o cliente HTTP */ } });
 }
 
 // Escuta desde o carregamento, para a aba antiga reagir mesmo sem enviar nada.
 canalDaSessao();
 
-function requiresStaffCsrf(path: string, method: string) {
+function caminhoSemQuery(path: string) {
+  const idx = path.indexOf("?");
+  return idx >= 0 ? path.slice(0, idx) : path;
+}
+
+function ehRotaDeSessaoStaff(rawPath: string) {
+  const path = caminhoSemQuery(rawPath);
+  return (
+    path === "/api/me" ||
+    path.startsWith("/api/me/") ||
+    path === "/api/logout" ||
+    path.startsWith("/api/admin/") ||
+    path.startsWith("/api/caixa/") ||
+    path.startsWith("/api/cozinha/") ||
+    path.startsWith("/api/bar/") ||
+    /^\/api\/pedidos\/\d+\/status$/.test(path)
+  );
+}
+
+function requiresStaffCsrf(rawPath: string, method: string) {
   if (["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase())) return false;
+  const path = caminhoSemQuery(rawPath);
   return path === "/api/logout" ||
     path === "/api/me/senha" ||
+    path.startsWith("/api/me/2fa/") ||
     path.startsWith("/api/admin/") ||
     path.startsWith("/api/caixa/") ||
     path.startsWith("/api/cozinha/") ||
@@ -86,9 +125,17 @@ export class ApiError extends Error {
   }
 }
 
-async function parse(res: Response) {
+async function parse(res: Response, path?: string) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    if (path) {
+      const clean = caminhoSemQuery(path);
+      if (res.status === 401 && clean !== "/api/me" && ehRotaDeSessaoStaff(clean)) {
+        notificarSessaoExpirada();
+      } else if (res.status === 403 && data && data.code === "SENHA_TROCA_OBRIGATORIA") {
+        notificarRevalidacaoLocal();
+      }
+    }
     throw new ApiError(res.status, (data && data.error) || res.statusText || "Erro na API", data && data.code);
   }
   return data;
@@ -96,8 +143,8 @@ async function parse(res: Response) {
 
 export async function apiGet<T = unknown>(path: string): Promise<T> {
   const res = await fetch(path, { credentials: "include" });
-  const data: any = await parse(res);
-  if (path === "/api/me" && typeof data?.csrfToken === "string") csrfToken = data.csrfToken;
+  const data: any = await parse(res, path);
+  if (caminhoSemQuery(path) === "/api/me" && typeof data?.csrfToken === "string") csrfToken = data.csrfToken;
   return data as T;
 }
 
@@ -121,12 +168,13 @@ export async function apiSend<T = unknown>(
 }
 
 async function enviarComRetryDeCsrf<T = unknown>(
-  path: string,
+  rawPath: string,
   method: string,
   body?: unknown
 ): Promise<T> {
+  const path = caminhoSemQuery(rawPath);
   const upperMethod = method.toUpperCase();
-  const needsCsrf = requiresStaffCsrf(path, upperMethod);
+  const needsCsrf = requiresStaffCsrf(rawPath, upperMethod);
   if (needsCsrf && !csrfToken) {
     await apiGet("/api/me");
   }
@@ -135,7 +183,7 @@ async function enviarComRetryDeCsrf<T = unknown>(
     const headers: Record<string, string> = {};
     if (body !== undefined) headers["Content-Type"] = "application/json";
     if (needsCsrf && csrfToken) headers["X-CSRF-Token"] = csrfToken;
-    return fetch(path, {
+    return fetch(rawPath, {
       method,
       credentials: "include",
       headers: Object.keys(headers).length ? headers : undefined,
@@ -149,8 +197,9 @@ async function enviarComRetryDeCsrf<T = unknown>(
      valida o CSRF ANTES de qualquer escrita, então a chamada recusada não
      alterou nada e é seguro repeti-la uma única vez com o token atual.
      Um único retry evita laço quando o problema é outro (permissão, sessão
-     revogada), e não se aplica a login/logout, que não usam o token antigo. */
-  if (needsCsrf && res.status === 403 && path !== "/api/login" && path !== "/api/logout") {
+     revogada), e inclui /api/logout para que o logout encerre o cookie real
+     mesmo se outra aba tiver rotacionado a sessão antes. */
+  if (needsCsrf && res.status === 403 && path !== "/api/login") {
     const corpo: any = await res.clone().json().catch(() => ({}));
     if (corpo?.code === "CSRF_INVALIDO") {
       const anterior = csrfToken;
@@ -164,7 +213,7 @@ async function enviarComRetryDeCsrf<T = unknown>(
     }
   }
 
-  const data: any = await parse(res);
+  const data: any = await parse(res, rawPath);
   if (
     (path === "/api/login" ||
       path === "/api/login/2fa" ||
@@ -174,6 +223,13 @@ async function enviarComRetryDeCsrf<T = unknown>(
   ) {
     csrfToken = data.csrfToken;
     // A sessão mudou para todas as abas deste navegador.
+    avisarTrocaDeSessao();
+  } else if (
+    path === "/api/admin/contas/senha" ||
+    path === "/api/me/2fa/ativar" ||
+    path === "/api/me/2fa/desativar"
+  ) {
+    // Redefinir outra conta ou alterar 2FA pode afetar obrigatoriedade/sessões em outras abas.
     avisarTrocaDeSessao();
   }
   if (path === "/api/logout") {
@@ -432,8 +488,12 @@ export const api = {
     const s = q.toString();
     return apiGet<any>(`/api/admin/dashboard${s ? `?${s}` : ""}`);
   },
-  adminRelatorio: (from: string, to: string) =>
-    apiGet<any>(`/api/admin/relatorio?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+  adminRelatorio: (from: string, to: string, opts?: { page?: number; limit?: number }) => {
+    const q = new URLSearchParams({ from, to });
+    if (opts?.page != null) q.set("page", String(opts.page));
+    if (opts?.limit != null) q.set("limit", String(opts.limit));
+    return apiGet<any>(`/api/admin/relatorio?${q.toString()}`);
+  },
   adminPedidos: (from?: string, to?: string, ativos?: boolean) => {
     const q = new URLSearchParams();
     if (from) q.set("from", from);
@@ -505,6 +565,7 @@ export function connectEvents(onUpdate: () => void, acesso?: { mesa?: string; ga
       const credentials: { mesa?: string; garcom?: string } = {};
       if (acesso?.mesa) credentials.mesa = acesso.mesa;
       if (acesso?.garcom) credentials.garcom = acesso.garcom;
+      const ehStaff = !acesso?.mesa && !acesso?.garcom;
       const response = await fetch("/api/events/ticket", {
         method: "POST",
         credentials: "include",
@@ -512,7 +573,13 @@ export function connectEvents(onUpdate: () => void, acesso?: { mesa?: string; ga
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(credentials),
       });
-      if (!response.ok) throw new Error("Não foi possível autorizar o stream SSE");
+      if (!response.ok) {
+        if (ehStaff && response.status === 401) {
+          notificarSessaoExpirada();
+          return;
+        }
+        throw new Error("Não foi possível autorizar o stream SSE");
+      }
       const result = await response.json() as { ticket?: string };
       if (closed) return;
       if (!result.ticket) throw new Error("Ticket SSE ausente");
@@ -536,9 +603,19 @@ export function connectEvents(onUpdate: () => void, acesso?: { mesa?: string; ga
       bounce();
     }
   };
+  const pararSessao =
+    !acesso?.mesa && !acesso?.garcom
+      ? aoTrocarSessao(() => {
+          if (closed) return;
+          failures = 0;
+          if (reconnect) clearTimeout(reconnect);
+          void start();
+        })
+      : null;
   void start();
   return () => {
     closed = true;
+    pararSessao?.();
     if (timer) clearTimeout(timer);
     if (reconnect) clearTimeout(reconnect);
     if (es) es.close();
