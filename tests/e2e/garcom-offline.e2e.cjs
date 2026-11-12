@@ -222,6 +222,7 @@ async function main() {
     // ---- 1) Inicia o atendimento e cria pedido sem rede -----------------
     // O fluxo atual inicia a sessão pela ficha da mesa; o novo pedido fica
     // disponível no detalhe depois que o garçom assume a mesa.
+    await page.click('#toggleTableSearch');
     await page.fill('#tableSearch', String(ids.numero));
     await page.locator('#tableGrid .table-tile').first().click();
     await page.locator('#tableDetailsModal[open]').waitFor();
