@@ -60,8 +60,17 @@ async function abrir(browser, state, viewport, scheme = 'light') {
   page.on('pageerror', (e) => erros.push(e.message));
   page.on('dialog', (dialog) => dialog.accept());
   await page.goto(base + '/garcom-pwa/?token=rodape', { waitUntil: 'load' });
-  await page.locator('#tableSearch').waitFor();
+  await page.locator('#tableGrid .table-tile').first().waitFor();
   return { context, page, erros };
+}
+
+/** A busca nasce recolhida: abre pela lupa antes de digitar. */
+async function buscar(page, termo) {
+  if (!(await page.locator('#salaoToolbar').evaluate((el) => el.classList.contains('buscando')))) {
+    await page.locator('#toggleTableSearch').click();
+    await page.locator('#tableSearch').waitFor({ state: 'visible' });
+  }
+  await page.locator('#tableSearch').fill(termo);
 }
 
 async function rodapeNasTelas(browser, viewport, scheme) {
@@ -110,17 +119,26 @@ async function rodapeNasTelas(browser, viewport, scheme) {
     for (const estado of ['Livre', 'Aguardando pedido', 'Em atendimento']) {
       assert.equal(await page.locator('#tableLegend').getByText(estado, { exact: true }).count(), 1, 'legenda ' + estado);
     }
-    await page.locator('#tableSearch').fill('1, 2');
+    // A lupa abre o campo no lugar da praça, sem criar outra linha.
+    assert.equal(await page.locator('#tableSearch').isVisible(), false, 'busca recolhida por padrão');
+    await page.locator('#toggleTableSearch').click();
+    assert.equal(await page.locator('#tableSearch').isVisible(), true, 'lupa abre a busca');
+    assert.equal(await page.locator('#pracaFilter').isVisible(), false, 'praças ficam ocultas durante a busca');
+    await page.locator('#closeTableSearch').click();
+    assert.equal(await page.locator('#pracaFilter').isVisible(), true, 'praças voltam ao fechar a busca');
+    assert.equal(await page.locator('#tableGrid .table-tile').count(), 3, 'fechar a busca limpa o filtro');
+
+    await buscar(page, '1, 2');
     await page.waitForFunction(() => document.querySelectorAll('#tableGrid .table-tile').length === 2);
     assert.equal(await page.locator('#tableGrid .table-tile').count(), 2, 'dois números = duas mesas');
-    await page.locator('#tableSearch').fill('');
+    await buscar(page, '');
 
     // Não existe uma segunda lista de mesas: o salão é a única entrada.
     assert.equal(await page.locator('#myTables').count(), 0, 'lista duplicada removida');
     assert.equal(await page.getByText('Minhas mesas', { exact: true }).count(), 0);
 
     // As ações da mesa responsável ficam no modal aberto pelo cartão do salão.
-    await page.locator('#tableSearch').fill('Ana Prado');
+    await buscar(page, 'Ana Prado');
     await page.locator('#tableGrid .table-tile').first().click();
     let detalhe = page.locator('#tableDetailsModal');
     await detalhe.waitFor({ state: 'visible' });
@@ -130,7 +148,7 @@ async function rodapeNasTelas(browser, viewport, scheme) {
     await page.locator('#closeTableDetails').click();
 
     // Mesa livre: oferece iniciar atendimento, nunca transferência.
-    await page.locator('#tableSearch').fill('2');
+    await buscar(page, '2');
     await page.locator('#tableGrid .table-tile').first().waitFor();
     await page.locator('#tableGrid .table-tile').first().click();
     detalhe = page.locator('#tableDetailsModal');
@@ -140,7 +158,7 @@ async function rodapeNasTelas(browser, viewport, scheme) {
     await page.locator('#closeTableDetails').click();
 
     // Mesa de outro responsável: o detalhe explica que só o responsável transfere.
-    await page.locator('#tableSearch').fill('3');
+    await buscar(page, '3');
     await page.locator('#tableGrid .table-tile').first().waitFor();
     await page.locator('#tableGrid .table-tile').first().click();
     detalhe = page.locator('#tableDetailsModal');
@@ -192,7 +210,7 @@ async function transferenciaNoModal(browser) {
   try {
     const modal = page.locator('#transferModal');
     const abrirTransferencia = async () => {
-      await page.locator('#tableSearch').fill('1');
+      await buscar(page, '1');
       await page.locator('#tableGrid .table-tile').first().click();
       const detalhe = page.locator('#tableDetailsModal');
       await detalhe.waitFor({ state: 'visible' });

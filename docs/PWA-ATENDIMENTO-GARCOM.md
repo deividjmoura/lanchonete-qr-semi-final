@@ -16,7 +16,7 @@
 
 O Service Worker **nunca** intercepta `/api/`. Nenhuma resposta de API é
 cacheada: o servidor é a única fonte de verdade. O cache do shell é versionado
-(`garcom-pwa-shell-v44` no código atual); qualquer mudança no shell exige subir essa versão, ou
+(`garcom-pwa-shell-v45` no código atual); qualquer mudança no shell exige subir essa versão, ou
 o aparelho continua executando JavaScript antigo.
 
 ## Fila compartilhada de prontos e retirada sem aceite separado
@@ -118,7 +118,7 @@ cozinha** — a tela mostra isso explicitamente.
 - Um rascunho de pedido pode conter mesa, nome do cliente, itens/produtos, quantidades, adicionais, remoções, observações, chave de idempotência, horários, estado de sincronização e o identificador do garçom usado para isolar a fila.
 - O `localStorage` mantém o token individual do garçom (`waiter-token`), preferências de tema/notificações, identificadores de avisos já exibidos e uma tentativa de pagamento pendente (sessão, mesa, valor, forma e chave idempotente).
 - Não há prazo automático de expurgo implementado para a store local de pedidos. Limpar os dados do site, remover o perfil do navegador ou desinstalar o PWA pode apagar dados ainda não sincronizados; o armazenamento persistente é apenas uma solicitação ao navegador, não uma garantia de backup.
-- O Service Worker usa o cache `garcom-pwa-shell-v44` apenas para arquivos do shell. Ele não intercepta nem armazena respostas de `/api/`.
+- O Service Worker usa o cache `garcom-pwa-shell-v45` apenas para arquivos do shell. Ele não intercepta nem armazena respostas de `/api/`.
 
 ## Navegação principal: Mesas e Entregas (#305)
 
@@ -139,12 +139,22 @@ O rodapé tem exatamente **duas abas**: **Mesas** e **Entregas**. As antigas aba
   número (aceita vírgula) e por nome do cliente apenas **filtra** a grade, assim
   como o seletor de **praça** — que é populado a partir das mesmas praças
   cadastradas pelo admin (`mesa_pracas`), sem um segundo cadastro.
-- Cada card mostra número, praça, **estado escrito por extenso** e responsável.
-  A legenda acima da grade repete os estados, portanto a cor nunca é o único
-  sinal. As cores usam as superfícies de status do design system (informativo
-  para "Aguardando pedido", atenção para "Em atendimento"), com destaque sutil.
-- A grade usa 1, 2, 3 ou 4 colunas conforme a largura real do aparelho, sem
-  rolagem horizontal.
+- **Barra do salão em uma linha só**: praça, lupa da busca e botão de novo
+  pedido (ícones, 44px). A busca nasce recolhida; ao tocar na lupa o campo
+  ocupa o lugar da praça (as praças ficam ocultas enquanto o filtro está aberto)
+  e o × fecha a busca, limpa o termo e devolve a praça. O antigo botão grande
+  "Novo pedido" do cabeçalho saiu: a ação continua no card da mesa, no detalhe,
+  e agora também como ícone da barra.
+- Cada card mostra número, praça, **estado escrito por extenso** e responsável;
+  em telas estreitas (≤759px) o card reduz ao essencial — número, tempo e
+  estado com **rótulo abreviado + ponto colorido**, mantendo o texto completo no
+  `aria-label`/`title` e na legenda. A legenda acima da grade repete os estados,
+  portanto a cor nunca é o único sinal. As cores usam as superfícies de status do
+  design system (informativo para "Aguardando pedido", atenção para "Em
+  atendimento"), com destaque sutil.
+- **Grade densa**: 2 colunas só em aparelhos bem estreitos (<360px), **4
+  colunas já no celular** (≥360px) e 5, 6 e 7 colunas a partir de 760/980/1200px,
+  sem rolagem horizontal — as 56 mesas cabem na tela do salão.
 
 ### Estados e tempo de atendimento
 
