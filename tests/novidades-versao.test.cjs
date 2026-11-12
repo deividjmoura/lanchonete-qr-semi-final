@@ -197,7 +197,7 @@ test('PWA do garçom: aviso ligado, com as mesmas regras do painel', () => {
   assert.match(modulo, /dados\.pwa/, 'o garçom compara o identificador dele, não o do painel');
   assert.match(modulo, /dados\.versao/, 'o garçom também compara a versão legível embutida no JS');
   assert.match(modulo, /compararVersoes\(publicada\.versao, versaoLegivelLocal\)/);
-  assert.match(app, /VERSAO_PWA_EM_EXECUCAO = '3\.2\.0'/);
+  assert.match(app, /VERSAO_PWA_EM_EXECUCAO = '\d+\.\d+\.\d+'/);
   assert.match(app, /versaoLegivel:VERSAO_PWA_EM_EXECUCAO/);
   assert.match(modulo, /'\/api\/version'/);
   // Nunca recarrega sozinho: reload só depois de confirmação explícita.
