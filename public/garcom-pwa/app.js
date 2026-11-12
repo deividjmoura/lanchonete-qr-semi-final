@@ -416,7 +416,6 @@ for (const btn of document.querySelectorAll('[data-tab]')) {
 $('#openOrdersPage')?.addEventListener('click',()=>switchTab('orders'));
 $('#backFromOrders')?.addEventListener('click',()=>switchTab('tables'));
 $('#backFromBilling')?.addEventListener('click',()=>switchTab('tables'));
-$('#newOrderTables')?.addEventListener('click',()=>openOrder());
 $('#newOrderOrders')?.addEventListener('click',()=>openOrder());
 $('#tableSearch')?.addEventListener('input',renderTableGrid);
 $('#pracaFilter')?.addEventListener('change',renderTableGrid);
