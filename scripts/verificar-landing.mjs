@@ -11,6 +11,8 @@
  *    avança, a estação ativa muda e o palco troca de captura;
  *  - links internos rolam a página sem trocar a rota;
  *  - /guia-sistema.html e /apresentacao.html continuam acessíveis;
+ *  - a landing não publica ofertas, planos ou preços comerciais e mantém os
+ *    dois canais oficiais de contato;
  *  - todos os CTAs de acesso abrem o modal real de autenticação, com foco
  *    preso, ESC, clique fora e retorno de foco;
  *  - o formulário do modal usa a MESMA API de login do produto (#/login):
@@ -297,7 +299,7 @@ try {
   assert(linksInstitucionais.includes("/guia-sistema.html"), "footer liga para /guia-sistema.html");
   assert(linksInstitucionais.includes("/apresentacao.html"), "footer liga para /apresentacao.html");
 
-  /* --- 5b. Contate-nos: canais reais e formatos de adesão ----------------- */
+  /* --- 5b. Contato: canais oficiais e ausência de oferta comercial -------- */
   const contato = page.locator("#contato");
   await contato.scrollIntoViewIfNeeded();
   const canais = await page.evaluate(() =>
@@ -332,25 +334,17 @@ try {
   });
   assert(canaisDoLogin, "/#/login continua sendo servido para comparação de contato");
 
-  const formatos = await page.evaluate(() =>
-    [...document.querySelectorAll("#contato .contato-formato")].map((li) => ({
-      titulo: li.querySelector("h3")?.innerText.trim(),
-      preco: li.querySelector(".contato-formato__preco")?.innerText.replace(/\s+/g, " ").trim(),
-      link: li.querySelector("a")?.getAttribute("href"),
-    })),
-  );
-  assert(formatos.length === 3, "contato lista os três formatos de adesão");
-  for (const formato of formatos) {
-    assert(/sob consulta/i.test(formato.preco || ""), `${formato.titulo}: preço sob consulta (sem valor público)`);
-    assert(
-      /^https:\/\/wa\.me\/5547996162721\?text=/.test(formato.link || ""),
-      `${formato.titulo}: fala direto no WhatsApp`,
-    );
-  }
-  assert(
-    formatos.every((f) => !/R\$/.test(f.preco || "")),
-    "nenhum valor numérico é publicado no site oficial",
-  );
+  const ofertaComercial = await page.evaluate(() => {
+    const texto = document.querySelector(".landing-root")?.innerText || "";
+    return {
+      cards: document.querySelectorAll("#contato .contato-formato, #contato .contato__formatos").length,
+      valores: texto.match(/\bR\$\s*\d[\d.,]*/gi) || [],
+      termos: texto.match(/\b(?:sob consulta|assinatura mensal|mensalidade|plano(?:s)? comerciais?|licen[cç]a pr[oó]pria|venda exclusiva|formatos? de ades[aã]o)\b/gi) || [],
+    };
+  });
+  assert(ofertaComercial.cards === 0, "contato não contém cards de oferta ou adesão");
+  assert(ofertaComercial.valores.length === 0, "landing não publica valores comerciais em reais");
+  assert(ofertaComercial.termos.length === 0, "landing não anuncia planos ou condições comerciais");
 
   /* Rodapé: contato ao lado do acesso, sem sobreposição em nenhuma largura. */
   for (const largura of [1440, 768, 390, 320]) {
