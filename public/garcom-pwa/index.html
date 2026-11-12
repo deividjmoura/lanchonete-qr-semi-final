@@ -81,8 +81,8 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
         </div>
       </div>
       <div class="ledger-body-pad salao-search">
-        <!-- Uma linha só: praça + lupa + novo pedido. A busca fica recolhida e,
-             ao abrir, ocupa o lugar da praça na mesma linha (#305/#306). -->
+        <!-- Uma linha só: praça + lupa. A busca fica recolhida e,
+             ao abrir, ocupa o lugar da praça na mesma linha. -->
         <div id="salaoToolbar" class="salao-toolbar">
           <label class="salao-praca">
             <span class="sr-only">Praça</span>
@@ -96,9 +96,6 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
           </div>
           <button id="toggleTableSearch" class="salao-icon-btn salao-search-toggle" type="button" aria-label="Buscar mesa ou cliente" aria-expanded="false" aria-controls="tableSearchWrap">
             <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#magnifying-glass-regular"></use></svg>
-          </button>
-          <button id="newOrderTables" class="salao-icon-btn salao-new-order" type="button" aria-label="Novo pedido">
-            <svg class="pwa-icon" aria-hidden="true"><use href="./icons.svg#plus-bold"></use></svg>
           </button>
         </div>
         <p id="tableSearchHint" class="muted small-copy sr-only">Digite um ou mais números de mesa separados por vírgula, ou o nome do cliente de uma mesa com atendimento aberto. A busca apenas filtra a grade.</p>
