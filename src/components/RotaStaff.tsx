@@ -11,9 +11,14 @@ import { destinoDoPapel } from "./AuthFlow";
  * /api/me confirmar a sessão persistida pelo callback.
  */
 export function RotaStaff({ recurso, children }: {
-  recurso: Role;
+  /** Setor exigido; `"staff"` = qualquer pessoa autenticada. */
+  recurso: Role | "staff";
   children: ReactNode;
 }) {
+  /* `recurso="staff"` não existe no backend: é a marca de tela que qualquer
+     pessoa autenticada pode abrir, como "O que mudou" (changelog). Sem isso,
+     escolher um setor faria um caixa cair na home por abrir a tela de
+     novidades. O cookie de sessão continua sendo exigido em qualquer caso. */
   const auth = usePub((s) => s.auth);
   const hydrateMe = usePub((s) => s.hydrateMe);
   const [estado, setEstado] = useState<"verificando" | "pronto" | "indisponivel">("verificando");
@@ -35,7 +40,9 @@ export function RotaStaff({ recurso, children }: {
       return;
     }
     // Mesma matriz de leitura do backend: admin acessa todos os setores.
-    if (auth.role !== "admin" && auth.role !== recurso) ir(destinoDoPapel(auth.role));
+    if (recurso !== "staff" && auth.role !== "admin" && auth.role !== recurso) {
+      ir(destinoDoPapel(auth.role));
+    }
   }, [estado, auth, recurso]);
 
   if (estado === "indisponivel") {
@@ -58,7 +65,8 @@ export function RotaStaff({ recurso, children }: {
 
   // Não monta a tela (nem seus fetches/pollings) durante a verificação ou um
   // redirect de perfil. Assim /api/mesas não é chamado por um caixa recém-login.
-  if (estado !== "pronto" || !auth || (auth.role !== "admin" && auth.role !== recurso)) {
+  const autorizado = Boolean(auth) && (recurso === "staff" || auth!.role === "admin" || auth!.role === recurso);
+  if (estado !== "pronto" || !autorizado) {
     return <main className="min-h-dvh grid place-items-center bg-surface p-6 text-sm text-text-muted" role="status" aria-busy="true">Verificando sessão…</main>;
   }
 

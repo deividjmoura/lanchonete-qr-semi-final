@@ -177,7 +177,7 @@ async function main() {
     const errorPayload = '<img src="/xss-probe" onerror="window.__pwaXss=1">';
     await page.evaluate(async (ownerToken) => {
       const db = await new Promise((resolve, reject) => {
-        const request = indexedDB.open('garcom-pwa-v1', 2);
+        const request = indexedDB.open('garcom-pwa-v1', 3);
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
       });

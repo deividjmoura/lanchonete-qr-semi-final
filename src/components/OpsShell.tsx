@@ -1,21 +1,4 @@
-import {
-  BeerStein,
-  CashRegister,
-  ChartBar,
-  CookingPot,
-  ForkKnife,
-  House,
-  Key,
-  List,
-  QrCode,
-  Question,
-  SignOut,
-  SpeakerHigh,
-  SpeakerSlash,
-  SquaresFour,
-  Users,
-  X,
-} from "@phosphor-icons/react";
+import { BeerStein, CashRegister, ChartBar, CookingPot, ForkKnife, House, Key, List, QrCode, Question, SignOut, Sparkle, SpeakerHigh, SpeakerSlash, SquaresFour, Users, X } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePub } from "../store/usePub";
 import { ir } from "../router";
@@ -34,6 +17,10 @@ const NAV_ALL = [
   { id: "admin-mesas", label: "Mesas", Icon: QrCode, to: "/admin/mesas", roles: ["admin"] as const },
   { id: "admin-garcons", label: "Garçons", Icon: Users, to: "/admin/garcons", roles: ["admin"] as const },
   { id: "admin-funcoes", label: "Funções", Icon: SquaresFour, to: "/admin/funcoes", roles: ["admin"] as const },
+  /* "O que mudou" fica no fim de propósito: é consulta ocasional, não operação.
+     Antes disso o changelog não existia em lugar nenhum e o único rastro de um
+     deploy era o banner passageiro (#301). */
+  { id: "novidades", label: "O que mudou", Icon: Sparkle, to: "/novidades", roles: ["admin", "cozinha", "bar", "caixa"] as const },
 ];
 
 /* Anúncios por papel — preserva 100% os alertas de voz e beeps do sistema */

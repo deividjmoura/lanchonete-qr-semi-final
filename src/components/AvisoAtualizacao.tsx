@@ -3,6 +3,12 @@ import { ArrowClockwise, X } from "@phosphor-icons/react";
 import { confirmarAcao } from "../lib/confirmacao";
 import { criarVigiaDeVersao, type EstadoAtualizacao } from "../lib/atualizacao";
 import { estadoDoTrabalho } from "../lib/trabalhoPendente";
+import {
+  notasDepoisDe,
+  resumoDeNovidades,
+  VERSAO_DO_APP,
+  type NotaDeVersao,
+} from "../lib/notasVersao";
 
 declare const __BUILD_VERSION__: string;
 
@@ -15,6 +21,9 @@ const CANAL = "qr-admin-atualizacao";
  * com o estado em memória.
  */
 const CHAVE_ADIAMENTO = "qradmin:atualizacao-adiada";
+
+/** Evento interno: qualquer ponto do painel pode abrir "O que mudou". */
+export const EVENTO_NOVIDADES = "qradmin:abrir-novidades";
 
 function lerAdiamento(): string | null {
   try {
@@ -65,7 +74,7 @@ function criarCanalDeAbas() {
   };
 }
 
-function mensagemDeConfirmacao(): string {
+function mensagemDeConfirmacao(novidades: NotaDeVersao[]): string {
   const trabalho = estadoDoTrabalho();
   const partes: string[] = [];
   if (trabalho.operacoes > 0) {
@@ -78,16 +87,22 @@ function mensagemDeConfirmacao(): string {
   if (trabalho.formulario) partes.push("há campos de formulário alterados e não salvos");
   if (trabalho.telaOcupada) partes.push("a tela indica uma operação em andamento");
 
+  const oQueMuda = novidades.length
+    ? `\n\nO que muda: ${novidades.map((nota) => nota.titulo).join("; ")}.`
+    : "";
+
   if (partes.length) {
     return (
-      `Antes de atualizar: ${partes.join("; ")}.\n\n` +
-      "Recarregar agora pode descartar esse trabalho ou impedir você de ver o resultado de uma operação já enviada. " +
+      `Antes de atualizar: ${partes.join("; ")}.` +
+      oQueMuda +
+      "\n\nRecarregar agora pode descartar esse trabalho ou impedir você de ver o resultado de uma operação já enviada. " +
       "Recomendamos concluir e conferir tudo antes de continuar.\n\nAtualizar mesmo assim?"
     );
   }
   return (
-    "Uma nova versão do QR Admin está publicada.\n\n" +
-    "Confirme que pedidos, pagamentos e fechamentos em andamento já foram concluídos antes de atualizar. " +
+    "Uma nova versão do QR Admin está publicada." +
+    oQueMuda +
+    "\n\nConfirme que pedidos, pagamentos e fechamentos em andamento já foram concluídos antes de atualizar. " +
     "A página será recarregada e o aviso desaparece.\n\nAtualizar agora?"
   );
 }
@@ -100,11 +115,19 @@ function mensagemDeConfirmacao(): string {
  * as outras abas; a recarga usa `location.reload()` e, quando o navegador
  * permite, `history.replaceState` antes, para garantir que o documento novo
  * venha da rede (o shell do SPA é servido com `Cache-Control: no-store`).
+ *
+ * O aviso também responde "o que mudou": o corpo lista as notas de versão
+ * publicadas depois da versão que esta aba está executando, e o rodapé abre a
+ * tela completa (`#/novidades`). Sem nota publicada para a versão, o aviso
+ * continua aparecendo — atualização é sobre o deploy, não sobre o changelog.
  */
 export function AvisoAtualizacao() {
   const [estado, setEstado] = useState<EstadoAtualizacao>("ocioso");
   const [atualizando, setAtualizando] = useState(false);
+  const [expandido, setExpandido] = useState(false);
   const vigia = useRef<ReturnType<typeof criarVigiaDeVersao> | null>(null);
+
+  const novidades = notasDepoisDe(VERSAO_DO_APP);
 
   useEffect(() => {
     const instancia = criarVigiaDeVersao({
@@ -153,7 +176,7 @@ export function AvisoAtualizacao() {
     if (atualizando) return;
     const confirmou = await confirmarAcao({
       titulo: "Atualizar para a nova versão?",
-      mensagem: mensagemDeConfirmacao(),
+      mensagem: mensagemDeConfirmacao(novidades),
       confirmar: "Atualizar agora",
       cancelar: "Continuar por enquanto",
       perigo: estadoDoTrabalho().pendente,
@@ -165,52 +188,92 @@ export function AvisoAtualizacao() {
     }
     setAtualizando(true);
     window.location.reload();
-  }, [adiar, atualizando]);
+  }, [adiar, atualizando, novidades]);
 
   if (estado !== "disponivel") return null;
+
+  const resumo = resumoDeNovidades(novidades);
 
   return (
     <aside
       role="status"
       aria-live="polite"
       aria-label="Nova versão disponível"
-      className="fixed inset-x-3 top-3 z-[100] mx-auto flex max-w-2xl flex-wrap items-center gap-3 rounded-lg border border-line bg-surface-raised px-4 py-3 shadow-modal"
+      className="fixed inset-x-3 top-3 z-[100] mx-auto flex max-w-2xl flex-col gap-3 rounded-lg border border-line bg-surface-raised px-4 py-3 shadow-modal"
     >
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-hover text-brand-ink">
-        <ArrowClockwise size={19} weight="bold" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-text">Nova versão disponível</p>
-        <p className="text-xs leading-relaxed text-text-muted">
-          Atualize quando terminar suas operações. Você continua trabalhando na versão atual até decidir.
-        </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-hover text-brand-ink">
+          <ArrowClockwise size={19} weight="bold" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-text">Nova versão disponível</p>
+          <p className="text-xs leading-relaxed text-text-muted">
+            {resumo
+              ? `${resumo}. Atualize quando terminar suas operações — até lá você continua na versão atual.`
+              : "Atualize quando terminar suas operações. Você continua trabalhando na versão atual até decidir."}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void atualizar()}
+            disabled={atualizando}
+            className="min-h-9 rounded-md bg-brand px-3 py-2 text-xs font-semibold text-brand-contrast hover:bg-brand-hover disabled:opacity-60"
+          >
+            {atualizando ? "Atualizando…" : "Atualizar agora"}
+          </button>
+          <button
+            type="button"
+            onClick={adiar}
+            className="min-h-9 rounded-md border border-line px-3 py-2 text-xs font-semibold text-text-muted hover:bg-surface-hover"
+          >
+            Continuar por enquanto
+          </button>
+          <button
+            type="button"
+            aria-label="Dispensar aviso de atualização"
+            title="Dispensar aviso"
+            onClick={adiar}
+            className="flex size-8 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-surface-hover"
+          >
+            <X size={17} />
+          </button>
+        </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <button
-          type="button"
-          onClick={() => void atualizar()}
-          disabled={atualizando}
-          className="min-h-9 rounded-md bg-brand px-3 py-2 text-xs font-semibold text-brand-contrast hover:bg-brand-hover disabled:opacity-60"
+
+      {novidades.length > 0 && (
+        <details
+          className="rounded-md border border-line bg-surface-sunken px-3 py-2"
+          open={expandido}
+          onToggle={(evento) => setExpandido((evento.currentTarget as HTMLDetailsElement).open)}
         >
-          {atualizando ? "Atualizando…" : "Atualizar agora"}
-        </button>
-        <button
-          type="button"
-          onClick={adiar}
-          className="min-h-9 rounded-md border border-line px-3 py-2 text-xs font-semibold text-text-muted hover:bg-surface-hover"
-        >
-          Continuar por enquanto
-        </button>
-        <button
-          type="button"
-          aria-label="Dispensar aviso de atualização"
-          title="Dispensar aviso"
-          onClick={adiar}
-          className="flex size-8 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-surface-hover"
-        >
-          <X size={17} />
-        </button>
-      </div>
+          <summary className="cursor-pointer text-xs font-semibold text-text">
+            O que mudou desde esta tela
+          </summary>
+          <ul className="mt-2 flex flex-col gap-2">
+            {novidades.map((nota) => (
+              <li key={nota.versao} className="text-xs leading-relaxed text-text-muted">
+                <span className="font-semibold text-text">{nota.titulo}</span>
+                <span className="text-text-muted"> — {nota.resumo}</span>
+                {nota.itens?.length ? (
+                  <ul className="mt-1 ml-4 list-disc">
+                    {nota.itens.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+          <a
+            href="#/novidades"
+            onClick={adiar}
+            className="mt-2 inline-block text-xs font-semibold text-brand-ink underline underline-offset-2"
+          >
+            Ver todas as novidades
+          </a>
+        </details>
+      )}
     </aside>
   );
 }
