@@ -52,8 +52,6 @@ async function listarMesasGarcom(token) {
     // Token QR disponível aos garçons autenticados e ativos.
     token: r.token,
     sessaoId: r.sessao_id, clienteNome: r.cliente_nome,
-    garcomResponsavelId: null,
-    garcomResponsavelNome: null,
     pedidoClienteQr: r.pedido_cliente_qr === true,
     // Praça: nome vem do cadastro (mesa_pracas); null = "Sem praça".
     pracaId: r.praca_id != null ? Number(r.praca_id) : null,
@@ -184,7 +182,7 @@ async function assumirMesa(token, numeroBruto, body = {}, requestId = null) {
     });
     await client.query('COMMIT');
     return { mesa: numero, mesaToken: mesa.token, sessaoId,
-      garcom: { id: garcom.id, nome: garcom.nome }, transferida: false };
+      garcom: { id: garcom.id, nome: garcom.nome } };
   } catch (e) {
     try { await client.query('ROLLBACK'); } catch (_) {}
     throw e;
@@ -258,9 +256,7 @@ async function criarPedidoGarcom(token, numeroBruto, body, requestId=null) {
   }
   const { rows: mesas } = await pool.query('SELECT token FROM mesas WHERE numero=$1', [numero]);
   if (!mesas[0]) throw new ErroAtendimento(404, 'Mesa não encontrada');
-  // Qualquer garçom ativo pode acrescentar itens a uma sessão aberta que
-  // já tem responsável. A responsabilidade da mesa continua com o titular;
-  // assumir/transferir é uma ação separada e nunca deve ocorrer implicitamente.
+  // Qualquer garçom ativo pode acrescentar itens a uma sessão aberta.
   const { rows: atribuidas } = await pool.query(
     `SELECT s.id FROM mesa_sessoes s JOIN mesas m ON m.id=s.mesa_id
       WHERE m.numero=$1 AND s.status='aberta'`,
