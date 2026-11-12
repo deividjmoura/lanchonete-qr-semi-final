@@ -179,11 +179,11 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
       <div class="ledger-body-pad">
         <p class="muted small-copy">Registre apenas valores efetivamente recebidos. O saldo já inclui o serviço padrão da casa; descontos e ajustes de serviço permanecem no Caixa.</p>
 
-        <label class="field">Minha mesa
+        <label class="field">Mesa para cobrança
           <select id="billingSession" aria-label="Mesa para registrar pagamento"></select>
         </label>
 
-        <div id="billingSummary" class="billing-summary" aria-live="polite">Selecione uma mesa sob sua responsabilidade para consultar o saldo.</div>
+        <div id="billingSummary" class="billing-summary" aria-live="polite">Selecione um atendimento aberto para consultar o saldo.</div>
         <p id="billingServiceNote" class="muted small-copy" aria-live="polite"></p>
 
         <div class="modal-fields">
@@ -364,27 +364,7 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
   <div class="sheet-body" id="historyContent"></div>
 </dialog>
 
-<dialog id="transferModal" class="sheet small-sheet" aria-labelledby="transferTitle">
-  <div class="sheet-top">
-    <div>
-      <span class="section-eyebrow">RESPONSABILIDADE</span>
-      <h2 id="transferTitle">Transferir mesa</h2>
-    </div>
-    <button type="button" id="closeTransfer" class="close-button" aria-label="Fechar transferência">×</button>
-  </div>
-  <div class="sheet-body">
-    <p id="transferSummary" class="small-copy"></p>
-    <label class="field">Garçom de destino
-      <select id="transferWaiter" aria-label="Garçom de destino"></select>
-    </label>
-    <p class="hint">Nada é enviado ao servidor antes de você confirmar. Pedidos já prontos continuam prontos e passam para a fila do novo responsável.</p>
-    <p id="transferMessage" class="muted small-copy" aria-live="polite"></p>
-    <div class="action-row">
-      <button id="confirmTransfer" class="primary" type="button">Confirmar transferência</button>
-      <button id="cancelTransfer" class="secondary" type="button">Cancelar</button>
-    </div>
-  </div>
-</dialog>
+
 
 <dialog id="helpModal" class="sheet small-sheet" aria-labelledby="helpTitle">
   <div class="sheet-top">
@@ -422,7 +402,7 @@ dialog.sheet[open]{position:fixed!important;inset:0!important;margin:auto!import
         <div><strong>Ajuda</strong><span>Este painel. Fecha com o botão × ou tocando fora.</span></div>
       </li>
     </ul>
-    <p class="muted small-copy">Mesas: todas as mesas aparecem em cards. Toque em uma mesa para abrir as ações (ver pedidos, novo pedido, fechar conta, transferência e deixar a mesa). A busca e o filtro por praça apenas reduzem a grade; a legenda explica as cores dos estados.</p>
+    <p class="muted small-copy">Mesas: todas as mesas aparecem em cards. Toque em uma mesa para abrir as ações (ver pedidos, novo pedido e fechar conta). A busca e o filtro por praça apenas reduzem a grade; a legenda explica as cores dos estados.</p>
     <p class="muted small-copy">Pedidos do aparelho: rascunhos offline e fila de sincronização. Abra pelo atalho no topo da aba Mesas. A conta só é fechada dentro do detalhe da mesa, em “Fechar conta”.</p>
     <p id="identity" class="muted small-copy">Identificando o garçom…</p>
   </div>
