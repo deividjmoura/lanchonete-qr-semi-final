@@ -48,7 +48,8 @@
     "test:cardapio-intacto": "node scripts/verificar-cardapio-intacto.mjs",
     "test:landing": "node scripts/verificar-landing.mjs",
     "seed:apresentacao": "node scripts/seed-apresentacao.cjs",
-    "test:contraste": "node scripts/verificar-contraste.mjs"
+    "test:contraste": "node scripts/verificar-contraste.mjs",
+    "seed:catalogo-demo": "node scripts/seed-catalogo-demo.cjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "2.1.10",
