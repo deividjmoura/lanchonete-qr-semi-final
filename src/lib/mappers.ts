@@ -200,12 +200,6 @@ export function mapSessaoFromMesaApi(_token: string, mesaMeta: Mesa | undefined,
      parciais já lançados pelo caixa. */
   const totalDevido = Number(data.totalDevido ?? data.valorTotal ?? 0);
   const valorPago = Number(data.valorPago ?? 0);
-  const garcomMesa =
-    data.garcomNome ||
-    data.garcom_nome ||
-    (data.pedidos || []).find((p: any) => p.garcom_nome || p.garcomNome)?.garcom_nome ||
-    (data.pedidos || []).find((p: any) => p.garcom_nome || p.garcomNome)?.garcomNome;
-
   const sessao: Sessao = {
     id: Number(data.sessaoId),
     mesaId,
@@ -215,7 +209,6 @@ export function mapSessaoFromMesaApi(_token: string, mesaMeta: Mesa | undefined,
     fechadaEm: null,
     pagamentos: [],
     pixAvisos: Array.isArray(data.pixAvisos) ? data.pixAvisos.length : 0,
-    garcomNome: garcomMesa ? String(garcomMesa) : undefined,
     desconto: 0,
     taxa: 0,
     valorTotal: totalDevido,
