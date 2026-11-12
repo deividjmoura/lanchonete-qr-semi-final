@@ -289,10 +289,7 @@ async function sendOrderToServer(order){
  await loadMesas();
  const mesaAtual=mesas.find(m=>Number(m.numero)===Number(order.table));
  if(!mesaAtual)throw new Error('Mesa não encontrada na lista de mesas habilitadas.');
- if(mesaAtual.sessaoId&&mesaAtual.garcomResponsavelId&&Number(mesaAtual.garcomResponsavelId)!==Number(currentWaiterId)&&!order.collaborationApproved){
-  const e=new Error('Mesa assumida por '+mesaAtual.garcomResponsavelNome+'. Revise a pendência e confirme o envio como colaborador, sem transferir a responsabilidade.');e.status=409;e.code='RESPONSAVEL_EXISTENTE';throw e;
- }
- if(!mesaAtual.sessaoId||!mesaAtual.garcomResponsavelId){
+ if(!mesaAtual.sessaoId){
   try{await getJson(root+'/iniciar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({clienteNome:order.customerName})});}
   catch(err){
    if(err.status===409){await loadMesas();const e=new Error('Outro garçom assumiu a mesa durante a sincronização. O pedido local foi preservado; revise antes de enviar como colaborador.');e.status=409;e.code='RESPONSAVEL_EXISTENTE';throw e;}
@@ -382,7 +379,7 @@ function exportPending(){
 }
 function updateQr(){
  const n=Number($('#qrTable').value);const mesa=mesas.find(x=>Number(x.numero)===n);
- if(!mesa?.token){$('#qrImage').textContent='QR disponível apenas para o responsável atual da mesa.';return;}
+ if(!mesa?.token){$('#qrImage').textContent='QR disponível para a equipe autenticada.';return;}
  const url=new URL('../',location.href).href+'#/mesa/'+mesa.token;$('#qrUrl').value=url;
  try{const qr=window.qrcode(0,'M');qr.addData(url);qr.make();$('#qrImage').innerHTML=qr.createSvgTag({cellSize:4,margin:2,scalable:true,title:'QR Code da mesa '+n})}
  catch(e){$('#qrImage').textContent='Não foi possível gerar o QR desta mesa';console.error('Falha ao gerar QR local',e)}
@@ -415,6 +412,21 @@ $('#newOrderTables')?.addEventListener('click',()=>openOrder());
 $('#newOrderOrders')?.addEventListener('click',()=>openOrder());
 $('#tableSearch')?.addEventListener('input',renderTableGrid);
 $('#pracaFilter')?.addEventListener('change',renderTableGrid);
+/* A busca vive na mesma linha da praça e nasce recolhida: a lupa abre o campo
+   (ocultando as praças) e o × fecha, limpando o termo para o salão voltar
+   inteiro. Nada disso altera dados: é só filtro de tela. */
+function alternarBuscaMesas(abrir){
+ const barra=$('#salaoToolbar');
+ const campo=$('#tableSearch');
+ const lupa=$('#toggleTableSearch');
+ const expandir=abrir??!barra?.classList.contains('buscando');
+ barra?.classList.toggle('buscando',expandir);
+ lupa?.setAttribute('aria-expanded',expandir?'true':'false');
+ if(!expandir&&campo?.value){campo.value='';renderTableGrid();}
+ if(expandir)campo?.focus();
+}
+$('#toggleTableSearch')?.addEventListener('click',()=>alternarBuscaMesas(true));
+$('#closeTableSearch')?.addEventListener('click',()=>alternarBuscaMesas(false));
 $('#refreshTables')?.addEventListener('click',async()=>{
  const btn=$('#refreshTables');btn.disabled=true;
  try{await loadMesas();$('#tableMessage').textContent='Mesas atualizadas.';}
@@ -639,7 +651,7 @@ function openOrder(tableNumber,parentOrderId=null){
 function openQr(n){
  const table=Number(n||$('#modalTable').value||$('#tableSelect').value);
  const mesa=mesas.find(x=>Number(x.numero)===table);
- if(!mesa?.token){alert('Para proteger o acesso às mesas, o QR só pode ser exibido pelo garçom responsável atual. Use o QR impresso na mesa.');return;}
+ if(!mesa?.token){alert('Use o QR da mesa ou gere uma cópia pelo painel de atendimento.');return;}
  if(table)$('#qrTable').value=String(table);
  updateQr();$('#qrModal').showModal();
 }
@@ -771,21 +783,34 @@ function renderTableGrid(){
   const minutos=minutosDesdePrimeiroPedido(m);
   const card=document.createElement('button');
   card.type='button';
-  card.className='table-tile '+dados.classe+(Number(m.garcomResponsavelId)===Number(currentWaiterId)&&m.garcomResponsavelId?' mine':'');
+  card.className='table-tile '+dados.classe;
   card.dataset.numero=String(m.numero);
   card.dataset.situacao=situacao;
   const linha=document.createElement('span');linha.className='table-tile-top';
-  const title=document.createElement('strong');title.textContent='Mesa '+String(m.numero).padStart(2,'0');
+  const title=document.createElement('strong');title.className='table-tile-num';
+  // "Mesa" é rótulo; no card de quatro colunas só o número aparece, e o nome
+  // acessível do botão continua dizendo "Mesa 07".
+  const prefixo=document.createElement('span');prefixo.className='table-tile-num-prefix';prefixo.textContent='Mesa ';
+  const numero=document.createElement('span');numero.textContent=String(m.numero).padStart(2,'0');
+  title.append(prefixo,numero);
+  card.setAttribute('aria-label','Mesa '+m.numero+' · '+dados.rotulo+(m.pracaNome?' · '+m.pracaNome:''));
   const prazo=document.createElement('span');prazo.className='table-tile-time';
   const tempo=tempoAtendimentoTexto(minutos);
-  prazo.textContent=situacao==='em_atendimento'&&tempo?tempo:(situacao==='aguardando_pedido'?'sem pedido':'');
-  if(prazo.textContent)prazo.title=situacao==='em_atendimento'&&tempo?'Tempo desde o primeiro pedido desta mesa':'Sessão aberta ainda sem pedido';
+  // "sem pedido" já aparece no estado; repetir aqui só roubava largura do card.
+  prazo.textContent=situacao==='em_atendimento'&&tempo?tempo:'';
+  if(prazo.textContent)prazo.title='Tempo desde o primeiro pedido desta mesa';
   linha.append(title,prazo);
   const praca=document.createElement('small');praca.className='table-tile-praca';
   praca.textContent=m.pracaNome||'Sem praça';
   // O estado é escrito por extenso: a cor nunca é o único sinal.
   const estado=document.createElement('small');estado.className='table-tile-state';
-  estado.textContent=dados.rotulo;
+  // Rótulo completo e abreviado coexistem: o CSS escolhe qual mostrar conforme
+  // a largura, então a cor nunca é o único sinal de estado.
+  const estadoLongo=document.createElement('span');estadoLongo.className='table-tile-state-long';estadoLongo.textContent=dados.rotulo;
+  const estadoCurto=document.createElement('span');estadoCurto.className='table-tile-state-short';
+  estadoCurto.textContent=situacao==='em_atendimento'?'Em at.':(situacao==='aguardando_pedido'?'Aguard.':'Livre');
+  estado.append(estadoLongo,estadoCurto);
+  estado.setAttribute('title',dados.rotulo);
   const resp=document.createElement('small');resp.className='table-tile-resp';
   resp.textContent=m.garcomResponsavelNome?'Resp.: '+m.garcomResponsavelNome:(situacao==='livre'?'Sem responsável':'Sem responsável definido');
   card.append(linha,praca,estado,resp);
@@ -821,7 +846,6 @@ function openTableDetails(tableNumber){
   const linhas=[
    ['Situação',situacoesMesa()[situacao].rotulo],
    ['Praça',m.pracaNome||'Sem praça'],
-   ['Responsável',m.garcomResponsavelNome||'Sem responsável'],
    ['Tempo de atendimento',situacao==='em_atendimento'&&tempo?tempo+' desde o primeiro pedido':(situacao==='aguardando_pedido'?'Conta o tempo a partir do primeiro pedido':'—')],
   ];
   for(const [rotulo,valor] of linhas){
@@ -830,13 +854,11 @@ function openTableDetails(tableNumber){
    fatos.append(dt,dd);
   }
  }
- $('#tableDetailsStatus').textContent=m.garcomResponsavelNome
-   ?'Responsável atual: '+m.garcomResponsavelNome
-   :(m.pedidoClienteQr?'O cliente já fez um pedido pelo QR.':'Mesa livre para novos pedidos.');
+ $('#tableDetailsStatus').textContent=m.sessaoId?'Atendimento compartilhado pela equipe.':(m.pedidoClienteQr?'O cliente já fez um pedido pelo QR.':'Mesa livre para novos pedidos.');
  if(m.token){
    const qr=document.createElement('button');qr.type='button';qr.className='secondary';qr.textContent='Mostrar QR da mesa';qr.onclick=()=>openQr(m.numero);root.append(qr);
  }else{
-   const qrNote=document.createElement('p');qrNote.className='muted';qrNote.textContent='Use o QR impresso na mesa. O acesso ao token QR é restrito ao responsável atual.';root.append(qrNote);
+   const qrNote=document.createElement('p');qrNote.className='muted';qrNote.textContent='QR disponível para a equipe autenticada.';root.append(qrNote);
  }
  if(m.sessaoId){
    const newOrder=document.createElement('button');newOrder.type='button';newOrder.className='primary';newOrder.textContent='Novo pedido';newOrder.onclick=()=>{openOrder(m.numero);$('#tableDetailsModal').close();};root.append(newOrder);
@@ -845,7 +867,7 @@ function openTableDetails(tableNumber){
    const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent=navigator.onLine?'Carregando pedidos ativos…':'Conecte-se para carregar pedidos ativos';appendSelect.append(placeholder);appendLabel.append(appendSelect);root.append(appendLabel);
    const appendButton=document.createElement('button');appendButton.type='button';appendButton.className='secondary';appendButton.textContent='Acrescentar itens ao pedido atual';appendButton.disabled=true;
    appendButton.onclick=()=>{const parent=Number(appendSelect.value);if(!Number.isSafeInteger(parent)||parent<1)return;openOrder(m.numero,parent);$('#tableDetailsModal').close();};root.append(appendButton);
-   if(navigator.onLine&&m.garcomResponsavelId){
+   if(navigator.onLine){
      getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/mesas/'+m.numero+'/pedidos-ativos').then(rows=>{
        appendSelect.replaceChildren();const empty=document.createElement('option');empty.value='';empty.textContent=rows.length?'Selecione o pedido ativo':'Nenhum pedido ativo — use “Novo pedido”';appendSelect.append(empty);
        for(const o of rows){const option=document.createElement('option');option.value=String(o.id);option.textContent='Pedido #'+o.id+' · '+(o.label||o.status);appendSelect.append(option);}
@@ -856,23 +878,19 @@ function openTableDetails(tableNumber){
    }
    appendSelect.addEventListener('change',()=>{appendButton.disabled=!appendSelect.value;});
  }
- if(!m.garcomResponsavelId){
+ if(!m.sessaoId){
    const start=document.createElement('button');start.type='button';start.className='primary';start.textContent=m.pedidoClienteQr?'Assumir mesa':'Iniciar atendimento';
    start.onclick=async()=>{start.disabled=true;try{await iniciarAtendimento(m.numero,m.clienteNome||'');await loadMesas();$('#tableDetailsModal').close();}catch(e){alert(e.message||'Não foi possível iniciar o atendimento.');start.disabled=false;}};
    root.append(start);
- }else if(Number(m.garcomResponsavelId)===Number(currentWaiterId)&&m.sessaoId){
+ }else if(m.sessaoId){
    const viewOrders=document.createElement('button');viewOrders.type='button';viewOrders.className='secondary';viewOrders.textContent='Ver pedidos';viewOrders.onclick=()=>{$('#tableDetailsModal').close();openOrdersModal(m.numero);};root.append(viewOrders);
    // "Fechar conta" abre a página de cobrança (secundária, sem aba no rodapé).
    // O fechamento financeiro continua sendo o do servidor/caixa: a PWA só
    // registra o recebimento e a mesa só é liberada quando a conta é quitada.
    const charge=document.createElement('button');charge.type='button';charge.className='secondary';charge.textContent='Fechar conta';
    charge.onclick=()=>{$('#tableDetailsModal').close();openBillingForSession(m.sessaoId,m.numero);};root.append(charge);
-   const transfer=document.createElement('button');transfer.type='button';transfer.className='primary';transfer.textContent='Transferir mesa';
-   transfer.onclick=()=>{$('#tableDetailsModal').close();openTransferModal(m.numero);};root.append(transfer);
    const leave=document.createElement('button');leave.type='button';leave.className='secondary leave-table';leave.textContent='Deixar mesa';
    leave.onclick=async()=>{leave.disabled=true;const ok=await leaveTable(m.numero);if(ok)$('#tableDetailsModal').close();else leave.disabled=false;};root.append(leave);
- }else if(m.garcomResponsavelId){
-   const note=document.createElement('p');note.className='muted';note.textContent='Qualquer garçom ativo pode acrescentar itens; somente o responsável atual pode transferir esta mesa.';root.append(note);
  }
  $('#tableDetailsModal').showModal();
 }
@@ -890,16 +908,16 @@ function liberarCobranca(){
 function renderBillingSessions(){
  const select=$('#billingSession');if(!select)return;
  const previous=select.value;
- const mine=mesas.filter(m=>Number(m.garcomResponsavelId)===Number(currentWaiterId)&&m.sessaoId);
+ const mine=mesas.filter(m=>m.sessaoId);
  select.replaceChildren();
  if(!mine.length){
-  const option=document.createElement('option');option.value='';option.textContent='Nenhuma mesa sob sua responsabilidade';select.append(option);
-  $('#billingSummary').textContent='Inicie ou receba uma transferência de mesa para registrar recebimentos.';
+  const option=document.createElement('option');option.value='';option.textContent='Nenhuma mesa com atendimento aberto';select.append(option);
+  $('#billingSummary').textContent='Abra um atendimento para registrar recebimentos.';
   const idGarcom=Number(currentWaiterId);
   const semIdentidade=currentWaiterId===null||currentWaiterId===undefined||currentWaiterId===''||!Number.isSafeInteger(idGarcom)||idGarcom<1;
   bloquearCobranca(semIdentidade
    ?'Não foi possível identificar seu cadastro de garçom. Reconecte-se e toque em “Atualizar saldo”.'
-   :'Você não é o responsável atual de nenhuma mesa aberta. Somente o responsável registra recebimentos; peça a transferência da mesa ou use o Caixa.');
+   :'Não há atendimento aberto disponível para registrar recebimentos.');
   if(pendingWaiterPayment)$('#billingMessage').textContent='Existe uma tentativa anterior pendente para a mesa '+pendingWaiterPayment.mesa+'. Confira o estado no Caixa antes de registrar outro pagamento.';
   return;
  }
@@ -914,7 +932,7 @@ function renderBillingSessions(){
    $('#billingMethod').value=pendingWaiterPayment.formaPagamento;
    $('#billingMessage').textContent='Há uma tentativa anterior que pode ter sido registrada. Reenvie exatamente os mesmos dados para reutilizar a mesma chave idempotente.';
   }else{
-   $('#billingMessage').textContent='Existe uma tentativa pendente para a mesa '+pendingWaiterPayment.mesa+'. Ela não está mais sob sua responsabilidade; confira o Caixa antes de registrar outro pagamento.';
+   $('#billingMessage').textContent='Existe uma tentativa pendente para a mesa '+pendingWaiterPayment.mesa+'. Confira o Caixa antes de registrar outro pagamento.';
    bloquearCobranca('Resolva a tentativa pendente da mesa '+pendingWaiterPayment.mesa+' antes de cobrar outra mesa. Confira o Caixa para saber se o valor entrou.');
   }
  }
@@ -932,7 +950,7 @@ function openBillingForSession(sessaoId,mesaNumero){
 }
 async function loadBillingSummary(){
  const sessionId=Number($('#billingSession')?.value);
- if(!Number.isSafeInteger(sessionId)||sessionId<1){$('#billingSummary').textContent='Selecione uma mesa sob sua responsabilidade.';return}
+ if(!Number.isSafeInteger(sessionId)||sessionId<1){$('#billingSummary').textContent='Selecione uma mesa com atendimento aberto.';return}
  if(!navigator.onLine){$('#billingSummary').textContent='Conecte-se para consultar o saldo no servidor.';bloquearCobranca('Sem conexão: o saldo precisa ser confirmado no servidor antes de registrar recebimento.');return}
  try{
   const data=await getJson('/api/garcom/'+encodeURIComponent(waiterToken)+'/sessoes/'+sessionId+'/resumo-pagamento');
@@ -974,7 +992,7 @@ async function loadBillingSummary(){
  }catch(e){
   $('#billingSummary').textContent=e.message||'Não foi possível consultar o saldo.';
   bloquearCobranca(e.status===403
-   ?'Você não é o responsável atual desta mesa. Peça a transferência ou registre o recebimento no Caixa.'
+   ?'Esta sessão não está disponível para cobrança pelo garçom.'
    :(e.message||'Não foi possível consultar o saldo.')+' Toque em “Atualizar saldo” para tentar novamente.');
  }
 }
@@ -1015,7 +1033,7 @@ async function submitWaiterPayment(){
  const sessionId=Number($('#billingSession').value);
  const valor=Number($('#billingAmount').value);
  const formaPagamento=$('#billingMethod').value;
- if(!Number.isSafeInteger(sessionId)||sessionId<1){$('#billingMessage').textContent='Selecione uma mesa sob sua responsabilidade.';return}
+ if(!Number.isSafeInteger(sessionId)||sessionId<1){$('#billingMessage').textContent='Selecione uma mesa com atendimento aberto.';return}
  if(!Number.isFinite(valor)||valor<=0){$('#billingMessage').textContent='Informe um valor maior que zero.';return}
  if(!$('#billingReceivedConfirm').checked){$('#billingMessage').textContent='Confirme o recebimento antes de registrar.';return}
  const valorArredondado=Number(valor.toFixed(2));
@@ -1049,7 +1067,7 @@ async function submitWaiterPayment(){
  }
  finally{button.disabled=false;await loadBillingSummary();}
 }
-$('#billingSession').addEventListener('change',()=>{if(pendingWaiterPayment&&Number($('#billingSession').value)!==Number(pendingWaiterPayment.sessaoId)){const mine=mesas.find(m=>Number(m.sessaoId)===Number(pendingWaiterPayment.sessaoId)&&Number(m.garcomResponsavelId)===Number(currentWaiterId));if(mine)$('#billingSession').value=String(pendingWaiterPayment.sessaoId);$('#billingMessage').textContent='Resolva a tentativa pendente com os mesmos dados antes de selecionar outra mesa.';}else if(!pendingWaiterPayment){$('#billingAmount').value='';$('#billingReceivedConfirm').checked=false;}void loadBillingSummary()});
+$('#billingSession').addEventListener('change',()=>{if(pendingWaiterPayment&&Number($('#billingSession').value)!==Number(pendingWaiterPayment.sessaoId)){const mine=mesas.find(m=>Number(m.sessaoId)===Number(pendingWaiterPayment.sessaoId));if(mine)$('#billingSession').value=String(pendingWaiterPayment.sessaoId);$('#billingMessage').textContent='Resolva a tentativa pendente com os mesmos dados antes de selecionar outra mesa.';}else if(!pendingWaiterPayment){$('#billingAmount').value='';$('#billingReceivedConfirm').checked=false;}void loadBillingSummary()});
 $('#refreshBilling').addEventListener('click',()=>loadBillingSummary());
 $('#billingMethod').addEventListener('change',updateBillingConfirmation);
 $('#registerPayment').addEventListener('click',submitWaiterPayment);
