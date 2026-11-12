@@ -190,7 +190,7 @@ describe('2. Segurança — Cliente não acessa endpoints de pagamento', () => {
    3. MESA ABERTA PELO CLIENTE E POSTERIORMENTE ASSUMIDA PELO GARÇOM
    ========================================================================= */
 describe('3. Ciclo de Vida — Mesa aberta pelo cliente e assumida pelo garçom', () => {
-  test('Mapper do cliente extrai e preserva garcomNome na sessão e nos pedidos', () => {
+  test('Mapper não atribui garçom titular à sessão; pedido preserva autor do lançamento', () => {
     const mappersCode = ts.transpileModule(fs.readFileSync('src/lib/mappers.ts', 'utf8'), {
       compilerOptions: { module: ts.ModuleKind.CommonJS },
     }).outputText;
@@ -235,7 +235,7 @@ describe('3. Ciclo de Vida — Mesa aberta pelo cliente e assumida pelo garçom'
     assert.equal(res.pedidos[1].garcomNome, 'Carlos Garçom', 'Pedido 102 registra Carlos Garçom');
   });
 
-  test('Garçom assume e entrega pedido da mesa aberta pelo cliente', async () => {
+  test('Garçom entrega item sem se tornar titular do pedido ou da mesa', async () => {
     const { criarEstado, install } = require('./helpers/fake-pool-itens.cjs');
     const estado = criarEstado({
       garcons: [{ id: 5, nome: 'Roberto Garçom', token: '33333333-3333-4000-8000-333333333333', ativo: true }],
