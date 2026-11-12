@@ -731,7 +731,7 @@ const server = http.createServer(async (req, res) => {
         const payload = await body(req);
         if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return json(res,400,{error:'Corpo de aceite inválido'});
         const out = await assumirEntregaComoGarcom(Number(m[2]), m[1], reqId, payload.itemIds ?? null);
-        broadcast('update', { type: 'entrega_assumida', pedidoId: Number(m[2]), itens: out.itensAfetados, responsavelMesaId: out.responsavelMesa?.id });
+        broadcast('update', { type: 'entrega_assumida', pedidoId: Number(m[2]), itens: out.itensAfetados });
         return json(res, 200, out);
       } catch (e) {
         if (e instanceof ErroGarcom) return json(res, e.status, { error: e.message });
