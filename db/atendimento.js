@@ -3,7 +3,6 @@ const { getGarcomPorToken } = require('./garcons');
 const { totalEntregueDaSessao, totalPagoDaSessao } = require('./conta');
 const { percentualServicoPadrao, taxaServicoPadraoPara } = require('./caixa');
 const { registrarEvento } = require('./auditoria');
-const { comRetryConcorrencia } = require('./retry');
 
 class ErroAtendimento extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -14,9 +13,8 @@ async function validarGarcom(token) {
   return g;
 }
 
-// A verificação anterior ao BEGIN não basta: uma remoção concorrente poderia
-// invalidar o garçom antes que a mesa seja atribuída. O lock é mantido até o
-// commit, serializando essa atribuição com remoção/desativação.
+// Revalida o cadastro ativo dentro da transação. O lock impede que o link
+// seja desativado no meio da operação de atendimento.
 async function travarGarcomAtivo(client, garcom, token) {
   const { rows } = await client.query(
     `SELECT id, ativo FROM garcons
@@ -257,7 +255,7 @@ async function criarPedidoGarcom(token, numeroBruto, body, requestId=null) {
   const { rows: mesas } = await pool.query('SELECT token FROM mesas WHERE numero=$1', [numero]);
   if (!mesas[0]) throw new ErroAtendimento(404, 'Mesa não encontrada');
   // Qualquer garçom ativo pode acrescentar itens a uma sessão aberta.
-  const { rows: atribuidas } = await pool.query(
+  const { rows: sessoesAbertas } = await pool.query(
     `SELECT s.id FROM mesa_sessoes s JOIN mesas m ON m.id=s.mesa_id
       WHERE m.numero=$1 AND s.status='aberta'`,
     [numero]
@@ -269,7 +267,7 @@ async function criarPedidoGarcom(token, numeroBruto, body, requestId=null) {
   // criarPedido resolver: replay devolve o original; pedido realmente novo
   // ainda é recusado lá dentro (a sessão criada é desfeita no rollback).
   const temChave = Boolean(body && typeof body === 'object' && (body.idempotencyKey || body.idempotency_key));
-  if (!atribuidas[0] && !temChave) {
+  if (!sessoesAbertas[0] && !temChave) {
     throw new ErroAtendimento(409, 'A mesa precisa ter um atendimento aberto');
   }
   const { criarPedido } = require('./pedidos');
