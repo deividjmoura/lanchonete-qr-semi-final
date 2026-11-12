@@ -31,8 +31,6 @@ export type MesaPanorama = {
   abertaEm: string | null;
   tempo: TempoMesa | null;
   clienteNome: string | null;
-  garcomResponsavelId: number | null;
-  garcomResponsavelNome: string | null;
   consumo: number;
   pago: number;
   saldo: number;
