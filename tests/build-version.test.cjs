@@ -93,7 +93,15 @@ test('hash é estável, muda com o conteúdo e não depende do caminho', () => {
     assert.notEqual(depois, antes, 'mudar o bundle precisa gerar versão nova');
     // O "deploy" que muda só servidor não altera o shell → não avisa à toa.
     fs.writeFileSync(path.join(dir, 'server.js'), '// mudou só o servidor\n');
-    assert.equal(calcularVersaoDoShell(dir), depois, 'mudança fora de src/ e index.html não muda a versão');
+    assert.equal(calcularVersaoDoShell(dir), depois, 'mudança só no servidor não muda a versão');
+
+    // O changelog é servido fora do bundle, mas mudar as notas precisa gerar
+    // uma versão nova para que abas abertas recebam o aviso.
+    fs.mkdirSync(path.join(dir, 'public'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'public', 'novidades.json'), '{"notas":[]}\n');
+    const comChangelog = calcularVersaoDoShell(dir);
+    fs.writeFileSync(path.join(dir, 'public', 'novidades.json'), '{"notas":[{"versao":"1.1.0"}]}\n');
+    assert.notEqual(calcularVersaoDoShell(dir), comChangelog, 'mudar o changelog precisa gerar versão nova');
     assert.match(calcularVersaoDoShell(dir), FORMATO_VERSAO);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
