@@ -71,6 +71,10 @@ jobs:
         run: node --test tests/postgres-entregas-progressivas.test.cjs
       - name: Run QR/session lifecycle PostgreSQL integration tests
         run: node --test tests/postgres-qr-session.test.cjs
+      # #301: o ciclo real do aviso de nova versão (endpoint público, cache e
+      # shell servido do dist/ versionado) precisa de HTTP + build verdadeiro.
+      - name: Version endpoint and shell cache integration (#301)
+        run: node --test tests/postgres-version-endpoint.test.cjs
       - name: Run financial concurrency PostgreSQL integration tests
         run: node --test tests/postgres-financial-concurrency.test.cjs
       - name: Staff password change PostgreSQL integration tests

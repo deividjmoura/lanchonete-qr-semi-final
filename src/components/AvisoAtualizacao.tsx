@@ -1,172 +1,216 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowClockwise, X } from "@phosphor-icons/react";
+import { confirmarAcao } from "../lib/confirmacao";
+import { criarVigiaDeVersao, type EstadoAtualizacao } from "../lib/atualizacao";
+import { estadoDoTrabalho } from "../lib/trabalhoPendente";
 
 declare const __BUILD_VERSION__: string;
 
-const INTERVALO_VERIFICACAO_MS = 60_000;
+const CANAL = "qr-admin-atualizacao";
 
-type RespostaVersao = { version?: string };
+/**
+ * Chave do adiamento por versão. Guarda apenas o identificador do build que o
+ * operador escolheu adiar — nunca preferência de negócio, fila offline ou
+ * credencial. Se o storage estiver bloqueado, o aviso continua funcionando só
+ * com o estado em memória.
+ */
+const CHAVE_ADIAMENTO = "qradmin:atualizacao-adiada";
 
-async function consultarVersao(): Promise<string | null> {
+function lerAdiamento(): string | null {
   try {
-    const resposta = await fetch("/api/version", {
-      method: "GET",
-      cache: "no-store",
-      headers: { Accept: "application/json" },
-    });
-    if (!resposta.ok) return null;
-    const dados = (await resposta.json()) as RespostaVersao;
-    return typeof dados.version === "string" && dados.version ? dados.version : null;
+    return window.localStorage.getItem(CHAVE_ADIAMENTO);
   } catch {
-    // Falha temporária de rede não deve interromper o trabalho nem gerar alertas.
     return null;
   }
 }
 
-type CampoFormulario = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
-
-function campoFoiAlterado(campo: CampoFormulario): boolean {
-  if (campo instanceof HTMLInputElement && (campo.type === "checkbox" || campo.type === "radio")) {
-    return campo.checked !== campo.defaultChecked;
+function gravarAdiamento(versao: string) {
+  try {
+    window.localStorage.setItem(CHAVE_ADIAMENTO, versao);
+  } catch {
+    /* armazenamento bloqueado: adiamento vale só nesta aba */
   }
-  if (campo instanceof HTMLSelectElement) {
-    const opcoes = Array.from(campo.options);
-    if (campo.multiple) {
-      return opcoes.some((opcao) => opcao.selected !== opcao.defaultSelected);
-    }
-
-    // Selects não têm defaultValue. Usa a opção marcada no HTML; sem marcação,
-    // o navegador seleciona a primeira opção em um select de tamanho padrão.
-    const indiceMarcado = opcoes.findIndex((opcao) => opcao.defaultSelected);
-    const indicePadrao = indiceMarcado >= 0
-      ? indiceMarcado
-      : campo.size <= 1 && opcoes.length > 0
-        ? 0
-        : -1;
-    return campo.selectedIndex !== indicePadrao;
-  }
-  return campo.value !== campo.defaultValue;
 }
 
-function existeTrabalhoNaoSalvo(): boolean {
-  const campos = Array.from(document.querySelectorAll<CampoFormulario>(
-    "input:not([type=hidden]):not([type=submit]):not([type=button]), textarea, select"
-  ));
-  const formularioAlterado = campos.some(campoFoiAlterado);
-  const operacaoSinalizadaComoAtiva = Boolean(document.querySelector(
-    '[aria-busy="true"], [data-operation-pending="true"], form[data-submitting="true"]'
-  ));
-  return formularioAlterado || operacaoSinalizadaComoAtiva;
+/** Consulta a versão publicada. Qualquer falha resolve `null` (silenciosa). */
+async function consultarVersaoPublicada(): Promise<string | null> {
+  try {
+    const resposta = await fetch("/api/version", {
+      method: "GET",
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    if (!resposta.ok) return null;
+    const dados = (await resposta.json()) as { version?: unknown };
+    return typeof dados.version === "string" && dados.version ? dados.version : null;
+  } catch {
+    // Falha temporária de rede não interrompe o trabalho nem gera alerta.
+    return null;
+  }
 }
 
+function criarCanalDeAbas() {
+  if (typeof BroadcastChannel === "undefined") return null;
+  const canal = new BroadcastChannel(CANAL);
+  return {
+    postMessage: (mensagem: unknown) => canal.postMessage(mensagem),
+    get onmessage() {
+      return canal.onmessage as ((evento: { data?: unknown }) => void) | null;
+    },
+    set onmessage(fn: ((evento: { data?: unknown }) => void) | null) {
+      canal.onmessage = fn as ((evento: MessageEvent) => void) | null;
+    },
+    close: () => canal.close(),
+  };
+}
+
+function mensagemDeConfirmacao(): string {
+  const trabalho = estadoDoTrabalho();
+  const partes: string[] = [];
+  if (trabalho.operacoes > 0) {
+    partes.push(
+      trabalho.operacoes === 1
+        ? "há 1 operação sendo enviada ao servidor agora"
+        : `há ${trabalho.operacoes} operações sendo enviadas ao servidor agora`
+    );
+  }
+  if (trabalho.formulario) partes.push("há campos de formulário alterados e não salvos");
+  if (trabalho.telaOcupada) partes.push("a tela indica uma operação em andamento");
+
+  if (partes.length) {
+    return (
+      `Antes de atualizar: ${partes.join("; ")}.\n\n` +
+      "Recarregar agora pode descartar esse trabalho ou impedir você de ver o resultado de uma operação já enviada. " +
+      "Recomendamos concluir e conferir tudo antes de continuar.\n\nAtualizar mesmo assim?"
+    );
+  }
+  return (
+    "Uma nova versão do QR Admin está publicada.\n\n" +
+    "Confirme que pedidos, pagamentos e fechamentos em andamento já foram concluídos antes de atualizar. " +
+    "A página será recarregada e o aviso desaparece.\n\nAtualizar agora?"
+  );
+}
+
+/**
+ * Aviso discreto de nova versão publicada (#301).
+ *
+ * Não recarrega sozinho: o operador escolhe Atualizar agora ou continuar
+ * trabalhando. O adiamento vale para a versão detectada e é compartilhado com
+ * as outras abas; a recarga usa `location.reload()` e, quando o navegador
+ * permite, `history.replaceState` antes, para garantir que o documento novo
+ * venha da rede (o shell do SPA é servido com `Cache-Control: no-store`).
+ */
 export function AvisoAtualizacao() {
-  // Esta versão pertence ao bundle carregado, não à primeira resposta da API.
-  // Assim uma aba antiga detecta o deploy mesmo se consultar a API só depois dele.
-  const versaoNotificada = useRef<string | null>(null);
-  const [atualizacaoDisponivel, setAtualizacaoDisponivel] = useState(false);
-  const [dispensado, setDispensado] = useState(false);
-  const [verificando, setVerificando] = useState(false);
+  const [estado, setEstado] = useState<EstadoAtualizacao>("ocioso");
+  const [atualizando, setAtualizando] = useState(false);
+  const vigia = useRef<ReturnType<typeof criarVigiaDeVersao> | null>(null);
 
   useEffect(() => {
+    const instancia = criarVigiaDeVersao({
+      versaoEmExecucao: __BUILD_VERSION__,
+      consultarVersao: consultarVersaoPublicada,
+      aoMudar: (novo) => setEstado(novo),
+      criarCanal: criarCanalDeAbas,
+      lerAdiamento,
+      gravarAdiamento,
+      visivel: () => document.visibilityState !== "hidden",
+      registrarGatilhos: (verificar) => {
+        const aoVoltar = () => {
+          if (document.visibilityState === "visible") verificar();
+        };
+        document.addEventListener("visibilitychange", aoVoltar);
+        window.addEventListener("focus", aoVoltar);
+        return () => {
+          document.removeEventListener("visibilitychange", aoVoltar);
+          window.removeEventListener("focus", aoVoltar);
+        };
+      },
+    });
+    vigia.current = instancia;
+    return instancia.iniciar();
+  }, []);
+
+  /* Proteção do navegador só enquanto existe aviso pendente: fechar/recarregar
+     a aba por fora (F5, atalho) com trabalho não salvo pede confirmação. */
+  useEffect(() => {
+    if (estado === "ocioso") return;
     const protegerSaida = (evento: BeforeUnloadEvent) => {
-      if (!atualizacaoDisponivel || !existeTrabalhoNaoSalvo()) return;
+      if (!estadoDoTrabalho().pendente) return;
       evento.preventDefault();
       evento.returnValue = "";
     };
     window.addEventListener("beforeunload", protegerSaida);
     return () => window.removeEventListener("beforeunload", protegerSaida);
-  }, [atualizacaoDisponivel]);
+  }, [estado]);
 
-  const verificar = useCallback(async () => {
-    if (import.meta.env.DEV || document.visibilityState === "hidden") return;
-    const versaoPublicada = await consultarVersao();
-    if (!versaoPublicada || versaoPublicada === __BUILD_VERSION__) return;
-    if (versaoNotificada.current === versaoPublicada) return;
-
-    versaoNotificada.current = versaoPublicada;
-    setAtualizacaoDisponivel(true);
-    setDispensado(false);
-    try {
-      const canal = new BroadcastChannel("qr-admin-update");
-      canal.postMessage({ type: "update-available", version: versaoPublicada });
-      canal.close();
-    } catch { /* BroadcastChannel indisponível: cada aba continua verificando */ }
+  const adiar = useCallback(() => {
+    vigia.current?.adiar();
+    setEstado("dispensado");
   }, []);
 
-  useEffect(() => {
-    void verificar();
-    const intervalo = window.setInterval(() => void verificar(), INTERVALO_VERIFICACAO_MS);
-    let canal: BroadcastChannel | null = null;
-    try {
-      canal = new BroadcastChannel("qr-admin-update");
-      canal.onmessage = (evento: MessageEvent<{ type?: string; version?: string }>) => {
-        if (evento.data?.type === "update-available" && evento.data.version &&
-            evento.data.version !== __BUILD_VERSION__) {
-          versaoNotificada.current = evento.data.version;
-          setAtualizacaoDisponivel(true);
-          setDispensado(false);
-        }
-      };
-    } catch { /* Navegadores sem BroadcastChannel usam a consulta periódica */ }
-    const aoVoltar = () => {
-      if (document.visibilityState === "visible") void verificar();
-    };
-    document.addEventListener("visibilitychange", aoVoltar);
-    window.addEventListener("focus", aoVoltar);
-    return () => {
-      window.clearInterval(intervalo);
-      canal?.close();
-      document.removeEventListener("visibilitychange", aoVoltar);
-      window.removeEventListener("focus", aoVoltar);
-    };
-  }, [verificar]);
-
-  const atualizar = () => {
-    if (verificando) return;
-    const trabalhoPendente = existeTrabalhoNaoSalvo();
-    const mensagem = trabalhoPendente
-      ? "Detectei alterações em formulários ou uma operação sinalizada como ativa. Atualizar agora pode descartar esse trabalho. Deseja realmente atualizar?"
-      : "Uma nova versão do QR Admin está disponível. Confirme que pedidos e operações em andamento foram concluídos antes de atualizar. Deseja continuar?";
-    const confirmou = window.confirm(mensagem);
-    if (!confirmou) return;
-    setVerificando(true);
+  const atualizar = useCallback(async () => {
+    if (atualizando) return;
+    const confirmou = await confirmarAcao({
+      titulo: "Atualizar para a nova versão?",
+      mensagem: mensagemDeConfirmacao(),
+      confirmar: "Atualizar agora",
+      cancelar: "Continuar por enquanto",
+      perigo: estadoDoTrabalho().pendente,
+    });
+    if (!confirmou) {
+      // Cancelar no modal equivale a adiar: não reabre o aviso sozinho.
+      adiar();
+      return;
+    }
+    setAtualizando(true);
     window.location.reload();
-  };
+  }, [adiar, atualizando]);
 
-  if (!atualizacaoDisponivel || dispensado) return null;
+  if (estado !== "disponivel") return null;
 
   return (
     <aside
       role="status"
       aria-live="polite"
-      className="fixed inset-x-3 top-3 z-[100] mx-auto flex max-w-2xl items-center gap-3 rounded-lg border border-line bg-surface-raised px-4 py-3 shadow-modal"
+      aria-label="Nova versão disponível"
+      className="fixed inset-x-3 top-3 z-[100] mx-auto flex max-w-2xl flex-wrap items-center gap-3 rounded-lg border border-line bg-surface-raised px-4 py-3 shadow-modal"
     >
       <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-hover text-brand-ink">
         <ArrowClockwise size={19} weight="bold" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-text">Nova atualização disponível</p>
+        <p className="text-sm font-semibold text-text">Nova versão disponível</p>
         <p className="text-xs leading-relaxed text-text-muted">
-          Uma nova versão do QR Admin foi publicada. Atualize quando terminar suas operações.
+          Atualize quando terminar suas operações. Você continua trabalhando na versão atual até decidir.
         </p>
       </div>
-      <button
-        type="button"
-        onClick={atualizar}
-        disabled={verificando}
-        className="shrink-0 rounded-md bg-brand px-3 py-2 text-xs font-semibold text-brand-contrast hover:bg-brand-hover disabled:opacity-60"
-      >
-        Atualizar
-      </button>
-      <button
-        type="button"
-        aria-label="Continuar trabalhando e dispensar aviso"
-        title="Continuar trabalhando"
-        onClick={() => setDispensado(true)}
-        className="flex size-8 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-surface-hover"
-      >
-        <X size={17} />
-      </button>
+      <div className="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={() => void atualizar()}
+          disabled={atualizando}
+          className="min-h-9 rounded-md bg-brand px-3 py-2 text-xs font-semibold text-brand-contrast hover:bg-brand-hover disabled:opacity-60"
+        >
+          {atualizando ? "Atualizando…" : "Atualizar agora"}
+        </button>
+        <button
+          type="button"
+          onClick={adiar}
+          className="min-h-9 rounded-md border border-line px-3 py-2 text-xs font-semibold text-text-muted hover:bg-surface-hover"
+        >
+          Continuar por enquanto
+        </button>
+        <button
+          type="button"
+          aria-label="Dispensar aviso de atualização"
+          title="Dispensar aviso"
+          onClick={adiar}
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-surface-hover"
+        >
+          <X size={17} />
+        </button>
+      </div>
     </aside>
   );
 }

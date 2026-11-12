@@ -35,7 +35,11 @@ const { fork } = require('node:child_process');
 
 const RAIZ = path.join(__dirname, '..', '..');
 
-/** Só os diretórios/arquivos que o `server.js` precisa para servir a API. */
+/**
+ * Só os diretórios/arquivos que o `server.js` precisa para servir a API.
+ * `lib/` entrou com o identificador de build (#301): o servidor lê
+ * `lib/build-version.js` para responder `/api/version`.
+ */
 const DIRETORIOS = ['db', 'lib', 'security', 'server'];
 const ARQUIVOS = ['server.js', 'package.json'];
 

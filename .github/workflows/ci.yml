@@ -92,6 +92,11 @@ jobs:
         if: ${{ hashFiles('tests/postgres-financial-concurrency.test.cjs') != '' }}
         run: node --test tests/postgres-financial-concurrency.test.cjs
 
+      # #301: endpoint de versão, cache do shell e manifesto do dist/ versionado.
+      - name: Version endpoint and shell cache on clean PostgreSQL
+        if: ${{ hashFiles('tests/postgres-version-endpoint.test.cjs') != '' }}
+        run: node --test tests/postgres-version-endpoint.test.cjs
+
       - name: Typecheck
         run: npm run typecheck
 

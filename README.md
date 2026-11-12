@@ -196,7 +196,7 @@ O primeiro login exige troca da senha de bootstrap. Não existe senha padrão. N
 | **npm run dev** | Interface Vite em desenvolvimento |
 | **npm start** | Inicialização pelo gate de migrations e servidor |
 | **npm run typecheck** | Verificação TypeScript |
-| **npm run build** | Build de produção da interface. O `dist/` é versionado e servido como está: se o seu `.env` local tiver `NODE_ENV=development`, o Vite gera um build de desenvolvimento sem avisar — use `NODE_ENV=production npm run build`. `npm test` acusa um `dist/` de desenvolvimento que esteja no Git: ele confere o que já passou por `git add`, não a pasta em disco |
+| **npm run build** | Build de produção da interface. Além dos assets, o build grava `dist/build-version.json` (identificador usado pelo aviso de atualização — commite-o junto). O `dist/` é versionado e servido como está: se o seu `.env` local tiver `NODE_ENV=development`, o Vite gera um build de desenvolvimento sem avisar — use `NODE_ENV=production npm run build`. `npm test` acusa um `dist/` de desenvolvimento que esteja no Git: ele confere o que já passou por `git add`, não a pasta em disco |
 | **npm run build:check** | Typecheck seguido do build |
 | **npm test** | Regressão sem as suítes que exigem PostgreSQL dedicado |
 | **npm run test:pg** | Suítes PostgreSQL; exige **DATABASE_URL** de banco de teste |
@@ -274,6 +274,7 @@ O rodapé mantém **Contate-nos** ao lado de **Acesso ao sistema**. Durante a ro
 | [Procedimento de titulares](docs/engineering/procedimento-titulares.md) | Como atender pedidos de acesso, correção e eliminação. |
 | [Observabilidade e alertas](docs/engineering/observabilidade-alertas.md) | Health check, logs e dependências de alertas externos. |
 | [Gate de migrations](docs/engineering/migration-gate-runbook.md) | Inicialização segura e compatibilidade do schema. |
+| [Atualização segura de versão](docs/engineering/ATUALIZACAO-SEGURA.md) | `/api/version`, aviso de deploy em abas abertas, adiamento sincronizado e cache do shell. |
 | [Google OAuth](docs/engineering/google-oauth-setup.md) | Pré-cadastro e configuração do login Google. |
 | [Backup e restore](docs/engineering/backup-restore.md) | Procedimento e evidências necessárias para restauração. |
 | [Fornecedor e serviços](docs/FORNECEDOR-E-SERVICOS-QR-ADMIN.md) | Identificação do fornecedor, infraestrutura e limites documentados. |

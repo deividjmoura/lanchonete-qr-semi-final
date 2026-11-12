@@ -1,20 +1,32 @@
 import path from "path";
-import { createHash } from "node:crypto";
 import { fileURLToPath } from "url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
+// @ts-expect-error -- módulo CommonJS sem tipos; a fonte da fórmula é única (lib/).
+import { ARQUIVO_VERSAO, calcularVersaoDoShell } from "./lib/build-version.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Railway/GitHub fornecem SHA estável por deploy. O fallback também cria um
-// identificador novo a cada build local, sem expor o valor original ao cliente.
-const origemVersao = process.env.RAILWAY_GIT_COMMIT_SHA ||
-  process.env.GITHUB_SHA ||
-  process.env.SOURCE_VERSION ||
-  `local-${Date.now()}-${process.pid}`;
-const BUILD_VERSION = createHash("sha256").update(origemVersao).digest("hex").slice(0, 16);
+/**
+ * Identificador de build publicado (#301) — ver `lib/build-version.js`.
+ *
+ * É um hash do CONTEÚDO do shell estático (fontes do SPA + index.html), não do
+ * SHA do commit nem de `Date.now()`. Consequências que importam:
+ *
+ *  - duas máquinas que compilam a mesma árvore chegam ao MESMO identificador,
+ *    então o valor commitado em `dist/` continua válido em produção (o deploy
+ *    serve o `dist/` do repositório, não recompila);
+ *  - um deploy que só muda servidor/migrations não muda o shell do navegador e
+ *    portanto NÃO gera aviso de atualização — não há bundle novo para buscar;
+ *  - qualquer mudança em `src/` ou no `index.html` muda o identificador, e a
+ *    aba antiga percebe a diferença na comparação com o próprio bundle.
+ *
+ * O servidor usa exatamente a mesma função; se as duas divergirem, o aviso ou
+ * nunca aparece ou aparece para sempre — por isso a fórmula mora em `lib/`.
+ */
+const BUILD_VERSION: string = calcularVersaoDoShell(__dirname);
 
 function pluginVersaoBuild(): Plugin {
   return {
@@ -22,8 +34,8 @@ function pluginVersaoBuild(): Plugin {
     generateBundle() {
       this.emitFile({
         type: "asset",
-        fileName: "build-version.json",
-        source: JSON.stringify({ version: BUILD_VERSION }),
+        fileName: ARQUIVO_VERSAO,
+        source: JSON.stringify({ version: BUILD_VERSION }) + "\n",
       });
     },
   };
@@ -31,6 +43,7 @@ function pluginVersaoBuild(): Plugin {
 
 export default defineConfig({
   define: {
+    // Mesmo valor que o servidor publica em /api/version (dist/build-version.json).
     __BUILD_VERSION__: JSON.stringify(BUILD_VERSION),
   },
   plugins: [react(), tailwindcss(), pluginVersaoBuild()],
