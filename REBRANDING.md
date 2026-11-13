@@ -94,9 +94,9 @@ No celular, cada cartão de indicador da `main` avança só 93px em relação ao
 84px mais 9px de intervalo) e precisa de bem mais que isso. O conteúdo vaza e o cartão seguinte cobre o
 valor do anterior. Não é rolagem horizontal (o estouro medido é 0px), é informação escondida.
 
-| `main`, 390px | agora, 390px |
-|---|---|
-| ![Painel da main no celular: cartões sobrepostos cobrindo os valores](docs/design/rebranding/painel-celular-main.png) | ![Painel na identidade Passe no celular: dois cartões por linha, valores inteiros](docs/design/rebranding/painel-celular-passe.png) |
+> *Comparação visual:* as imagens antes/depois desta seção saíram do repositório na limpeza de
+> 13/11/2026 (eram 14 MB de PNGs descrevendo telas que não existem mais). Os números medidos acima
+> continuam sendo a evidência; para reconferir, rode a captura em `scripts/capturar-apresentacao.mjs`.
 
 ### 1.4 Telas que divergiam da identidade
 
@@ -187,9 +187,8 @@ Cada estação mostra uma **captura real do sistema**, tirada do banco de demons
 refeitas sobre o build final. As capturas do cardápio do cliente mostram o cardápio como ele é, com a
 identidade própria que foi preservada.
 
-| `main` | agora |
-|---|---|
-| ![Topo da landing da main](docs/design/rebranding/landing-main.png) | ![Topo da landing na identidade Passe](docs/design/rebranding/landing-passe.png) |
+> *Comparação visual:* as capturas antes/depois da landing saíram do repositório na mesma limpeza de
+> 13/11/2026. A landing atual pode ser vista em `#/` e capturada de novo pelo script acima.
 
 ### 3.2 Contato por ícones
 
@@ -295,9 +294,8 @@ produção serve, ele difere nas 36 combinações (de 1% a 19% dos pixels):
 - os raios diminuíram (`--radius-lg` de 24 para 20px, `--radius-md` de 20 para 16px);
 - os tokens de marca passaram de violeta para brasa, e o anel de foco, de violeta para tinta escura.
 
-![Cardápio e carrinho no celular: em cada par, a produção à esquerda e este PR à direita](docs/design/rebranding/cardapio-producao-x-pr.png)
-
-*Em cada par, à esquerda a produção (`a044980`) e à direita este PR.*
+*A comparação lado a lado (produção `a044980` × este PR) foi removida do repositório na limpeza de
+13/11/2026. O cardápio em produção é a referência: `#/mesa/:token`.*
 
 **Consequência:** publicar este PR muda o cardápio que o cliente vê hoje. A causa é o #295, que já está
 na `main`, e não o rebranding. Para o cardápio ficar igual ao da produção, a referência teria de ser

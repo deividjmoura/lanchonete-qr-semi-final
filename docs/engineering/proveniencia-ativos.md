@@ -41,17 +41,19 @@ git grep -liP "del[ií]cia" -- .    # → apenas tests/branding-neutral.test.cjs
 
 | Ativo | Caminho | Tamanho | Origem |
 |---|---|---|---|
-| Marca QR Admin (horizontal, dark) | `public/logo/qradmin-horizontal-dark.png` | 1,3 MB | identidade própria do projeto |
-| Marca QR Admin (horizontal) | `public/logo/qradmin-horizontal.png` | 230 KB | idem |
+| Marca QR Admin (horizontal) | `public/logo/qradmin-horizontal.png` | 230 KB | identidade própria do projeto |
 | Marca QR Admin (mark) | `public/logo/qradmin-mark.png` | 272 KB | idem |
-| Marca QR Admin (quadrada) | `public/logo/qradmin.png` | 244 KB | idem |
+| Símbolo reduzido (SVG) | `public/logo/simbolo.svg` | 0,4 KB | idem |
+| Ícones do shell | `public/logo/simbolo-96.png`, `simbolo-180.png` | 3 KB | idem |
 | Favicon | `public/logo/favicon.png` | 24 KB | idem |
 | Favicons diversos | `public/favicons/` | 32 KB | idem |
-| Fundo de admin | `public/assets/bg-admin.{jpg,webp}` | 330 / 103 KB | a verificar |
+| Fundos de tela | `public/assets/bg-*.webp` | 0,7 MB | a verificar |
 
-**Total em `public/logo/`:** 2,0 MB · **`public/assets/`:** 4,1 MB
+**Total em `public/logo/`:** 0,5 MB · **`public/assets/`:** ~2,8 MB
 
-> **Ponto de atenção:** `qradmin-horizontal-dark.png` tem **1,3 MB** para um logo. Isso não é problema de propriedade, mas é peso de deploy e de primeira carga. Candidato a otimização.
+> **Resolvido em 13/11/2026:** `qradmin-horizontal-dark.png` (1,3 MB), `qradmin.png` (244 KB) e
+> `simbolo-traco.svg` não eram referenciados por nenhum HTML, CSS, React ou teste — saíram do
+> repositório. Os fundos de tela ficaram só em WebP: os `.jpg` eram fallback que nenhum CSS pedia.
 
 ---
 
@@ -60,8 +62,8 @@ git grep -liP "del[ií]cia" -- .    # → apenas tests/branding-neutral.test.cjs
 | Item | Valor |
 |---|---|
 | Pasta | `public/assets/demo/` |
-| Arquivos | **70** (35 `.jpg` + 35 `.webp`, o mesmo conjunto em dois formatos) |
-| Tamanho total | **2,1 MB** |
+| Arquivos | **35** (`.webp`; os 35 `.jpg` duplicados saíram em 13/11/2026) |
+| Tamanho total | **0,6 MB** |
 | Origem no histórico | commit `eb7096b` — *"feat(mesa): prévia UI estilo app — chips, cards, logo cliente e fotos demo"* |
 | Autor do commit | Arena Agent, 16/09/2026 |
 
@@ -123,7 +125,7 @@ Se foram geradas ou vieram de banco com licença permissiva, documente a fonte. 
 | 2 | Visibilidade | público / privado | Se for vender licença: privado. Se for adoção: público com licença clara |
 | 3 | Licença | proprietária / AGPL-3.0 / MIT / BSL 1.1 | proprietária se o modelo é vender licença (combina com CNAE 6202-3/00); AGPL se o objetivo é adoção sem que concorrente feche o código |
 | 4 | Fonte das 35 imagens demo | banco / geradas / autorizadas | obter comprovante escrito antes de manter |
-| 5 | `bg-admin.jpg` (330 KB) | própria / terceiro | verificar |
+| 5 | `bg-admin.webp` (103 KB) | própria / terceiro | verificar |
 
 ---
 

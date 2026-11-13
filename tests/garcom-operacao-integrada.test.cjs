@@ -68,7 +68,7 @@ describe('1. Fluxo do Cliente — Sem Pagamento e com Recursos Essenciais', () =
     );
   });
 
-  test('Interface legada do cliente (public/js/mesa-app-a.js e mesa-pix.js) não injeta avisos de pagamento', () => {
+  test('Interface legada do cliente (public/js/mesa-app-a.js) não injeta avisos de pagamento', () => {
     const mesaAppA = fs.readFileSync('public/js/mesa-app-a.js', 'utf8');
     assert.equal(
       /Pagamento no caixa ou com o garçom/i.test(mesaAppA),
@@ -81,11 +81,12 @@ describe('1. Fluxo do Cliente — Sem Pagamento e com Recursos Essenciais', () =
       'mesa-app-a.js não deve exibir detalhes parciais de pagamento na conta do cliente'
     );
 
-    const mesaPix = fs.readFileSync('public/js/mesa-pix.js', 'utf8');
+    // mesa-pix.js era um stub de 4 linhas, que nenhuma página carregava; foi
+    // removido. Se voltar, o botão de pagamento PIX não pode voltar com ele.
     assert.equal(
-      /pixJaPagueiBtn/i.test(mesaPix),
+      fs.existsSync('public/js/mesa-pix.js'),
       false,
-      'mesa-pix.js não deve expor botão de pagamento PIX no cliente'
+      'mesa-pix.js não deve existir: o cliente não tem ação de pagamento'
     );
   });
 

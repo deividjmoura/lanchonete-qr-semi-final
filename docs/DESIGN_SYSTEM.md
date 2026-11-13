@@ -12,8 +12,10 @@
 > propósito e continua exatamente como era (tema praia sobre a identidade anterior). Ver §8.
 >
 > Esta identidade substitui a "Comanda de Chapa" (palco escuro de vidro, brasa, Fraunces + Plus
-> Jakarta Sans + JetBrains Mono). O histórico daquela fase está em `docs/design/` e não descreve mais
-> o produto. O relatório da troca está em `REBRANDING.md`, na raiz.
+> Jakarta Sans + JetBrains Mono). Daquela fase só restou o cardápio do cliente, com os tokens
+> congelados em `src/screens/cardapio-identidade/identidade-cardapio.css`; o material histórico
+> (`docs/design/`) saiu do repositório na limpeza de 13/11/2026. O relatório da troca está em
+> `REBRANDING.md`, na raiz.
 
 ---
 

@@ -276,6 +276,7 @@ O rodapé mantém **Contate-nos** ao lado de **Acesso ao sistema**. Durante a ro
 | [Gate de migrations](docs/engineering/migration-gate-runbook.md) | Inicialização segura e compatibilidade do schema. |
 | [Atualização segura de versão](docs/engineering/ATUALIZACAO-SEGURA.md) | `/api/version`, aviso de deploy em abas abertas, adiamento sincronizado e cache do shell. |
 | [Google OAuth](docs/engineering/google-oauth-setup.md) | Pré-cadastro e configuração do login Google. |
+| [Higiene do repositório e pendências](docs/engineering/HIGIENE-REPOSITORIO-2026-11-13.md) | O que saiu do repositório em 13/11/2026, branches apagadas e o estado real das issues abertas. |
 | [Backup e restore](docs/engineering/backup-restore.md) | Procedimento e evidências necessárias para restauração. |
 | [Fornecedor e serviços](docs/FORNECEDOR-E-SERVICOS-QR-ADMIN.md) | Identificação do fornecedor, infraestrutura e limites documentados. |
 | [Política de Privacidade](https://qradmin.up.railway.app/politica-de-privacidade.html) | Política publicada. |
