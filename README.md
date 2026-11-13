@@ -196,8 +196,16 @@ O primeiro login exige troca da senha de bootstrap. Não existe senha padrão. N
 | **npm run dev** | Interface Vite em desenvolvimento |
 | **npm start** | Inicialização pelo gate de migrations e servidor |
 | **npm run typecheck** | Verificação TypeScript |
-| **npm run build** | Build de produção da interface. Além dos assets, o build grava `dist/build-version.json` (identificador usado pelo aviso de atualização — commite-o junto). O `dist/` é versionado e servido como está: se o seu `.env` local tiver `NODE_ENV=development`, o Vite gera um build de desenvolvimento sem avisar — use `NODE_ENV=production npm run build`. `npm test` acusa um `dist/` de desenvolvimento que esteja no Git: ele confere o que já passou por `git add`, não a pasta em disco |
+| **npm run build** | Build de produção da interface. Além dos assets, grava `dist/build-version.json` (identificador do aviso de atualização — commite-o junto com o bundle). O build também **copia `public/` para `dist/`**, mas essas cópias não são versionadas: o `server.js` resolve esses caminhos em `public/`. Se o seu `.env` local tiver `NODE_ENV=development`, o Vite gera um build de desenvolvimento sem avisar — use `NODE_ENV=production npm run build`; `npm test` acusa um `dist/` de desenvolvimento que esteja no Git |
 | **npm run build:check** | Typecheck seguido do build |
+
+> **Deploy:** o `dist/` não é mais versionado por inteiro (13/11/2026). O deploy
+> precisa rodar `npm ci && npm run build` antes de `npm start` — no Railway, isso
+> é o *Build Command*. Com `NODE_ENV=production`, o servidor **recusa subir** se
+> `dist/index.html` não existir, em vez de servir as páginas legadas de `public/`
+> com a interface antiga e HTTP 200. Para aceitar essa degradação de propósito,
+> defina `FRONTEND_BUILD_REQUIRED=0`. Detalhes em
+> [Higiene do repositório](docs/engineering/HIGIENE-REPOSITORIO-2026-11-13.md).
 | **npm test** | Regressão sem as suítes que exigem PostgreSQL dedicado |
 | **npm run test:pg** | Suítes PostgreSQL; exige **DATABASE_URL** de banco de teste |
 | **npm run test:e2e** | Suítes E2E Playwright |

@@ -66,6 +66,66 @@ Os SHAs acima permitem recuperar qualquer uma com `git fetch origin <sha>`.
 `feat/313-atendimento-colaborativo-sem-mesa-fixa` foi **mantida**: é trabalho em
 andamento da issue #313, ainda não integrado.
 
+### 1.4 `dist/` deixa de ser versionado por inteiro (13/11/2026)
+
+O `dist/` estava 100% duplicado no Git: dos 143 arquivos versionados, **143 eram
+saída de build**, e **79 eram cópias byte a byte de `public/`**. Medindo o que o
+`server.js` realmente entrega, o quadro ficou claro:
+
+| | arquivos | o que acontecia |
+|---|---|---|
+| bundle com hash (`assets/index-*`, `react-*`, `motion-*`, `icons-*`, `*.woff2`) | 9 | servidos de `dist/` — **precisam ficar** |
+| `index.html`, `build-version.json` | 2 | lidos de `dist/` — **precisam ficar** |
+| imagens de `assets/` (`demo/`, `bg-*`, `apresentacao/`) | 53 | o servidor as serve de `public/`, mas `verificar-cardapio-intacto.mjs` e o `vite preview` servem `dist/` como raiz — **ficam** |
+| `garcom-pwa/` | 22 | servido por cópia e usado pelo E2E — **fica** |
+| HTML, CSS, `js/`, `logo/`, `favicons/`, `fonts/`, `novidades.json`, `uploads/` | **57** | o servidor resolve **sempre** em `public/`; a cópia em `dist/` nunca era entregue |
+
+Prova: com o `dist/` renomeado e o servidor real no ar, `GET /dist/admin.html`,
+`GET /assets/index-*.js` e `GET /build-version.json` respondiam **404**, enquanto
+`GET /guia-sistema.html` e `GET /assets/bg-caixa.webp` respondiam 200 — servidos
+de `public/`.
+
+Os 57 saíram do Git (1,0 MB) e entraram no `.gitignore`. Continuam sendo gerados
+no disco pelo build, porque as duas ferramentas citadas precisam deles.
+
+#### A trava que faltava
+
+`server.js` servia o SPA **se** `dist/` existisse e, quando não existia, caía
+silenciosamente nos HTML legados. Enquanto o `dist/` era versionado isso nunca
+acontecia; sem ele, um deploy que esquecesse o build entregaria a interface
+antiga com HTTP 200 — sem erro, sem log, sem alarme no health check.
+
+`lib/exigir-build.js` fecha o buraco: em `NODE_ENV=production`, ausência de
+`dist/index.html` **impede o servidor de subir** (`server.close()` +
+`exitCode = 1`). Fora de produção a degradação continua permitida — as suítes
+`postgres-*` sobem o `server.js` real com `NODE_ENV=test` e só falam com `/api/**`;
+exigir build ali quebraria a integração sem ganho. `FRONTEND_BUILD_REQUIRED=0`
+aceita a degradação de propósito.
+
+Comportamento verificado com o servidor real:
+
+```
+com build     → GET / 200, /guia-sistema.html 200, /garcom-pwa/ 200
+sem build     → "❌ Build do frontend ausente", exit 1, porta não abre
+```
+
+#### O que o deploy precisa ter
+
+`npm ci && npm run build` antes de `npm start` (no Railway: *Build Command*).
+Registrado em `README.md` e `.env.example`. **Não confirmei a configuração real
+do Railway** — o repositório não expõe `railway.json`/`nixpacks.toml`, então o
+Build Command precisa ser conferido no painel do serviço. Se por algum motivo o
+build não rodar, a falha agora é barulhenta em vez de silenciosa.
+
+#### Novo teste
+
+`tests/dist-versionado.test.cjs` cobre os quatro comportamentos da trava (com
+build, sem build em produção, fora de produção, `FRONTEND_BUILD_REQUIRED=0`) e
+mantém uma allowlist do que pode voltar para o `dist/` versionado.
+`tests/regressions.cjs` passou a conferir o **índice do Git** (não o disco) ao
+garantir que `dist/js/` não volta — o build recria a pasta, e o problema era ela
+ser versionada.
+
 ---
 
 ## 2. Panorama das tarefas incompletas
@@ -97,9 +157,8 @@ andamento da issue #313, ainda não integrado.
    `public/js/admin-cardapio.js`, `admin-relatorio.js`, `caixa-divisao.js`,
    `mesa-app-*.js`, `realtime.js`, `voz-*.js` e o CSS legado — vários ainda cobertos
    por testes que leem o arquivo, não o comportamento).
-3. **Duplicação de HTML entre `public/` e `dist/`**: 15 arquivos `.html` idênticos
-   byte a byte são versionados duas vezes (o build os copia). Só `index.html` difere
-   de fato. Reduz o diff de todo PR de UI.
+3. ~~**Duplicação de HTML entre `public/` e `dist/`**~~ — **resolvido em 13/11/2026.**
+   Ver §1.4.
 4. **`public/style.css` carrega Google Fonts** (`@import url('https://fonts.googleapis…')`)
    no caminho legado, enquanto o resto do sistema serve fontes do próprio domínio
    (`docs/FORNECEDOR-E-SERVICOS-QR-ADMIN.md` registra que isso foi corrigido no
@@ -123,7 +182,7 @@ andamento da issue #313, ainda não integrado.
 npm ci                                  ok (145 pacotes)
 npm run typecheck                       ok
 NODE_ENV=production npm run build       ok — dist/ regenerado, versões em dia
-node scripts/run-tests.js               692 testes, 691 pass, 1 skip*, 0 fail
+node scripts/run-tests.js               697 testes**, 696 pass, 1 skip*, 0 fail
 npm run smoke:panorama / :fila / :2fa / :mesas   ok
 node --check server.js + db/*.js + scripts/*.js  ok
 tests/cardapio-isolamento.test.cjs      10/10 com o commit de referência buscado
@@ -131,6 +190,10 @@ tests/cardapio-isolamento.test.cjs      10/10 com o commit de referência buscad
 
 \* O único skip é o teste do cardápio congelado quando o commit de referência não
 está no clone raso; ele passa com `git fetch --depth=1 origin bc9727ef3368`.
+\*\* 692 da verificação original + 6 de `tests/dist-versionado.test.cjs`.
+
+Servidor real em produção: com build serve (`/`, `/guia-sistema.html`,
+`/garcom-pwa/` → 200); sem build recusa subir (exit 1, porta fechada).
 
 **Falhas pré-existentes encontradas na linha de base** (`6d75e1a`, antes de
 qualquer mudança): 4 testes de versão falhavam porque `dist/` estava defasado em

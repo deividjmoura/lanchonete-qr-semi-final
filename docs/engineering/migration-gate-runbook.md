@@ -12,6 +12,7 @@ O fluxo de produção deve manter as migrations como gate anterior à abertura d
 3. O runner executa db/migrate.js novamente (idempotente) e só carrega server.js se o processo terminar com código 0.
 4. Erro de spawn, saída não-zero ou timeout de 30 segundos encerram o processo sem abrir a porta. A aplicação não recebe tráfego com schema potencialmente incompatível.
 5. npm start, npm run start:api e npm run start:prod apontam para o mesmo gate. node server.js/npm run server permanecem caminhos de desenvolvimento local e não devem ser usados como comando de produção.
+6. **Build do frontend é pré-requisito do start (13/11/2026).** O `dist/` não é mais versionado por inteiro; o deploy precisa rodar `npm ci && npm run build` antes de `npm start`. Em `NODE_ENV=production`, `server.js` chama `lib/exigir-build.js` no callback do `listen` e, sem `dist/index.html`, fecha o servidor e sai com código 1 — em vez de cair no HTML legado de `public/`. `FRONTEND_BUILD_REQUIRED=0` aceita a degradação de propósito.
 
 ## Matriz de validação
 
@@ -22,6 +23,9 @@ O fluxo de produção deve manter as migrations como gate anterior à abertura d
 | Falha de SQL | tests/start-production.test.cjs | Servidor não inicia, exit 1 e erro sem segredos |
 | Timeout/erro de spawn | tests/start-production.test.cjs | Servidor não inicia, exit 1 |
 | Caminho feliz | tests/start-production.test.cjs | loadServer() só é chamado após migrations concluídas |
+| Build ausente em produção | tests/dist-versionado.test.cjs | Servidor não abre a porta, exit 1, mensagem com `npm run build` |
+| Build presente | tests/dist-versionado.test.cjs | Sobe normalmente |
+| Build ausente fora de produção | tests/dist-versionado.test.cjs | Segue (suítes postgres-* com NODE_ENV=test) |
 
 ## Observabilidade do schema e do banco
 

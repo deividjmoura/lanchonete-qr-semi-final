@@ -13,10 +13,10 @@ test('legacy pages and generated distribution use QR Admin branding', () => {
     'index.html', 'public/index.html', 'public/mesa.html', 'public/pedido.html',
     'public/admin.html', 'public/caixa.html', 'public/garcom.html',
     'public/cozinha.html', 'public/bar.html', 'public/login.html',
-    'dist/index.html', 'dist/mesa.html', 'dist/pedido.html',
-    'dist/admin.html', 'dist/caixa.html', 'dist/garcom.html',
-    'dist/cozinha.html', 'dist/bar.html', 'dist/login.html',
-    'public/js/admin-relatorio.js', 'dist/js/admin-relatorio.js', 'db/seed.js',
+    /* dist/ guarda só o que o build gera de fato (bundle, build-version.json
+       e o shell do garçom): as cópias de public/ saíram em 13/11/2026. */
+    'dist/index.html',
+    'public/js/admin-relatorio.js', 'db/seed.js',
     'src/lib/print.ts', 'package.json',
   ];
   for (const file of files) {

@@ -17,3 +17,41 @@ docs/screenshots/
 
 # Evidências locais da prova do cardápio do cliente (scripts/verificar-cardapio-intacto.mjs)
 .cardapio-intacto/
+
+# dist/ é saída de build: o build COPIA public/ para cá, e o server.js resolve
+# esses caminhos em public/ de qualquer forma. Ficam no disco (verificar-cardapio-intacto.mjs
+# e o `vite preview` dos E2E servem dist/ como raiz), mas fora do Git — commitar
+# de novo criava o segundo lugar onde o arquivo "publicado" podia divergir do real.
+# O que continua versionado é o que o build GERA e o servidor lê de dist/:
+# index.html, build-version.json, assets/ (bundle, fontes e imagens) e garcom-pwa/.
+dist/admin.html
+dist/apresentacao.html
+dist/bar.html
+dist/caixa.html
+dist/cozinha.html
+dist/garcom.html
+dist/guia-sistema.html
+dist/login.html
+dist/mesa.html
+dist/mesa-1.css
+dist/mesa-2a.css
+dist/mesa-2b.css
+dist/mesa-app-extra.css
+dist/mesa-app.css
+dist/mesa-fonts.css
+dist/novidades.html
+dist/novidades.json
+dist/pedido.html
+dist/politica-de-privacidade.html
+dist/termos-de-servico.html
+dist/termos-de-uso.html
+dist/icons.css
+dist/institucional.css
+dist/style-ops.css
+dist/style.css
+dist/theme-glass.css
+dist/favicons/
+dist/fonts/
+dist/js/
+dist/logo/
+dist/uploads/

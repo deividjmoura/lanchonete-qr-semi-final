@@ -2109,6 +2109,15 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, '0.0.0.0', async () => {
   console.log(`🍔 Lanchonete QR V2: http://0.0.0.0:${PORT}`);
+  // Build do SPA: em produção, ausência de dist/index.html é erro de startup.
+  // Sem esta trava o servidor cairia no HTML legado de public/ (interface
+  // antiga) com HTTP 200 — ver lib/exigir-build.js.
+  const { exigirBuildDoFrontend } = require('./lib/exigir-build');
+  if (!exigirBuildDoFrontend({ root: __dirname }) && process.env.FRONTEND_BUILD_REQUIRED !== '0') {
+    server.close();
+    process.exitCode = 1;
+    return;
+  }
   // Auto-migrate best-effort: aplica migrations pendentes na inicialização
   // (idempotente — já aplicadas são puladas). Nunca derruba o servidor.
   try {

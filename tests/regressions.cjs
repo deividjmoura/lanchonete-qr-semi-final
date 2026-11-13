@@ -251,22 +251,26 @@ test('LQRRealtime troca token de garçom por ticket antes de abrir EventSource',
   assert.equal(closed, true);
 });
 
-test('o realtime.js publicado em dist/ é o mesmo que passou no teste acima', () => {
-  /* `npm start` não roda build: produção serve o dist/ versionado. Um
-     public/js/realtime.js novo com dist/js/realtime.js antigo parece verde em
-     CI (que builda antes de testar) e chega ao usuário com o cliente velho —
-     exatamente o que aconteceu nesta mudança: o PWA continuava abrindo
-     /api/events?garcom=<bearer permanente>. */
+test('o realtime.js servido em produção é o de public/, e dist/ não guarda cópia própria', () => {
+  /* O servidor resolve /js/* em public/ (nunca em dist/), então a cópia
+     dist/js/realtime.js era um segundo lugar para divergir — e divergiu: o
+     PWA continuava abrindo /api/events?garcom=<bearer permanente> enquanto o
+     teste acima passava com a fonte corrigida. A cópia saiu do repositório em
+     13/11/2026; este teste impede que ela volte, porque uma cópia que ninguém
+     serve só cria a chance de o arquivo errado parecer o publicado. */
   const fonte = fs.readFileSync('public/js/realtime.js', 'utf8');
-  assert.ok(fs.existsSync('dist/js/realtime.js'), 'dist/js/realtime.js precisa existir');
-  const publicado = fs.readFileSync('dist/js/realtime.js', 'utf8');
+  /* Conferimos o ÍNDICE do Git, não o disco: o build copia public/ para dist/
+     e a cópia reaparece no disco a cada `npm run build` — é justamente por
+     isso que ela precisa ficar fora do controle de versão, não apagada. */
+  const versionado = require('node:child_process')
+    .execFileSync('git', ['ls-files', '--', 'dist/js'], { cwd: require('node:path').join(__dirname, '..'), encoding: 'utf8' })
+    .trim();
   assert.equal(
-    publicado,
-    fonte,
-    'dist/js/realtime.js divergiu de public/js/realtime.js: copie a fonte para dist/ antes de commitar'
+    versionado,
+    '',
+    'dist/js/ não pode ser versionado: o servidor serve /js/ de public/',
   );
-  assert.match(publicado, /\/api\/events\/ticket/, 'cliente publicado deve pedir ticket de uso único');
-  assert.doesNotMatch(publicado, /\/api\/events\?(mesa|garcom|token)=/, 'cliente publicado não pode montar URL SSE com bearer permanente');
+  assert.doesNotMatch(fonte, /\/api\/events\?(mesa|garcom|token)=/, 'cliente não pode montar URL SSE com bearer permanente');
 });
 
 test('o bundle SPA publicado não monta URL de SSE com bearer permanente', () => {
